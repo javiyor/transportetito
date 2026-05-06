@@ -1,0 +1,4 @@
+transportetito.5amsoftware.com.ar {
+    encode zstd gzip
+    reverse_proxy nginx:80
+}
