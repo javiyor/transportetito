@@ -26,6 +26,14 @@ docker compose run --rm app php artisan key:generate
 docker compose run --rm app php artisan migrate
 ```
 
+## Auth (roles + 2FA)
+
+Instala scaffold de autenticacion (Jetstream Inertia) y permisos (spatie):
+
+```bash
+bash scripts/setup-auth.sh
+```
+
 4) Abrir en navegador:
 - En VPS: https://transportetito.5amsoftware.com.ar (Caddy maneja HTTPS)
 - En local (sin DNS): podes cambiar el Caddyfile o comentar el servicio caddy y exponer nginx.
