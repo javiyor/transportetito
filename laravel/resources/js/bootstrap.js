@@ -1,0 +1,7 @@
+import axios from 'axios';
+window.axios = axios;
+window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+// Ensure axios never downgrades to http behind proxies.
+if (typeof window !== 'undefined' && window.location && window.location.origin) {
+  window.axios.defaults.baseURL = window.location.origin;
+}

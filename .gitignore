@@ -1,0 +1,10 @@
+.env
+
+# Local docker volumes / artifacts
+**/.DS_Store
+**/Thumbs.db
+
+# Laravel app (generated artifacts)
+laravel/vendor/
+laravel/node_modules/
+laravel/public/storage
