@@ -52,6 +52,10 @@ const logout = () => {
                                     Dashboard
                                 </NavLink>
 
+                                <NavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
+                                    Operacion
+                                </NavLink>
+
                                 <NavLink
                                     v-if="($page.props.tt?.roles || []).includes('admin')"
                                     :href="route('admin.users.index')"
@@ -201,6 +205,10 @@ const logout = () => {
                     <div class="pt-2 pb-3 space-y-1">
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
+                            Operacion
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

@@ -12,6 +12,9 @@ use App\Http\Controllers\Admin\UserStoreController;
 use App\Http\Controllers\Admin\UserTwoFactorResetController;
 use App\Http\Controllers\Admin\UserUnblockController;
 
+use App\Http\Controllers\Operacion\ManifiestoIngresoController;
+use App\Http\Controllers\Operacion\PedidoStoreController;
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -38,5 +41,14 @@ Route::middleware([
         Route::post('/users/{user}/2fa/reset', UserTwoFactorResetController::class)->name('users.2fa.reset');
         Route::post('/users/{user}/block', UserBlockController::class)->name('users.block');
         Route::post('/users/{user}/unblock', UserUnblockController::class)->name('users.unblock');
+    });
+
+    Route::prefix('operacion')->name('operacion.')->group(function () {
+        Route::get('/manifiestos', [ManifiestoIngresoController::class, 'index'])->name('manifiestos.index');
+        Route::get('/manifiestos/create', [ManifiestoIngresoController::class, 'create'])->name('manifiestos.create');
+        Route::post('/manifiestos', [ManifiestoIngresoController::class, 'store'])->name('manifiestos.store');
+        Route::get('/manifiestos/{manifiesto}', [ManifiestoIngresoController::class, 'show'])->name('manifiestos.show');
+
+        Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
     });
 });
