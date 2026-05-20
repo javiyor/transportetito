@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 
 defineProps({
     manifiestos: Object,
@@ -15,9 +16,14 @@ defineProps({
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Manifiestos</h2>
-                <Link :href="route('operacion.manifiestos.create')">
-                    <PrimaryButton>Nuevo manifiesto</PrimaryButton>
-                </Link>
+                <div class="flex items-center gap-2">
+                    <Link :href="route('operacion.import.carga.index')">
+                        <SecondaryButton>Importar</SecondaryButton>
+                    </Link>
+                    <Link :href="route('operacion.manifiestos.create')">
+                        <PrimaryButton>Nuevo manifiesto</PrimaryButton>
+                    </Link>
+                </div>
             </div>
         </template>
 

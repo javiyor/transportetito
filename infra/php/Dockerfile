@@ -5,6 +5,7 @@ RUN apk add --no-cache \
     bash \
     icu-dev \
     libzip-dev \
+    mariadb-dev \
     oniguruma-dev \
     postgresql-dev \
     unzip \
@@ -17,6 +18,7 @@ RUN docker-php-ext-install \
     intl \
     zip \
     pdo \
+    pdo_mysql \
     pdo_pgsql \
     opcache
 # Redis extension (phpredis) for Laravel cache/session/queue

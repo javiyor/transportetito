@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\UserTwoFactorResetController;
 use App\Http\Controllers\Admin\UserUnblockController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
+use App\Http\Controllers\Operacion\ImportCargaController;
 use App\Http\Controllers\Operacion\PedidoStoreController;
 
 Route::get('/', function () {
@@ -50,5 +51,8 @@ Route::middleware([
         Route::get('/manifiestos/{manifiesto}', [ManifiestoIngresoController::class, 'show'])->name('manifiestos.show');
 
         Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
+
+        Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');
+        Route::post('/import/carga', [ImportCargaController::class, 'store'])->name('import.carga.store');
     });
 });

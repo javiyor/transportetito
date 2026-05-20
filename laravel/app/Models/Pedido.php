@@ -10,6 +10,7 @@ class Pedido extends Model
     protected $table = 'pedidos';
 
     protected $fillable = [
+        'external_carga_id',
         'empresa_id',
         'deposito_id',
         'manifiesto_ingreso_id',
@@ -21,17 +22,24 @@ class Pedido extends Model
         'remito_interno_pv',
         'remito_interno_nro',
         'bultos',
+        'unidad',
         'palets',
         'valor_declarado',
         'es_devolucion',
         'cr_importe',
         'estado',
+        'observacion',
+        'external_estado',
+        'external_facturado',
+        'external_retiro',
     ];
 
     protected $casts = [
         'valor_declarado' => 'decimal:2',
         'cr_importe' => 'decimal:2',
         'es_devolucion' => 'bool',
+        'external_facturado' => 'bool',
+        'external_retiro' => 'bool',
     ];
 
     public function manifiestoIngreso(): BelongsTo
