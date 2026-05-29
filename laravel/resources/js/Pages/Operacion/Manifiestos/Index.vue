@@ -7,6 +7,11 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 defineProps({
     manifiestos: Object,
 });
+
+const formatFecha = (value) => {
+    if (!value) return '-';
+    return String(value).slice(0, 10);
+};
 </script>
 
 <template>
@@ -46,7 +51,7 @@ defineProps({
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="m in manifiestos.data" :key="m.id">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ m.fecha }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.empresa?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.transporte || '-' }}</td>

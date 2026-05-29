@@ -253,7 +253,7 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                         Email: <span class="font-mono">{{ tempPasswordEmail }}</span>
                     </p>
                     <p class="mt-2">
-                        Password: <span class="font-mono">{{ tempPassword }}</span>
+                        Contrasena: <span class="font-mono">{{ tempPassword }}</span>
                     </p>
                     <p class="mt-3 text-xs text-gray-500">
                         Se muestra una sola vez. El usuario debe cambiarlo al ingresar.

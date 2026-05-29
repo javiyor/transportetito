@@ -39,6 +39,11 @@ const submitPedido = () => {
 };
 
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
+
+const formatFecha = (value) => {
+    if (!value) return '-';
+    return String(value).slice(0, 10);
+};
 </script>
 
 <template>
@@ -50,7 +55,7 @@ const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Manifiesto #{{ manifiesto.id }}</h2>
                     <div class="mt-1 text-sm text-gray-600">
-                        {{ manifiesto.fecha }} · {{ manifiesto.empresa?.razon_social || '-' }} · {{ manifiesto.deposito?.nombre || '-' }}
+                        {{ formatFecha(manifiesto.fecha) }} · {{ manifiesto.empresa?.razon_social || '-' }} · {{ manifiesto.deposito?.nombre || '-' }}
                     </div>
                 </div>
                 <Link :href="route('operacion.manifiestos.index')">
