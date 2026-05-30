@@ -11,6 +11,10 @@ import Checkbox from '@/Components/Checkbox.vue';
 
 const props = defineProps({
     manifiesto: Object,
+    comprobantes: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const page = usePage();
@@ -44,6 +48,18 @@ const submitPedido = () => {
 };
 
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
+
+const statsFacturacion = computed(() => {
+    const pedidos = props.manifiesto.pedidos || [];
+    const pendientes = pedidos.filter((p) => !(p.comprobantes && p.comprobantes.length));
+    const sinEntrega = pendientes.filter((p) => !p.destinatario_cuenta_id);
+    return {
+        total: pedidos.length,
+        pendientes: pendientes.length,
+        sinEntrega: sinEntrega.length,
+        emitidos: (props.comprobantes || []).length,
+    };
+});
 
 const pedidosPendientes = computed(() => {
     return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
@@ -160,6 +176,25 @@ const formatFecha = (value) => {
                     <div class="text-sm font-medium text-gray-900">Facturacion (v1)</div>
                     <p class="mt-1 text-xs text-gray-600">Se crea 1 comprobante por cuenta de entrega. Elegi la cuenta a facturar por cada grupo.</p>
 
+                    <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                        <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
+                            <div class="text-xs text-gray-500">Pedidos</div>
+                            <div class="font-medium text-gray-900">{{ statsFacturacion.total }}</div>
+                        </div>
+                        <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
+                            <div class="text-xs text-gray-500">Pendientes</div>
+                            <div class="font-medium text-gray-900">{{ statsFacturacion.pendientes }}</div>
+                        </div>
+                        <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
+                            <div class="text-xs text-gray-500">Sin entrega</div>
+                            <div class="font-medium text-gray-900">{{ statsFacturacion.sinEntrega }}</div>
+                        </div>
+                        <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
+                            <div class="text-xs text-gray-500">Comprobantes</div>
+                            <div class="font-medium text-gray-900">{{ statsFacturacion.emitidos }}</div>
+                        </div>
+                    </div>
+
                     <div class="mt-4 space-y-3">
                         <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border border-gray-200 p-4">
                             <div class="flex items-start justify-between gap-4 flex-wrap">
@@ -184,6 +219,41 @@ const formatFecha = (value) => {
                         </div>
 
                         <div v-if="!gruposFacturacion.length" class="text-sm text-gray-600">No hay pedidos pendientes de facturar.</div>
+                    </div>
+                </div>
+
+                <div v-if="(comprobantes || []).length" class="mt-6 rounded-lg border border-gray-200 bg-white overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <div class="text-sm font-medium text-gray-900">Comprobantes emitidos</div>
+                        <div class="mt-1 text-xs text-gray-600">Generados para este manifiesto.</div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="c in comprobantes" :key="c.id">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">#{{ c.id }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="font-medium text-gray-900">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
+                                        <div class="text-xs text-gray-500">CUIT {{ c.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ c.entrega_cuenta?.numero_cliente || '-' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="font-medium text-gray-900">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</div>
+                                        <div class="text-xs text-gray-500">CUIT {{ c.facturar_cuenta?.tercero?.cuit || '-' }} · Nro {{ c.facturar_cuenta?.numero_cliente || '-' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ String(c.fecha_emision || '').slice(0, 10) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

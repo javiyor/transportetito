@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Operacion;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Operacion\StoreManifiestoIngresoRequest;
 use App\Models\Deposito;
+use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use Illuminate\Http\Request;
@@ -46,6 +47,20 @@ class ManifiestoIngresoController extends Controller
 
     public function show(ManifiestoIngreso $manifiesto)
     {
+        $comprobantes = Comprobante::query()
+            ->where('empresa_id', $manifiesto->empresa_id)
+            ->whereHas('pedidos', function ($q) use ($manifiesto) {
+                $q->where('manifiesto_ingreso_id', $manifiesto->id);
+            })
+            ->with([
+                'entregaCuenta.tercero:id,razon_social,cuit',
+                'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta',
+                'facturarCuenta.tercero:id,razon_social,cuit',
+                'facturarCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta',
+            ])
+            ->orderByDesc('id')
+            ->get();
+
         $manifiesto->load([
             'empresa:id,razon_social',
             'deposito:id,nombre',
@@ -62,6 +77,7 @@ class ManifiestoIngresoController extends Controller
 
         return Inertia::render('Operacion/Manifiestos/Show', [
             'manifiesto' => $manifiesto,
+            'comprobantes' => $comprobantes,
         ]);
     }
 }
