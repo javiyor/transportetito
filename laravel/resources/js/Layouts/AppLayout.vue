@@ -53,6 +53,14 @@ const switchEmpresa = (empresaId) => {
                                 </NavLink>
 
                                 <NavLink
+                                    v-if="($page.props.tt?.roles || []).includes('operaciones')"
+                                    :href="route('operacion.repartos.facturas')"
+                                    :active="route().current('operacion.repartos.*')"
+                                >
+                                    Repartos
+                                </NavLink>
+
+                                <NavLink
                                     v-if="($page.props.tt?.roles || []).includes('admin')"
                                     :href="route('admin.users.index')"
                                     :active="route().current('admin.users.*')"
@@ -208,6 +216,14 @@ const switchEmpresa = (empresaId) => {
 
                         <ResponsiveNavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
                             Operacion
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('operaciones')"
+                            :href="route('operacion.repartos.facturas')"
+                            :active="route().current('operacion.repartos.*')"
+                        >
+                            Repartos
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

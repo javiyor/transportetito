@@ -20,6 +20,11 @@ use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
 use App\Http\Controllers\Operacion\PedidoStoreController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Operacion\Repartos\FacturasListController;
+use App\Http\Controllers\Operacion\Repartos\HojaRutaStoreController;
+use App\Http\Controllers\Operacion\Repartos\HojaRutaShowController;
+use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
+use App\Http\Controllers\Operacion\Repartos\HojaRutaCerrarController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -70,5 +75,13 @@ Route::middleware([
 
         Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');
         Route::post('/import/carga', [ImportCargaController::class, 'store'])->name('import.carga.store');
+
+        Route::middleware(['role:operaciones'])->prefix('repartos')->name('repartos.')->group(function () {
+            Route::get('/facturas', FacturasListController::class)->name('facturas');
+            Route::post('/hojas', HojaRutaStoreController::class)->name('hojas.store');
+            Route::get('/hojas/{hoja}', HojaRutaShowController::class)->name('hojas.show');
+            Route::put('/hojas/{hoja}/items/{item}', HojaRutaItemUpdateController::class)->name('hojas.items.update');
+            Route::post('/hojas/{hoja}/cerrar', HojaRutaCerrarController::class)->name('hojas.cerrar');
+        });
     });
 });

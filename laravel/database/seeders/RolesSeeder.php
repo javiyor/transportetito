@@ -13,7 +13,7 @@ class RolesSeeder extends Seeder
         $roles = config('roles.available', []);
 
         foreach ($roles as $role) {
-            Role::findOrCreate($role);
+            Role::findOrCreate($role, 'web');
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

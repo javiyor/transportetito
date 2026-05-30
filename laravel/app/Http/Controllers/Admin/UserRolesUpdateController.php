@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\PermissionRegistrar;
+use Spatie\Permission\Models\Role;
 
 class UserRolesUpdateController extends Controller
 {
@@ -34,6 +35,10 @@ class UserRolesUpdateController extends Controller
             return back()->withErrors([
                 'roles' => 'No se puede eliminar el ultimo admin.',
             ]);
+        }
+
+        foreach ($roles as $roleName) {
+            Role::findOrCreate($roleName, 'web');
         }
 
         $user->syncRoles($roles);

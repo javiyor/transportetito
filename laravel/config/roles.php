@@ -8,6 +8,8 @@ return [
         'operaciones',
         'facturacion',
         'cobranzas',
+        'chofer',
+        'cobranzas_admin',
         'lectura',
     ],
 ];
