@@ -17,14 +17,17 @@ class ManifiestoFacturarController extends Controller
     {
         $request->validate([
             'confirm' => ['required', 'boolean'],
+            'facturar_por_entrega' => ['nullable', 'array'],
+            'facturar_por_entrega.*' => ['nullable', 'integer', 'exists:tercero_cuentas,id'],
         ]);
 
+        $map = $request->input('facturar_por_entrega', []);
         $created = 0;
         $skipped = 0;
         $missingCuentas = 0;
-        $conflictingPayer = 0;
+        $missingSelection = 0;
 
-        DB::transaction(function () use ($manifiesto, &$created, &$skipped, &$missingCuentas, &$conflictingPayer) {
+        DB::transaction(function () use ($manifiesto, $map, &$created, &$skipped, &$missingCuentas, &$missingSelection) {
             $pedidos = Pedido::query()
                 ->where('manifiesto_ingreso_id', $manifiesto->id)
                 ->whereDoesntHave('comprobantes')
@@ -32,32 +35,64 @@ class ManifiestoFacturarController extends Controller
 
             $grouped = [];
             foreach ($pedidos as $p) {
-                if (! $p->destinatario_cuenta_id || (! $p->remitente_cuenta_id && $p->paga === 'origen')) {
+                if (! $p->destinatario_cuenta_id) {
                     $missingCuentas++;
                     continue;
                 }
 
                 $entregaCuentaId = (int) $p->destinatario_cuenta_id;
-                $facturarCuentaId = $p->paga === 'origen'
-                    ? (int) $p->remitente_cuenta_id
-                    : (int) $p->destinatario_cuenta_id;
-
                 $key = (string) $entregaCuentaId;
-                $grouped[$key] ??= ['entrega' => $entregaCuentaId, 'facturar_ids' => [], 'pedidos' => []];
-                $grouped[$key]['facturar_ids'][] = $facturarCuentaId;
+                $grouped[$key] ??= ['entrega' => $entregaCuentaId, 'pedidos' => []];
                 $grouped[$key]['pedidos'][] = $p;
             }
 
             $invoicedPedidoIds = [];
 
             foreach ($grouped as $g) {
-                $facturarIds = array_values(array_unique(array_map('intval', $g['facturar_ids'])));
-                if (count($facturarIds) !== 1) {
-                    $conflictingPayer += count($g['pedidos']);
+                $entregaCuentaId = (int) $g['entrega'];
+
+                // v1: require explicit selection if provided; otherwise fallback to old rule if unambiguous
+                $selected = isset($map[$entregaCuentaId]) ? (int) $map[$entregaCuentaId] : 0;
+
+                if ($selected <= 0) {
+                    $fallbackIds = [];
+                    foreach ($g['pedidos'] as $p) {
+                        $fallback = $p->paga === 'origen'
+                            ? (int) ($p->remitente_cuenta_id ?: 0)
+                            : (int) ($p->destinatario_cuenta_id ?: 0);
+                        if ($fallback > 0) {
+                            $fallbackIds[] = $fallback;
+                        }
+                    }
+
+                    $fallbackIds = array_values(array_unique($fallbackIds));
+                    if (count($fallbackIds) === 1) {
+                        $selected = (int) $fallbackIds[0];
+                    }
+                }
+
+                if ($selected <= 0) {
+                    $missingSelection += count($g['pedidos']);
                     continue;
                 }
 
-                $facturarCuentaId = (int) $facturarIds[0];
+                // Safety: only allow factoring to cuentas actually present in this manifest's pedidos (remitente/destinatario)
+                $allowed = [];
+                foreach ($g['pedidos'] as $p) {
+                    if ($p->remitente_cuenta_id) {
+                        $allowed[(int) $p->remitente_cuenta_id] = true;
+                    }
+                    if ($p->destinatario_cuenta_id) {
+                        $allowed[(int) $p->destinatario_cuenta_id] = true;
+                    }
+                }
+
+                if (! isset($allowed[$selected])) {
+                    $missingSelection += count($g['pedidos']);
+                    continue;
+                }
+
+                $facturarCuentaId = $selected;
                 $total = (float) collect($g['pedidos'])->sum('valor_declarado');
 
                 $comprobante = Comprobante::query()->create([
@@ -102,6 +137,6 @@ class ManifiestoFacturarController extends Controller
 
         return redirect()
             ->route('operacion.manifiestos.show', $manifiesto)
-            ->with('success', "Facturacion minima: $created comprobante(s) creados. Omitidos: $skipped. Sin cuentas: $missingCuentas. Paga mixto (no facturado): $conflictingPayer.");
+            ->with('success', "Facturacion minima: $created comprobante(s) creados. Omitidos: $skipped. Sin entrega: $missingCuentas. Sin seleccion: $missingSelection.");
     }
 }

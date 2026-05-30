@@ -45,12 +45,56 @@ const submitPedido = () => {
 
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
 
-const facturarForm = useForm({ confirm: true });
+const pedidosPendientes = computed(() => {
+    return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
+});
 
-const facturar = () => {
-    facturarForm.post(route('operacion.manifiestos.facturar', props.manifiesto.id), {
-        preserveScroll: true,
-    });
+const gruposFacturacion = computed(() => {
+    const grouped = new Map();
+    for (const p of pedidosPendientes.value) {
+        const entregaId = p.destinatario_cuenta_id;
+        if (!entregaId) continue;
+        if (!grouped.has(entregaId)) grouped.set(entregaId, []);
+        grouped.get(entregaId).push(p);
+    }
+
+    const out = [];
+    for (const [entregaId, pedidos] of grouped.entries()) {
+        const total = pedidos.reduce((acc, x) => acc + Number(x.valor_declarado || 0), 0).toFixed(2);
+        const cuentas = new Map();
+        for (const p of pedidos) {
+            if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
+            if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
+        }
+
+        // Default suggestion: if all pedidos have same paga, suggest that side
+        const pagas = Array.from(new Set(pedidos.map((p) => p.paga)));
+        let suggested = '';
+        if (pagas.length === 1) {
+            if (pagas[0] === 'origen' && pedidos[0].remitente_cuenta) suggested = String(pedidos[0].remitente_cuenta.id);
+            if (pagas[0] === 'destino' && pedidos[0].destinatario_cuenta) suggested = String(pedidos[0].destinatario_cuenta.id);
+        }
+
+        out.push({ entregaId, pedidos, total, cuentas: Array.from(cuentas.values()), suggested });
+    }
+
+    return out.sort((a, b) => a.entregaId - b.entregaId);
+});
+
+const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {} });
+
+const initFacturarMap = () => {
+    const map = {};
+    for (const g of gruposFacturacion.value) {
+        map[g.entregaId] = g.suggested || '';
+    }
+    facturarPorEntrega.facturar_por_entrega = map;
+};
+
+initFacturarMap();
+
+const facturarSeleccionado = () => {
+    facturarPorEntrega.post(route('operacion.manifiestos.facturar', props.manifiesto.id), { preserveScroll: true });
 };
 
 const formatFecha = (value) => {
@@ -108,7 +152,38 @@ const formatFecha = (value) => {
                         <p class="mt-1 text-sm text-gray-600">{{ totalPedidos }} cargados</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <PrimaryButton v-if="canFacturar" :disabled="facturarForm.processing || !totalPedidos" @click.prevent="facturar">Emitir facturas</PrimaryButton>
+                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
+                    </div>
+                </div>
+
+                <div v-if="canFacturar" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-sm font-medium text-gray-900">Facturacion (v1)</div>
+                    <p class="mt-1 text-xs text-gray-600">Se crea 1 comprobante por cuenta de entrega. Elegi la cuenta a facturar por cada grupo.</p>
+
+                    <div class="mt-4 space-y-3">
+                        <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border border-gray-200 p-4">
+                            <div class="flex items-start justify-between gap-4 flex-wrap">
+                                <div>
+                                    <div class="text-xs text-gray-500">Cuenta de entrega</div>
+                                    <div class="text-sm font-medium text-gray-900">#{{ g.entregaId }}</div>
+                                    <div class="text-xs text-gray-600">Pedidos: {{ g.pedidos.length }} · Total (v1): ARS {{ g.total }}</div>
+                                </div>
+                                <div class="min-w-[260px]">
+                                    <div class="text-xs text-gray-500">Facturar a</div>
+                                    <select
+                                        v-model="facturarPorEntrega.facturar_por_entrega[g.entregaId]"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                    >
+                                        <option value="">(seleccionar)</option>
+                                        <option v-for="c in g.cuentas" :key="c.id" :value="String(c.id)">
+                                            {{ c.label }}{{ c.cuit ? ' · CUIT ' + c.cuit : '' }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="!gruposFacturacion.length" class="text-sm text-gray-600">No hay pedidos pendientes de facturar.</div>
                     </div>
                 </div>
 

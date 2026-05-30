@@ -55,6 +55,7 @@ class ManifiestoIngresoController extends Controller
                     'destinatario:id,cuit,razon_social',
                     'remitenteCuenta.tercero:id,razon_social,cuit',
                     'destinatarioCuenta.tercero:id,razon_social,cuit',
+                    'comprobantes:id',
                 ])->orderByDesc('id');
             },
         ]);
