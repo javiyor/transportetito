@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\TerceroCuenta;
 
 class Pedido extends Model
 {
@@ -17,6 +18,8 @@ class Pedido extends Model
         'envio_consolidado_id',
         'remitente_tercero_id',
         'destinatario_tercero_id',
+        'remitente_cuenta_id',
+        'destinatario_cuenta_id',
         'paga',
         'remito_numero',
         'remito_interno_pv',
@@ -55,5 +58,15 @@ class Pedido extends Model
     public function destinatario(): BelongsTo
     {
         return $this->belongsTo(Tercero::class, 'destinatario_tercero_id');
+    }
+
+    public function remitenteCuenta(): BelongsTo
+    {
+        return $this->belongsTo(TerceroCuenta::class, 'remitente_cuenta_id');
+    }
+
+    public function destinatarioCuenta(): BelongsTo
+    {
+        return $this->belongsTo(TerceroCuenta::class, 'destinatario_cuenta_id');
     }
 }

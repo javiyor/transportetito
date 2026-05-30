@@ -11,6 +11,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Empresa;
 
 class User extends Authenticatable
 {
@@ -70,5 +72,10 @@ class User extends Authenticatable
             'blocked_at' => 'datetime',
             'must_change_password' => 'boolean',
         ];
+    }
+
+    public function currentEmpresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class, 'current_empresa_id');
     }
 }

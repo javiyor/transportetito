@@ -11,10 +11,15 @@ use App\Http\Controllers\Admin\UserRolesUpdateController;
 use App\Http\Controllers\Admin\UserStoreController;
 use App\Http\Controllers\Admin\UserTwoFactorResetController;
 use App\Http\Controllers\Admin\UserUnblockController;
+use App\Http\Controllers\Admin\CurrentEmpresaUpdateController;
+use App\Http\Controllers\Admin\EmpresaAdminController;
+use App\Http\Controllers\Admin\DepositoAdminController;
+use App\Http\Controllers\Admin\TerceroAdminController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
 use App\Http\Controllers\Operacion\PedidoStoreController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -30,9 +35,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -42,6 +45,19 @@ Route::middleware([
         Route::post('/users/{user}/2fa/reset', UserTwoFactorResetController::class)->name('users.2fa.reset');
         Route::post('/users/{user}/block', UserBlockController::class)->name('users.block');
         Route::post('/users/{user}/unblock', UserUnblockController::class)->name('users.unblock');
+
+        Route::post('/current-empresa', CurrentEmpresaUpdateController::class)->name('current-empresa.update');
+
+        Route::get('/empresas', [EmpresaAdminController::class, 'index'])->name('empresas.index');
+        Route::post('/empresas', [EmpresaAdminController::class, 'store'])->name('empresas.store');
+        Route::put('/empresas/{empresa}', [EmpresaAdminController::class, 'update'])->name('empresas.update');
+
+        Route::get('/depositos', [DepositoAdminController::class, 'index'])->name('depositos.index');
+        Route::post('/depositos', [DepositoAdminController::class, 'store'])->name('depositos.store');
+        Route::put('/depositos/{deposito}', [DepositoAdminController::class, 'update'])->name('depositos.update');
+
+        Route::get('/terceros', [TerceroAdminController::class, 'index'])->name('terceros.index');
+        Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {

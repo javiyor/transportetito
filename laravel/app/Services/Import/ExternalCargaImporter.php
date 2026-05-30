@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\Tercero;
+use App\Models\TerceroCuenta;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -91,6 +92,9 @@ SQL,
             $remitente = $this->firstOrCreateTercero((string) ($row->cuitori ?? ''), (string) ($row->nomorigen ?? ''), (int) ($row->idorigen ?? 0));
             $destinatario = $this->firstOrCreateTercero((string) ($row->cuitdest ?? ''), (string) ($row->nomdest ?? ''), (int) ($row->iddest ?? 0));
 
+            $remitenteCuenta = $this->firstOrCreateCuenta($empresa, $remitente, (int) ($row->idorigen ?? 0), (string) ($row->nomorigen ?? ''));
+            $destinatarioCuenta = $this->firstOrCreateCuenta($empresa, $destinatario, (int) ($row->iddest ?? 0), (string) ($row->nomdest ?? ''));
+
             Pedido::query()->create([
                 'external_carga_id' => $externalId,
                 'empresa_id' => $empresa->id,
@@ -99,6 +103,8 @@ SQL,
                 'envio_consolidado_id' => null,
                 'remitente_tercero_id' => $remitente->id,
                 'destinatario_tercero_id' => $destinatario->id,
+                'remitente_cuenta_id' => $remitenteCuenta?->id,
+                'destinatario_cuenta_id' => $destinatarioCuenta?->id,
                 'paga' => 'destino',
                 'remito_numero' => (string) ($row->remito ?? ''),
                 'bultos' => max(0, (int) ($row->cantidad ?? 0)),
@@ -138,6 +144,27 @@ SQL,
         return Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             ['razon_social' => $cleanRazon]
+        );
+    }
+
+    private function firstOrCreateCuenta(Empresa $empresa, Tercero $tercero, int $numeroCliente, string $nombreCuenta): ?TerceroCuenta
+    {
+        if ($numeroCliente <= 0) {
+            return null;
+        }
+
+        $nombre = trim($nombreCuenta) !== '' ? trim($nombreCuenta) : null;
+
+        return TerceroCuenta::query()->firstOrCreate(
+            [
+                'empresa_id' => $empresa->id,
+                'numero_cliente' => $numeroCliente,
+            ],
+            [
+                'tercero_id' => $tercero->id,
+                'nombre_cuenta' => $nombre,
+                'activo' => true,
+            ]
         );
     }
 }

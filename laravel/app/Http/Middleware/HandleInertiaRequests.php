@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,10 +36,33 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $currentEmpresa = null;
+        $empresasDisponibles = [];
+
+        if ($user) {
+            if (! $user->current_empresa_id) {
+                $first = Empresa::query()->orderBy('id')->first();
+                if ($first) {
+                    $user->forceFill(['current_empresa_id' => $first->id])->save();
+                }
+            }
+
+            $currentEmpresa = $user->current_empresa_id
+                ? Empresa::query()->whereKey($user->current_empresa_id)->first(['id', 'razon_social', 'cuit'])
+                : null;
+
+            if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
+                $empresasDisponibles = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social', 'cuit']);
+            }
+        }
+
         return [
             ...parent::share($request),
             'tt' => [
                 'roles' => fn () => $request->user()?->getRoleNames()->values()->all() ?? [],
+                'currentEmpresa' => fn () => $currentEmpresa,
+                'empresasDisponibles' => fn () => $empresasDisponibles,
                 'flash' => [
                     'tempPassword' => fn () => $request->session()->get('tt.temp_password'),
                     'tempPasswordEmail' => fn () => $request->session()->get('tt.temp_password_email'),

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\TerceroCuenta;
 
 class Tercero extends Model
 {
@@ -18,4 +20,9 @@ class Tercero extends Model
     protected $casts = [
         'domicilio_fiscal' => 'array',
     ];
+
+    public function cuentas(): HasMany
+    {
+        return $this->hasMany(TerceroCuenta::class, 'tercero_id');
+    }
 }
