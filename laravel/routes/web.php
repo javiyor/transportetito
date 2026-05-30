@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\Empresa;
 
 use App\Http\Controllers\Admin\UserBlockController;
 use App\Http\Controllers\Admin\UserController;
@@ -25,13 +26,37 @@ use App\Http\Controllers\Operacion\Repartos\HojaRutaStoreController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaShowController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaCerrarController;
+use App\Http\Controllers\Operacion\Repartos\HojaRutaPrintController;
+use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
+
+use App\Http\Controllers\Cobranzas\PreReciboIndexController;
+use App\Http\Controllers\Cobranzas\PreReciboShowController;
+use App\Http\Controllers\Cobranzas\PreReciboConfirmController;
 
 Route::get('/', function () {
+    $empresa = Empresa::query()
+        ->with(['depositos:id,empresa_id,nombre,direccion'])
+        ->orderBy('id')
+        ->first([
+            'id',
+            'razon_social',
+            'cuit',
+            'condicion_iva',
+            'telefono',
+            'email',
+            'whatsapp',
+            'sitio_web',
+            'instagram_url',
+            'facebook_url',
+            'linkedin_url',
+        ]);
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
+        'empresa' => $empresa,
     ]);
 });
 
@@ -73,6 +98,8 @@ Route::middleware([
 
         Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
 
+        Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/facturar', ManifiestoFacturarController::class)->name('manifiestos.facturar');
+
         Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');
         Route::post('/import/carga', [ImportCargaController::class, 'store'])->name('import.carga.store');
 
@@ -80,8 +107,15 @@ Route::middleware([
             Route::get('/facturas', FacturasListController::class)->name('facturas');
             Route::post('/hojas', HojaRutaStoreController::class)->name('hojas.store');
             Route::get('/hojas/{hoja}', HojaRutaShowController::class)->name('hojas.show');
+            Route::get('/hojas/{hoja}/print', HojaRutaPrintController::class)->name('hojas.print');
             Route::put('/hojas/{hoja}/items/{item}', HojaRutaItemUpdateController::class)->name('hojas.items.update');
             Route::post('/hojas/{hoja}/cerrar', HojaRutaCerrarController::class)->name('hojas.cerrar');
         });
+    });
+
+    Route::middleware(['role:cobranzas|cobranzas_admin'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
+        Route::get('/pre-recibos', PreReciboIndexController::class)->name('pre-recibos.index');
+        Route::get('/pre-recibos/{preRecibo}', PreReciboShowController::class)->name('pre-recibos.show');
+        Route::post('/pre-recibos/{preRecibo}/confirmar', PreReciboConfirmController::class)->name('pre-recibos.confirm');
     });
 });

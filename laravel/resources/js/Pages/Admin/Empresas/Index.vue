@@ -19,6 +19,14 @@ const createForm = useForm({
     condicion_iva: '',
     arca_pv_default: 2,
     arca_env: 'homologacion',
+
+    telefono: '',
+    email: '',
+    whatsapp: '',
+    sitio_web: '',
+    instagram_url: '',
+    facebook_url: '',
+    linkedin_url: '',
 });
 
 const submitCreate = () => {
@@ -36,6 +44,14 @@ const editForm = useForm({
     condicion_iva: '',
     arca_pv_default: 2,
     arca_env: 'homologacion',
+
+    telefono: '',
+    email: '',
+    whatsapp: '',
+    sitio_web: '',
+    instagram_url: '',
+    facebook_url: '',
+    linkedin_url: '',
 });
 
 const openEdit = (e) => {
@@ -45,6 +61,15 @@ const openEdit = (e) => {
     editForm.condicion_iva = e.condicion_iva || '';
     editForm.arca_pv_default = e.arca_pv_default;
     editForm.arca_env = e.arca_env;
+
+    editForm.telefono = e.telefono || '';
+    editForm.email = e.email || '';
+    editForm.whatsapp = e.whatsapp || '';
+    editForm.sitio_web = e.sitio_web || '';
+    editForm.instagram_url = e.instagram_url || '';
+    editForm.facebook_url = e.facebook_url || '';
+    editForm.linkedin_url = e.linkedin_url || '';
+
     editForm.clearErrors();
     editing.value = true;
 };
@@ -95,6 +120,46 @@ const submitEdit = () => {
                             <option value="produccion">Produccion</option>
                         </select>
                         <InputError class="mt-2" :message="createForm.errors.arca_env" />
+                    </div>
+
+                    <div>
+                        <InputLabel value="Telefono" />
+                        <TextInput v-model="createForm.telefono" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="createForm.errors.telefono" />
+                    </div>
+                    <div>
+                        <InputLabel value="Email" />
+                        <TextInput v-model="createForm.email" type="email" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="createForm.errors.email" />
+                    </div>
+                    <div>
+                        <InputLabel value="WhatsApp" />
+                        <TextInput v-model="createForm.whatsapp" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="createForm.errors.whatsapp" />
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <InputLabel value="Sitio web" />
+                        <TextInput v-model="createForm.sitio_web" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                        <InputError class="mt-2" :message="createForm.errors.sitio_web" />
+                    </div>
+
+                    <div class="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <InputLabel value="Instagram" />
+                            <TextInput v-model="createForm.instagram_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                            <InputError class="mt-2" :message="createForm.errors.instagram_url" />
+                        </div>
+                        <div>
+                            <InputLabel value="Facebook" />
+                            <TextInput v-model="createForm.facebook_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                            <InputError class="mt-2" :message="createForm.errors.facebook_url" />
+                        </div>
+                        <div>
+                            <InputLabel value="LinkedIn" />
+                            <TextInput v-model="createForm.linkedin_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                            <InputError class="mt-2" :message="createForm.errors.linkedin_url" />
+                        </div>
                     </div>
 
                     <div class="sm:col-span-3 flex justify-end">
@@ -169,6 +234,46 @@ const submitEdit = () => {
                             <option value="produccion">Produccion</option>
                         </select>
                         <InputError class="mt-2" :message="editForm.errors.arca_env" />
+                    </div>
+
+                    <div>
+                        <InputLabel value="Telefono" />
+                        <TextInput v-model="editForm.telefono" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="editForm.errors.telefono" />
+                    </div>
+                    <div>
+                        <InputLabel value="Email" />
+                        <TextInput v-model="editForm.email" type="email" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="editForm.errors.email" />
+                    </div>
+                    <div>
+                        <InputLabel value="WhatsApp" />
+                        <TextInput v-model="editForm.whatsapp" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="editForm.errors.whatsapp" />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <InputLabel value="Sitio web" />
+                        <TextInput v-model="editForm.sitio_web" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                        <InputError class="mt-2" :message="editForm.errors.sitio_web" />
+                    </div>
+
+                    <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <InputLabel value="Instagram" />
+                            <TextInput v-model="editForm.instagram_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                            <InputError class="mt-2" :message="editForm.errors.instagram_url" />
+                        </div>
+                        <div>
+                            <InputLabel value="Facebook" />
+                            <TextInput v-model="editForm.facebook_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                            <InputError class="mt-2" :message="editForm.errors.facebook_url" />
+                        </div>
+                        <div>
+                            <InputLabel value="LinkedIn" />
+                            <TextInput v-model="editForm.linkedin_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
+                            <InputError class="mt-2" :message="editForm.errors.linkedin_url" />
+                        </div>
                     </div>
                 </form>
             </template>

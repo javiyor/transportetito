@@ -23,7 +23,9 @@ class HojaRutaCerrarController extends Controller
             return back();
         }
 
-        DB::transaction(function () use ($request, $hoja) {
+        $created = 0;
+
+        DB::transaction(function () use ($request, $hoja, &$created) {
             $items = $hoja->items()->with('comprobante')->get();
 
             $grouped = [];
@@ -89,11 +91,14 @@ class HojaRutaCerrarController extends Controller
                 }
 
                 $pre->update(['total' => $total]);
+
+                $created++;
             }
 
             $hoja->update(['estado' => 'cerrada']);
         });
 
-        return redirect()->route('operacion.repartos.hojas.show', $hoja);
+        return redirect()->route('operacion.repartos.hojas.show', $hoja)
+            ->with('success', "Hoja cerrada. Pre-recibos generados: $created.");
     }
 }

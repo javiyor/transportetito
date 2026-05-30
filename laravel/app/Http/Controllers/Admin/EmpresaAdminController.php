@@ -25,6 +25,14 @@ class EmpresaAdminController extends Controller
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
+
+            'telefono' => ['nullable', 'string', 'max:64'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'whatsapp' => ['nullable', 'string', 'max:64'],
+            'sitio_web' => ['nullable', 'url', 'max:255'],
+            'instagram_url' => ['nullable', 'url', 'max:255'],
+            'facebook_url' => ['nullable', 'url', 'max:255'],
+            'linkedin_url' => ['nullable', 'url', 'max:255'],
         ]);
 
         Empresa::query()->create($data);
@@ -40,6 +48,14 @@ class EmpresaAdminController extends Controller
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
+
+            'telefono' => ['nullable', 'string', 'max:64'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'whatsapp' => ['nullable', 'string', 'max:64'],
+            'sitio_web' => ['nullable', 'url', 'max:255'],
+            'instagram_url' => ['nullable', 'url', 'max:255'],
+            'facebook_url' => ['nullable', 'url', 'max:255'],
+            'linkedin_url' => ['nullable', 'url', 'max:255'],
         ]);
 
         $empresa->update($data);

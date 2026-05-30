@@ -53,6 +53,8 @@ class ManifiestoIngresoController extends Controller
                 $q->with([
                     'remitente:id,cuit,razon_social',
                     'destinatario:id,cuit,razon_social',
+                    'remitenteCuenta.tercero:id,razon_social,cuit',
+                    'destinatarioCuenta.tercero:id,razon_social,cuit',
                 ])->orderByDesc('id');
             },
         ]);

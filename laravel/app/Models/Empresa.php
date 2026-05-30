@@ -17,6 +17,13 @@ class Empresa extends Model
         'condicion_iva',
         'arca_pv_default',
         'arca_env',
+        'telefono',
+        'email',
+        'whatsapp',
+        'sitio_web',
+        'instagram_url',
+        'facebook_url',
+        'linkedin_url',
     ];
 
     public function depositos(): HasMany

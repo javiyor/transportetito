@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Recibo;
+use App\Models\Comprobante;
+
+class ReciboAplicacion extends Model
+{
+    protected $table = 'recibo_aplicaciones';
+
+    protected $fillable = [
+        'recibo_id',
+        'comprobante_id',
+        'modo',
+        'moneda',
+        'importe',
+    ];
+
+    protected $casts = [
+        'importe' => 'decimal:2',
+    ];
+
+    public function recibo(): BelongsTo
+    {
+        return $this->belongsTo(Recibo::class, 'recibo_id');
+    }
+}

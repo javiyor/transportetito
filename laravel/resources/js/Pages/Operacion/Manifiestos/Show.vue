@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -12,6 +12,11 @@ import Checkbox from '@/Components/Checkbox.vue';
 const props = defineProps({
     manifiesto: Object,
 });
+
+const page = usePage();
+const roles = computed(() => page.props.tt?.roles || []);
+const canFacturar = computed(() => roles.value.includes('admin') || roles.value.includes('facturacion'));
+const flashSuccess = computed(() => page.props.flash?.success);
 
 const pedidoForm = useForm({
     remitente: { cuit: '', razon_social: '' },
@@ -40,6 +45,14 @@ const submitPedido = () => {
 
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
 
+const facturarForm = useForm({ confirm: true });
+
+const facturar = () => {
+    facturarForm.post(route('operacion.manifiestos.facturar', props.manifiesto.id), {
+        preserveScroll: true,
+    });
+};
+
 const formatFecha = (value) => {
     if (!value) return '-';
     return String(value).slice(0, 10);
@@ -65,6 +78,10 @@ const formatFecha = (value) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
+                {{ flashSuccess }}
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -89,6 +106,9 @@ const formatFecha = (value) => {
                     <div>
                         <h3 class="text-base font-semibold text-gray-900">Pedidos</h3>
                         <p class="mt-1 text-sm text-gray-600">{{ totalPedidos }} cargados</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <PrimaryButton v-if="canFacturar" :disabled="facturarForm.processing || !totalPedidos" @click.prevent="facturar">Emitir facturas</PrimaryButton>
                     </div>
                 </div>
 

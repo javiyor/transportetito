@@ -3,10 +3,15 @@ import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 defineProps({
     manifiestos: Object,
 });
+
+const page = usePage();
+const canRepartos = computed(() => (page.props.tt?.roles || []).includes('operaciones'));
 
 const formatFecha = (value) => {
     if (!value) return '-';
@@ -22,6 +27,9 @@ const formatFecha = (value) => {
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Manifiestos</h2>
                 <div class="flex items-center gap-2">
+                    <Link v-if="canRepartos" :href="route('operacion.repartos.facturas')">
+                        <SecondaryButton>Repartos</SecondaryButton>
+                    </Link>
                     <Link :href="route('operacion.import.carga.index')">
                         <SecondaryButton>Importar</SecondaryButton>
                     </Link>
