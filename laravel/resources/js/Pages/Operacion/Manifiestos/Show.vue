@@ -99,6 +99,11 @@ const gruposFacturacion = computed(() => {
 
 const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {} });
 
+const backfillForm = useForm({ confirm: true });
+const completarCuentas = () => {
+    backfillForm.post(route('operacion.manifiestos.backfill-cuentas', props.manifiesto.id), { preserveScroll: true });
+};
+
 const initFacturarMap = () => {
     const map = {};
     for (const g of gruposFacturacion.value) {
@@ -193,6 +198,13 @@ const formatFecha = (value) => {
                             <div class="text-xs text-gray-500">Comprobantes</div>
                             <div class="font-medium text-gray-900">{{ statsFacturacion.emitidos }}</div>
                         </div>
+                    </div>
+
+                    <div v-if="statsFacturacion.sinEntrega" class="mt-4 flex items-center justify-between gap-4 flex-wrap">
+                        <div class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                            Hay pedidos pendientes sin cuenta de entrega. Primero completa cuentas para poder facturar.
+                        </div>
+                        <PrimaryButton :disabled="backfillForm.processing" @click.prevent="completarCuentas">Completar cuentas</PrimaryButton>
                     </div>
 
                     <div class="mt-4 space-y-3">
