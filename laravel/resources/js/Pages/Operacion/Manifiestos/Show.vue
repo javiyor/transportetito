@@ -386,6 +386,38 @@ const facturarSeleccionado = () => {
         .post(route('operacion.manifiestos.facturar', props.manifiesto.id), { preserveScroll: true });
 };
 
+const emitirGuias = () => {
+    facturarPorEntrega
+        .transform((data) => {
+            const out = { ...data };
+            const det = {};
+            const keysToNull = [
+                'tarifa_bulto',
+                'tarifa_palet',
+                'tarifa_valor_declarado_pct',
+                'flete_minimo',
+                'seguro_pct',
+                'seguro_minimo',
+                'seguro_tope',
+                'cr_comision_pct',
+                'cr_comision_minimo',
+                'cr_comision_tope',
+                'iva_pct',
+            ];
+            for (const [entregaId, v] of Object.entries(data.detalles_por_entrega || {})) {
+                const x = { ...(v || {}) };
+                delete x.editar;
+                for (const k of keysToNull) {
+                    if (x[k] === '') x[k] = null;
+                }
+                det[entregaId] = x;
+            }
+            out.detalles_por_entrega = det;
+            return out;
+        })
+        .post(route('operacion.manifiestos.emitir-guias', props.manifiesto.id), { preserveScroll: true });
+};
+
 const formatFecha = (value) => {
     if (!value) return '-';
     return String(value).slice(0, 10);
@@ -451,6 +483,7 @@ const formatMoney = (n) => {
                     </div>
                     <div class="flex items-center gap-2">
                         <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
+                        <SecondaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
 
@@ -627,40 +660,41 @@ const formatMoney = (n) => {
                                         <div class="text-xs text-gray-500">CUIT {{ c.facturar_cuenta?.tercero?.cuit || '-' }} · Nro {{ c.facturar_cuenta?.numero_cliente || '-' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ String(c.fecha_emision || '').slice(0, 10) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                        <div v-if="c.arca_cae" class="text-xs text-gray-700">
-                                            <div>CAE {{ c.arca_cae }}</div>
-                                            <div class="text-gray-500">Vto {{ String(c.arca_cae_vto || '').slice(0, 10) }}</div>
-                                        </div>
-                                        <div v-else class="flex justify-end gap-2">
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
-                                                :disabled="autorizarForm.processing"
-                                                @click.prevent="autorizarArca(c.id, 'FA')"
-                                            >
-                                                Autorizar A
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
-                                                :disabled="autorizarForm.processing"
-                                                @click.prevent="autorizarArca(c.id, 'FB')"
-                                            >
-                                                Autorizar B
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
-                                                :disabled="autorizarForm.processing"
-                                                @click.prevent="autorizarArca(c.id, 'FC')"
-                                            >
-                                                Autorizar C
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td>
+                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                         <div v-if="c.arca_cae" class="text-xs text-gray-700">
+                                             <div>CAE {{ c.arca_cae }}</div>
+                                             <div class="text-gray-500">Vto {{ String(c.arca_cae_vto || '').slice(0, 10) }}</div>
+                                         </div>
+                                         <div v-else-if="c.tipo === 'factura_interna'" class="flex justify-end gap-2">
+                                             <button
+                                                 type="button"
+                                                 class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
+                                                 :disabled="autorizarForm.processing"
+                                                 @click.prevent="autorizarArca(c.id, 'FA')"
+                                             >
+                                                 Autorizar A
+                                             </button>
+                                             <button
+                                                 type="button"
+                                                 class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
+                                                 :disabled="autorizarForm.processing"
+                                                 @click.prevent="autorizarArca(c.id, 'FB')"
+                                             >
+                                                 Autorizar B
+                                             </button>
+                                             <button
+                                                 type="button"
+                                                 class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
+                                                 :disabled="autorizarForm.processing"
+                                                 @click.prevent="autorizarArca(c.id, 'FC')"
+                                             >
+                                                 Autorizar C
+                                             </button>
+                                         </div>
+                                         <div v-else class="text-xs text-gray-500">No fiscal</div>
+                                     </td>
+                                 </tr>
                             </tbody>
                         </table>
                     </div>

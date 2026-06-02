@@ -1,4 +1,6 @@
 .env
+.env.bak*
+**/.env.bak*
 
 # Local docker volumes / artifacts
 **/.DS_Store

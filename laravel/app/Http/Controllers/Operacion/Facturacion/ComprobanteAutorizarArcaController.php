@@ -16,6 +16,14 @@ class ComprobanteAutorizarArcaController extends Controller
         $empresaId = (int) $request->user()->current_empresa_id;
         abort_unless((int) $comprobante->empresa_id === $empresaId, 404);
 
+        if ((string) $comprobante->tipo !== 'factura_interna') {
+            return back()->with('error', 'Este comprobante no es una factura interna para autorizar en ARCA.');
+        }
+
+        if ((bool) $comprobante->requiere_autorizacion_arca !== true) {
+            return back()->with('error', 'Este comprobante no requiere autorizacion ARCA.');
+        }
+
         $data = $request->validate([
             'tipo' => ['required', 'in:FA,FB,FC'],
         ]);
