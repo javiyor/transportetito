@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Operacion\Facturacion;
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\TarifaRelacion;
 use App\Services\Facturacion\FacturaCalculator;
+use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Facturacion\TarifaResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,8 +18,13 @@ use Illuminate\Support\Facades\DB;
 
 class ManifiestoEmitirGuiasController extends Controller
 {
-    public function __invoke(Request $request, ManifiestoIngreso $manifiesto): RedirectResponse
+    public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ComprobanteMailer $mailer): RedirectResponse
     {
+        $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id);
+        if (! $empresa->permite_guias_no_fiscales) {
+            return back()->with('error', 'La empresa activa no tiene habilitada la emision de guias no fiscales.');
+        }
+
         $request->validate([
             'confirm' => ['required', 'boolean'],
             'facturar_por_entrega' => ['nullable', 'array'],
@@ -44,11 +51,12 @@ class ManifiestoEmitirGuiasController extends Controller
         $skipped = 0;
         $missingCuentas = 0;
         $missingSelection = 0;
+        $comprobanteIds = [];
 
         $tarifaResolver = new TarifaResolver();
         $calculator = new FacturaCalculator();
 
-        DB::transaction(function () use ($manifiesto, $map, $detalles, $tarifaResolver, $calculator, &$created, &$skipped, &$missingCuentas, &$missingSelection) {
+        DB::transaction(function () use ($manifiesto, $map, $detalles, $tarifaResolver, $calculator, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
             $pedidos = Pedido::query()
                 ->where('manifiesto_ingreso_id', $manifiesto->id)
                 ->whereDoesntHave('comprobantes')
@@ -214,6 +222,7 @@ class ManifiestoEmitirGuiasController extends Controller
                 ]);
 
                 $comprobante->pedidos()->sync(collect($g['pedidos'])->pluck('id')->all());
+                $comprobanteIds[] = (int) $comprobante->id;
 
                 foreach ($g['pedidos'] as $p) {
                     $invoicedPedidoIds[] = (int) $p->id;
@@ -273,6 +282,14 @@ class ManifiestoEmitirGuiasController extends Controller
 
             $skipped = $pedidos->count() - count(array_unique($invoicedPedidoIds)) - $missingCuentas;
         });
+
+        if ($comprobanteIds !== []) {
+            Comprobante::query()
+                ->with('facturarCuenta')
+                ->whereIn('id', $comprobanteIds)
+                ->get()
+                ->each(fn (Comprobante $comprobante) => $mailer->enviarSiCorresponde($comprobante));
+        }
 
         return redirect()
             ->route('operacion.manifiestos.show', $manifiesto)

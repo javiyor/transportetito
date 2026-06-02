@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Deposito;
 use App\Models\Empresa;
 use App\Models\Pedido;
@@ -25,6 +26,8 @@ class Comprobante extends Model
         'total',
         'numero_interno',
         'fecha_emision',
+        'comprobante_origen_id',
+        'motivo',
 
         'detalle_facturacion',
 
@@ -42,6 +45,7 @@ class Comprobante extends Model
     protected $casts = [
         'total' => 'decimal:2',
         'numero_interno' => 'int',
+        'comprobante_origen_id' => 'int',
         'fecha_emision' => 'date',
         'requiere_autorizacion_arca' => 'bool',
         'arca_punto_venta' => 'int',
@@ -74,5 +78,30 @@ class Comprobante extends Model
     public function pedidos(): BelongsToMany
     {
         return $this->belongsToMany(Pedido::class, 'comprobante_pedido');
+    }
+
+    public function comprobanteOrigen(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'comprobante_origen_id');
+    }
+
+    public function notasCredito(): HasMany
+    {
+        return $this->hasMany(self::class, 'comprobante_origen_id');
+    }
+
+    public function hojaRutaItems(): HasMany
+    {
+        return $this->hasMany(HojaRutaItem::class);
+    }
+
+    public function preReciboAplicaciones(): HasMany
+    {
+        return $this->hasMany(PreReciboAplicacion::class, 'comprobante_id');
+    }
+
+    public function reciboAplicaciones(): HasMany
+    {
+        return $this->hasMany(ReciboAplicacion::class, 'comprobante_id');
     }
 }

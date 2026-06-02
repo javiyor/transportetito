@@ -24,6 +24,11 @@ class Empresa extends Model
         'instagram_url',
         'facebook_url',
         'linkedin_url',
+        'permite_guias_no_fiscales',
+    ];
+
+    protected $casts = [
+        'permite_guias_no_fiscales' => 'bool',
     ];
 
     public function depositos(): HasMany

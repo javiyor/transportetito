@@ -23,11 +23,13 @@ class TerceroCuenta extends Model
         'cp',
         'telefono',
         'email',
+        'enviar_comprobantes_por_email',
         'activo',
     ];
 
     protected $casts = [
         'numero_cliente' => 'int',
+        'enviar_comprobantes_por_email' => 'bool',
         'activo' => 'bool',
     ];
 

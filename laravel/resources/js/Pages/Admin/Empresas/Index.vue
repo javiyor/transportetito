@@ -7,6 +7,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import Checkbox from '@/Components/Checkbox.vue';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -19,6 +20,7 @@ const createForm = useForm({
     condicion_iva: '',
     arca_pv_default: 2,
     arca_env: 'homologacion',
+    permite_guias_no_fiscales: false,
 
     telefono: '',
     email: '',
@@ -44,6 +46,7 @@ const editForm = useForm({
     condicion_iva: '',
     arca_pv_default: 2,
     arca_env: 'homologacion',
+    permite_guias_no_fiscales: false,
 
     telefono: '',
     email: '',
@@ -61,6 +64,7 @@ const openEdit = (e) => {
     editForm.condicion_iva = e.condicion_iva || '';
     editForm.arca_pv_default = e.arca_pv_default;
     editForm.arca_env = e.arca_env;
+    editForm.permite_guias_no_fiscales = !!e.permite_guias_no_fiscales;
 
     editForm.telefono = e.telefono || '';
     editForm.email = e.email || '';
@@ -120,6 +124,12 @@ const submitEdit = () => {
                             <option value="produccion">Produccion</option>
                         </select>
                         <InputError class="mt-2" :message="createForm.errors.arca_env" />
+                    </div>
+                    <div class="flex items-end">
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <Checkbox v-model:checked="createForm.permite_guias_no_fiscales" />
+                            Permite emitir guias no fiscales
+                        </label>
                     </div>
 
                     <div>
@@ -181,6 +191,7 @@ const submitEdit = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ARCA</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guias</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -190,12 +201,13 @@ const submitEdit = () => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.cuit }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.arca_pv_default }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.arca_env }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ e.permite_guias_no_fiscales ? 'Si' : 'No' }}</td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <SecondaryButton class="text-xs" @click.prevent="openEdit(e)">Editar</SecondaryButton>
                                 </td>
                             </tr>
                             <tr v-if="!empresas.length">
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
+                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -234,6 +246,12 @@ const submitEdit = () => {
                             <option value="produccion">Produccion</option>
                         </select>
                         <InputError class="mt-2" :message="editForm.errors.arca_env" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="flex items-center gap-2 text-sm text-gray-700 pt-6">
+                            <Checkbox v-model:checked="editForm.permite_guias_no_fiscales" />
+                            Permite emitir guias no fiscales
+                        </label>
                     </div>
 
                     <div>

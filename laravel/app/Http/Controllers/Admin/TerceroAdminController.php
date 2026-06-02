@@ -18,7 +18,7 @@ class TerceroAdminController extends Controller
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
         $query = TerceroCuenta::query()
-            ->with(['tercero:id,cuit,razon_social', 'empresa:id,razon_social'])
+            ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social'])
             ->leftJoin('tercero_empresa as te', function ($join) {
                 $join->on('te.tercero_cuenta_id', '=', 'tercero_cuentas.id')
                     ->on('te.empresa_id', '=', 'tercero_cuentas.empresa_id');
@@ -35,6 +35,8 @@ class TerceroAdminController extends Controller
             'tercero_cuentas.tercero_id',
             'tercero_cuentas.numero_cliente',
             'tercero_cuentas.nombre_cuenta',
+            'tercero_cuentas.email',
+            'tercero_cuentas.enviar_comprobantes_por_email',
             'tercero_cuentas.activo',
             'te.es_cliente',
             'te.es_proveedor',
@@ -54,7 +56,10 @@ class TerceroAdminController extends Controller
             'numero_cliente' => ['required', 'integer', 'min:1'],
             'cuit' => ['required', 'string', 'max:32'],
             'razon_social' => ['required', 'string', 'max:255'],
+            'condicion_iva' => ['nullable', 'string', 'max:64'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'enviar_comprobantes_por_email' => ['sometimes', 'boolean'],
             'es_cliente' => ['required', 'boolean'],
             'es_proveedor' => ['required', 'boolean'],
         ]);
@@ -63,20 +68,80 @@ class TerceroAdminController extends Controller
 
         $tercero = Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
-            ['razon_social' => $data['razon_social']]
+            [
+                'razon_social' => $data['razon_social'],
+                'condicion_iva' => $data['condicion_iva'] ?: null,
+            ]
         );
+
+        $tercero->update([
+            'razon_social' => $data['razon_social'],
+            'condicion_iva' => $data['condicion_iva'] ?: null,
+        ]);
 
         $cuenta = TerceroCuenta::query()->firstOrCreate(
             ['empresa_id' => $data['empresa_id'], 'numero_cliente' => (int) $data['numero_cliente']],
             [
                 'tercero_id' => $tercero->id,
                 'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+                'email' => $data['email'] ?: null,
+                'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
                 'activo' => true,
             ]
         );
 
+        $cuenta->update([
+            'tercero_id' => $tercero->id,
+            'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+            'email' => $data['email'] ?: null,
+            'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
+        ]);
+
         TerceroEmpresa::query()->updateOrCreate(
             ['empresa_id' => $data['empresa_id'], 'tercero_cuenta_id' => $cuenta->id],
+            ['es_cliente' => (bool) $data['es_cliente'], 'es_proveedor' => (bool) $data['es_proveedor']]
+        );
+
+        return back();
+    }
+
+    public function update(Request $request, TerceroCuenta $cuenta): RedirectResponse
+    {
+        $data = $request->validate([
+            'cuit' => ['required', 'string', 'max:32'],
+            'razon_social' => ['required', 'string', 'max:255'],
+            'condicion_iva' => ['nullable', 'string', 'max:64'],
+            'nombre_cuenta' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'enviar_comprobantes_por_email' => ['sometimes', 'boolean'],
+            'es_cliente' => ['required', 'boolean'],
+            'es_proveedor' => ['required', 'boolean'],
+        ]);
+
+        $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
+
+        $tercero = Tercero::query()->firstOrCreate(
+            ['cuit' => $cleanCuit],
+            [
+                'razon_social' => $data['razon_social'],
+                'condicion_iva' => $data['condicion_iva'] ?: null,
+            ]
+        );
+
+        $tercero->update([
+            'razon_social' => $data['razon_social'],
+            'condicion_iva' => $data['condicion_iva'] ?: null,
+        ]);
+
+        $cuenta->update([
+            'tercero_id' => $tercero->id,
+            'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+            'email' => $data['email'] ?: null,
+            'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
+        ]);
+
+        TerceroEmpresa::query()->updateOrCreate(
+            ['empresa_id' => $cuenta->empresa_id, 'tercero_cuenta_id' => $cuenta->id],
             ['es_cliente' => (bool) $data['es_cliente'], 'es_proveedor' => (bool) $data['es_proveedor']]
         );
 

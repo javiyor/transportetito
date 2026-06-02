@@ -46,7 +46,7 @@ class WsfeClient
             throw new RuntimeException('Comprobante sin empresa.');
         }
 
-        $tipoCbte = $this->mapTipoCbte($tipoArca);
+        $tipoCbte = $this->mapTipoCbte($tipoArca, $comprobante);
         $puntoVenta = (int) $depositoCentral->punto_venta_numero;
         if ($puntoVenta <= 0) {
             throw new RuntimeException('Deposito central sin punto de venta.');
@@ -71,9 +71,55 @@ class WsfeClient
             throw new RuntimeException('Cuenta a facturar sin CUIT.');
         }
 
-        $importeTotal = (float) $comprobante->total;
+        $importeTotal = abs((float) $comprobante->total);
         $importeNeto = round($importeTotal / 1.21, 2);
         $importeIva = round($importeTotal - $importeNeto, 2);
+
+        $detalleRequest = [
+            'Concepto' => 2, // Servicios
+            'DocTipo' => 80, // CUIT
+            'DocNro' => (int) $cuit,
+            'CbteDesde' => $nro,
+            'CbteHasta' => $nro,
+            'CbteFch' => $fechaYmd,
+            'ImpTotal' => $importeTotal,
+            'ImpTotConc' => 0,
+            'ImpNeto' => $importeNeto,
+            'ImpOpEx' => 0,
+            'ImpIVA' => $importeIva,
+            'ImpTrib' => 0,
+            'MonId' => 'PES',
+            'MonCotiz' => 1,
+            'FchServDesde' => $fechaYmd,
+            'FchServHasta' => $fechaYmd,
+            'FchVtoPago' => $fechaYmd,
+            'Iva' => [
+                'AlicIva' => [
+                    [
+                        'Id' => 5,
+                        'BaseImp' => $importeNeto,
+                        'Importe' => $importeIva,
+                    ],
+                ],
+            ],
+        ];
+
+        if ((string) $comprobante->tipo === 'nota_credito_interna') {
+            $origen = $comprobante->comprobanteOrigen()->first();
+            if (! $origen || ! $origen->arca_punto_venta || ! $origen->arca_numero) {
+                throw new RuntimeException('La nota de credito no tiene comprobante origen fiscal asociado.');
+            }
+
+            $detalleRequest['CbtesAsoc'] = [
+                'CbteAsoc' => [
+                    [
+                        'Tipo' => $this->mapTipoCbte((string) $origen->arca_tipo_cbte, $origen),
+                        'PtoVta' => (int) $origen->arca_punto_venta,
+                        'Nro' => (int) $origen->arca_numero,
+                    ],
+                ],
+            ];
+        }
 
         $req = [
             'FeCAEReq' => [
@@ -83,35 +129,7 @@ class WsfeClient
                     'CbteTipo' => $tipoCbte,
                 ],
                 'FeDetReq' => [
-                    'FECAEDetRequest' => [
-                        'Concepto' => 2, // Servicios
-                        'DocTipo' => 80, // CUIT
-                        'DocNro' => (int) $cuit,
-                        'CbteDesde' => $nro,
-                        'CbteHasta' => $nro,
-                        'CbteFch' => $fechaYmd,
-                        'ImpTotal' => $importeTotal,
-                        'ImpTotConc' => 0,
-                        'ImpNeto' => $importeNeto,
-                        'ImpOpEx' => 0,
-                        'ImpIVA' => $importeIva,
-                        'ImpTrib' => 0,
-                        'MonId' => 'PES',
-                        'MonCotiz' => 1,
-                        // Servicios
-                        'FchServDesde' => $fechaYmd,
-                        'FchServHasta' => $fechaYmd,
-                        'FchVtoPago' => $fechaYmd,
-                        'Iva' => [
-                            'AlicIva' => [
-                                [
-                                    'Id' => 5, // 21%
-                                    'BaseImp' => $importeNeto,
-                                    'Importe' => $importeIva,
-                                ],
-                            ],
-                        ],
-                    ],
+                    'FECAEDetRequest' => $detalleRequest,
                 ],
             ],
         ];
@@ -200,12 +218,27 @@ class WsfeClient
         return new SoapClient($wsdl, ['exceptions' => true, 'trace' => false]);
     }
 
-    private function mapTipoCbte(string $tipo): int
+    private function mapTipoCbte(string $tipo, ?Comprobante $comprobante = null): int
     {
+        if ($comprobante && (string) $comprobante->tipo === 'nota_credito_interna') {
+            return match ($tipo) {
+                'FA' => 3,
+                'FB' => 8,
+                'FC' => 13,
+                'FCA' => 203,
+                'FCB' => 208,
+                'FCC' => 213,
+                default => throw new RuntimeException('Tipo ARCA origen no soportado para nota de credito: '.$tipo),
+            };
+        }
+
         return match ($tipo) {
             'FA' => 1,
             'FB' => 6,
             'FC' => 11,
+            'FCA' => 201,
+            'FCB' => 206,
+            'FCC' => 211,
             default => throw new RuntimeException('Tipo ARCA no soportado: '.$tipo),
         };
     }

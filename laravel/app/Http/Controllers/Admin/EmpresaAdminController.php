@@ -25,6 +25,7 @@ class EmpresaAdminController extends Controller
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
+            'permite_guias_no_fiscales' => ['sometimes', 'boolean'],
 
             'telefono' => ['nullable', 'string', 'max:64'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -48,6 +49,7 @@ class EmpresaAdminController extends Controller
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
+            'permite_guias_no_fiscales' => ['sometimes', 'boolean'],
 
             'telefono' => ['nullable', 'string', 'max:64'],
             'email' => ['nullable', 'email', 'max:255'],

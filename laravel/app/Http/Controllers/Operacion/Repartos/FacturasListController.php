@@ -14,6 +14,7 @@ class FacturasListController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $depositoId = (int) ($request->query('deposito_id') ?: 0);
+        $tipo = (string) ($request->query('tipo') ?: 'todos');
         $fechaRaw = $request->query('fecha');
         $fecha = is_string($fechaRaw) ? trim($fechaRaw) : null;
         if ($fecha === '') {
@@ -42,15 +43,20 @@ class FacturasListController extends Controller
             $query->where('deposito_id', $depositoId);
         }
 
-        $facturas = $query->get();
+        if (in_array($tipo, ['factura_interna', 'guia_envio'], true)) {
+            $query->where('tipo', $tipo);
+        }
+
+        $comprobantes = $query->get();
 
         return Inertia::render('Operacion/Repartos/Facturas', [
             'depositos' => $depositos,
             'filters' => [
                 'deposito_id' => $depositoId ?: null,
                 'fecha' => $fecha,
+                'tipo' => $tipo,
             ],
-            'facturas' => $facturas,
+            'facturas' => $comprobantes,
         ]);
     }
 }

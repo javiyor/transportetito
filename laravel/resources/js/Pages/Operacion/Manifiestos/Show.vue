@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputError from '@/Components/InputError.vue';
@@ -26,6 +26,7 @@ const roles = computed(() => page.props.tt?.roles || []);
 const canFacturar = computed(() => roles.value.includes('admin') || roles.value.includes('facturacion'));
 const flashSuccess = computed(() => page.props.flash?.success);
 const flashError = computed(() => page.props.flash?.error);
+const permiteGuiasNoFiscales = computed(() => !!props.manifiesto?.empresa?.permite_guias_no_fiscales);
 
 const pedidoForm = useForm({
     remitente: { cuit: '', razon_social: '' },
@@ -314,6 +315,14 @@ const completarCuentas = () => {
 };
 
 const autorizarForm = useForm({ tipo: 'FC' });
+const tipoArcaPorComprobante = reactive({});
+
+for (const c of props.comprobantes || []) {
+    if (c.tipo === 'factura_interna' && !c.arca_cae) {
+        tipoArcaPorComprobante[c.id] = c.arca_tipo_opciones?.[0]?.code || 'FC';
+    }
+}
+
 const autorizarArca = (comprobanteId, tipo) => {
     autorizarForm.tipo = tipo;
     autorizarForm.post(route('operacion.comprobantes.autorizar-arca', comprobanteId), { preserveScroll: true });
@@ -427,6 +436,13 @@ const formatMoney = (n) => {
     const x = Number(n || 0);
     return x.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
+
+const comprobanteTipoLabel = (tipo) => {
+    if (tipo === 'guia_envio') return 'Guia no fiscal';
+    if (tipo === 'factura_interna') return 'Factura';
+    if (tipo === 'nota_credito_interna') return 'Nota de credito';
+    return tipo || '-';
+};
 </script>
 
 <template>
@@ -483,13 +499,14 @@ const formatMoney = (n) => {
                     </div>
                     <div class="flex items-center gap-2">
                         <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
-                        <SecondaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
+                        <SecondaryButton v-if="canFacturar && permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
 
                 <div v-if="canFacturar" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div class="text-sm font-medium text-gray-900">Facturacion (v2)</div>
                     <p class="mt-1 text-xs text-gray-600">Se crea 1 comprobante por cuenta de entrega. Elegi la cuenta a facturar por cada grupo.</p>
+                    <p v-if="!permiteGuiasNoFiscales" class="mt-1 text-xs text-gray-500">Esta empresa no tiene habilitada la emision de guias no fiscales.</p>
 
                     <div v-if="faltanSelecciones && gruposFacturacion.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         Falta seleccionar “Facturar a” en uno o mas grupos.
@@ -641,6 +658,7 @@ const formatMoney = (n) => {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
@@ -650,7 +668,10 @@ const formatMoney = (n) => {
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="c in comprobantes" :key="c.id">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">#{{ c.id }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                                        <Link :href="route('operacion.comprobantes.show', c.id)" class="text-indigo-600 hover:text-indigo-800">#{{ c.id }}</Link>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ comprobanteTipoLabel(c.tipo) }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="font-medium text-gray-900">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                         <div class="text-xs text-gray-500">CUIT {{ c.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ c.entrega_cuenta?.numero_cliente || '-' }}</div>
@@ -666,35 +687,35 @@ const formatMoney = (n) => {
                                              <div>CAE {{ c.arca_cae }}</div>
                                              <div class="text-gray-500">Vto {{ String(c.arca_cae_vto || '').slice(0, 10) }}</div>
                                          </div>
-                                         <div v-else-if="c.tipo === 'factura_interna'" class="flex justify-end gap-2">
+                                         <div v-else-if="c.tipo === 'factura_interna'" class="flex justify-end gap-2 items-center">
+                                             <select
+                                                 v-model="tipoArcaPorComprobante[c.id]"
+                                                 class="block border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs"
+                                             >
+                                                 <option v-for="op in c.arca_tipo_opciones || []" :key="op.code" :value="op.code">{{ op.label }}</option>
+                                             </select>
                                              <button
                                                  type="button"
                                                  class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
-                                                 :disabled="autorizarForm.processing"
-                                                 @click.prevent="autorizarArca(c.id, 'FA')"
+                                                 :disabled="autorizarForm.processing || !(c.arca_tipo_opciones || []).length"
+                                                 @click.prevent="autorizarArca(c.id, tipoArcaPorComprobante[c.id])"
                                              >
-                                                 Autorizar A
+                                                 Autorizar ARCA
                                              </button>
+                                         </div>
+                                         <div v-else-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen?.arca_tipo_cbte" class="flex justify-end gap-2">
                                              <button
                                                  type="button"
                                                  class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
                                                  :disabled="autorizarForm.processing"
-                                                 @click.prevent="autorizarArca(c.id, 'FB')"
+                                                 @click.prevent="autorizarArca(c.id, c.comprobante_origen.arca_tipo_cbte)"
                                              >
-                                                 Autorizar B
-                                             </button>
-                                             <button
-                                                 type="button"
-                                                 class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
-                                                 :disabled="autorizarForm.processing"
-                                                 @click.prevent="autorizarArca(c.id, 'FC')"
-                                             >
-                                                 Autorizar C
+                                                 Autorizar NC
                                              </button>
                                          </div>
                                          <div v-else class="text-xs text-gray-500">No fiscal</div>
-                                     </td>
-                                 </tr>
+                                      </td>
+                                  </tr>
                             </tbody>
                         </table>
                     </div>

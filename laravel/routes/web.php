@@ -21,6 +21,11 @@ use App\Http\Controllers\Admin\TarifaRelacionAdminController;
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
 use App\Http\Controllers\Operacion\PedidoStoreController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteIndexController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteShowController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteAnularController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobantePrintController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaCreditoStoreController;
 use App\Http\Controllers\Operacion\Manifiestos\ManifiestoBackfillCuentasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Operacion\Repartos\FacturasListController;
@@ -64,6 +69,10 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/comprobantes/{comprobante}/publico', ComprobantePrintController::class)
+    ->middleware('signed')
+    ->name('comprobantes.publico');
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
@@ -92,6 +101,7 @@ Route::middleware([
 
         Route::get('/terceros', [TerceroAdminController::class, 'index'])->name('terceros.index');
         Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
+        Route::put('/terceros/{cuenta}', [TerceroAdminController::class, 'update'])->name('terceros.update');
 
         Route::get('/tarifas', [TarifaRelacionAdminController::class, 'index'])->name('tarifas.index');
         Route::post('/tarifas', [TarifaRelacionAdminController::class, 'store'])->name('tarifas.store');
@@ -103,6 +113,12 @@ Route::middleware([
         Route::get('/manifiestos/create', [ManifiestoIngresoController::class, 'create'])->name('manifiestos.create');
         Route::post('/manifiestos', [ManifiestoIngresoController::class, 'store'])->name('manifiestos.store');
         Route::get('/manifiestos/{manifiesto}', [ManifiestoIngresoController::class, 'show'])->name('manifiestos.show');
+
+        Route::middleware(['role:facturacion|admin'])->get('/comprobantes', ComprobanteIndexController::class)->name('comprobantes.index');
+        Route::middleware(['role:facturacion|admin'])->get('/comprobantes/{comprobante}', ComprobanteShowController::class)->name('comprobantes.show');
+        Route::middleware(['role:facturacion|admin'])->get('/comprobantes/{comprobante}/print', ComprobantePrintController::class)->name('comprobantes.print');
+        Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/anular', ComprobanteAnularController::class)->name('comprobantes.anular');
+        Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/nota-credito', ComprobanteNotaCreditoStoreController::class)->name('comprobantes.nota-credito');
 
         Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
 

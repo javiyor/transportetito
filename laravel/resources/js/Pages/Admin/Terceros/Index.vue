@@ -1,11 +1,14 @@
 <script setup>
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
+import { ref } from 'vue';
 
 const props = defineProps({
     empresas: Array,
@@ -18,7 +21,10 @@ const form = useForm({
     numero_cliente: '',
     cuit: '',
     razon_social: '',
+    condicion_iva: '',
     nombre_cuenta: '',
+    email: '',
+    enviar_comprobantes_por_email: false,
     es_cliente: true,
     es_proveedor: false,
 });
@@ -26,12 +32,43 @@ const form = useForm({
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'nombre_cuenta'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'nombre_cuenta', 'email'),
     });
 };
 
 const changeEmpresa = (id) => {
     router.get(route('admin.terceros.index'), { empresa_id: id || null }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const editing = ref(false);
+const editId = ref(null);
+const editForm = useForm({
+    cuit: '',
+    razon_social: '',
+    condicion_iva: '',
+    nombre_cuenta: '',
+    email: '',
+    enviar_comprobantes_por_email: false,
+    es_cliente: false,
+    es_proveedor: false,
+});
+
+const openEdit = (c) => {
+    editId.value = c.id;
+    editForm.cuit = c.tercero?.cuit || '';
+    editForm.razon_social = c.tercero?.razon_social || '';
+    editForm.condicion_iva = c.tercero?.condicion_iva || '';
+    editForm.nombre_cuenta = c.nombre_cuenta || '';
+    editForm.email = c.email || '';
+    editForm.enviar_comprobantes_por_email = !!c.enviar_comprobantes_por_email;
+    editForm.es_cliente = !!c.es_cliente;
+    editForm.es_proveedor = !!c.es_proveedor;
+    editForm.clearErrors();
+    editing.value = true;
+};
+
+const submitEdit = () => {
+    editForm.put(route('admin.terceros.update', editId.value), { preserveScroll: true, onSuccess: () => (editing.value = false) });
 };
 </script>
 
@@ -86,10 +123,22 @@ const changeEmpresa = (id) => {
                         <InputError class="mt-2" :message="form.errors.razon_social" />
                     </div>
 
+                    <div>
+                        <InputLabel value="Condicion IVA" />
+                        <TextInput v-model="form.condicion_iva" type="text" class="mt-1 block w-full" placeholder="RI / Monotributo / Exento / CF" />
+                        <InputError class="mt-2" :message="form.errors.condicion_iva" />
+                    </div>
+
                     <div class="sm:col-span-3">
                         <InputLabel value="Nombre cuenta (opcional)" />
                         <TextInput v-model="form.nombre_cuenta" type="text" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="form.errors.nombre_cuenta" />
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <InputLabel value="Email comprobantes" />
+                        <TextInput v-model="form.email" type="email" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
                     <div class="sm:col-span-3 flex items-center gap-6 pt-6">
@@ -100,6 +149,10 @@ const changeEmpresa = (id) => {
                         <label class="flex items-center gap-2 text-sm text-gray-700">
                             <Checkbox v-model:checked="form.es_proveedor" />
                             Proveedor
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <Checkbox v-model:checked="form.enviar_comprobantes_por_email" />
+                            Enviar comprobantes por email
                         </label>
                     </div>
 
@@ -123,8 +176,11 @@ const changeEmpresa = (id) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro cliente</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flags</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -133,20 +189,77 @@ const changeEmpresa = (id) => {
                                 <td class="px-6 py-4 text-sm text-gray-900 font-mono">{{ c.numero_cliente }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ c.tercero?.cuit || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.email || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Cliente</span>
                                     <span v-if="c.es_proveedor" class="ms-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Proveedor</span>
-                                    <span v-if="!c.es_cliente && !c.es_proveedor" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Sin flags</span>
+                                    <span v-if="c.enviar_comprobantes_por_email" class="ms-2 inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Mail comprobantes</span>
+                                    <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Sin categoria</span>
+                                </td>
+                                <td class="px-6 py-4 text-right text-sm">
+                                    <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <DialogModal :show="editing" @close="editing = false">
+                <template #title>Editar cuenta</template>
+                <template #content>
+                    <form class="grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="submitEdit">
+                        <div>
+                            <InputLabel value="CUIT" />
+                            <TextInput v-model="editForm.cuit" type="text" class="mt-1 block w-full" required />
+                            <InputError class="mt-2" :message="editForm.errors.cuit" />
+                        </div>
+                        <div>
+                            <InputLabel value="Razon social" />
+                            <TextInput v-model="editForm.razon_social" type="text" class="mt-1 block w-full" required />
+                            <InputError class="mt-2" :message="editForm.errors.razon_social" />
+                        </div>
+                        <div>
+                            <InputLabel value="Condicion IVA" />
+                            <TextInput v-model="editForm.condicion_iva" type="text" class="mt-1 block w-full" placeholder="RI / Monotributo / Exento / CF" />
+                            <InputError class="mt-2" :message="editForm.errors.condicion_iva" />
+                        </div>
+                        <div>
+                            <InputLabel value="Nombre cuenta" />
+                            <TextInput v-model="editForm.nombre_cuenta" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-2" :message="editForm.errors.nombre_cuenta" />
+                        </div>
+                        <div>
+                            <InputLabel value="Email comprobantes" />
+                            <TextInput v-model="editForm.email" type="email" class="mt-1 block w-full" />
+                            <InputError class="mt-2" :message="editForm.errors.email" />
+                        </div>
+                        <div class="sm:col-span-2 flex flex-wrap items-center gap-6 pt-2">
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <Checkbox v-model:checked="editForm.es_cliente" />
+                                Cliente
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <Checkbox v-model:checked="editForm.es_proveedor" />
+                                Proveedor
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <Checkbox v-model:checked="editForm.enviar_comprobantes_por_email" />
+                                Enviar comprobantes por email
+                            </label>
+                        </div>
+                    </form>
+                </template>
+                <template #footer>
+                    <SecondaryButton @click="editing = false">Cancelar</SecondaryButton>
+                    <PrimaryButton class="ms-3" :disabled="editForm.processing" @click="submitEdit">Guardar</PrimaryButton>
+                </template>
+            </DialogModal>
         </div>
     </AppLayout>
 </template>

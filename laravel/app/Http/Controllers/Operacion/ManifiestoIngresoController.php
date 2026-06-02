@@ -9,6 +9,7 @@ use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\TarifaRelacion;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -46,8 +47,10 @@ class ManifiestoIngresoController extends Controller
         return redirect()->route('operacion.manifiestos.show', $manifiesto);
     }
 
-    public function show(ManifiestoIngreso $manifiesto)
+    public function show(ManifiestoIngreso $manifiesto, ArcaTipoComprobanteResolver $arcaTipos)
     {
+        $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id, ['id', 'razon_social', 'permite_guias_no_fiscales', 'condicion_iva']);
+
         $comprobantes = Comprobante::query()
             ->where('empresa_id', $manifiesto->empresa_id)
             ->whereHas('pedidos', function ($q) use ($manifiesto) {
@@ -56,14 +59,24 @@ class ManifiestoIngresoController extends Controller
             ->with([
                 'entregaCuenta.tercero:id,razon_social,cuit',
                 'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta',
-                'facturarCuenta.tercero:id,razon_social,cuit',
+                'facturarCuenta.tercero:id,razon_social,cuit,condicion_iva',
                 'facturarCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta',
+                'comprobanteOrigen:id,arca_tipo_cbte',
             ])
             ->orderByDesc('id')
             ->get();
 
+        $comprobantes = $comprobantes->map(function (Comprobante $comprobante) use ($empresa, $arcaTipos) {
+            $item = $comprobante->toArray();
+            $item['arca_tipo_opciones'] = (string) $comprobante->tipo === 'factura_interna'
+                ? $arcaTipos->opcionesFactura($empresa->condicion_iva, $comprobante->facturarCuenta?->tercero?->condicion_iva)
+                : [];
+
+            return $item;
+        });
+
         $manifiesto->load([
-            'empresa:id,razon_social',
+            'empresa:id,razon_social,permite_guias_no_fiscales,condicion_iva',
             'deposito:id,nombre',
             'pedidos' => function ($q) {
                 $q->with([
