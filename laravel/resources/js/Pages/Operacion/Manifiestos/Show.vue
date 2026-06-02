@@ -19,6 +19,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    cotizacionesReferencia: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 const page = usePage();
@@ -99,10 +103,37 @@ const resolveTarifa = (remId, destId) => {
     };
 };
 
+const getTasa = (moneda) => {
+    const m = String(moneda || 'ARS').toUpperCase();
+    if (m === 'ARS') return 1;
+    return Number(props.cotizacionesReferencia?.[m]?.tasa_ars || 0);
+};
+
+const convertAmount = (amount, from, to) => {
+    const origen = String(from || 'ARS').toUpperCase();
+    const destino = String(to || 'ARS').toUpperCase();
+    const n = Number(amount || 0);
+    if (origen === destino) return n;
+    const tasaOrigen = getTasa(origen);
+    const tasaDestino = getTasa(destino);
+    if (!tasaOrigen || !tasaDestino) return n;
+    const ars = origen === 'ARS' ? n : n * tasaOrigen;
+    return destino === 'ARS' ? ars : ars / tasaDestino;
+};
+
 const applyOverride = (tarifa, override) => {
     const out = { ...tarifa };
     if (!override) return out;
     if (override.moneda) {
+        const origen = out.moneda || 'ARS';
+        const destino = override.moneda;
+        out.tarifa_bulto = convertAmount(out.tarifa_bulto, origen, destino);
+        out.tarifa_palet = convertAmount(out.tarifa_palet, origen, destino);
+        out.flete_minimo = convertAmount(out.flete_minimo, origen, destino);
+        out.seguro_minimo = out.seguro_minimo === null ? null : convertAmount(out.seguro_minimo, origen, destino);
+        out.seguro_tope = out.seguro_tope === null ? null : convertAmount(out.seguro_tope, origen, destino);
+        out.cr_comision_minimo = out.cr_comision_minimo === null ? null : convertAmount(out.cr_comision_minimo, origen, destino);
+        out.cr_comision_tope = out.cr_comision_tope === null ? null : convertAmount(out.cr_comision_tope, origen, destino);
         out.moneda = override.moneda;
     }
     for (const k of [
@@ -129,8 +160,10 @@ const calcFactura = (pedidos, tarifa, override) => {
     const t = applyOverride(tarifa, override);
     const bultos = pedidos.reduce((acc, p) => acc + Number(p.bultos || 0), 0);
     const palets = pedidos.reduce((acc, p) => acc + Number(p.palets || 0), 0);
-    const valorDeclarado = pedidos.reduce((acc, p) => acc + Number(p.valor_declarado || 0), 0);
-    const crImporte = pedidos.reduce((acc, p) => acc + Number(p.cr_importe || 0), 0);
+    const valorDeclaradoOrigen = pedidos.reduce((acc, p) => acc + Number(p.valor_declarado || 0), 0);
+    const crImporteOrigen = pedidos.reduce((acc, p) => acc + Number(p.cr_importe || 0), 0);
+    const valorDeclarado = convertAmount(valorDeclaradoOrigen, 'ARS', t.moneda || 'ARS');
+    const crImporte = convertAmount(crImporteOrigen, 'ARS', t.moneda || 'ARS');
 
     const fletePorUnidad = bultos * t.tarifa_bulto + palets * t.tarifa_palet;
     const fletePorValor = valorDeclarado * t.tarifa_valor_declarado_pct;

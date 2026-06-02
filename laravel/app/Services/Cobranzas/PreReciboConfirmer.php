@@ -27,6 +27,7 @@ class PreReciboConfirmer
                 'sentido' => $preRecibo->sentido,
                 'estado' => 'confirmado',
                 'moneda' => $preRecibo->moneda,
+                'cotizacion_ars' => $preRecibo->cotizacion_ars,
                 'total' => $preRecibo->total,
                 'fecha' => $preRecibo->fecha,
                 'confirmado_por_user_id' => $userId,
@@ -37,6 +38,7 @@ class PreReciboConfirmer
                     'recibo_id' => $recibo->id,
                     'medio' => $item->medio,
                     'moneda' => $item->moneda,
+                    'cotizacion_ars' => $item->cotizacion_ars,
                     'importe' => $item->importe,
                     'detalle' => $item->detalle,
                 ]);
@@ -48,6 +50,7 @@ class PreReciboConfirmer
                     'comprobante_id' => $ap->comprobante_id,
                     'modo' => $ap->modo,
                     'moneda' => $ap->moneda,
+                    'cotizacion_ars' => $ap->cotizacion_ars,
                     'importe' => $ap->importe,
                 ]);
 
@@ -57,6 +60,8 @@ class PreReciboConfirmer
                     'tercero_cuenta_id' => $preRecibo->tercero_cuenta_id,
                     'fecha' => $preRecibo->fecha,
                     'tipo' => $preRecibo->sentido === 'pago' ? 'pago' : 'cobro',
+                    'moneda' => $ap->moneda,
+                    'cotizacion_ars' => $ap->cotizacion_ars,
                     'importe_signed' => $preRecibo->sentido === 'pago' ? (float) $ap->importe : (float) (-1 * $ap->importe),
                     'referencia_tipo' => 'recibo',
                     'referencia_id' => $recibo->id,

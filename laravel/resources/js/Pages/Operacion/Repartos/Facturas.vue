@@ -106,6 +106,7 @@ const createHoja = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -121,9 +122,10 @@ const createHoja = () => {
                                     <div class="text-xs text-gray-500">{{ f.entrega_cuenta?.direccion || '' }} {{ f.entrega_cuenta?.localidad ? '· ' + f.entrega_cuenta.localidad : '' }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ f.moneda }} {{ f.total }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ f.moneda === 'ARS' ? '-' : (f.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || f.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</td>
                             </tr>
                             <tr v-if="!facturas.length">
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
+                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>

@@ -22,6 +22,7 @@ class Recibo extends Model
         'numero_interno',
         'estado',
         'moneda',
+        'cotizacion_ars',
         'total',
         'fecha',
         'confirmado_por_user_id',
@@ -29,6 +30,7 @@ class Recibo extends Model
 
     protected $casts = [
         'numero_interno' => 'int',
+        'cotizacion_ars' => 'decimal:6',
         'total' => 'decimal:2',
         'fecha' => 'date',
     ];

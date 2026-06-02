@@ -42,6 +42,8 @@ use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaControlle
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
 use App\Http\Controllers\Cobranzas\PreReciboConfirmController;
+use App\Http\Controllers\Cobranzas\ReciboIndexController;
+use App\Http\Controllers\Cobranzas\ReciboShowController;
 
 Route::get('/', function () {
     $empresa = Empresa::query()
@@ -150,5 +152,7 @@ Route::middleware([
         Route::get('/pre-recibos', PreReciboIndexController::class)->name('pre-recibos.index');
         Route::get('/pre-recibos/{preRecibo}', PreReciboShowController::class)->name('pre-recibos.show');
         Route::post('/pre-recibos/{preRecibo}/confirmar', PreReciboConfirmController::class)->name('pre-recibos.confirm');
+        Route::get('/recibos', ReciboIndexController::class)->name('recibos.index');
+        Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
     });
 });

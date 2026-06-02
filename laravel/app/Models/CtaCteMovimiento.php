@@ -16,6 +16,8 @@ class CtaCteMovimiento extends Model
         'tercero_cuenta_id',
         'fecha',
         'tipo',
+        'moneda',
+        'cotizacion_ars',
         'importe_signed',
         'referencia_tipo',
         'referencia_id',
@@ -24,6 +26,7 @@ class CtaCteMovimiento extends Model
 
     protected $casts = [
         'fecha' => 'date',
+        'cotizacion_ars' => 'decimal:6',
         'importe_signed' => 'decimal:2',
         'referencia_id' => 'int',
     ];

@@ -14,11 +14,13 @@ class ReciboItem extends Model
         'recibo_id',
         'medio',
         'moneda',
+        'cotizacion_ars',
         'importe',
         'detalle',
     ];
 
     protected $casts = [
+        'cotizacion_ars' => 'decimal:6',
         'importe' => 'decimal:2',
         'detalle' => 'array',
     ];

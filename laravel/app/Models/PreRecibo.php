@@ -23,6 +23,7 @@ class PreRecibo extends Model
         'numero_interno',
         'estado',
         'moneda',
+        'cotizacion_ars',
         'total',
         'fecha',
         'creado_por_user_id',
@@ -30,6 +31,7 @@ class PreRecibo extends Model
 
     protected $casts = [
         'numero_interno' => 'int',
+        'cotizacion_ars' => 'decimal:6',
         'total' => 'decimal:2',
         'fecha' => 'date',
     ];

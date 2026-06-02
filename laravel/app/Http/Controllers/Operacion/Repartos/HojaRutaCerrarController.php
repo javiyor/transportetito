@@ -7,13 +7,15 @@ use App\Models\HojaRuta;
 use App\Models\PreRecibo;
 use App\Models\PreReciboAplicacion;
 use App\Models\PreReciboItem;
+use App\Models\Empresa;
+use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class HojaRutaCerrarController extends Controller
 {
-    public function __invoke(Request $request, HojaRuta $hoja): RedirectResponse
+    public function __invoke(Request $request, HojaRuta $hoja, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         $request->validate([
             'confirm' => ['required', 'boolean'],
@@ -25,7 +27,9 @@ class HojaRutaCerrarController extends Controller
 
         $created = 0;
 
-        DB::transaction(function () use ($request, $hoja, &$created) {
+        $empresa = Empresa::query()->findOrFail($hoja->empresa_id);
+
+        DB::transaction(function () use ($request, $hoja, $empresa, $tipoCambioResolver, &$created) {
             $items = $hoja->items()->with('comprobante')->get();
 
             $grouped = [];
@@ -44,6 +48,7 @@ class HojaRutaCerrarController extends Controller
 
             foreach ($grouped as $cuentaId => $cuentaItems) {
                 $moneda = (string) ($cuentaItems[0]->cobro_moneda ?: $cuentaItems[0]->comprobante->moneda);
+                $cotizacion = $tipoCambioResolver->resolver($empresa, $moneda, $hoja->fecha->toDateString());
 
                 $pre = PreRecibo::query()->create([
                     'empresa_id' => $hoja->empresa_id,
@@ -53,6 +58,7 @@ class HojaRutaCerrarController extends Controller
                     'sentido' => 'cobro',
                     'estado' => 'borrador',
                     'moneda' => $moneda,
+                    'cotizacion_ars' => $cotizacion['tasa_ars'],
                     'total' => 0,
                     'fecha' => $hoja->fecha->toDateString(),
                     'creado_por_user_id' => $request->user()->id,
@@ -67,6 +73,7 @@ class HojaRutaCerrarController extends Controller
                         'pre_recibo_id' => $pre->id,
                         'medio' => $item->cobro_medio,
                         'moneda' => (string) ($item->cobro_moneda ?: $moneda),
+                        'cotizacion_ars' => $tipoCambioResolver->resolver($empresa, (string) ($item->cobro_moneda ?: $moneda), $hoja->fecha->toDateString())['tasa_ars'],
                         'importe' => $importe,
                         'detalle' => $item->cobro_detalle,
                     ]);
@@ -77,6 +84,7 @@ class HojaRutaCerrarController extends Controller
                             'comprobante_id' => null,
                             'modo' => 'a_cuenta',
                             'moneda' => (string) ($item->cobro_moneda ?: $moneda),
+                            'cotizacion_ars' => $tipoCambioResolver->resolver($empresa, (string) ($item->cobro_moneda ?: $moneda), $hoja->fecha->toDateString())['tasa_ars'],
                             'importe' => $importe,
                         ]);
                     } else {
@@ -85,6 +93,7 @@ class HojaRutaCerrarController extends Controller
                             'comprobante_id' => $item->comprobante_id,
                             'modo' => 'a_factura',
                             'moneda' => (string) ($item->cobro_moneda ?: $moneda),
+                            'cotizacion_ars' => $tipoCambioResolver->resolver($empresa, (string) ($item->cobro_moneda ?: $moneda), $hoja->fecha->toDateString())['tasa_ars'],
                             'importe' => $importe,
                         ]);
                     }

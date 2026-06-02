@@ -68,4 +68,26 @@ class TipoCambioResolver
             'fuente' => (string) $oficial->fuente,
         ];
     }
+
+    public function convertir(Empresa $empresa, float $importe, string $monedaOrigen, string $monedaDestino, string $fecha): float
+    {
+        $origen = strtoupper(trim($monedaOrigen));
+        $destino = strtoupper(trim($monedaDestino));
+
+        if ($origen === $destino) {
+            return round($importe, 2);
+        }
+
+        $tasaOrigen = $this->resolver($empresa, $origen, $fecha)['tasa_ars'];
+        $tasaDestino = $this->resolver($empresa, $destino, $fecha)['tasa_ars'];
+
+        if ($tasaOrigen <= 0 || $tasaDestino <= 0) {
+            throw new RuntimeException('No se puede convertir entre monedas sin cotizacion valida.');
+        }
+
+        $importeArs = $origen === 'ARS' ? $importe : ($importe * $tasaOrigen);
+        $convertido = $destino === 'ARS' ? $importeArs : ($importeArs / $tasaDestino);
+
+        return round($convertido, 2);
+    }
 }

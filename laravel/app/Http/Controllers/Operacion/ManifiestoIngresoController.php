@@ -10,6 +10,7 @@ use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\TarifaRelacion;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
+use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -47,7 +48,7 @@ class ManifiestoIngresoController extends Controller
         return redirect()->route('operacion.manifiestos.show', $manifiesto);
     }
 
-    public function show(ManifiestoIngreso $manifiesto, ArcaTipoComprobanteResolver $arcaTipos)
+    public function show(ManifiestoIngreso $manifiesto, ArcaTipoComprobanteResolver $arcaTipos, TipoCambioResolver $tipoCambioResolver)
     {
         $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id, ['id', 'razon_social', 'permite_guias_no_fiscales', 'condicion_iva']);
 
@@ -104,10 +105,20 @@ class ManifiestoIngresoController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        $cotizacionesReferencia = [];
+        foreach (TipoCambioResolver::MONEDAS as $moneda) {
+            try {
+                $cotizacionesReferencia[$moneda] = $tipoCambioResolver->resolver($empresa, $moneda, $manifiesto->fecha->toDateString());
+            } catch (\Throwable) {
+                $cotizacionesReferencia[$moneda] = null;
+            }
+        }
+
         return Inertia::render('Operacion/Manifiestos/Show', [
             'manifiesto' => $manifiesto,
             'comprobantes' => $comprobantes,
             'tarifas' => $tarifas,
+            'cotizacionesReferencia' => $cotizacionesReferencia,
         ]);
     }
 }

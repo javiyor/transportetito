@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Empresa;
+use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +22,7 @@ class ComprobanteNotaCreditoStoreController extends Controller
         'otros' => 'Otros',
     ];
 
-    public function __invoke(Request $request, Comprobante $comprobante): RedirectResponse
+    public function __invoke(Request $request, Comprobante $comprobante, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         abort_unless((int) $comprobante->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
 
@@ -72,7 +74,9 @@ class ComprobanteNotaCreditoStoreController extends Controller
             $motivo .= ': '.$data['motivo_detalle'];
         }
 
-        $nota = DB::transaction(function () use ($request, $comprobante, $data, $importe, $motivo, $saldoDisponible) {
+        $empresa = Empresa::query()->findOrFail($comprobante->empresa_id);
+
+        $nota = DB::transaction(function () use ($request, $empresa, $comprobante, $data, $importe, $motivo, $saldoDisponible, $tipoCambioResolver) {
             $detalle = $comprobante->detalle_facturacion ?: [];
             $detalle['nota_credito_de'] = $comprobante->id;
             $detalle['motivo_nota_credito'] = $motivo;
@@ -81,6 +85,7 @@ class ComprobanteNotaCreditoStoreController extends Controller
             $detalle['importe_nota_credito'] = $importe;
             $detalle['saldo_disponible_antes_nota_credito'] = $saldoDisponible;
 
+            $cotizacion = $tipoCambioResolver->resolver($empresa, (string) $comprobante->moneda, now()->toDateString());
             $nota = Comprobante::query()->create([
                 'empresa_id' => $comprobante->empresa_id,
                 'deposito_id' => $comprobante->deposito_id,
@@ -98,6 +103,10 @@ class ComprobanteNotaCreditoStoreController extends Controller
                 'detalle_facturacion' => $detalle,
             ]);
 
+            $detalle = $nota->detalle_facturacion ?: [];
+            $detalle['cotizacion'] = $cotizacion;
+            $nota->update(['detalle_facturacion' => $detalle]);
+
             $nota->pedidos()->sync($comprobante->pedidos->pluck('id')->all());
 
             CtaCteMovimiento::query()->create([
@@ -105,6 +114,8 @@ class ComprobanteNotaCreditoStoreController extends Controller
                 'tercero_cuenta_id' => $comprobante->facturar_cuenta_id,
                 'fecha' => now()->toDateString(),
                 'tipo' => 'nota_credito',
+                'moneda' => $comprobante->moneda,
+                'cotizacion_ars' => $cotizacion['tasa_ars'],
                 'importe_signed' => $importe * -1,
                 'referencia_tipo' => 'comprobante',
                 'referencia_id' => $nota->id,

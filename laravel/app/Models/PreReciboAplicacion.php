@@ -16,10 +16,12 @@ class PreReciboAplicacion extends Model
         'comprobante_id',
         'modo',
         'moneda',
+        'cotizacion_ars',
         'importe',
     ];
 
     protected $casts = [
+        'cotizacion_ars' => 'decimal:6',
         'importe' => 'decimal:2',
     ];
 

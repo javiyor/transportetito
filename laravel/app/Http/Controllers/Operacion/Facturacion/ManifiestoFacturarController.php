@@ -20,6 +20,25 @@ use Illuminate\Support\Facades\DB;
 
 class ManifiestoFacturarController extends Controller
 {
+    private function convertirTarifaMoneda(array $tarifa, string $monedaDestino, Empresa $empresa, string $fecha, TipoCambioResolver $tipoCambioResolver): array
+    {
+        $origen = (string) ($tarifa['moneda'] ?? 'ARS');
+        $destino = strtoupper(trim($monedaDestino));
+        if ($origen === $destino) {
+            $tarifa['moneda'] = $destino;
+            return $tarifa;
+        }
+
+        foreach (['tarifa_bulto', 'tarifa_palet', 'flete_minimo', 'seguro_minimo', 'seguro_tope', 'cr_comision_minimo', 'cr_comision_tope'] as $campo) {
+            if (array_key_exists($campo, $tarifa) && $tarifa[$campo] !== null) {
+                $tarifa[$campo] = $tipoCambioResolver->convertir($empresa, (float) $tarifa[$campo], $origen, $destino, $fecha);
+            }
+        }
+
+        $tarifa['moneda'] = $destino;
+        return $tarifa;
+    }
+
     public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ComprobanteMailer $mailer, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         $request->validate([
@@ -152,10 +171,10 @@ class ManifiestoFacturarController extends Controller
                 foreach ($relationGroups as $rg) {
                     $tarifa = $tarifaResolver->resolve((int) $manifiesto->empresa_id, (int) $rg['remitente_id'], (int) $rg['destinatario_id']);
 
-                if (is_array($override)) {
-                    if (! empty($override['moneda'])) {
-                        $tarifa['moneda'] = (string) $override['moneda'];
-                    }
+                    if (is_array($override)) {
+                        if (! empty($override['moneda'])) {
+                            $tarifa = $this->convertirTarifaMoneda($tarifa, (string) $override['moneda'], $empresa, $manifiesto->fecha->toDateString(), $tipoCambioResolver);
+                        }
                     foreach ([
                         'tarifa_bulto',
                             'tarifa_palet',
@@ -174,6 +193,10 @@ class ManifiestoFacturarController extends Controller
                             }
                         }
                     }
+
+                    $tarifa['moneda_origen_importes'] = 'ARS';
+                    $tarifa['tasa_origen_importes_ars'] = 1;
+                    $tarifa['tasa_destino_ars'] = $tipoCambioResolver->resolver($empresa, (string) $tarifa['moneda'], $manifiesto->fecha->toDateString())['tasa_ars'];
 
                     $calc = $calculator->calcular($rg['pedidos'], $tarifa);
                     $detallesPorRelacion[] = [
@@ -302,6 +325,8 @@ class ManifiestoFacturarController extends Controller
                     'tercero_cuenta_id' => $facturarCuentaId,
                     'fecha' => $manifiesto->fecha->toDateString(),
                     'tipo' => 'factura',
+                    'moneda' => $moneda,
+                    'cotizacion_ars' => $cotizacion['tasa_ars'],
                     'importe_signed' => $total,
                     'referencia_tipo' => 'comprobante',
                     'referencia_id' => $comprobante->id,

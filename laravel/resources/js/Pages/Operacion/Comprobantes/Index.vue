@@ -76,6 +76,7 @@ const tipoLabel = (tipo) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo acreditable</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
@@ -88,6 +89,7 @@ const tipoLabel = (tipo) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.estado }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda === 'ARS' ? '-' : (c.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || c.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ c.credit_summary?.saldo_acreditable }}</span>
                                     <span v-else>-</span>
@@ -97,7 +99,7 @@ const tipoLabel = (tipo) => {
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
-                                <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</td>
+                                <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</td>
                             </tr>
                         </tbody>
                     </table>

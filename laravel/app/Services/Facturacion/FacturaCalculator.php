@@ -25,6 +25,18 @@ class FacturaCalculator
             $crImporte += (float) ($p->cr_importe ?? 0);
         }
 
+        $moneda = (string) ($tarifa['moneda'] ?? 'ARS');
+        $monedaOrigenImportes = (string) ($tarifa['moneda_origen_importes'] ?? 'ARS');
+        $tasaOrigenArs = (float) ($tarifa['tasa_origen_importes_ars'] ?? ($monedaOrigenImportes === 'ARS' ? 1 : 0));
+        $tasaDestinoArs = (float) ($tarifa['tasa_destino_ars'] ?? ($moneda === 'ARS' ? 1 : 0));
+
+        if ($monedaOrigenImportes !== $moneda && $tasaOrigenArs > 0 && $tasaDestinoArs > 0) {
+            $valorDeclaradoArs = $monedaOrigenImportes === 'ARS' ? $valorDeclarado : ($valorDeclarado * $tasaOrigenArs);
+            $crImporteArs = $monedaOrigenImportes === 'ARS' ? $crImporte : ($crImporte * $tasaOrigenArs);
+            $valorDeclarado = $moneda === 'ARS' ? $valorDeclaradoArs : ($valorDeclaradoArs / $tasaDestinoArs);
+            $crImporte = $moneda === 'ARS' ? $crImporteArs : ($crImporteArs / $tasaDestinoArs);
+        }
+
         $tarifaBulto = (float) ($tarifa['tarifa_bulto'] ?? 0);
         $tarifaPalet = (float) ($tarifa['tarifa_palet'] ?? 0);
         $pctValor = (float) ($tarifa['tarifa_valor_declarado_pct'] ?? 0);
@@ -62,7 +74,7 @@ class FacturaCalculator
         $total = $subtotalGravado + $iva;
 
         return [
-            'moneda' => (string) ($tarifa['moneda'] ?? 'ARS'),
+            'moneda' => $moneda,
             'bultos' => $bultos,
             'palets' => $palets,
             'valor_declarado' => round($valorDeclarado, 2),
