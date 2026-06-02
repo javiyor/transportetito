@@ -23,6 +23,8 @@ const form = useForm({
     razon_social: '',
     condicion_iva: '',
     nombre_cuenta: '',
+    localidad: '',
+    barrio: '',
     email: '',
     enviar_comprobantes_por_email: false,
     es_cliente: true,
@@ -32,7 +34,7 @@ const form = useForm({
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'nombre_cuenta', 'email'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'nombre_cuenta', 'localidad', 'barrio', 'email'),
     });
 };
 
@@ -47,6 +49,8 @@ const editForm = useForm({
     razon_social: '',
     condicion_iva: '',
     nombre_cuenta: '',
+    localidad: '',
+    barrio: '',
     email: '',
     enviar_comprobantes_por_email: false,
     es_cliente: false,
@@ -59,6 +63,8 @@ const openEdit = (c) => {
     editForm.razon_social = c.tercero?.razon_social || '';
     editForm.condicion_iva = c.tercero?.condicion_iva || '';
     editForm.nombre_cuenta = c.nombre_cuenta || '';
+    editForm.localidad = c.localidad || '';
+    editForm.barrio = c.barrio || '';
     editForm.email = c.email || '';
     editForm.enviar_comprobantes_por_email = !!c.enviar_comprobantes_por_email;
     editForm.es_cliente = !!c.es_cliente;
@@ -135,6 +141,17 @@ const submitEdit = () => {
                         <InputError class="mt-2" :message="form.errors.nombre_cuenta" />
                     </div>
 
+                    <div>
+                        <InputLabel value="Ciudad" />
+                        <TextInput v-model="form.localidad" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="form.errors.localidad" />
+                    </div>
+                    <div>
+                        <InputLabel value="Barrio" />
+                        <TextInput v-model="form.barrio" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="form.errors.barrio" />
+                    </div>
+
                     <div class="sm:col-span-3">
                         <InputLabel value="Email comprobantes" />
                         <TextInput v-model="form.email" type="email" class="mt-1 block w-full" />
@@ -178,6 +195,8 @@ const submitEdit = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flags</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -191,6 +210,8 @@ const submitEdit = () => {
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.localidad || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.email || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Cliente</span>
@@ -203,7 +224,7 @@ const submitEdit = () => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td colspan="11" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -233,6 +254,16 @@ const submitEdit = () => {
                             <InputLabel value="Nombre cuenta" />
                             <TextInput v-model="editForm.nombre_cuenta" type="text" class="mt-1 block w-full" />
                             <InputError class="mt-2" :message="editForm.errors.nombre_cuenta" />
+                        </div>
+                        <div>
+                            <InputLabel value="Ciudad" />
+                            <TextInput v-model="editForm.localidad" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-2" :message="editForm.errors.localidad" />
+                        </div>
+                        <div>
+                            <InputLabel value="Barrio" />
+                            <TextInput v-model="editForm.barrio" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-2" :message="editForm.errors.barrio" />
                         </div>
                         <div>
                             <InputLabel value="Email comprobantes" />

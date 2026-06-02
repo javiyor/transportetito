@@ -35,6 +35,8 @@ class TerceroAdminController extends Controller
             'tercero_cuentas.tercero_id',
             'tercero_cuentas.numero_cliente',
             'tercero_cuentas.nombre_cuenta',
+            'tercero_cuentas.localidad',
+            'tercero_cuentas.barrio',
             'tercero_cuentas.email',
             'tercero_cuentas.enviar_comprobantes_por_email',
             'tercero_cuentas.activo',
@@ -58,6 +60,8 @@ class TerceroAdminController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
+            'localidad' => ['nullable', 'string', 'max:255'],
+            'barrio' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'enviar_comprobantes_por_email' => ['sometimes', 'boolean'],
             'es_cliente' => ['required', 'boolean'],
@@ -84,6 +88,8 @@ class TerceroAdminController extends Controller
             [
                 'tercero_id' => $tercero->id,
                 'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+                'localidad' => $data['localidad'] ?: null,
+                'barrio' => $data['barrio'] ?: null,
                 'email' => $data['email'] ?: null,
                 'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
                 'activo' => true,
@@ -93,6 +99,8 @@ class TerceroAdminController extends Controller
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+            'localidad' => $data['localidad'] ?: null,
+            'barrio' => $data['barrio'] ?: null,
             'email' => $data['email'] ?: null,
             'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
         ]);
@@ -112,6 +120,8 @@ class TerceroAdminController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
+            'localidad' => ['nullable', 'string', 'max:255'],
+            'barrio' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'enviar_comprobantes_por_email' => ['sometimes', 'boolean'],
             'es_cliente' => ['required', 'boolean'],
@@ -136,6 +146,8 @@ class TerceroAdminController extends Controller
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+            'localidad' => $data['localidad'] ?: null,
+            'barrio' => $data['barrio'] ?: null,
             'email' => $data['email'] ?: null,
             'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
         ]);

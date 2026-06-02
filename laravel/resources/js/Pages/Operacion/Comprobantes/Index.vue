@@ -24,6 +24,8 @@ const tipoLabel = (tipo) => {
     if (tipo === 'guia_envio') return 'Guia no fiscal';
     if (tipo === 'factura_interna') return 'Factura';
     if (tipo === 'nota_credito_interna') return 'Nota de credito';
+    if (tipo === 'nota_debito_manual') return 'Nota de debito';
+    if (tipo === 'nota_credito_manual') return 'Nota de credito manual';
     return tipo || '-';
 };
 </script>
