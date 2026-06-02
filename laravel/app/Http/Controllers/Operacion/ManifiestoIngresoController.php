@@ -8,6 +8,7 @@ use App\Models\Deposito;
 use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
+use App\Models\TarifaRelacion;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -75,9 +76,20 @@ class ManifiestoIngresoController extends Controller
             },
         ]);
 
+        $tarifas = TarifaRelacion::query()
+            ->where('empresa_id', $manifiesto->empresa_id)
+            ->where('activo', true)
+            ->with([
+                'remitente:id,razon_social,cuit',
+                'destinatario:id,razon_social,cuit',
+            ])
+            ->orderByDesc('id')
+            ->get();
+
         return Inertia::render('Operacion/Manifiestos/Show', [
             'manifiesto' => $manifiesto,
             'comprobantes' => $comprobantes,
+            'tarifas' => $tarifas,
         ]);
     }
 }

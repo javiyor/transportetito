@@ -18,7 +18,11 @@ const form = useForm({
 });
 
 const applyFilters = () => {
-    router.get(route('operacion.repartos.facturas'), { deposito_id: form.deposito_id || null, fecha: form.fecha }, { preserveState: true, preserveScroll: true, replace: true });
+    router.get(
+        route('operacion.repartos.facturas'),
+        { deposito_id: form.deposito_id || null, fecha: form.fecha || null },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 };
 
 const toggleAll = (checked) => {

@@ -4,6 +4,7 @@ WORKDIR /var/www/html
 RUN apk add --no-cache \
     bash \
     icu-dev \
+    libxml2-dev \
     libzip-dev \
     mariadb-dev \
     oniguruma-dev \
@@ -14,8 +15,9 @@ RUN apk add --no-cache \
     curl \
     $PHPIZE_DEPS
 # PHP extensions
-RUN docker-php-ext-install \
+RUN docker-php-ext-install -j"$(nproc)" \
     intl \
+    soap \
     zip \
     pdo \
     pdo_mysql \

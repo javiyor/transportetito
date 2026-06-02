@@ -7,6 +7,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import Checkbox from '@/Components/Checkbox.vue';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -20,6 +21,7 @@ const createForm = useForm({
     nombre: '',
     direccion: '',
     punto_venta_numero: 2,
+    es_central: false,
 });
 
 const submitCreate = () => {
@@ -36,6 +38,7 @@ const editForm = useForm({
     nombre: '',
     direccion: '',
     punto_venta_numero: 2,
+    es_central: false,
 });
 
 const openEdit = (d) => {
@@ -44,6 +47,7 @@ const openEdit = (d) => {
     editForm.nombre = d.nombre;
     editForm.direccion = d.direccion || '';
     editForm.punto_venta_numero = d.punto_venta_numero;
+    editForm.es_central = !!d.es_central;
     editForm.clearErrors();
     editing.value = true;
 };
@@ -104,6 +108,12 @@ const changeEmpresa = (id) => {
                         <TextInput v-model="createForm.punto_venta_numero" type="number" min="1" class="mt-1 block w-full" required />
                         <InputError class="mt-2" :message="createForm.errors.punto_venta_numero" />
                     </div>
+
+                    <div class="sm:col-span-4 flex items-center gap-2">
+                        <Checkbox v-model:checked="createForm.es_central" />
+                        <span class="text-sm text-gray-700">Es deposito central</span>
+                        <InputError class="mt-2" :message="createForm.errors.es_central" />
+                    </div>
                     <div class="sm:col-span-4 flex justify-end">
                         <PrimaryButton :disabled="createForm.processing">Crear</PrimaryButton>
                     </div>
@@ -123,6 +133,7 @@ const changeEmpresa = (id) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direccion</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Central</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -132,12 +143,13 @@ const changeEmpresa = (id) => {
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ d.nombre }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ d.direccion || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ d.punto_venta_numero }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ d.es_central ? 'Si' : 'No' }}</td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <SecondaryButton class="text-xs" @click.prevent="openEdit(d)">Editar</SecondaryButton>
                                 </td>
                             </tr>
                             <tr v-if="!depositos.length">
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">Sin depositos.</td>
+                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin depositos.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -170,6 +182,12 @@ const changeEmpresa = (id) => {
                         <InputLabel value="PV" />
                         <TextInput v-model="editForm.punto_venta_numero" type="number" min="1" class="mt-1 block w-full" required />
                         <InputError class="mt-2" :message="editForm.errors.punto_venta_numero" />
+                    </div>
+
+                    <div class="sm:col-span-2 flex items-center gap-2">
+                        <Checkbox v-model:checked="editForm.es_central" />
+                        <span class="text-sm text-gray-700">Es deposito central</span>
+                        <InputError class="mt-2" :message="editForm.errors.es_central" />
                     </div>
                 </form>
             </template>

@@ -14,7 +14,11 @@ class FacturasListController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $depositoId = (int) ($request->query('deposito_id') ?: 0);
-        $fecha = (string) ($request->query('fecha') ?: now()->toDateString());
+        $fechaRaw = $request->query('fecha');
+        $fecha = is_string($fechaRaw) ? trim($fechaRaw) : null;
+        if ($fecha === '') {
+            $fecha = null;
+        }
 
         $depositos = Deposito::query()
             ->where('empresa_id', $empresaId)
@@ -28,8 +32,11 @@ class FacturasListController extends Controller
             ])
             ->where('empresa_id', $empresaId)
             ->where('estado', 'emitida')
-            ->whereDate('fecha_emision', $fecha)
             ->orderBy('id');
+
+        if ($fecha) {
+            $query->whereDate('fecha_emision', $fecha);
+        }
 
         if ($depositoId > 0) {
             $query->where('deposito_id', $depositoId);

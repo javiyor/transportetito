@@ -8,3 +8,7 @@
 laravel/vendor/
 laravel/node_modules/
 laravel/public/storage
+
+# Certificates (never commit)
+certificados/
+laravel/certificados/

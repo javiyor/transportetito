@@ -17,6 +17,11 @@ class Deposito extends Model
         'nombre',
         'direccion',
         'punto_venta_numero',
+        'es_central',
+    ];
+
+    protected $casts = [
+        'es_central' => 'bool',
     ];
 
     public function empresa(): BelongsTo

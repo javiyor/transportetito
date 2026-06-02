@@ -25,12 +25,30 @@ class Comprobante extends Model
         'total',
         'numero_interno',
         'fecha_emision',
+
+        'detalle_facturacion',
+
+        'requiere_autorizacion_arca',
+        'arca_punto_venta',
+        'arca_tipo_cbte',
+        'arca_numero',
+        'arca_cae',
+        'arca_cae_vto',
+        'arca_resultado',
+        'arca_error',
+        'arca_request_id',
     ];
 
     protected $casts = [
         'total' => 'decimal:2',
         'numero_interno' => 'int',
         'fecha_emision' => 'date',
+        'requiere_autorizacion_arca' => 'bool',
+        'arca_punto_venta' => 'int',
+        'arca_numero' => 'int',
+        'arca_cae_vto' => 'date',
+
+        'detalle_facturacion' => 'array',
     ];
 
     public function empresa(): BelongsTo

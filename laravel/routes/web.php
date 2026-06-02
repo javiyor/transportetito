@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\CurrentEmpresaUpdateController;
 use App\Http\Controllers\Admin\EmpresaAdminController;
 use App\Http\Controllers\Admin\DepositoAdminController;
 use App\Http\Controllers\Admin\TerceroAdminController;
+use App\Http\Controllers\Admin\TarifaRelacionAdminController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaCerrarController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaPrintController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
+use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -89,6 +91,10 @@ Route::middleware([
 
         Route::get('/terceros', [TerceroAdminController::class, 'index'])->name('terceros.index');
         Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
+
+        Route::get('/tarifas', [TarifaRelacionAdminController::class, 'index'])->name('tarifas.index');
+        Route::post('/tarifas', [TarifaRelacionAdminController::class, 'store'])->name('tarifas.store');
+        Route::put('/tarifas/{tarifa}', [TarifaRelacionAdminController::class, 'update'])->name('tarifas.update');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
@@ -101,6 +107,8 @@ Route::middleware([
 
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/facturar', ManifiestoFacturarController::class)->name('manifiestos.facturar');
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/backfill-cuentas', ManifiestoBackfillCuentasController::class)->name('manifiestos.backfill-cuentas');
+
+        Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/autorizar-arca', ComprobanteAutorizarArcaController::class)->name('comprobantes.autorizar-arca');
 
         Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');
         Route::post('/import/carga', [ImportCargaController::class, 'store'])->name('import.carga.store');

@@ -15,12 +15,17 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    tarifas: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const page = usePage();
 const roles = computed(() => page.props.tt?.roles || []);
 const canFacturar = computed(() => roles.value.includes('admin') || roles.value.includes('facturacion'));
 const flashSuccess = computed(() => page.props.flash?.success);
+const flashError = computed(() => page.props.flash?.error);
 
 const pedidoForm = useForm({
     remitente: { cuit: '', razon_social: '' },
@@ -49,6 +54,113 @@ const submitPedido = () => {
 
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
 
+const DEFAULT_TARIFA = {
+    moneda: 'ARS',
+    tarifa_bulto: 10000,
+    tarifa_palet: 100000,
+    tarifa_valor_declarado_pct: 0.03,
+    flete_minimo: 20000,
+    seguro_pct: 0.007,
+    seguro_minimo: null,
+    seguro_tope: null,
+    cr_comision_pct: 0.025,
+    cr_comision_minimo: null,
+    cr_comision_tope: null,
+    iva_pct: 0.21,
+};
+
+const tarifaKey = (remId, destId) => `${remId || 0}-${destId || 0}`;
+
+const tarifasMap = computed(() => {
+    const m = new Map();
+    for (const t of props.tarifas || []) {
+        m.set(tarifaKey(t.remitente_tercero_id, t.destinatario_tercero_id), t);
+    }
+    return m;
+});
+
+const resolveTarifa = (remId, destId) => {
+    const t = tarifasMap.value.get(tarifaKey(remId, destId));
+    if (!t) return { ...DEFAULT_TARIFA };
+    return {
+        moneda: t.moneda || 'ARS',
+        tarifa_bulto: Number(t.tarifa_bulto || 0),
+        tarifa_palet: Number(t.tarifa_palet || 0),
+        tarifa_valor_declarado_pct: Number(t.tarifa_valor_declarado_pct || 0),
+        flete_minimo: Number(t.flete_minimo || 0),
+        seguro_pct: Number(t.seguro_pct || 0),
+        seguro_minimo: t.seguro_minimo === null ? null : Number(t.seguro_minimo || 0),
+        seguro_tope: t.seguro_tope === null ? null : Number(t.seguro_tope || 0),
+        cr_comision_pct: Number(t.cr_comision_pct || 0),
+        cr_comision_minimo: t.cr_comision_minimo === null ? null : Number(t.cr_comision_minimo || 0),
+        cr_comision_tope: t.cr_comision_tope === null ? null : Number(t.cr_comision_tope || 0),
+        iva_pct: Number(t.iva_pct || 0),
+    };
+};
+
+const applyOverride = (tarifa, override) => {
+    const out = { ...tarifa };
+    if (!override) return out;
+    for (const k of [
+        'tarifa_bulto',
+        'tarifa_palet',
+        'tarifa_valor_declarado_pct',
+        'flete_minimo',
+        'seguro_pct',
+        'seguro_minimo',
+        'seguro_tope',
+        'cr_comision_pct',
+        'cr_comision_minimo',
+        'cr_comision_tope',
+        'iva_pct',
+    ]) {
+        if (Object.prototype.hasOwnProperty.call(override, k) && override[k] !== null && override[k] !== '') {
+            out[k] = Number(override[k]);
+        }
+    }
+    return out;
+};
+
+const calcFactura = (pedidos, tarifa, override) => {
+    const t = applyOverride(tarifa, override);
+    const bultos = pedidos.reduce((acc, p) => acc + Number(p.bultos || 0), 0);
+    const palets = pedidos.reduce((acc, p) => acc + Number(p.palets || 0), 0);
+    const valorDeclarado = pedidos.reduce((acc, p) => acc + Number(p.valor_declarado || 0), 0);
+    const crImporte = pedidos.reduce((acc, p) => acc + Number(p.cr_importe || 0), 0);
+
+    const fletePorUnidad = bultos * t.tarifa_bulto + palets * t.tarifa_palet;
+    const fletePorValor = valorDeclarado * t.tarifa_valor_declarado_pct;
+    const flete = Math.max(t.flete_minimo, fletePorUnidad, fletePorValor);
+
+    let seguro = valorDeclarado * t.seguro_pct;
+    if (t.seguro_minimo !== null) seguro = Math.max(Number(t.seguro_minimo), seguro);
+    if (t.seguro_tope !== null) seguro = Math.min(Number(t.seguro_tope), seguro);
+
+    let comisionCr = crImporte * t.cr_comision_pct;
+    if (t.cr_comision_minimo !== null) comisionCr = Math.max(Number(t.cr_comision_minimo), comisionCr);
+    if (t.cr_comision_tope !== null) comisionCr = Math.min(Number(t.cr_comision_tope), comisionCr);
+
+    const subtotalGravado = flete + seguro + comisionCr;
+    const iva = subtotalGravado * t.iva_pct;
+    const total = subtotalGravado + iva;
+
+    const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+    return {
+        moneda: t.moneda || 'ARS',
+        bultos,
+        palets,
+        valorDeclarado: round2(valorDeclarado),
+        crImporte: round2(crImporte),
+        flete: round2(flete),
+        seguro: round2(seguro),
+        comisionCr: round2(comisionCr),
+        subtotalGravado: round2(subtotalGravado),
+        iva: round2(iva),
+        total: round2(total),
+        parametros: t,
+    };
+};
+
 const statsFacturacion = computed(() => {
     const pedidos = props.manifiesto.pedidos || [];
     const pendientes = pedidos.filter((p) => !(p.comprobantes && p.comprobantes.length));
@@ -65,6 +177,8 @@ const pedidosPendientes = computed(() => {
     return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
 });
 
+const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {} });
+
 const gruposFacturacion = computed(() => {
     const grouped = new Map();
     for (const p of pedidosPendientes.value) {
@@ -76,7 +190,95 @@ const gruposFacturacion = computed(() => {
 
     const out = [];
     for (const [entregaId, pedidos] of grouped.entries()) {
-        const total = pedidos.reduce((acc, x) => acc + Number(x.valor_declarado || 0), 0).toFixed(2);
+        if (!facturarPorEntrega.facturar_por_entrega?.[entregaId]) {
+            // keep selection editable even if groups change after initial load
+            facturarPorEntrega.facturar_por_entrega[entregaId] = '';
+        }
+        if (!facturarPorEntrega.detalles_por_entrega?.[entregaId]) {
+            facturarPorEntrega.detalles_por_entrega[entregaId] = {
+                editar: false,
+                persistir_tarifa: false,
+                tarifa_bulto: null,
+                tarifa_palet: null,
+                tarifa_valor_declarado_pct: null,
+                flete_minimo: null,
+                seguro_pct: null,
+                seguro_minimo: null,
+                seguro_tope: null,
+                cr_comision_pct: null,
+                cr_comision_minimo: null,
+                cr_comision_tope: null,
+                iva_pct: null,
+            };
+        }
+
+        const remitenteIds = Array.from(new Set(pedidos.map((p) => Number(p.remitente_tercero_id || 0)).filter(Boolean)));
+        const destinatarioIds = Array.from(new Set(pedidos.map((p) => Number(p.destinatario_tercero_id || 0)).filter(Boolean)));
+        const isSingleRelacion = remitenteIds.length === 1 && destinatarioIds.length === 1;
+
+        const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
+
+        let detalle;
+        if (isSingleRelacion) {
+            const tarifaBase = resolveTarifa(remitenteIds[0], destinatarioIds[0]);
+            detalle = calcFactura(pedidos, tarifaBase, override);
+        } else {
+            const groupedByRel = new Map();
+            for (const p of pedidos) {
+                const key = tarifaKey(p.remitente_tercero_id, p.destinatario_tercero_id);
+                if (!groupedByRel.has(key)) groupedByRel.set(key, []);
+                groupedByRel.get(key).push(p);
+            }
+
+            const sum = {
+                moneda: 'ARS',
+                bultos: 0,
+                palets: 0,
+                valorDeclarado: 0,
+                crImporte: 0,
+                flete: 0,
+                seguro: 0,
+                comisionCr: 0,
+                subtotalGravado: 0,
+                iva: 0,
+                total: 0,
+                porRelacion: [],
+                parametros: null,
+            };
+
+            for (const [key, relPedidos] of groupedByRel.entries()) {
+                const [remStr, destStr] = String(key).split('-');
+                const remId = Number(remStr || 0);
+                const destId = Number(destStr || 0);
+                const tarifaBase = resolveTarifa(remId, destId);
+                const calc = calcFactura(relPedidos, tarifaBase, override);
+                sum.moneda = calc.moneda || sum.moneda;
+                sum.bultos += Number(calc.bultos || 0);
+                sum.palets += Number(calc.palets || 0);
+                sum.valorDeclarado += Number(calc.valorDeclarado || 0);
+                sum.crImporte += Number(calc.crImporte || 0);
+                sum.flete += Number(calc.flete || 0);
+                sum.seguro += Number(calc.seguro || 0);
+                sum.comisionCr += Number(calc.comisionCr || 0);
+                sum.subtotalGravado += Number(calc.subtotalGravado || 0);
+                sum.iva += Number(calc.iva || 0);
+                sum.total += Number(calc.total || 0);
+                sum.porRelacion.push({ remitenteId: remId, destinatarioId: destId, detalle: calc });
+            }
+
+            const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+            detalle = {
+                ...sum,
+                valorDeclarado: round2(sum.valorDeclarado),
+                crImporte: round2(sum.crImporte),
+                flete: round2(sum.flete),
+                seguro: round2(sum.seguro),
+                comisionCr: round2(sum.comisionCr),
+                subtotalGravado: round2(sum.subtotalGravado),
+                iva: round2(sum.iva),
+                total: round2(sum.total),
+            };
+        }
         const cuentas = new Map();
         for (const p of pedidos) {
             if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
@@ -91,36 +293,107 @@ const gruposFacturacion = computed(() => {
             if (pagas[0] === 'destino' && pedidos[0].destinatario_cuenta) suggested = String(pedidos[0].destinatario_cuenta.id);
         }
 
-        out.push({ entregaId, pedidos, total, cuentas: Array.from(cuentas.values()), suggested });
+        out.push({
+            entregaId,
+            pedidos,
+            detalle,
+            cuentas: Array.from(cuentas.values()),
+            suggested,
+            isSingleRelacion,
+            remitenteId: isSingleRelacion ? remitenteIds[0] : null,
+            destinatarioId: isSingleRelacion ? destinatarioIds[0] : null,
+        });
     }
 
     return out.sort((a, b) => a.entregaId - b.entregaId);
 });
-
-const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {} });
 
 const backfillForm = useForm({ confirm: true });
 const completarCuentas = () => {
     backfillForm.post(route('operacion.manifiestos.backfill-cuentas', props.manifiesto.id), { preserveScroll: true });
 };
 
+const autorizarForm = useForm({ tipo: 'FC' });
+const autorizarArca = (comprobanteId, tipo) => {
+    autorizarForm.tipo = tipo;
+    autorizarForm.post(route('operacion.comprobantes.autorizar-arca', comprobanteId), { preserveScroll: true });
+};
+
 const initFacturarMap = () => {
     const map = {};
+    const det = {};
     for (const g of gruposFacturacion.value) {
         map[g.entregaId] = g.suggested || '';
+        det[g.entregaId] = {
+            editar: false,
+            persistir_tarifa: false,
+            tarifa_bulto: null,
+            tarifa_palet: null,
+            tarifa_valor_declarado_pct: null,
+            flete_minimo: null,
+            seguro_pct: null,
+            seguro_minimo: null,
+            seguro_tope: null,
+            cr_comision_pct: null,
+            cr_comision_minimo: null,
+            cr_comision_tope: null,
+            iva_pct: null,
+        };
     }
     facturarPorEntrega.facturar_por_entrega = map;
+    facturarPorEntrega.detalles_por_entrega = det;
 };
 
 initFacturarMap();
 
+const faltanSelecciones = computed(() => {
+    for (const g of gruposFacturacion.value) {
+        const selected = facturarPorEntrega.facturar_por_entrega?.[g.entregaId] || '';
+        if (!selected) return true;
+    }
+    return false;
+});
+
 const facturarSeleccionado = () => {
-    facturarPorEntrega.post(route('operacion.manifiestos.facturar', props.manifiesto.id), { preserveScroll: true });
+    facturarPorEntrega
+        .transform((data) => {
+            const out = { ...data };
+            const det = {};
+            const keysToNull = [
+                'tarifa_bulto',
+                'tarifa_palet',
+                'tarifa_valor_declarado_pct',
+                'flete_minimo',
+                'seguro_pct',
+                'seguro_minimo',
+                'seguro_tope',
+                'cr_comision_pct',
+                'cr_comision_minimo',
+                'cr_comision_tope',
+                'iva_pct',
+            ];
+            for (const [entregaId, v] of Object.entries(data.detalles_por_entrega || {})) {
+                const x = { ...(v || {}) };
+                delete x.editar;
+                for (const k of keysToNull) {
+                    if (x[k] === '') x[k] = null;
+                }
+                det[entregaId] = x;
+            }
+            out.detalles_por_entrega = det;
+            return out;
+        })
+        .post(route('operacion.manifiestos.facturar', props.manifiesto.id), { preserveScroll: true });
 };
 
 const formatFecha = (value) => {
     if (!value) return '-';
     return String(value).slice(0, 10);
+};
+
+const formatMoney = (n) => {
+    const x = Number(n || 0);
+    return x.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 </script>
 
@@ -145,6 +418,10 @@ const formatFecha = (value) => {
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
                 {{ flashSuccess }}
+            </div>
+
+            <div v-if="flashError" class="bg-red-50 border border-red-200 text-red-900 px-4 py-3 rounded">
+                {{ flashError }}
             </div>
 
             <div class="bg-white shadow sm:rounded-lg p-6">
@@ -173,13 +450,17 @@ const formatFecha = (value) => {
                         <p class="mt-1 text-sm text-gray-600">{{ totalPedidos }} cargados</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
+                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
                     </div>
                 </div>
 
                 <div v-if="canFacturar" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <div class="text-sm font-medium text-gray-900">Facturacion (v1)</div>
+                    <div class="text-sm font-medium text-gray-900">Facturacion (v2)</div>
                     <p class="mt-1 text-xs text-gray-600">Se crea 1 comprobante por cuenta de entrega. Elegi la cuenta a facturar por cada grupo.</p>
+
+                    <div v-if="faltanSelecciones && gruposFacturacion.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        Falta seleccionar “Facturar a” en uno o mas grupos.
+                    </div>
 
                     <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                         <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
@@ -213,7 +494,10 @@ const formatFecha = (value) => {
                                 <div>
                                     <div class="text-xs text-gray-500">Cuenta de entrega</div>
                                     <div class="text-sm font-medium text-gray-900">#{{ g.entregaId }}</div>
-                                    <div class="text-xs text-gray-600">Pedidos: {{ g.pedidos.length }} · Total (v1): ARS {{ g.total }}</div>
+                                    <div class="text-xs text-gray-600">Pedidos: {{ g.pedidos.length }} · Total a facturar: {{ g.detalle.moneda }} {{ formatMoney(g.detalle.total) }}</div>
+                                    <div class="mt-2 text-xs text-gray-600">
+                                        Flete {{ g.detalle.moneda }} {{ formatMoney(g.detalle.flete) }} · Seguro {{ g.detalle.moneda }} {{ formatMoney(g.detalle.seguro) }} · CR {{ g.detalle.moneda }} {{ formatMoney(g.detalle.comisionCr) }} · IVA {{ g.detalle.moneda }} {{ formatMoney(g.detalle.iva) }}
+                                    </div>
                                 </div>
                                 <div class="min-w-[260px]">
                                     <div class="text-xs text-gray-500">Facturar a</div>
@@ -226,7 +510,87 @@ const formatFecha = (value) => {
                                             {{ c.label }}{{ c.cuit ? ' · CUIT ' + c.cuit : '' }}
                                         </option>
                                     </select>
+
+                                    <div class="mt-3 flex items-center justify-between gap-2">
+                                        <button
+                                            type="button"
+                                            class="text-xs text-gray-700 underline"
+                                            @click.prevent="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar = !facturarPorEntrega.detalles_por_entrega[g.entregaId].editar"
+                                        >
+                                            {{ facturarPorEntrega.detalles_por_entrega[g.entregaId].editar ? 'Ocultar edicion' : 'Editar tarifa' }}
+                                        </button>
+                                        <div v-if="!g.isSingleRelacion" class="text-[11px] text-gray-500">(mezcla remitente/destinatario)</div>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div class="mt-3 grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
+                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="text-gray-500">Bultos</div>
+                                    <div class="font-medium text-gray-900">{{ g.detalle.bultos }}</div>
+                                </div>
+                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="text-gray-500">Palets</div>
+                                    <div class="font-medium text-gray-900">{{ g.detalle.palets }}</div>
+                                </div>
+                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="text-gray-500">Valor decl.</div>
+                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.valorDeclarado) }}</div>
+                                </div>
+                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="text-gray-500">CR</div>
+                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.crImporte) }}</div>
+                                </div>
+                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="text-gray-500">Subtotal</div>
+                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.subtotalGravado) }}</div>
+                                </div>
+                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="text-gray-500">Total</div>
+                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.total) }}</div>
+                                </div>
+                            </div>
+
+                            <div v-if="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar" class="mt-4 rounded-md border border-gray-200 bg-white p-4">
+                                <div class="text-sm font-medium text-gray-900">Detalle a facturar (edicion)</div>
+                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                                    <div>
+                                        <InputLabel value="Tarifa bulto" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Tarifa palet" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="% valor declarado" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.03" />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value="Flete minimo" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="% seguro" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.007" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="% CR" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_comision_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.025" />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value="% IVA" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.21" />
+                                    </div>
+                                </div>
+
+                                <div v-if="g.isSingleRelacion" class="mt-4 flex items-center gap-2">
+                                    <Checkbox v-model:checked="facturarPorEntrega.detalles_por_entrega[g.entregaId].persistir_tarifa" />
+                                    <span class="text-sm text-gray-700">Actualizar tarifa para esta relacion (remitente/destinatario)</span>
+                                </div>
+                                <div v-else class="mt-4 text-sm text-gray-500">No se puede actualizar tarifa porque el grupo mezcla remitente/destinatario.</div>
                             </div>
                         </div>
 
@@ -247,8 +611,9 @@ const formatFecha = (value) => {
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                </tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">ARCA</th>
+                            </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="c in comprobantes" :key="c.id">
@@ -263,6 +628,38 @@ const formatFecha = (value) => {
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ String(c.fecha_emision || '').slice(0, 10) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                        <div v-if="c.arca_cae" class="text-xs text-gray-700">
+                                            <div>CAE {{ c.arca_cae }}</div>
+                                            <div class="text-gray-500">Vto {{ String(c.arca_cae_vto || '').slice(0, 10) }}</div>
+                                        </div>
+                                        <div v-else class="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
+                                                :disabled="autorizarForm.processing"
+                                                @click.prevent="autorizarArca(c.id, 'FA')"
+                                            >
+                                                Autorizar A
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
+                                                :disabled="autorizarForm.processing"
+                                                @click.prevent="autorizarArca(c.id, 'FB')"
+                                            >
+                                                Autorizar B
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="px-3 py-2 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50"
+                                                :disabled="autorizarForm.processing"
+                                                @click.prevent="autorizarArca(c.id, 'FC')"
+                                            >
+                                                Autorizar C
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

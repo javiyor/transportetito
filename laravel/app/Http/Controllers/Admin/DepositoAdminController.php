@@ -23,7 +23,7 @@ class DepositoAdminController extends Controller
         return Inertia::render('Admin/Depositos/Index', [
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
-            'depositos' => $depositosQuery->get(['id', 'empresa_id', 'nombre', 'direccion', 'punto_venta_numero']),
+            'depositos' => $depositosQuery->get(['id', 'empresa_id', 'nombre', 'direccion', 'punto_venta_numero', 'es_central']),
         ]);
     }
 
@@ -34,9 +34,17 @@ class DepositoAdminController extends Controller
             'nombre' => ['required', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'punto_venta_numero' => ['required', 'integer', 'min:1'],
+            'es_central' => ['sometimes', 'boolean'],
         ]);
 
-        Deposito::query()->create($data);
+        $deposito = Deposito::query()->create($data);
+
+        if (($data['es_central'] ?? false) === true) {
+            Deposito::query()
+                ->where('empresa_id', $deposito->empresa_id)
+                ->whereKeyNot($deposito->id)
+                ->update(['es_central' => false]);
+        }
 
         return back();
     }
@@ -48,9 +56,17 @@ class DepositoAdminController extends Controller
             'nombre' => ['required', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'punto_venta_numero' => ['required', 'integer', 'min:1'],
+            'es_central' => ['sometimes', 'boolean'],
         ]);
 
         $deposito->update($data);
+
+        if (($data['es_central'] ?? false) === true) {
+            Deposito::query()
+                ->where('empresa_id', $deposito->empresa_id)
+                ->whereKeyNot($deposito->id)
+                ->update(['es_central' => false]);
+        }
 
         return back();
     }
