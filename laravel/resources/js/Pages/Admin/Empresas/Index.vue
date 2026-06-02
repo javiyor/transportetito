@@ -18,6 +18,7 @@ const createForm = useForm({
     razon_social: '',
     cuit: '',
     condicion_iva: '',
+    moneda_base: 'ARS',
     arca_pv_default: 2,
     arca_env: 'homologacion',
     permite_guias_no_fiscales: false,
@@ -44,6 +45,7 @@ const editForm = useForm({
     razon_social: '',
     cuit: '',
     condicion_iva: '',
+    moneda_base: 'ARS',
     arca_pv_default: 2,
     arca_env: 'homologacion',
     permite_guias_no_fiscales: false,
@@ -62,6 +64,7 @@ const openEdit = (e) => {
     editForm.razon_social = e.razon_social;
     editForm.cuit = e.cuit;
     editForm.condicion_iva = e.condicion_iva || '';
+    editForm.moneda_base = e.moneda_base || 'ARS';
     editForm.arca_pv_default = e.arca_pv_default;
     editForm.arca_env = e.arca_env;
     editForm.permite_guias_no_fiscales = !!e.permite_guias_no_fiscales;
@@ -111,6 +114,16 @@ const submitEdit = () => {
                         <InputLabel value="Condicion IVA" />
                         <TextInput v-model="createForm.condicion_iva" type="text" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="createForm.errors.condicion_iva" />
+                    </div>
+                    <div>
+                        <InputLabel value="Moneda base" />
+                        <select v-model="createForm.moneda_base" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="BRL">BRL</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.moneda_base" />
                     </div>
                     <div>
                         <InputLabel value="PV default" />
@@ -189,6 +202,7 @@ const submitEdit = () => {
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ARCA</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guias</th>
@@ -199,6 +213,7 @@ const submitEdit = () => {
                             <tr v-for="e in empresas" :key="e.id">
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ e.razon_social }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.cuit }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ e.moneda_base || 'ARS' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.arca_pv_default }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.arca_env }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.permite_guias_no_fiscales ? 'Si' : 'No' }}</td>
@@ -207,7 +222,7 @@ const submitEdit = () => {
                                 </td>
                             </tr>
                             <tr v-if="!empresas.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
+                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -233,6 +248,16 @@ const submitEdit = () => {
                         <InputLabel value="Condicion IVA" />
                         <TextInput v-model="editForm.condicion_iva" type="text" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="editForm.errors.condicion_iva" />
+                    </div>
+                    <div>
+                        <InputLabel value="Moneda base" />
+                        <select v-model="editForm.moneda_base" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="BRL">BRL</option>
+                        </select>
+                        <InputError class="mt-2" :message="editForm.errors.moneda_base" />
                     </div>
                     <div>
                         <InputLabel value="PV default" />

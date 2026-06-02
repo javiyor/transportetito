@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\EmpresaAdminController;
 use App\Http\Controllers\Admin\DepositoAdminController;
 use App\Http\Controllers\Admin\TerceroAdminController;
 use App\Http\Controllers\Admin\TarifaRelacionAdminController;
+use App\Http\Controllers\Admin\CotizacionAdminController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
@@ -106,6 +107,10 @@ Route::middleware([
         Route::get('/tarifas', [TarifaRelacionAdminController::class, 'index'])->name('tarifas.index');
         Route::post('/tarifas', [TarifaRelacionAdminController::class, 'store'])->name('tarifas.store');
         Route::put('/tarifas/{tarifa}', [TarifaRelacionAdminController::class, 'update'])->name('tarifas.update');
+
+        Route::get('/cotizaciones', [CotizacionAdminController::class, 'index'])->name('cotizaciones.index');
+        Route::post('/cotizaciones/oficial', [CotizacionAdminController::class, 'storeOficial'])->name('cotizaciones.oficial.store');
+        Route::post('/cotizaciones/override', [CotizacionAdminController::class, 'storeOverride'])->name('cotizaciones.override.store');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {

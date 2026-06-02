@@ -5,6 +5,7 @@ namespace App\Services\Arca;
 use App\Models\Empresa;
 use App\Models\Deposito;
 use App\Models\Comprobante;
+use App\Services\Moneda\MonedaAfipMapper;
 use Carbon\CarbonImmutable;
 use RuntimeException;
 use SoapClient;
@@ -12,7 +13,7 @@ use SoapFault;
 
 class WsfeClient
 {
-    public function __construct(private WsaaClient $wsaa)
+    public function __construct(private WsaaClient $wsaa, private MonedaAfipMapper $monedaAfipMapper)
     {
     }
 
@@ -74,6 +75,14 @@ class WsfeClient
         $importeTotal = abs((float) $comprobante->total);
         $importeNeto = round($importeTotal / 1.21, 2);
         $importeIva = round($importeTotal - $importeNeto, 2);
+        $detalleFacturacion = (array) ($comprobante->detalle_facturacion ?? []);
+        $cotizacion = (array) (($detalleFacturacion['calculo']['cotizacion'] ?? $detalleFacturacion['cotizacion'] ?? []) ?: []);
+        $moneda = strtoupper((string) ($comprobante->moneda ?: 'ARS'));
+        $monId = $this->monedaAfipMapper->toAfipCode($moneda);
+        $monCotiz = $moneda === 'ARS' ? 1 : (float) ($cotizacion['tasa_ars'] ?? 0);
+        if ($moneda !== 'ARS' && $monCotiz <= 0) {
+            throw new RuntimeException('Falta cotizacion para autorizar comprobante en moneda '.$moneda.'.');
+        }
 
         $detalleRequest = [
             'Concepto' => 2, // Servicios
@@ -88,8 +97,8 @@ class WsfeClient
             'ImpOpEx' => 0,
             'ImpIVA' => $importeIva,
             'ImpTrib' => 0,
-            'MonId' => 'PES',
-            'MonCotiz' => 1,
+            'MonId' => $monId,
+            'MonCotiz' => $monCotiz,
             'FchServDesde' => $fechaYmd,
             'FchServHasta' => $fechaYmd,
             'FchVtoPago' => $fechaYmd,

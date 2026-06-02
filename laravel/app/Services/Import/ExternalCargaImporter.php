@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\Tercero;
+use App\Models\TerceroEmpresa;
 use App\Models\TerceroCuenta;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -95,6 +96,13 @@ SQL,
             $remitenteCuenta = $this->firstOrCreateCuenta($empresa, $remitente, (int) ($row->idorigen ?? 0), (string) ($row->nomorigen ?? ''));
             $destinatarioCuenta = $this->firstOrCreateCuenta($empresa, $destinatario, (int) ($row->iddest ?? 0), (string) ($row->nomdest ?? ''));
 
+            if ($remitenteCuenta) {
+                $this->markCuentaAsCliente($empresa, $remitenteCuenta);
+            }
+            if ($destinatarioCuenta) {
+                $this->markCuentaAsCliente($empresa, $destinatarioCuenta);
+            }
+
             Pedido::query()->create([
                 'external_carga_id' => $externalId,
                 'empresa_id' => $empresa->id,
@@ -166,5 +174,17 @@ SQL,
                 'activo' => true,
             ]
         );
+    }
+
+    private function markCuentaAsCliente(Empresa $empresa, TerceroCuenta $cuenta): void
+    {
+        $pivot = TerceroEmpresa::query()->firstOrNew([
+            'empresa_id' => $empresa->id,
+            'tercero_cuenta_id' => $cuenta->id,
+        ]);
+
+        $pivot->es_cliente = true;
+        $pivot->es_proveedor = (bool) $pivot->es_proveedor;
+        $pivot->save();
     }
 }

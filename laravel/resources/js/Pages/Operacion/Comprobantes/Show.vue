@@ -29,6 +29,8 @@ const tipoLabel = (tipo) => {
     if (tipo === 'nota_credito_interna') return 'Nota de credito';
     return tipo || '-';
 };
+
+const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion || props.comprobante?.detalle_facturacion?.cotizacion || null;
 </script>
 
 <template>
@@ -74,6 +76,10 @@ const tipoLabel = (tipo) => {
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Total</div>
                     <div class="mt-1 text-sm text-gray-900">{{ comprobante.moneda }} {{ comprobante.total }}</div>
+                </div>
+                <div v-if="cotizacion && comprobante.moneda !== 'ARS'">
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Cotizacion usada</div>
+                    <div class="mt-1 text-sm text-gray-900">1 {{ comprobante.moneda }} = {{ cotizacion.tasa_ars }} ARS</div>
                 </div>
                 <div v-if="comprobante.comprobante_origen">
                     <div class="text-xs uppercase tracking-wider text-gray-500">Comprobante origen</div>

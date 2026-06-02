@@ -69,14 +69,19 @@ class ManifiestoIngresoController extends Controller
         $comprobantes = $comprobantes->map(function (Comprobante $comprobante) use ($empresa, $arcaTipos) {
             $item = $comprobante->toArray();
             $item['arca_tipo_opciones'] = (string) $comprobante->tipo === 'factura_interna'
-                ? $arcaTipos->opcionesFactura($empresa->condicion_iva, $comprobante->facturarCuenta?->tercero?->condicion_iva)
+                ? $arcaTipos->opcionesFactura(
+                    $empresa->condicion_iva,
+                    $comprobante->facturarCuenta?->tercero?->condicion_iva,
+                    (float) $comprobante->total,
+                    $comprobante->facturarCuenta?->tercero?->cuit,
+                )
                 : [];
 
             return $item;
         });
 
         $manifiesto->load([
-            'empresa:id,razon_social,permite_guias_no_fiscales,condicion_iva',
+            'empresa:id,razon_social,permite_guias_no_fiscales,condicion_iva,moneda_base',
             'deposito:id,nombre',
             'pedidos' => function ($q) {
                 $q->with([

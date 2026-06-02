@@ -7,29 +7,55 @@ class ArcaTipoComprobanteResolver
     /**
      * @return array<int, array{code:string,label:string}>
      */
-    public function opcionesFactura(?string $emisorCondicionIva, ?string $clienteCondicionIva): array
+    public function opcionesFactura(?string $emisorCondicionIva, ?string $clienteCondicionIva, ?float $importeTotal = null, ?string $clienteCuit = null): array
     {
         $emisor = $this->normalizarCondicionIva($emisorCondicionIva);
         $cliente = $this->normalizarCondicionIva($clienteCondicionIva);
+        $permiteCredito = $this->permiteFacturaCredito($emisor, $cliente, $importeTotal, $clienteCuit);
 
         if ($emisor === 'ri') {
             if ($cliente === 'ri') {
-                return [
+                $out = [
                     ['code' => 'FA', 'label' => 'Factura A'],
-                    ['code' => 'FCA', 'label' => 'Factura de Credito A'],
                 ];
+                if ($permiteCredito) {
+                    $out[] = ['code' => 'FCA', 'label' => 'Factura de Credito A'];
+                }
+
+                return $out;
             }
 
-            return [
+            $out = [
                 ['code' => 'FB', 'label' => 'Factura B'],
-                ['code' => 'FCB', 'label' => 'Factura de Credito B'],
             ];
+            if ($permiteCredito) {
+                $out[] = ['code' => 'FCB', 'label' => 'Factura de Credito B'];
+            }
+
+            return $out;
         }
 
-        return [
+        $out = [
             ['code' => 'FC', 'label' => 'Factura C'],
-            ['code' => 'FCC', 'label' => 'Factura de Credito C'],
         ];
+        if ($permiteCredito) {
+            $out[] = ['code' => 'FCC', 'label' => 'Factura de Credito C'];
+        }
+
+        return $out;
+    }
+
+    public function permiteFacturaCredito(?string $emisorCondicionIva, ?string $clienteCondicionIva, ?float $importeTotal = null, ?string $clienteCuit = null): bool
+    {
+        $emisor = $this->normalizarCondicionIva($emisorCondicionIva);
+        $cliente = $this->normalizarCondicionIva($clienteCondicionIva);
+        $cuit = preg_replace('/\D+/', '', (string) $clienteCuit) ?? '';
+
+        return $emisor === 'ri'
+            && $cliente === 'ri'
+            && $cuit !== ''
+            && strlen($cuit) === 11
+            && ((float) ($importeTotal ?? 0)) > 0;
     }
 
     public function normalizarCondicionIva(?string $value): string

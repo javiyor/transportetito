@@ -56,7 +56,7 @@ const submitPedido = () => {
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
 
 const DEFAULT_TARIFA = {
-    moneda: 'ARS',
+    moneda: props.manifiesto?.empresa?.moneda_base || 'ARS',
     tarifa_bulto: 10000,
     tarifa_palet: 100000,
     tarifa_valor_declarado_pct: 0.03,
@@ -102,6 +102,9 @@ const resolveTarifa = (remId, destId) => {
 const applyOverride = (tarifa, override) => {
     const out = { ...tarifa };
     if (!override) return out;
+    if (override.moneda) {
+        out.moneda = override.moneda;
+    }
     for (const k of [
         'tarifa_bulto',
         'tarifa_palet',
@@ -199,6 +202,7 @@ const gruposFacturacion = computed(() => {
             facturarPorEntrega.detalles_por_entrega[entregaId] = {
                 editar: false,
                 persistir_tarifa: false,
+                moneda: props.manifiesto?.empresa?.moneda_base || 'ARS',
                 tarifa_bulto: null,
                 tarifa_palet: null,
                 tarifa_valor_declarado_pct: null,
@@ -336,6 +340,7 @@ const initFacturarMap = () => {
         det[g.entregaId] = {
             editar: false,
             persistir_tarifa: false,
+            moneda: props.manifiesto?.empresa?.moneda_base || 'ARS',
             tarifa_bulto: null,
             tarifa_palet: null,
             tarifa_valor_declarado_pct: null,
@@ -604,6 +609,15 @@ const comprobanteTipoLabel = (tipo) => {
                             <div v-if="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar" class="mt-4 rounded-md border border-gray-200 bg-white p-4">
                                 <div class="text-sm font-medium text-gray-900">Detalle a facturar (edicion)</div>
                                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                                    <div>
+                                        <InputLabel value="Moneda" />
+                                        <select v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                            <option value="ARS">ARS</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="BRL">BRL</option>
+                                        </select>
+                                    </div>
                                     <div>
                                         <InputLabel value="Tarifa bulto" />
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />

@@ -3,21 +3,24 @@
 namespace App\Http\Controllers\Operacion\Facturacion;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\TarifaRelacion;
 use App\Services\Facturacion\FacturaCalculator;
 use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Facturacion\TarifaResolver;
+use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ManifiestoFacturarController extends Controller
 {
-    public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ComprobanteMailer $mailer): RedirectResponse
+    public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ComprobanteMailer $mailer, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         $request->validate([
             'confirm' => ['required', 'boolean'],
@@ -38,6 +41,7 @@ class ManifiestoFacturarController extends Controller
             'detalles_por_entrega.*.cr_comision_tope' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.iva_pct' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.persistir_tarifa' => ['nullable', 'boolean'],
+            'detalles_por_entrega.*.moneda' => ['nullable', 'in:ARS,USD,EUR,BRL'],
         ]);
 
         $map = $request->input('facturar_por_entrega', []);
@@ -50,8 +54,9 @@ class ManifiestoFacturarController extends Controller
 
         $tarifaResolver = new TarifaResolver();
         $calculator = new FacturaCalculator();
+        $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id);
 
-        DB::transaction(function () use ($manifiesto, $map, $detalles, $tarifaResolver, $calculator, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
+        DB::transaction(function () use ($empresa, $manifiesto, $map, $detalles, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
             $pedidos = Pedido::query()
                 ->where('manifiesto_ingreso_id', $manifiesto->id)
                 ->whereDoesntHave('comprobantes')
@@ -147,9 +152,12 @@ class ManifiestoFacturarController extends Controller
                 foreach ($relationGroups as $rg) {
                     $tarifa = $tarifaResolver->resolve((int) $manifiesto->empresa_id, (int) $rg['remitente_id'], (int) $rg['destinatario_id']);
 
-                    if (is_array($override)) {
-                        foreach ([
-                            'tarifa_bulto',
+                if (is_array($override)) {
+                    if (! empty($override['moneda'])) {
+                        $tarifa['moneda'] = (string) $override['moneda'];
+                    }
+                    foreach ([
+                        'tarifa_bulto',
                             'tarifa_palet',
                             'tarifa_valor_declarado_pct',
                             'flete_minimo',
@@ -188,8 +196,14 @@ class ManifiestoFacturarController extends Controller
                 }
 
                 $total = round($total, 2);
+                $cotizacion = $tipoCambioResolver->resolver(
+                    $empresa,
+                    $moneda,
+                    $manifiesto->fecha->toDateString(),
+                );
                 $detalleCalc = [
                     'moneda' => $moneda,
+                    'cotizacion' => $cotizacion,
                     'bultos' => $bultos,
                     'palets' => $palets,
                     'valor_declarado' => round($valorDeclarado, 2),
@@ -292,6 +306,21 @@ class ManifiestoFacturarController extends Controller
                     'referencia_tipo' => 'comprobante',
                     'referencia_id' => $comprobante->id,
                     'observacion' => 'Emision comprobante '.$comprobante->id,
+                ]);
+
+                AuditLog::query()->create([
+                    'user_id' => request()->user()?->id,
+                    'action' => 'comprobante.emitido',
+                    'subject_type' => Comprobante::class,
+                    'subject_id' => $comprobante->id,
+                    'context' => [
+                        'tipo' => $comprobante->tipo,
+                        'total' => $comprobante->total,
+                        'moneda' => $comprobante->moneda,
+                        'manifiesto_id' => $manifiesto->id,
+                        'facturar_cuenta_id' => $facturarCuentaId,
+                        'entrega_cuenta_id' => $g['entrega'],
+                    ],
                 ]);
 
                 $created++;

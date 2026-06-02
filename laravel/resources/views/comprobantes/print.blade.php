@@ -29,6 +29,10 @@
         };
     @endphp
 
+    @php
+        $cotizacion = $comprobante->detalle_facturacion['calculo']['cotizacion'] ?? $comprobante->detalle_facturacion['cotizacion'] ?? null;
+    @endphp
+
     <h1>Comprobante #{{ $comprobante->id }}</h1>
     <div>{{ $tipoLabel }} - {{ $comprobante->estado }}</div>
 
@@ -39,6 +43,9 @@
         <div><div class="label">Entrega</div><div class="value">{{ $comprobante->entregaCuenta?->tercero?->razon_social ?? '-' }}</div></div>
         <div><div class="label">Fecha</div><div class="value">{{ optional($comprobante->fecha_emision)->format('Y-m-d') }}</div></div>
         <div><div class="label">Total</div><div class="value">{{ $comprobante->moneda }} {{ number_format((float) $comprobante->total, 2, ',', '.') }}</div></div>
+        @if($cotizacion && $comprobante->moneda !== 'ARS')
+            <div><div class="label">Cotizacion usada</div><div class="value">1 {{ $comprobante->moneda }} = {{ number_format((float) $cotizacion['tasa_ars'], 6, ',', '.') }} ARS</div></div>
+        @endif
     </div>
 
     @if($comprobante->tipo === 'nota_credito_interna' && $comprobante->comprobanteOrigen)

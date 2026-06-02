@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion\Facturacion;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\Deposito;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
@@ -34,6 +35,8 @@ class ComprobanteAutorizarArcaController extends Controller
             $permitidos = collect($arcaTipos->opcionesFactura(
                 $comprobante->empresa?->condicion_iva,
                 $comprobante->facturarCuenta?->tercero?->condicion_iva,
+                (float) $comprobante->total,
+                $comprobante->facturarCuenta?->tercero?->cuit,
             ))->pluck('code')->all();
 
             if (! in_array((string) $data['tipo'], $permitidos, true)) {
@@ -54,8 +57,34 @@ class ComprobanteAutorizarArcaController extends Controller
         try {
             $wsfe->autorizarComprobante($comprobante, $depositoCentral, (string) $data['tipo']);
         } catch (\Throwable $e) {
+            AuditLog::query()->create([
+                'user_id' => $request->user()->id,
+                'action' => 'comprobante.arca_autorizacion_fallida',
+                'subject_type' => Comprobante::class,
+                'subject_id' => $comprobante->id,
+                'context' => [
+                    'tipo_solicitado' => $data['tipo'],
+                    'mensaje' => $e->getMessage(),
+                ],
+            ]);
+
             return back()->with('error', $e->getMessage());
         }
+
+        $comprobante->refresh();
+
+        AuditLog::query()->create([
+            'user_id' => $request->user()->id,
+            'action' => 'comprobante.arca_autorizado',
+            'subject_type' => Comprobante::class,
+            'subject_id' => $comprobante->id,
+            'context' => [
+                'tipo_solicitado' => $data['tipo'],
+                'arca_cae' => $comprobante->arca_cae,
+                'arca_numero' => $comprobante->arca_numero,
+                'arca_punto_venta' => $comprobante->arca_punto_venta,
+            ],
+        ]);
 
         return back()->with('success', 'Comprobante autorizado en ARCA (CAE generado).');
     }

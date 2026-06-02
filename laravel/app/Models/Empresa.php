@@ -25,6 +25,7 @@ class Empresa extends Model
         'facebook_url',
         'linkedin_url',
         'permite_guias_no_fiscales',
+        'moneda_base',
     ];
 
     protected $casts = [
@@ -39,5 +40,10 @@ class Empresa extends Model
     public function manifiestosIngreso(): HasMany
     {
         return $this->hasMany(ManifiestoIngreso::class);
+    }
+
+    public function monedaOverrides(): HasMany
+    {
+        return $this->hasMany(EmpresaMonedaOverride::class);
     }
 }
