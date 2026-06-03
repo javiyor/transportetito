@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\CotizacionAdminController;
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
 use App\Http\Controllers\Operacion\PedidoStoreController;
+use App\Http\Controllers\Operacion\PedidoRecepcionControlController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteIndexController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteShowController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteAnularController;
@@ -39,6 +40,8 @@ use App\Http\Controllers\Operacion\Repartos\HojaRutaPrintController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoEmitirGuiasController;
 use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaController;
+use App\Http\Controllers\Compras\ProveedorComprobanteIndexController;
+use App\Http\Controllers\Compras\ProveedorCuentaCorrienteIndexController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -141,6 +144,7 @@ Route::middleware([
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/nota-debito', ComprobanteNotaDebitoStoreController::class)->name('comprobantes.nota-debito');
 
         Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
+        Route::put('/pedidos/{pedido}/recepcion', PedidoRecepcionControlController::class)->name('pedidos.recepcion.update');
 
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/facturar', ManifiestoFacturarController::class)->name('manifiestos.facturar');
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/emitir-guias', ManifiestoEmitirGuiasController::class)->name('manifiestos.emitir-guias');
@@ -159,6 +163,12 @@ Route::middleware([
             Route::put('/hojas/{hoja}/items/{item}', HojaRutaItemUpdateController::class)->name('hojas.items.update');
             Route::post('/hojas/{hoja}/cerrar', HojaRutaCerrarController::class)->name('hojas.cerrar');
         });
+    });
+
+    Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
+        Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
+        Route::post('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'store'])->name('proveedores.comprobantes.store');
+        Route::get('/proveedores/cuentas-corrientes', ProveedorCuentaCorrienteIndexController::class)->name('proveedores.ctacte.index');
     });
 
     Route::middleware(['role:cobranzas|cobranzas_admin'])->prefix('cobranzas')->name('cobranzas.')->group(function () {

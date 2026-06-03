@@ -44,6 +44,19 @@ const pedidoForm = useForm({
     cr_importe: '',
 });
 
+const recepcionForms = reactive({});
+
+for (const p of (props.manifiesto?.pedidos || [])) {
+    recepcionForms[p.id] = useForm({
+        recepcion_estado: p.recepcion_estado || 'correcto',
+        recepcion_observacion: p.recepcion_observacion || '',
+    });
+}
+
+const guardarRecepcion = (pedidoId) => {
+    recepcionForms[pedidoId].put(route('operacion.pedidos.recepcion.update', pedidoId), { preserveScroll: true });
+};
+
 const submitPedido = () => {
     pedidoForm.post(route('operacion.manifiestos.pedidos.store', props.manifiesto.id), {
         preserveScroll: true,
@@ -58,6 +71,9 @@ const submitPedido = () => {
 };
 
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
+const recepcionConErrores = computed(() => (props.manifiesto.pedidos || []).filter((p) => p.recepcion_estado === 'con_error'));
+const bloquearEmisionPorRecepcion = computed(() => recepcionConErrores.value.length > 0);
+const filtroRecepcion = reactive({ soloErrores: false });
 
 const DEFAULT_TARIFA = {
     moneda: props.manifiesto?.empresa?.moneda_base || 'ARS',
@@ -147,6 +163,8 @@ const applyOverride = (tarifa, override) => {
         'cr_comision_pct',
         'cr_comision_minimo',
         'cr_comision_tope',
+        'cr_importe_manual',
+        'comision_cr_manual',
         'iva_pct',
     ]) {
         if (Object.prototype.hasOwnProperty.call(override, k) && override[k] !== null && override[k] !== '') {
@@ -163,7 +181,10 @@ const calcFactura = (pedidos, tarifa, override) => {
     const valorDeclaradoOrigen = pedidos.reduce((acc, p) => acc + Number(p.valor_declarado || 0), 0);
     const crImporteOrigen = pedidos.reduce((acc, p) => acc + Number(p.cr_importe || 0), 0);
     const valorDeclarado = convertAmount(valorDeclaradoOrigen, 'ARS', t.moneda || 'ARS');
-    const crImporte = convertAmount(crImporteOrigen, 'ARS', t.moneda || 'ARS');
+    const crImporteCalculado = convertAmount(crImporteOrigen, 'ARS', t.moneda || 'ARS');
+    const crImporte = override?.cr_importe_manual !== null && override?.cr_importe_manual !== ''
+        ? Number(override.cr_importe_manual)
+        : crImporteCalculado;
 
     const fletePorUnidad = bultos * t.tarifa_bulto + palets * t.tarifa_palet;
     const fletePorValor = valorDeclarado * t.tarifa_valor_declarado_pct;
@@ -176,6 +197,9 @@ const calcFactura = (pedidos, tarifa, override) => {
     let comisionCr = crImporte * t.cr_comision_pct;
     if (t.cr_comision_minimo !== null) comisionCr = Math.max(Number(t.cr_comision_minimo), comisionCr);
     if (t.cr_comision_tope !== null) comisionCr = Math.min(Number(t.cr_comision_tope), comisionCr);
+    if (override?.comision_cr_manual !== null && override?.comision_cr_manual !== '') {
+        comisionCr = Number(override.comision_cr_manual);
+    }
 
     const subtotalGravado = flete + seguro + comisionCr;
     const iva = subtotalGravado * t.iva_pct;
@@ -214,9 +238,18 @@ const pedidosPendientes = computed(() => {
     return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
 });
 
+const pedidosVisibles = computed(() => {
+    const items = props.manifiesto.pedidos || [];
+    return filtroRecepcion.soloErrores ? items.filter((p) => p.recepcion_estado === 'con_error') : items;
+});
+
 const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {} });
 
+const detalleOverridesSnapshot = computed(() => JSON.stringify(facturarPorEntrega.detalles_por_entrega || {}));
+
 const gruposFacturacion = computed(() => {
+    detalleOverridesSnapshot.value;
+
     const grouped = new Map();
     for (const p of pedidosPendientes.value) {
         const entregaId = p.destinatario_cuenta_id;
@@ -246,6 +279,8 @@ const gruposFacturacion = computed(() => {
                 cr_comision_pct: null,
                 cr_comision_minimo: null,
                 cr_comision_tope: null,
+                cr_importe_manual: null,
+                comision_cr_manual: null,
                 iva_pct: null,
             };
         }
@@ -384,6 +419,8 @@ const initFacturarMap = () => {
             cr_comision_pct: null,
             cr_comision_minimo: null,
             cr_comision_tope: null,
+            cr_importe_manual: null,
+            comision_cr_manual: null,
             iva_pct: null,
         };
     }
@@ -417,6 +454,8 @@ const facturarSeleccionado = () => {
                 'cr_comision_pct',
                 'cr_comision_minimo',
                 'cr_comision_tope',
+                'cr_importe_manual',
+                'comision_cr_manual',
                 'iva_pct',
             ];
             for (const [entregaId, v] of Object.entries(data.detalles_por_entrega || {})) {
@@ -536,8 +575,8 @@ const comprobanteTipoLabel = (tipo) => {
                         <p class="mt-1 text-sm text-gray-600">{{ totalPedidos }} cargados</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
-                        <SecondaryButton v-if="canFacturar && permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
+                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
+                        <SecondaryButton v-if="canFacturar && permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
 
@@ -548,6 +587,9 @@ const comprobanteTipoLabel = (tipo) => {
 
                     <div v-if="faltanSelecciones && gruposFacturacion.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         Falta seleccionar “Facturar a” en uno o mas grupos.
+                    </div>
+                    <div v-if="bloquearEmisionPorRecepcion" class="mt-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                        Hay pedidos recibidos con error. Debes revisarlos/corregirlos antes de emitir facturas o guias.
                     </div>
 
                     <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
@@ -675,6 +717,14 @@ const comprobanteTipoLabel = (tipo) => {
                                     <div>
                                         <InputLabel value="% CR" />
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_comision_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.025" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="CR manual" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_importe_manual" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa CR pedidos)" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Comision CR manual" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].comision_cr_manual" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(calcula automatica)" />
                                     </div>
 
                                     <div>
@@ -850,7 +900,15 @@ const comprobanteTipoLabel = (tipo) => {
                     </div>
                 </form>
 
-                <div class="mt-8 overflow-x-auto">
+                <div class="mt-8 flex items-center justify-between gap-4 flex-wrap">
+                    <div class="text-sm text-gray-600">Control de recepcion de pedidos importados.</div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <Checkbox v-model:checked="filtroRecepcion.soloErrores" />
+                        Mostrar solo pedidos con error
+                    </label>
+                </div>
+
+                <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -859,13 +917,14 @@ const comprobanteTipoLabel = (tipo) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paga</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="p in (manifiesto.pedidos || [])" :key="p.id">
+                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
+                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
+                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
+                             </tr>
+                         </thead>
+                         <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="p in pedidosVisibles" :key="p.id" :class="p.recepcion_estado === 'con_error' ? 'bg-red-50' : (p.recepcion_estado === 'correcto' ? 'bg-green-50/40' : '')">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ p.id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
@@ -877,14 +936,31 @@ const comprobanteTipoLabel = (tipo) => {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.paga }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.bultos }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.palets }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.valor_declarado }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
-                            </tr>
+                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.palets }}</td>
+                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.valor_declarado }}</td>
+                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
+                                 <td class="px-6 py-4 text-sm text-gray-700 min-w-[320px]">
+                                     <div class="space-y-2">
+                                         <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                             <option value="correcto">Correctamente recibido</option>
+                                             <option value="con_error">Recibido con error</option>
+                                         </select>
+                                         <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" :placeholder="recepcionForms[p.id].recepcion_estado === 'con_error' ? 'Describir error' : 'Observacion opcional'" />
+                                         <div class="flex items-center justify-between gap-2">
+                                             <div class="text-xs text-gray-500">
+                                                 <span v-if="p.recepcion_controlado_at">Ultimo control: {{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 16) }}</span>
+                                                 <span v-else>Sin control</span>
+                                             </div>
+                                             <PrimaryButton :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">Guardar</PrimaryButton>
+                                         </div>
+                                         <InputError class="mt-1" :message="recepcionForms[p.id].errors.recepcion_observacion" />
+                                     </div>
+                                 </td>
+                             </tr>
 
-                            <tr v-if="!(manifiesto.pedidos || []).length">
-                                <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
-                            </tr>
+                             <tr v-if="!pedidosVisibles.length">
+                                 <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
+                             </tr>
                         </tbody>
                     </table>
                 </div>

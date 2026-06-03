@@ -10,12 +10,15 @@ import TextInput from '@/Components/TextInput.vue';
 
 const props = defineProps({
     defaults: Object,
+    empresa: Object,
+    depositos: Array,
 });
 
 const page = usePage();
 
 const form = useForm({
     since: props.defaults?.since || '',
+    deposito_id: props.depositos?.[0]?.id || '',
 });
 
 const importResult = computed(() => page.props.tt?.flash?.importResult || null);
@@ -57,10 +60,23 @@ const submit = () => {
 
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <form class="grid grid-cols-1 sm:grid-cols-3 gap-4" @submit.prevent="submit">
+                    <div class="sm:col-span-3">
+                        <InputLabel value="Empresa seleccionada" />
+                        <div class="mt-1 text-sm text-gray-700">{{ empresa?.razon_social || '-' }}</div>
+                    </div>
                     <div class="sm:col-span-2">
                         <InputLabel for="since" value="Importar desde (fecha)" />
                         <TextInput id="since" v-model="form.since" type="date" class="mt-1 block w-full" required />
                         <InputError class="mt-2" :message="form.errors.since" />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <InputLabel for="deposito_id" value="Deposito de origen" />
+                        <select id="deposito_id" v-model="form.deposito_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                            <option value="" disabled>(seleccionar)</option>
+                            <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.deposito_id" />
                     </div>
 
                     <div class="flex items-end justify-end">
@@ -70,6 +86,9 @@ const submit = () => {
 
                 <div class="mt-4 text-sm text-gray-600">
                     No duplica: usa <span class="font-mono">carga.id</span> como <span class="font-mono">external_carga_id</span>.
+                </div>
+                <div class="mt-2 text-sm text-gray-600">
+                    El deposito seleccionado se usa como deposito de origen. El deposito destino se asigna automaticamente al deposito central de la empresa.
                 </div>
             </div>
         </div>

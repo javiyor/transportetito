@@ -83,7 +83,7 @@ const applyFilters = () => {
                     <p class="text-sm text-gray-600">Las cuentas con deuda vencida al {{ cutoff }} se resaltan.</p>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-[1200px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
@@ -92,7 +92,7 @@ const applyFilters = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo total</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencido +30</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -106,7 +106,7 @@ const applyFilters = () => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || 'Sin barrio' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.saldo }}</td>
                                 <td class="px-6 py-4 text-sm font-medium" :class="c.vencido_30 > 0 ? 'text-red-700' : 'text-gray-700'">{{ c.vencido_30 }}</td>
-                                <td class="px-6 py-4 text-right text-sm">
+                                <td class="sticky right-0 bg-white px-6 py-4 text-right text-sm">
                                     <Link class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.show', c.id)">Consultar</Link>
                                 </td>
                             </tr>

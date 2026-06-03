@@ -105,7 +105,7 @@ const createHoja = () => {
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-[1200px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -116,6 +116,7 @@ const createHoja = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
+                                <th class="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -132,9 +133,10 @@ const createHoja = () => {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ f.moneda }} {{ f.total }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ f.moneda === 'ARS' ? '-' : (f.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || f.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</td>
+                                <td class="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">Seleccionar</td>
                             </tr>
                             <tr v-if="!facturas.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
+                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>

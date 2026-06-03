@@ -62,6 +62,8 @@ class ManifiestoEmitirGuiasController extends Controller
             'detalles_por_entrega.*.cr_comision_pct' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.cr_comision_minimo' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.cr_comision_tope' => ['nullable', 'numeric', 'min:0'],
+            'detalles_por_entrega.*.cr_importe_manual' => ['nullable', 'numeric', 'min:0'],
+            'detalles_por_entrega.*.comision_cr_manual' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.iva_pct' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.persistir_tarifa' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.moneda' => ['nullable', 'in:ARS,USD,EUR,BRL'],
@@ -74,6 +76,15 @@ class ManifiestoEmitirGuiasController extends Controller
         $missingCuentas = 0;
         $missingSelection = 0;
         $comprobanteIds = [];
+
+        $erroresRecepcion = Pedido::query()
+            ->where('manifiesto_ingreso_id', $manifiesto->id)
+            ->where('recepcion_estado', 'con_error')
+            ->count();
+
+        if ($erroresRecepcion > 0) {
+            return back()->with('error', 'No se puede emitir: hay pedidos con error de recepcion pendientes de corregir.');
+        }
 
         $tarifaResolver = new TarifaResolver();
         $calculator = new FacturaCalculator();
@@ -169,6 +180,8 @@ class ManifiestoEmitirGuiasController extends Controller
                             'cr_comision_pct',
                             'cr_comision_minimo',
                             'cr_comision_tope',
+                            'cr_importe_manual',
+                            'comision_cr_manual',
                             'iva_pct',
                         ] as $k) {
                             if (array_key_exists($k, $override) && $override[$k] !== null && $override[$k] !== '') {
@@ -232,6 +245,8 @@ class ManifiestoEmitirGuiasController extends Controller
                         'cr_comision_pct',
                         'cr_comision_minimo',
                         'cr_comision_tope',
+                        'cr_importe_manual',
+                        'comision_cr_manual',
                         'iva_pct',
                     ])) : null,
                 ];

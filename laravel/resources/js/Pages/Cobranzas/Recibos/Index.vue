@@ -100,7 +100,7 @@ const formatFecha = (value) => {
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-[1200px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
@@ -108,7 +108,7 @@ const formatFecha = (value) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -122,7 +122,7 @@ const formatFecha = (value) => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ r.estado }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ r.moneda }} {{ r.total }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ r.moneda === 'ARS' ? '-' : r.cotizacion_ars }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                <td class="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-right text-sm">
                                     <Link class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', r.id)">Ver</Link>
                                 </td>
                             </tr>

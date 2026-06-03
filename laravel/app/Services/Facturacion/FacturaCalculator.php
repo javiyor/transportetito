@@ -37,6 +37,10 @@ class FacturaCalculator
             $crImporte = $moneda === 'ARS' ? $crImporteArs : ($crImporteArs / $tasaDestinoArs);
         }
 
+        if (array_key_exists('cr_importe_manual', $tarifa) && $tarifa['cr_importe_manual'] !== null && $tarifa['cr_importe_manual'] !== '') {
+            $crImporte = (float) $tarifa['cr_importe_manual'];
+        }
+
         $tarifaBulto = (float) ($tarifa['tarifa_bulto'] ?? 0);
         $tarifaPalet = (float) ($tarifa['tarifa_palet'] ?? 0);
         $pctValor = (float) ($tarifa['tarifa_valor_declarado_pct'] ?? 0);
@@ -68,6 +72,10 @@ class FacturaCalculator
             $comisionCr = min((float) $crTope, $comisionCr);
         }
 
+        if (array_key_exists('comision_cr_manual', $tarifa) && $tarifa['comision_cr_manual'] !== null && $tarifa['comision_cr_manual'] !== '') {
+            $comisionCr = (float) $tarifa['comision_cr_manual'];
+        }
+
         $subtotalGravado = $flete + $seguro + $comisionCr;
         $ivaPct = (float) ($tarifa['iva_pct'] ?? 0);
         $iva = $subtotalGravado * $ivaPct;
@@ -96,6 +104,8 @@ class FacturaCalculator
                 'cr_comision_pct' => $crPct,
                 'cr_comision_minimo' => $crMin,
                 'cr_comision_tope' => $crTope,
+                'cr_importe_manual' => $tarifa['cr_importe_manual'] ?? null,
+                'comision_cr_manual' => $tarifa['comision_cr_manual'] ?? null,
                 'iva_pct' => $ivaPct,
             ],
         ];

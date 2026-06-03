@@ -37,6 +37,10 @@ class Pedido extends Model
         'external_estado',
         'external_facturado',
         'external_retiro',
+        'recepcion_estado',
+        'recepcion_observacion',
+        'recepcion_controlado_at',
+        'recepcion_controlado_por_user_id',
     ];
 
     protected $casts = [
@@ -45,6 +49,7 @@ class Pedido extends Model
         'es_devolucion' => 'bool',
         'external_facturado' => 'bool',
         'external_retiro' => 'bool',
+        'recepcion_controlado_at' => 'datetime',
     ];
 
     public function manifiestoIngreso(): BelongsTo

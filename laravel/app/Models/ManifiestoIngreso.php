@@ -16,6 +16,7 @@ class ManifiestoIngreso extends Model
     protected $fillable = [
         'empresa_id',
         'deposito_id',
+        'destino_deposito_id',
         'transporte',
         'chofer',
         'patente_camion',
@@ -41,6 +42,11 @@ class ManifiestoIngreso extends Model
     public function deposito(): BelongsTo
     {
         return $this->belongsTo(Deposito::class);
+    }
+
+    public function depositoDestino(): BelongsTo
+    {
+        return $this->belongsTo(Deposito::class, 'destino_deposito_id');
     }
 
     public function pedidos(): HasMany

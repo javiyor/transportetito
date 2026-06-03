@@ -15,6 +15,7 @@ class ImportCargaRequest extends FormRequest
     {
         return [
             'since' => ['required', 'date'],
+            'deposito_id' => ['required', 'integer', 'exists:depositos,id'],
         ];
     }
 }

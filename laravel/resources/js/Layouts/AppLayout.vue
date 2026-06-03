@@ -61,6 +61,14 @@ const switchEmpresa = (empresaId) => {
                                 </NavLink>
 
                                 <NavLink
+                                    v-if="($page.props.tt?.roles || []).includes('admin')"
+                                    :href="route('compras.proveedores.comprobantes.index')"
+                                    :active="route().current('compras.*')"
+                                >
+                                    Compras
+                                </NavLink>
+
+                                <NavLink
                                     v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin'].includes(r))"
                                     :href="route('cobranzas.pre-recibos.index')"
                                     :active="route().current('cobranzas.*')"
@@ -222,6 +230,14 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('operacion.comprobantes.*')"
                         >
                             Comprobantes
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.proveedores.comprobantes.index')"
+                            :active="route().current('compras.*')"
+                        >
+                            Compras
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class ExternalCargaImporter
 {
-    public function importSince(Empresa $empresa, string $sinceDate): array
+    public function importSince(Empresa $empresa, Deposito $depositoOrigenSeleccionado, string $sinceDate): array
     {
         $since = CarbonImmutable::parse($sinceDate)->startOfDay();
 
@@ -65,17 +65,22 @@ SQL,
                 continue;
             }
 
-            $depositoNombre = trim((string) ($row->nombre ?? ''));
-            $deposito = Deposito::query()->firstOrCreate(
-                ['empresa_id' => $empresa->id, 'nombre' => $depositoNombre !== '' ? $depositoNombre : 'Deposito'],
-                ['punto_venta_numero' => $empresa->arca_pv_default]
-            );
+            $remitente = $this->firstOrCreateTercero((string) ($row->cuitori ?? ''), (string) ($row->nomorigen ?? ''), (int) ($row->idorigen ?? 0));
+            $destinatario = $this->firstOrCreateTercero((string) ($row->cuitdest ?? ''), (string) ($row->nomdest ?? ''), (int) ($row->iddest ?? 0));
+
+            $remitenteCuenta = $this->firstOrCreateCuenta($empresa, $remitente, (int) ($row->idorigen ?? 0), (string) ($row->nomorigen ?? ''));
+            $destinatarioCuenta = $this->firstOrCreateCuenta($empresa, $destinatario, (int) ($row->iddest ?? 0), (string) ($row->nomdest ?? ''));
+
+            $empresaEfectiva = $this->resolveEmpresaForImport($empresa, $remitenteCuenta, $destinatarioCuenta);
+            $depositoOrigen = $this->resolveDepositoForImport($empresaEfectiva, $depositoOrigenSeleccionado);
+            $depositoDestino = $this->resolveDepositoDestinoCentral($empresaEfectiva, $depositoOrigen);
 
             $fecha = CarbonImmutable::parse((string) $row->fecha)->toDateString();
             $manifiesto = ManifiestoIngreso::query()->firstOrCreate(
                 [
-                    'empresa_id' => $empresa->id,
-                    'deposito_id' => $deposito->id,
+                    'empresa_id' => $empresaEfectiva->id,
+                    'deposito_id' => $depositoOrigen->id,
+                    'destino_deposito_id' => $depositoDestino?->id,
                     'fecha' => $fecha,
                 ],
                 [
@@ -83,30 +88,24 @@ SQL,
                     'chofer' => null,
                     'patente_camion' => null,
                     'patente_acoplado' => null,
-                    'ciudad_origen' => null,
-                    'ciudad_destino' => null,
+                    'ciudad_origen' => $depositoOrigen->nombre,
+                    'ciudad_destino' => $depositoDestino?->nombre,
                     'valor_asegurado' => null,
                     'gastos_envio' => null,
                 ]
             );
 
-            $remitente = $this->firstOrCreateTercero((string) ($row->cuitori ?? ''), (string) ($row->nomorigen ?? ''), (int) ($row->idorigen ?? 0));
-            $destinatario = $this->firstOrCreateTercero((string) ($row->cuitdest ?? ''), (string) ($row->nomdest ?? ''), (int) ($row->iddest ?? 0));
-
-            $remitenteCuenta = $this->firstOrCreateCuenta($empresa, $remitente, (int) ($row->idorigen ?? 0), (string) ($row->nomorigen ?? ''));
-            $destinatarioCuenta = $this->firstOrCreateCuenta($empresa, $destinatario, (int) ($row->iddest ?? 0), (string) ($row->nomdest ?? ''));
-
             if ($remitenteCuenta) {
-                $this->markCuentaAsCliente($empresa, $remitenteCuenta);
+                $this->markCuentaAsCliente($empresaEfectiva, $remitenteCuenta);
             }
             if ($destinatarioCuenta) {
-                $this->markCuentaAsCliente($empresa, $destinatarioCuenta);
+                $this->markCuentaAsCliente($empresaEfectiva, $destinatarioCuenta);
             }
 
             Pedido::query()->create([
                 'external_carga_id' => $externalId,
-                'empresa_id' => $empresa->id,
-                'deposito_id' => $deposito->id,
+                'empresa_id' => $empresaEfectiva->id,
+                'deposito_id' => $depositoOrigen->id,
                 'manifiesto_ingreso_id' => $manifiesto->id,
                 'envio_consolidado_id' => null,
                 'remitente_tercero_id' => $remitente->id,
@@ -163,6 +162,19 @@ SQL,
 
         $nombre = trim($nombreCuenta) !== '' ? trim($nombreCuenta) : null;
 
+        $existing = TerceroCuenta::query()
+            ->where('tercero_id', $tercero->id)
+            ->orderBy('id')
+            ->first();
+
+        if ($existing) {
+            if (! $existing->nombre_cuenta && $nombre) {
+                $existing->update(['nombre_cuenta' => $nombre]);
+            }
+
+            return $existing;
+        }
+
         return TerceroCuenta::query()->firstOrCreate(
             [
                 'empresa_id' => $empresa->id,
@@ -174,6 +186,35 @@ SQL,
                 'activo' => true,
             ]
         );
+    }
+
+    private function resolveEmpresaForImport(Empresa $empresaSeleccionada, ?TerceroCuenta $remitenteCuenta, ?TerceroCuenta $destinatarioCuenta): Empresa
+    {
+        $empresaId = $destinatarioCuenta?->empresa_id ?: $remitenteCuenta?->empresa_id ?: $empresaSeleccionada->id;
+        return $empresaId === $empresaSeleccionada->id
+            ? $empresaSeleccionada
+            : Empresa::query()->findOrFail($empresaId);
+    }
+
+    private function resolveDepositoForImport(Empresa $empresa, Deposito $depositoSeleccionado): Deposito
+    {
+        if ((int) $depositoSeleccionado->empresa_id === (int) $empresa->id) {
+            return $depositoSeleccionado;
+        }
+
+        return Deposito::query()->firstOrCreate(
+            ['empresa_id' => $empresa->id, 'nombre' => $depositoSeleccionado->nombre],
+            ['punto_venta_numero' => $empresa->arca_pv_default]
+        );
+    }
+
+    private function resolveDepositoDestinoCentral(Empresa $empresa, Deposito $fallbackOrigen): ?Deposito
+    {
+        return Deposito::query()
+            ->where('empresa_id', $empresa->id)
+            ->where('es_central', true)
+            ->first()
+            ?: $fallbackOrigen;
     }
 
     private function markCuentaAsCliente(Empresa $empresa, TerceroCuenta $cuenta): void
