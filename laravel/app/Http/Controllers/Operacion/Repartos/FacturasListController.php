@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Operacion\Repartos;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
-use App\Models\Deposito;
+use App\Models\TerceroCuenta;
+use App\Models\Zona;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,7 +14,8 @@ class FacturasListController extends Controller
     public function __invoke(Request $request)
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        $depositoId = (int) ($request->query('deposito_id') ?: 0);
+        $zonaId = (int) ($request->query('zona_id') ?: 0);
+        $localidad = trim((string) ($request->query('localidad') ?: ''));
         $tipo = (string) ($request->query('tipo') ?: 'todos');
         $fechaRaw = $request->query('fecha');
         $fecha = is_string($fechaRaw) ? trim($fechaRaw) : null;
@@ -21,10 +23,19 @@ class FacturasListController extends Controller
             $fecha = null;
         }
 
-        $depositos = Deposito::query()
+        $zonas = Zona::query()
             ->where('empresa_id', $empresaId)
+            ->where('activo', true)
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
+
+        $localidades = TerceroCuenta::query()
+            ->where('empresa_id', $empresaId)
+            ->whereNotNull('localidad')
+            ->where('localidad', '!=', '')
+            ->distinct()
+            ->orderBy('localidad')
+            ->pluck('localidad');
 
         $query = Comprobante::query()
             ->with([
@@ -39,8 +50,12 @@ class FacturasListController extends Controller
             $query->whereDate('fecha_emision', $fecha);
         }
 
-        if ($depositoId > 0) {
-            $query->where('deposito_id', $depositoId);
+        if ($zonaId > 0) {
+            $query->whereHas('entregaCuenta', fn ($q) => $q->where('zona_id', $zonaId));
+        }
+
+        if ($localidad !== '') {
+            $query->whereHas('entregaCuenta', fn ($q) => $q->where('localidad', $localidad));
         }
 
         if (in_array($tipo, ['factura_interna', 'guia_envio'], true)) {
@@ -50,9 +65,11 @@ class FacturasListController extends Controller
         $comprobantes = $query->get();
 
         return Inertia::render('Operacion/Repartos/Facturas', [
-            'depositos' => $depositos,
+            'zonas' => $zonas,
+            'localidades' => $localidades,
             'filters' => [
-                'deposito_id' => $depositoId ?: null,
+                'zona_id' => $zonaId ?: null,
+                'localidad' => $localidad !== '' ? $localidad : null,
                 'fecha' => $fecha,
                 'tipo' => $tipo,
             ],

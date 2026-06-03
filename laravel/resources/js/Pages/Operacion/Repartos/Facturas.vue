@@ -6,13 +6,15 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 
 const props = defineProps({
-    depositos: Array,
+    zonas: Array,
+    localidades: Array,
     filters: Object,
     facturas: Array,
 });
 
 const form = useForm({
-    deposito_id: props.filters?.deposito_id || '',
+    zona_id: props.filters?.zona_id || '',
+    localidad: props.filters?.localidad || '',
     fecha: props.filters?.fecha || '',
     tipo: props.filters?.tipo || 'todos',
     comprobante_ids: [],
@@ -21,7 +23,7 @@ const form = useForm({
 const applyFilters = () => {
     router.get(
         route('operacion.repartos.facturas'),
-        { deposito_id: form.deposito_id || null, fecha: form.fecha || null, tipo: form.tipo || 'todos' },
+        { zona_id: form.zona_id || null, localidad: form.localidad || null, fecha: form.fecha || null, tipo: form.tipo || 'todos' },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -58,12 +60,19 @@ const createHoja = () => {
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div>
-                        <div class="text-sm font-medium text-gray-900">Deposito</div>
-                        <select v-model="form.deposito_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <div class="text-sm font-medium text-gray-900">Zona</div>
+                        <select v-model="form.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="">Todos</option>
-                            <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+                            <option v-for="z in zonas" :key="z.id" :value="z.id">{{ z.nombre }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Ciudad</div>
+                        <select v-model="form.localidad" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                            <option value="">Todas</option>
+                            <option v-for="loc in localidades" :key="loc" :value="loc">{{ loc }}</option>
                         </select>
                     </div>
                     <div>
