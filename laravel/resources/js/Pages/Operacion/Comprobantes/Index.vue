@@ -68,7 +68,46 @@ const tipoLabel = (tipo) => {
                 <div class="p-6 border-b border-gray-200">
                     <h3 class="text-base font-semibold text-gray-900">Emitidos</h3>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="space-y-4 p-4 sm:hidden">
+                    <div v-for="c in comprobantes.data" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">#{{ c.id }}</div>
+                                <div class="text-xs text-gray-500">{{ tipoLabel(c.tipo) }} · {{ c.estado }}</div>
+                            </div>
+                            <Link :href="route('operacion.comprobantes.show', c.id)" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</Link>
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Facturar</div>
+                                <div class="font-medium text-gray-900">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Entrega</div>
+                                <div class="font-medium text-gray-900">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Total</div>
+                                    <div class="font-medium text-gray-900">{{ c.moneda }} {{ c.total }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Cotizacion</div>
+                                    <div class="font-medium text-gray-900">{{ c.moneda === 'ARS' ? '-' : (c.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || c.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Saldo acreditable</div>
+                                <div class="font-medium text-gray-900">
+                                    <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ c.credit_summary?.saldo_acreditable }}</span>
+                                    <span v-else>-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="!comprobantes.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</div>
+                </div>
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

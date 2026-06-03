@@ -82,7 +82,34 @@ const applyFilters = () => {
                 <div class="p-6 border-b border-gray-200">
                     <p class="text-sm text-gray-600">Las cuentas con deuda vencida al {{ cutoff }} se resaltan.</p>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="space-y-4 p-4 sm:hidden">
+                    <div v-for="c in cuentas" :key="c.id" class="rounded-lg border p-4" :class="c.resaltar ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ c.razon_social || '-' }}</div>
+                                <div class="text-xs text-gray-500">CUIT {{ c.cuit || '-' }} · Nro {{ c.numero_cliente || '-' }}</div>
+                            </div>
+                            <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.show', c.id)">Consultar</Link>
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Zona / Ciudad / Barrio</div>
+                                <div class="font-medium text-gray-900">{{ c.zona || 'Sin zona' }} · {{ c.localidad || 'Sin ciudad' }} · {{ c.barrio || 'Sin barrio' }}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Saldo total</div>
+                                    <div class="font-medium text-gray-900">{{ c.saldo }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Vencido +30</div>
+                                    <div class="font-medium" :class="c.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ c.vencido_30 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-[1200px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

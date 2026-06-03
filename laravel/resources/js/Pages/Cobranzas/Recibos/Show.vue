@@ -23,7 +23,7 @@ const formatFecha = (value) => {
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Recibo #{{ recibo.id }}</h2>
                     <div class="mt-1 text-sm text-gray-600">{{ formatFecha(recibo.fecha) }} · Estado: {{ recibo.estado }}</div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 justify-end">
                     <a :href="route('cobranzas.recibos.print', recibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
                     <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
                 </div>
@@ -52,7 +52,19 @@ const formatFecha = (value) => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Items</h3></div>
-                <div class="overflow-x-auto">
+                <div class="space-y-3 p-4 sm:hidden">
+                    <div v-for="it in (recibo.items || [])" :key="it.id" class="rounded-lg border border-gray-200 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ it.medio }}</div>
+                                <div class="text-xs text-gray-500">{{ it.moneda }} {{ it.importe }}</div>
+                            </div>
+                            <div class="text-xs text-gray-500">{{ it.moneda === 'ARS' ? '-' : it.cotizacion_ars }}</div>
+                        </div>
+                        <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-auto whitespace-pre-wrap">{{ it.detalle ? JSON.stringify(it.detalle, null, 2) : '' }}</pre>
+                    </div>
+                </div>
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -76,7 +88,19 @@ const formatFecha = (value) => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Aplicaciones</h3></div>
-                <div class="overflow-x-auto">
+                <div class="space-y-3 p-4 sm:hidden">
+                    <div v-for="ap in (recibo.aplicaciones || [])" :key="ap.id" class="rounded-lg border border-gray-200 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ ap.modo }}</div>
+                                <div class="text-xs text-gray-500">{{ ap.comprobante_id ? ('#' + ap.comprobante_id) : '-' }}</div>
+                            </div>
+                            <div class="text-sm font-medium text-gray-900">{{ ap.moneda }} {{ ap.importe }}</div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">Cotizacion: {{ ap.moneda === 'ARS' ? '-' : ap.cotizacion_ars }}</div>
+                    </div>
+                </div>
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

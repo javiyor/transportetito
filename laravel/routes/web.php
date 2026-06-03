@@ -42,6 +42,8 @@ use App\Http\Controllers\Operacion\Facturacion\ManifiestoEmitirGuiasController;
 use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaController;
 use App\Http\Controllers\Compras\ProveedorComprobanteIndexController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteIndexController;
+use App\Http\Controllers\Compras\ProveedorCuentaCorrienteShowController;
+use App\Http\Controllers\Compras\ProveedorOrdenPagoStoreController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -169,6 +171,8 @@ Route::middleware([
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
         Route::post('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'store'])->name('proveedores.comprobantes.store');
         Route::get('/proveedores/cuentas-corrientes', ProveedorCuentaCorrienteIndexController::class)->name('proveedores.ctacte.index');
+        Route::get('/proveedores/cuentas-corrientes/{cuenta}', ProveedorCuentaCorrienteShowController::class)->name('proveedores.ctacte.show');
+        Route::post('/proveedores/cuentas-corrientes/{cuenta}/ordenes-pago', ProveedorOrdenPagoStoreController::class)->name('proveedores.ctacte.ordenes-pago.store');
     });
 
     Route::middleware(['role:cobranzas|cobranzas_admin'])->prefix('cobranzas')->name('cobranzas.')->group(function () {

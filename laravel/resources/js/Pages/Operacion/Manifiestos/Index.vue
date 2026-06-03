@@ -26,7 +26,7 @@ const formatFecha = (value) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Manifiestos</h2>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 justify-end">
                     <Link v-if="canRepartos" :href="route('operacion.repartos.facturas')">
                         <SecondaryButton>Repartos</SecondaryButton>
                     </Link>
@@ -46,7 +46,30 @@ const formatFecha = (value) => {
                     <p class="text-sm text-gray-600">Ingreso de camion completo + pedidos por destinatario.</p>
                 </div>
 
-                <div class="overflow-x-auto">
+                <div class="space-y-4 p-4 sm:hidden">
+                    <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border border-gray-200 bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
+                                <div class="text-xs text-gray-500">{{ m.empresa?.razon_social || '-' }}</div>
+                            </div>
+                            <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Deposito</div>
+                                <div class="font-medium text-gray-900">{{ m.deposito?.nombre || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Transporte</div>
+                                <div class="font-medium text-gray-900">{{ m.transporte || '-' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="!manifiestos.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">Sin manifiestos todavia.</div>
+                </div>
+
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

@@ -58,7 +58,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Comprobante #{{ comprobante.id }}</h2>
                     <div class="mt-1 text-sm text-gray-600">{{ tipoLabel(comprobante.tipo) }} · {{ comprobante.estado }}</div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 justify-end">
                     <SecondaryButton @click="imprimir">Imprimir / PDF</SecondaryButton>
                     <PrimaryButton v-if="['nota_credito_interna', 'nota_debito_interna'].includes(comprobante.tipo) && !comprobante.arca_cae && comprobante.comprobante_origen?.arca_tipo_cbte" :disabled="autorizarForm.processing" @click="autorizarArca">Autorizar ARCA</PrimaryButton>
                     <PrimaryButton v-if="comprobante.estado === 'emitida' && !comprobante.arca_cae" @click="anular">Anular</PrimaryButton>
@@ -175,7 +175,28 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
 
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <h3 class="text-base font-semibold text-gray-900">Detalle de pedidos</h3>
-                <div class="mt-4 overflow-x-auto">
+                <div class="mt-4 space-y-3 sm:hidden">
+                    <div v-for="p in comprobante.pedidos || []" :key="p.id" class="rounded-lg border border-gray-200 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">Pedido #{{ p.id }}</div>
+                                <div class="text-xs text-gray-500">Bultos {{ p.bultos }} · Palets {{ p.palets }}</div>
+                            </div>
+                            <div class="text-sm font-medium text-gray-900">{{ p.valor_declarado }}</div>
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Remitente</div>
+                                <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Destinatario</div>
+                                <div class="font-medium text-gray-900">{{ p.destinatario?.razon_social || '-' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

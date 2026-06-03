@@ -185,7 +185,44 @@ const submitEdit = () => {
                     <p class="mt-1 text-sm text-gray-600">Cada cuenta es un Numero de cliente dentro de una empresa.</p>
                 </div>
 
-                <div class="overflow-x-auto">
+                <div class="space-y-4 p-4 sm:hidden">
+                    <div v-for="c in cuentas" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ c.tercero?.razon_social || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ c.empresa?.razon_social || '-' }} · Nro {{ c.numero_cliente }}</div>
+                            </div>
+                            <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">CUIT / IVA</div>
+                                <div class="font-medium text-gray-900">{{ c.tercero?.cuit || '-' }} · {{ c.tercero?.condicion_iva || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Cuenta</div>
+                                <div class="font-medium text-gray-900">{{ c.nombre_cuenta || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Ciudad / Barrio</div>
+                                <div class="font-medium text-gray-900">{{ c.localidad || '-' }} · {{ c.barrio || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Email</div>
+                                <div class="font-medium text-gray-900">{{ c.email || '-' }}</div>
+                            </div>
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 font-medium text-green-800">Cliente</span>
+                                <span v-if="c.es_proveedor" class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 font-medium text-blue-800">Proveedor</span>
+                                <span v-if="c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800">Mail comprobantes</span>
+                                <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800">Sin categoria</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="!cuentas.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</div>
+                </div>
+
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-[1400px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

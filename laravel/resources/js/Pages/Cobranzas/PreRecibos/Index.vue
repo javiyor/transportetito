@@ -108,7 +108,40 @@ const formatFecha = (value) => {
                     <p class="text-sm text-gray-600">Pre-recibos generados desde Repartos para confirmar en deposito.</p>
                 </div>
 
-                <div class="overflow-x-auto">
+                <div class="space-y-4 p-4 sm:hidden">
+                    <div v-for="p in preRecibos.data" :key="p.id" class="rounded-lg border border-gray-200 bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ p.cuenta?.tercero?.razon_social || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ formatFecha(p.fecha) }} · {{ p.estado }}</div>
+                            </div>
+                            <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.pre-recibos.show', p.id)">Ver</Link>
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Deposito</div>
+                                <div class="font-medium text-gray-900">{{ p.hoja_ruta?.deposito?.nombre || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Zona / Ciudad / Barrio</div>
+                                <div class="font-medium text-gray-900">{{ p.cuenta?.zona?.nombre || 'Sin zona' }} · {{ p.cuenta?.localidad || 'Sin ciudad' }} · {{ p.cuenta?.barrio || 'Sin barrio' }}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Total</div>
+                                    <div class="font-medium text-gray-900">{{ p.moneda }} {{ p.total }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Cotizacion</div>
+                                    <div class="font-medium text-gray-900">{{ p.moneda === 'ARS' ? '-' : p.cotizacion_ars }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="!preRecibos.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">No hay pre-recibos.</div>
+                </div>
+
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-[1200px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
