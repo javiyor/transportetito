@@ -23,7 +23,10 @@ const formatFecha = (value) => {
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Recibo #{{ recibo.id }}</h2>
                     <div class="mt-1 text-sm text-gray-600">{{ formatFecha(recibo.fecha) }} · Estado: {{ recibo.estado }}</div>
                 </div>
-                <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                <div class="flex items-center gap-2">
+                    <a :href="route('cobranzas.recibos.print', recibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
+                    <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                </div>
             </div>
         </template>
 

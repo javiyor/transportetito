@@ -46,7 +46,9 @@ use App\Http\Controllers\Cobranzas\PreReciboConfirmController;
 use App\Http\Controllers\Cobranzas\ReciboIndexController;
 use App\Http\Controllers\Cobranzas\ReciboShowController;
 use App\Http\Controllers\Cobranzas\PreReciboExportController;
+use App\Http\Controllers\Cobranzas\PreReciboPrintController;
 use App\Http\Controllers\Cobranzas\ReciboExportController;
+use App\Http\Controllers\Cobranzas\ReciboPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteIndexController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteShowController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteAjusteStoreController;
@@ -162,10 +164,12 @@ Route::middleware([
     Route::middleware(['role:cobranzas|cobranzas_admin'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
         Route::get('/pre-recibos', PreReciboIndexController::class)->name('pre-recibos.index');
         Route::get('/pre-recibos/export', PreReciboExportController::class)->name('pre-recibos.export');
+        Route::get('/pre-recibos/{preRecibo}/print', PreReciboPrintController::class)->name('pre-recibos.print');
         Route::get('/pre-recibos/{preRecibo}', PreReciboShowController::class)->name('pre-recibos.show');
         Route::post('/pre-recibos/{preRecibo}/confirmar', PreReciboConfirmController::class)->name('pre-recibos.confirm');
         Route::get('/recibos', ReciboIndexController::class)->name('recibos.index');
         Route::get('/recibos/export', ReciboExportController::class)->name('recibos.export');
+        Route::get('/recibos/{recibo}/print', ReciboPrintController::class)->name('recibos.print');
         Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
         Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');

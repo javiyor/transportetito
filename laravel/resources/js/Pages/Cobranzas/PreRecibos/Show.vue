@@ -36,6 +36,7 @@ const formatFecha = (value) => {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <a :href="route('cobranzas.pre-recibos.print', preRecibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
                     <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Recibos</SecondaryButton></Link>
                     <SecondaryButton :href="route('cobranzas.pre-recibos.index')" as="a">Volver</SecondaryButton>
                     <PrimaryButton v-if="preRecibo.estado !== 'confirmado'" :disabled="confirmForm.processing" @click.prevent="confirmar">Confirmar</PrimaryButton>

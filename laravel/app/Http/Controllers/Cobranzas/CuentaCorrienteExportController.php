@@ -15,18 +15,34 @@ class CuentaCorrienteExportController extends Controller
         $empresaId = (int) $request->user()->current_empresa_id;
         $tipoFiltro = (string) ($request->query('filtro') ?: 'todos');
         $cutoff = now()->subDays(30)->toDateString();
+        $desde = (string) ($request->query('desde') ?: '');
+        $hasta = (string) ($request->query('hasta') ?: '');
+        $zonaId = (int) ($request->query('zona_id') ?: 0);
 
         $cuentas = TerceroCuenta::query()
             ->with(['tercero:id,cuit,razon_social', 'zona:id,nombre'])
             ->where('empresa_id', $empresaId)
-            ->whereHas('movimientosCtaCte')
-            ->orderBy('numero_cliente')
-            ->get();
+            ->whereHas('movimientosCtaCte');
 
-        $movimientos = CtaCteMovimiento::query()
+        if ($zonaId > 0) {
+            $cuentas->where('zona_id', $zonaId);
+        }
+
+        $cuentas = $cuentas->orderBy('numero_cliente')->get();
+
+        $movimientosQuery = CtaCteMovimiento::query()
             ->where('empresa_id', $empresaId)
             ->whereIn('tercero_cuenta_id', $cuentas->pluck('id'))
-            ->get()
+            ->orderBy('fecha');
+
+        if ($desde !== '') {
+            $movimientosQuery->whereDate('fecha', '>=', $desde);
+        }
+        if ($hasta !== '') {
+            $movimientosQuery->whereDate('fecha', '<=', $hasta);
+        }
+
+        $movimientos = $movimientosQuery->get()
             ->groupBy('tercero_cuenta_id');
 
         $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff) {

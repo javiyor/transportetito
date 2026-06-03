@@ -6,14 +6,24 @@ const props = defineProps({
     cuentas: Array,
     cutoff: String,
     filters: Object,
+    zonas: Array,
+    reportMeta: Object,
 });
 
 const form = useForm({
     filtro: props.filters?.filtro || 'todos',
+    desde: props.filters?.desde || '',
+    hasta: props.filters?.hasta || '',
+    zona_id: props.filters?.zona_id || '',
 });
 
 const applyFilters = () => {
-    router.get(route('cobranzas.ctacte.index'), { filtro: form.filtro || 'todos' }, { preserveState: true, preserveScroll: true, replace: true });
+    router.get(route('cobranzas.ctacte.index'), {
+        filtro: form.filtro || 'todos',
+        desde: form.desde || null,
+        hasta: form.hasta || null,
+        zona_id: form.zona_id || null,
+    }, { preserveState: true, preserveScroll: true, replace: true });
 };
 </script>
 
@@ -25,7 +35,7 @@ const applyFilters = () => {
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Cuentas corrientes</h2>
                 <div class="flex items-center gap-3">
-                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos' })">Exportar CSV</a>
+                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos', desde: form.desde || null, hasta: form.hasta || null, zona_id: form.zona_id || null })">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.pre-recibos.index')">Pre-recibos</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.index')">Recibos</Link>
                 </div>
@@ -34,7 +44,7 @@ const applyFilters = () => {
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Filtro</div>
                         <select v-model="form.filtro" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
@@ -44,9 +54,27 @@ const applyFilters = () => {
                             <option value="sin_saldo">Sin saldo</option>
                         </select>
                     </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Desde</div>
+                        <input v-model="form.desde" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Hasta</div>
+                        <input v-model="form.hasta" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Zona</div>
+                        <select v-model="form.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                            <option value="">Todas</option>
+                            <option v-for="z in zonas || []" :key="z.id" :value="z.id">{{ z.nombre }}</option>
+                        </select>
+                    </div>
                     <div class="flex items-end">
                         <button type="button" class="inline-flex items-center px-4 py-2 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-800 hover:bg-gray-200" @click="applyFilters">Aplicar</button>
                     </div>
+                </div>
+                <div v-if="reportMeta && reportMeta.vendedor_disponible === false" class="mt-3 text-xs text-gray-500">
+                    Reporte por vendedor pendiente: hoy no existe un campo de vendedor/comercial en esta estructura.
                 </div>
             </div>
 
