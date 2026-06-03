@@ -33,7 +33,18 @@ class ProveedorCuentaCorrienteShowController extends Controller
             ->where('tercero_cuenta_id', $cuenta->id)
             ->orderByDesc('fecha_emision')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->map(function (ProveedorComprobante $comprobante) use ($empresaId) {
+                $pagado = (float) OrdenPago::query()
+                    ->where('empresa_id', $empresaId)
+                    ->whereJsonContains('detalle->proveedor_comprobante_id', $comprobante->id)
+                    ->sum('total');
+
+                $comprobante->setAttribute('pagado_total', round($pagado, 2));
+                $comprobante->setAttribute('saldo_pendiente', round((float) $comprobante->total - $pagado, 2));
+
+                return $comprobante;
+            });
 
         $ordenesPago = OrdenPago::query()
             ->where('empresa_id', $empresaId)

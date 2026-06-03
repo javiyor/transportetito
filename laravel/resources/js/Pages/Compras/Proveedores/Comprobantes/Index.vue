@@ -1,10 +1,13 @@
 <script setup>
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
+import { ref } from 'vue';
 
 const props = defineProps({
     proveedores: Array,
@@ -13,6 +16,7 @@ const props = defineProps({
 
 const form = useForm({
     tercero_cuenta_id: '',
+    proveedor_cuit_busqueda: '',
     tipo: 'factura',
     numero: '',
     moneda: 'ARS',
@@ -25,6 +29,115 @@ const form = useForm({
 });
 
 const submit = () => form.post(route('compras.proveedores.comprobantes.store'), { preserveScroll: true });
+
+const proveedorDialog = ref(false);
+const editingProveedorId = ref(null);
+const proveedorLookupInfo = ref('');
+const editComprobanteDialog = ref(false);
+const editComprobanteId = ref(null);
+
+const proveedorForm = useForm({
+    cuit: '',
+    razon_social: '',
+    condicion_iva: '',
+    nombre_cuenta: '',
+    email: '',
+    localidad: '',
+    barrio: '',
+});
+
+const editComprobanteForm = useForm({
+    tipo: 'factura',
+    numero: '',
+    moneda: 'ARS',
+    subtotal: '',
+    iva_total: '',
+    tributos_total: '',
+    fecha_emision: '',
+    fecha_vencimiento: '',
+    observacion: '',
+});
+
+const buscarProveedorPorCuit = async () => {
+    proveedorLookupInfo.value = '';
+    proveedorForm.clearErrors();
+    const cuit = String(form.proveedor_cuit_busqueda || '').trim();
+    if (!cuit) return;
+
+    const url = route('compras.proveedores.lookup-cuit', { cuit });
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    const data = await res.json();
+
+    if (!data.found) {
+        editingProveedorId.value = null;
+        proveedorForm.cuit = cuit;
+        proveedorForm.razon_social = '';
+        proveedorForm.condicion_iva = '';
+        proveedorForm.nombre_cuenta = '';
+        proveedorForm.email = '';
+        proveedorForm.localidad = '';
+        proveedorForm.barrio = '';
+        proveedorLookupInfo.value = 'No existe un tercero con ese CUIT. Puedes crearlo como proveedor.';
+        proveedorDialog.value = true;
+        return;
+    }
+
+    proveedorForm.cuit = data.tercero?.cuit || cuit;
+    proveedorForm.razon_social = data.tercero?.razon_social || '';
+    proveedorForm.condicion_iva = data.tercero?.condicion_iva || '';
+    proveedorForm.nombre_cuenta = data.cuenta?.nombre_cuenta || '';
+    proveedorForm.email = data.cuenta?.email || '';
+    proveedorForm.localidad = data.cuenta?.localidad || '';
+    proveedorForm.barrio = data.cuenta?.barrio || '';
+
+    if (data.cuenta?.id) {
+        form.tercero_cuenta_id = data.cuenta.id;
+        editingProveedorId.value = data.cuenta.id;
+        proveedorLookupInfo.value = 'Proveedor existente encontrado y seleccionado. Puedes editarlo si hace falta.';
+    } else {
+        editingProveedorId.value = null;
+        proveedorLookupInfo.value = 'El CUIT existe, pero no tiene cuenta proveedor en esta empresa. Puedes crearla.';
+    }
+
+    proveedorDialog.value = true;
+};
+
+const submitProveedor = () => {
+    if (editingProveedorId.value) {
+        proveedorForm.put(route('compras.proveedores.update', editingProveedorId.value), {
+            preserveScroll: true,
+            onSuccess: () => { proveedorDialog.value = false; },
+        });
+        return;
+    }
+
+    proveedorForm.post(route('compras.proveedores.store'), {
+        preserveScroll: true,
+        onSuccess: () => { proveedorDialog.value = false; },
+    });
+};
+
+const openEditComprobante = (c) => {
+    editComprobanteId.value = c.id;
+    editComprobanteForm.tipo = c.tipo || 'factura';
+    editComprobanteForm.numero = c.numero || '';
+    editComprobanteForm.moneda = c.moneda || 'ARS';
+    editComprobanteForm.subtotal = c.subtotal || '';
+    editComprobanteForm.iva_total = c.iva_total || '';
+    editComprobanteForm.tributos_total = c.tributos_total || '';
+    editComprobanteForm.fecha_emision = String(c.fecha_emision || '').slice(0, 10);
+    editComprobanteForm.fecha_vencimiento = c.fecha_vencimiento ? String(c.fecha_vencimiento).slice(0, 10) : '';
+    editComprobanteForm.observacion = c.observacion || '';
+    editComprobanteForm.clearErrors();
+    editComprobanteDialog.value = true;
+};
+
+const submitEditComprobante = () => {
+    editComprobanteForm.put(route('compras.proveedores.comprobantes.update', editComprobanteId.value), {
+        preserveScroll: true,
+        onSuccess: () => { editComprobanteDialog.value = false; },
+    });
+};
 </script>
 
 <template>
@@ -42,6 +155,16 @@ const submit = () => form.post(route('compras.proveedores.comprobantes.store'), 
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <h3 class="text-base font-semibold text-gray-900">Nuevo comprobante proveedor</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submit">
+                    <div class="sm:col-span-4 grid grid-cols-1 sm:grid-cols-4 gap-4 items-end rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div class="sm:col-span-2">
+                            <InputLabel value="Buscar proveedor por CUIT" />
+                            <TextInput v-model="form.proveedor_cuit_busqueda" type="text" class="mt-1 block w-full" placeholder="CUIT" />
+                        </div>
+                        <div class="flex gap-2 sm:col-span-2">
+                            <SecondaryButton type="button" @click="buscarProveedorPorCuit">Buscar / crear</SecondaryButton>
+                            <SecondaryButton type="button" @click="proveedorDialog = true">Nuevo proveedor</SecondaryButton>
+                        </div>
+                    </div>
                     <div class="sm:col-span-2">
                         <InputLabel value="Proveedor" />
                         <select v-model="form.tercero_cuenta_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
@@ -79,16 +202,61 @@ const submit = () => form.post(route('compras.proveedores.comprobantes.store'), 
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Numero</div>
                                 <div class="font-medium text-gray-900">{{ c.numero || '-' }}</div>
                             </div>
+                            <div class="flex gap-3">
+                                <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link>
+                                <button type="button" class="text-sm text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.numero || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td></tr></tbody>
+                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.numero || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-3 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button></td></tr></tbody>
                     </table>
                 </div>
             </div>
+
+            <DialogModal :show="proveedorDialog" @close="proveedorDialog = false">
+                <template #title>{{ editingProveedorId ? 'Editar proveedor' : 'Nuevo proveedor' }}</template>
+                <template #content>
+                    <div v-if="proveedorLookupInfo" class="mb-4 text-sm text-gray-600">{{ proveedorLookupInfo }}</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div><InputLabel value="CUIT" /><TextInput v-model="proveedorForm.cuit" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.cuit" /></div>
+                        <div><InputLabel value="Razon social" /><TextInput v-model="proveedorForm.razon_social" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.razon_social" /></div>
+                        <div><InputLabel value="Condicion IVA" /><TextInput v-model="proveedorForm.condicion_iva" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.condicion_iva" /></div>
+                        <div><InputLabel value="Nombre cuenta" /><TextInput v-model="proveedorForm.nombre_cuenta" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.nombre_cuenta" /></div>
+                        <div><InputLabel value="Email" /><TextInput v-model="proveedorForm.email" type="email" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.email" /></div>
+                        <div><InputLabel value="Ciudad" /><TextInput v-model="proveedorForm.localidad" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.localidad" /></div>
+                        <div><InputLabel value="Barrio" /><TextInput v-model="proveedorForm.barrio" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.barrio" /></div>
+                    </div>
+                </template>
+                <template #footer>
+                    <SecondaryButton @click="proveedorDialog = false">Cancelar</SecondaryButton>
+                    <PrimaryButton class="ms-3" :disabled="proveedorForm.processing" @click="submitProveedor">Guardar proveedor</PrimaryButton>
+                </template>
+            </DialogModal>
+
+            <DialogModal :show="editComprobanteDialog" @close="editComprobanteDialog = false">
+                <template #title>Editar comprobante proveedor</template>
+                <template #content>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div><InputLabel value="Tipo" /><TextInput v-model="editComprobanteForm.tipo" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.tipo" /></div>
+                        <div><InputLabel value="Numero" /><TextInput v-model="editComprobanteForm.numero" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.numero" /></div>
+                        <div><InputLabel value="Moneda" /><select v-model="editComprobanteForm.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="editComprobanteForm.errors.moneda" /></div>
+                        <div><InputLabel value="Subtotal" /><TextInput v-model="editComprobanteForm.subtotal" type="number" min="0" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.subtotal" /></div>
+                        <div><InputLabel value="IVA" /><TextInput v-model="editComprobanteForm.iva_total" type="number" min="0" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.iva_total" /></div>
+                        <div><InputLabel value="Tributos" /><TextInput v-model="editComprobanteForm.tributos_total" type="number" min="0" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.tributos_total" /></div>
+                        <div><InputLabel value="Fecha emision" /><TextInput v-model="editComprobanteForm.fecha_emision" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.fecha_emision" /></div>
+                        <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="editComprobanteForm.fecha_vencimiento" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.fecha_vencimiento" /></div>
+                        <div class="sm:col-span-2"><InputLabel value="Observacion" /><TextInput v-model="editComprobanteForm.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.observacion" /></div>
+                    </div>
+                </template>
+                <template #footer>
+                    <SecondaryButton @click="editComprobanteDialog = false">Cancelar</SecondaryButton>
+                    <PrimaryButton class="ms-3" :disabled="editComprobanteForm.processing" @click="submitEditComprobante">Guardar cambios</PrimaryButton>
+                </template>
+            </DialogModal>
         </div>
     </AppLayout>
 </template>

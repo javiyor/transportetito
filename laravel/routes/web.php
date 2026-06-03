@@ -41,6 +41,8 @@ use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoEmitirGuiasController;
 use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaController;
 use App\Http\Controllers\Compras\ProveedorComprobanteIndexController;
+use App\Http\Controllers\Compras\ProveedorComprobanteShowController;
+use App\Http\Controllers\Compras\ProveedorComprobanteUpdateController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteIndexController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteShowController;
 use App\Http\Controllers\Compras\ProveedorOrdenPagoStoreController;
@@ -170,6 +172,11 @@ Route::middleware([
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
         Route::post('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'store'])->name('proveedores.comprobantes.store');
+        Route::get('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteShowController::class)->name('proveedores.comprobantes.show');
+        Route::put('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteUpdateController::class)->name('proveedores.comprobantes.update');
+        Route::get('/proveedores/lookup-cuit', [ProveedorComprobanteIndexController::class, 'lookupByCuit'])->name('proveedores.lookup-cuit');
+        Route::post('/proveedores', [ProveedorComprobanteIndexController::class, 'storeProveedor'])->name('proveedores.store');
+        Route::put('/proveedores/{cuenta}', [ProveedorComprobanteIndexController::class, 'updateProveedor'])->name('proveedores.update');
         Route::get('/proveedores/cuentas-corrientes', ProveedorCuentaCorrienteIndexController::class)->name('proveedores.ctacte.index');
         Route::get('/proveedores/cuentas-corrientes/{cuenta}', ProveedorCuentaCorrienteShowController::class)->name('proveedores.ctacte.show');
         Route::post('/proveedores/cuentas-corrientes/{cuenta}/ordenes-pago', ProveedorOrdenPagoStoreController::class)->name('proveedores.ctacte.ordenes-pago.store');

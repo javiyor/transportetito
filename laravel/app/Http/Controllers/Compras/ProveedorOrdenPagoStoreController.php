@@ -34,7 +34,20 @@ class ProveedorOrdenPagoStoreController extends Controller
         if (! empty($data['proveedor_comprobante_id'])) {
             $comp = ProveedorComprobante::query()->findOrFail($data['proveedor_comprobante_id']);
             abort_unless((int) $comp->tercero_cuenta_id === (int) $cuenta->id, 422);
+
+            $pagado = (float) OrdenPago::query()
+                ->where('empresa_id', $empresaId)
+                ->whereJsonContains('detalle->proveedor_comprobante_id', $comp->id)
+                ->sum('total');
+            $saldo = round((float) $comp->total - $pagado, 2);
+            if ((float) $data['importe'] > $saldo) {
+                return back()->withErrors([
+                    'importe' => 'El pago supera el saldo pendiente del comprobante proveedor.',
+                ]);
+            }
+
             $detalle['proveedor_comprobante_id'] = $comp->id;
+            $detalle['saldo_previo'] = $saldo;
         }
 
         $orden = OrdenPago::query()->create([
