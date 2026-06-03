@@ -55,7 +55,7 @@ class ArcaTipoComprobanteResolver
             && $cliente === 'ri'
             && $cuit !== ''
             && strlen($cuit) === 11
-            && ((float) ($importeTotal ?? 0)) > 0;
+            && ((float) ($importeTotal ?? 0)) >= 0;
     }
 
     public function normalizarCondicionIva(?string $value): string

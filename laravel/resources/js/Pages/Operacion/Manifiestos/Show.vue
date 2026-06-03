@@ -981,7 +981,68 @@ const comprobanteTipoLabel = (tipo) => {
                     </label>
                 </div>
 
-                <div class="mt-4 overflow-x-auto">
+                <div class="mt-4 space-y-4 lg:hidden">
+                    <div
+                        v-for="p in pedidosVisibles"
+                        :key="p.id"
+                        class="rounded-lg border p-4"
+                        :class="p.recepcion_estado === 'con_error' ? 'border-red-200 bg-red-50' : (p.recepcion_estado === 'correcto' ? 'border-green-200 bg-green-50/40' : 'border-gray-200 bg-white')"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">Pedido #{{ p.id }}</div>
+                                <div class="text-xs text-gray-500">{{ p.paga }}</div>
+                            </div>
+                            <div class="text-xs text-gray-500 text-right">
+                                <div>Bultos {{ p.bultos }}</div>
+                                <div>Palets {{ p.palets }}</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Remitente</div>
+                                <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Destinatario</div>
+                                <div class="font-medium text-gray-900">{{ p.destinatario?.razon_social || '-' }}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Valor declarado</div>
+                                    <div class="font-medium text-gray-900">{{ p.valor_declarado }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">CR</div>
+                                    <div class="font-medium text-gray-900">{{ p.cr_importe || '-' }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 space-y-2 border-t border-gray-200 pt-4">
+                            <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="correcto">Correctamente recibido</option>
+                                <option value="con_error">Recibido con error</option>
+                            </select>
+                            <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" :placeholder="recepcionForms[p.id].recepcion_estado === 'con_error' ? 'Describir error' : 'Observacion opcional'" />
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="text-xs text-gray-500">
+                                    <span v-if="p.recepcion_controlado_at">Ultimo control: {{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 16) }}</span>
+                                    <span v-else>Sin control</span>
+                                </div>
+                                <PrimaryButton :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">Guardar</PrimaryButton>
+                            </div>
+                            <InputError class="mt-1" :message="recepcionForms[p.id].errors.recepcion_observacion" />
+                        </div>
+                    </div>
+
+                    <div v-if="!pedidosVisibles.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">
+                        Todavia no hay pedidos cargados.
+                    </div>
+                </div>
+
+                <div class="mt-4 hidden lg:block overflow-x-auto">
                     <table class="min-w-[1500px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

@@ -65,17 +65,22 @@ class WsfeClient
         $auth = $this->auth($empresa);
         $client = $this->soapClient($empresa);
 
-        // Receptor: v1 CUIT del facturarCuenta; si no existe, aborta
+        // Receptor: resolver segun condicion IVA / identificacion disponible
         $cuenta = $comprobante->facturarCuenta()->with('tercero')->first();
-        $cuit = preg_replace('/\D+/', '', (string) ($cuenta?->tercero?->cuit ?? '')) ?? '';
-        if ($cuit === '') {
-            throw new RuntimeException('Cuenta a facturar sin CUIT.');
-        }
+        [$docTipo, $docNro] = $this->resolveDocCliente($cuenta?->tercero?->condicion_iva, $cuenta?->tercero?->cuit);
 
-        $importeTotal = abs((float) $comprobante->total);
-        $importeNeto = round($importeTotal / 1.21, 2);
-        $importeIva = round($importeTotal - $importeNeto, 2);
         $detalleFacturacion = (array) ($comprobante->detalle_facturacion ?? []);
+        $calculo = (array) (($detalleFacturacion['calculo'] ?? []) ?: []);
+        $importeTotal = abs((float) $comprobante->total);
+        $subtotalGravado = abs((float) ($calculo['subtotal_gravado'] ?? 0));
+        $importeIva = abs((float) ($calculo['iva'] ?? 0));
+        if ($subtotalGravado <= 0 && $importeTotal > 0) {
+            $subtotalGravado = round($importeTotal / 1.21, 2);
+        }
+        if ($importeIva <= 0 && $importeTotal > 0) {
+            $importeIva = round($importeTotal - $subtotalGravado, 2);
+        }
+        $importeNeto = $subtotalGravado;
         $cotizacion = (array) (($detalleFacturacion['calculo']['cotizacion'] ?? $detalleFacturacion['cotizacion'] ?? []) ?: []);
         $moneda = strtoupper((string) ($comprobante->moneda ?: 'ARS'));
         $monId = $this->monedaAfipMapper->toAfipCode($moneda);
@@ -86,8 +91,8 @@ class WsfeClient
 
         $detalleRequest = [
             'Concepto' => 2, // Servicios
-            'DocTipo' => 80, // CUIT
-            'DocNro' => (int) $cuit,
+            'DocTipo' => $docTipo,
+            'DocNro' => $docNro,
             'CbteDesde' => $nro,
             'CbteHasta' => $nro,
             'CbteFch' => $fechaYmd,
@@ -167,18 +172,22 @@ class WsfeClient
 
         $errorMsg = null;
         if (isset($r->Errors->Err)) {
-            $err = $r->Errors->Err;
-            $errorMsg = ((string) ($err->Code ?? '')).' '.((string) ($err->Msg ?? ''));
+            $errorMsg = $this->formatAfipMessages($r->Errors->Err);
+        }
+
+        $obsMsg = null;
+        if (isset($r->FeDetResp->FECAEDetResponse->Observaciones->Obs)) {
+            $obsMsg = $this->formatAfipMessages($r->FeDetResp->FECAEDetResponse->Observaciones->Obs);
         }
 
         if ($resultado !== 'A' || $cae === '') {
             $comprobante->forceFill([
                 'arca_request_id' => $requestId,
                 'arca_resultado' => $resultado !== '' ? $resultado : 'R',
-                'arca_error' => $errorMsg ?: 'WSFE rechazo o sin CAE',
+                'arca_error' => $errorMsg ?: ($obsMsg ?: 'WSFE rechazo o sin CAE'),
             ])->save();
 
-            throw new RuntimeException('WSFE rechazo: '.($errorMsg ?: $resultado));
+            throw new RuntimeException('WSFE rechazo: '.($errorMsg ?: ($obsMsg ?: $resultado)));
         }
 
         $comprobante->forceFill([
@@ -190,7 +199,7 @@ class WsfeClient
             'arca_cae' => $cae,
             'arca_cae_vto' => $caeVto !== '' ? CarbonImmutable::createFromFormat('Ymd', $caeVto)->toDateString() : null,
             'arca_resultado' => $resultado,
-            'arca_error' => null,
+            'arca_error' => $obsMsg,
             'estado' => 'emitida',
         ])->save();
 
@@ -225,6 +234,37 @@ class WsfeClient
         }
 
         return new SoapClient($wsdl, ['exceptions' => true, 'trace' => false]);
+    }
+
+    private function resolveDocCliente(?string $condicionIva, ?string $cuit): array
+    {
+        $digits = preg_replace('/\D+/', '', (string) $cuit) ?? '';
+        $cond = mb_strtolower(trim((string) $condicionIva));
+
+        if ($digits !== '' && strlen($digits) === 11) {
+            return [80, (int) $digits];
+        }
+
+        if (in_array($cond, ['consumidor final', 'consumidor_final', 'cf', ''], true)) {
+            return [99, 0];
+        }
+
+        throw new RuntimeException('El cliente no tiene una identificacion valida para ARCA. Cargar CUIT o revisar condicion IVA.');
+    }
+
+    private function formatAfipMessages(mixed $items): string
+    {
+        $items = is_array($items) ? $items : [$items];
+
+        return collect($items)
+            ->map(function ($item) {
+                $code = (string) ($item->Code ?? $item['Code'] ?? '');
+                $msg = (string) ($item->Msg ?? $item['Msg'] ?? '');
+
+                return trim($code.' '.$msg);
+            })
+            ->filter()
+            ->implode(' | ');
     }
 
     private function mapTipoCbte(string $tipo, ?Comprobante $comprobante = null): int

@@ -31,7 +31,7 @@ class ComprobanteAutorizarArcaController extends Controller
         ]);
 
         if ((string) $comprobante->tipo === 'factura_interna') {
-            $comprobante->loadMissing(['empresa:id,condicion_iva', 'facturarCuenta.tercero:id,condicion_iva']);
+            $comprobante->loadMissing(['empresa:id,condicion_iva', 'facturarCuenta.tercero:id,condicion_iva,cuit']);
             $permitidos = collect($arcaTipos->opcionesFactura(
                 $comprobante->empresa?->condicion_iva,
                 $comprobante->facturarCuenta?->tercero?->condicion_iva,
