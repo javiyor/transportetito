@@ -1,11 +1,20 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
-defineProps({
+const props = defineProps({
     cuentas: Array,
     cutoff: String,
+    filters: Object,
 });
+
+const form = useForm({
+    filtro: props.filters?.filtro || 'todos',
+});
+
+const applyFilters = () => {
+    router.get(route('cobranzas.ctacte.index'), { filtro: form.filtro || 'todos' }, { preserveState: true, preserveScroll: true, replace: true });
+};
 </script>
 
 <template>
@@ -16,13 +25,31 @@ defineProps({
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Cuentas corrientes</h2>
                 <div class="flex items-center gap-3">
+                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos' })">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.pre-recibos.index')">Pre-recibos</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.index')">Recibos</Link>
                 </div>
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+            <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Filtro</div>
+                        <select v-model="form.filtro" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                            <option value="todos">Todos</option>
+                            <option value="vencido">Vencidos +30</option>
+                            <option value="con_saldo">Con saldo</option>
+                            <option value="sin_saldo">Sin saldo</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="button" class="inline-flex items-center px-4 py-2 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-800 hover:bg-gray-200" @click="applyFilters">Aplicar</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
                     <p class="text-sm text-gray-600">Las cuentas con deuda vencida al {{ cutoff }} se resaltan.</p>

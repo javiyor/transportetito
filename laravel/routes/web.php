@@ -27,6 +27,7 @@ use App\Http\Controllers\Operacion\Comprobantes\ComprobanteShowController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteAnularController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobantePrintController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaCreditoStoreController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaDebitoStoreController;
 use App\Http\Controllers\Operacion\Manifiestos\ManifiestoBackfillCuentasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Operacion\Repartos\FacturasListController;
@@ -51,6 +52,8 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteShowController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteAjusteStoreController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteNotaStoreController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteReciboStoreController;
+use App\Http\Controllers\Cobranzas\CuentaCorrienteExportController;
+use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 
 Route::get('/', function () {
     $empresa = Empresa::query()
@@ -133,6 +136,7 @@ Route::middleware([
         Route::middleware(['role:facturacion|admin'])->get('/comprobantes/{comprobante}/print', ComprobantePrintController::class)->name('comprobantes.print');
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/anular', ComprobanteAnularController::class)->name('comprobantes.anular');
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/nota-credito', ComprobanteNotaCreditoStoreController::class)->name('comprobantes.nota-credito');
+        Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/nota-debito', ComprobanteNotaDebitoStoreController::class)->name('comprobantes.nota-debito');
 
         Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
 
@@ -164,7 +168,9 @@ Route::middleware([
         Route::get('/recibos/export', ReciboExportController::class)->name('recibos.export');
         Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
+        Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');
         Route::get('/cuentas-corrientes/{cuenta}', CuentaCorrienteShowController::class)->name('ctacte.show');
+        Route::get('/cuentas-corrientes/{cuenta}/print', CuentaCorrientePrintController::class)->name('ctacte.print');
         Route::post('/cuentas-corrientes/{cuenta}/ajustes', CuentaCorrienteAjusteStoreController::class)->name('ctacte.ajustes.store');
         Route::post('/cuentas-corrientes/{cuenta}/notas', CuentaCorrienteNotaStoreController::class)->name('ctacte.notas.store');
         Route::post('/cuentas-corrientes/{cuenta}/recibos', CuentaCorrienteReciboStoreController::class)->name('ctacte.recibos.store');

@@ -12,6 +12,8 @@ const props = defineProps({
 });
 
 const notaCreditoForm = useForm({ motivo_tipo: 'devolucion_parcial', motivo_detalle: '', importe: '' });
+const notaDebitoForm = useForm({ motivo: '', importe: '' });
+const autorizarForm = useForm({ tipo: '' });
 
 const imprimir = () => window.open(route('operacion.comprobantes.print', props.comprobante.id), '_blank');
 const anular = () => {
@@ -23,10 +25,21 @@ const generarNotaCredito = () => {
     notaCreditoForm.post(route('operacion.comprobantes.nota-credito', props.comprobante.id), { preserveScroll: true });
 };
 
+const generarNotaDebito = () => {
+    notaDebitoForm.post(route('operacion.comprobantes.nota-debito', props.comprobante.id), { preserveScroll: true });
+};
+
+const autorizarArca = () => {
+    const tipo = props.comprobante.comprobante_origen?.arca_tipo_cbte || 'FC';
+    autorizarForm.tipo = tipo;
+    autorizarForm.post(route('operacion.comprobantes.autorizar-arca', props.comprobante.id), { preserveScroll: true });
+};
+
 const tipoLabel = (tipo) => {
     if (tipo === 'guia_envio') return 'Guia no fiscal';
     if (tipo === 'factura_interna') return 'Factura';
     if (tipo === 'nota_credito_interna') return 'Nota de credito';
+    if (tipo === 'nota_debito_interna') return 'Nota de debito';
     if (tipo === 'nota_debito_manual') return 'Nota de debito';
     if (tipo === 'nota_credito_manual') return 'Nota de credito manual';
     return tipo || '-';
@@ -47,6 +60,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
                 <div class="flex items-center gap-2">
                     <SecondaryButton @click="imprimir">Imprimir / PDF</SecondaryButton>
+                    <PrimaryButton v-if="['nota_credito_interna', 'nota_debito_interna'].includes(comprobante.tipo) && !comprobante.arca_cae && comprobante.comprobante_origen?.arca_tipo_cbte" :disabled="autorizarForm.processing" @click="autorizarArca">Autorizar ARCA</PrimaryButton>
                     <PrimaryButton v-if="comprobante.estado === 'emitida' && !comprobante.arca_cae" @click="anular">Anular</PrimaryButton>
                     <Link :href="route('operacion.comprobantes.index')"><SecondaryButton>Volver</SecondaryButton></Link>
                 </div>
@@ -127,6 +141,20 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 <div v-if="notaCreditoForm.errors.motivo_tipo" class="mt-2 text-sm text-red-600">{{ notaCreditoForm.errors.motivo_tipo }}</div>
                 <div v-if="notaCreditoForm.errors.motivo_detalle" class="mt-2 text-sm text-red-600">{{ notaCreditoForm.errors.motivo_detalle }}</div>
                 <div v-if="notaCreditoForm.errors.importe" class="mt-2 text-sm text-red-600">{{ notaCreditoForm.errors.importe }}</div>
+            </div>
+
+            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-6">
+                <h3 class="text-base font-semibold text-gray-900">Nota de debito fiscal</h3>
+                <p class="mt-1 text-sm text-gray-600">Genera una nota de debito fiscal vinculada a esta factura.</p>
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input v-model="notaDebitoForm.motivo" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm sm:col-span-2" placeholder="Motivo" />
+                    <input v-model="notaDebitoForm.importe" type="number" min="0.01" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" />
+                </div>
+                <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                    <PrimaryButton :disabled="notaDebitoForm.processing || !notaDebitoForm.motivo || !notaDebitoForm.importe" @click="generarNotaDebito">Generar ND</PrimaryButton>
+                </div>
+                <div v-if="notaDebitoForm.errors.motivo" class="mt-2 text-sm text-red-600">{{ notaDebitoForm.errors.motivo }}</div>
+                <div v-if="notaDebitoForm.errors.importe" class="mt-2 text-sm text-red-600">{{ notaDebitoForm.errors.importe }}</div>
             </div>
 
             <div v-if="(comprobante.notas_credito || []).length" class="bg-white shadow sm:rounded-lg p-6">

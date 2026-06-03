@@ -18,7 +18,7 @@ class ComprobanteAutorizarArcaController extends Controller
         $empresaId = (int) $request->user()->current_empresa_id;
         abort_unless((int) $comprobante->empresa_id === $empresaId, 404);
 
-        if (! in_array((string) $comprobante->tipo, ['factura_interna', 'nota_credito_interna'], true)) {
+        if (! in_array((string) $comprobante->tipo, ['factura_interna', 'nota_credito_interna', 'nota_debito_interna'], true)) {
             return back()->with('error', 'Este comprobante no es fiscal para autorizar en ARCA.');
         }
 

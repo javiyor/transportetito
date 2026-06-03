@@ -113,10 +113,10 @@ class WsfeClient
             ],
         ];
 
-        if ((string) $comprobante->tipo === 'nota_credito_interna') {
+        if (in_array((string) $comprobante->tipo, ['nota_credito_interna', 'nota_debito_interna'], true)) {
             $origen = $comprobante->comprobanteOrigen()->first();
             if (! $origen || ! $origen->arca_punto_venta || ! $origen->arca_numero) {
-                throw new RuntimeException('La nota de credito no tiene comprobante origen fiscal asociado.');
+                throw new RuntimeException('El comprobante fiscal derivado no tiene comprobante origen fiscal asociado.');
             }
 
             $detalleRequest['CbtesAsoc'] = [
@@ -238,6 +238,18 @@ class WsfeClient
                 'FCB' => 208,
                 'FCC' => 213,
                 default => throw new RuntimeException('Tipo ARCA origen no soportado para nota de credito: '.$tipo),
+            };
+        }
+
+        if ($comprobante && (string) $comprobante->tipo === 'nota_debito_interna') {
+            return match ($tipo) {
+                'FA' => 2,
+                'FB' => 7,
+                'FC' => 12,
+                'FCA' => 202,
+                'FCB' => 207,
+                'FCC' => 212,
+                default => throw new RuntimeException('Tipo ARCA origen no soportado para nota de debito: '.$tipo),
             };
         }
 
