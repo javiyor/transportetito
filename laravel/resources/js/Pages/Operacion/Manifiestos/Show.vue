@@ -381,6 +381,72 @@ const gruposFacturacion = computed(() => {
     return out.sort((a, b) => a.entregaId - b.entregaId);
 });
 
+const detalleGrupo = (g) => {
+    const pedidos = g?.pedidos || [];
+    const remitenteIds = Array.from(new Set(pedidos.map((p) => Number(p.remitente_tercero_id || 0)).filter(Boolean)));
+    const destinatarioIds = Array.from(new Set(pedidos.map((p) => Number(p.destinatario_tercero_id || 0)).filter(Boolean)));
+    const isSingleRelacion = remitenteIds.length === 1 && destinatarioIds.length === 1;
+    const override = facturarPorEntrega.detalles_por_entrega?.[g.entregaId] || null;
+
+    if (isSingleRelacion) {
+        const tarifaBase = resolveTarifa(remitenteIds[0], destinatarioIds[0]);
+        return calcFactura(pedidos, tarifaBase, override);
+    }
+
+    const groupedByRel = new Map();
+    for (const p of pedidos) {
+        const key = tarifaKey(p.remitente_tercero_id, p.destinatario_tercero_id);
+        if (!groupedByRel.has(key)) groupedByRel.set(key, []);
+        groupedByRel.get(key).push(p);
+    }
+
+    const sum = {
+        moneda: 'ARS',
+        bultos: 0,
+        palets: 0,
+        valorDeclarado: 0,
+        crImporte: 0,
+        flete: 0,
+        seguro: 0,
+        comisionCr: 0,
+        subtotalGravado: 0,
+        iva: 0,
+        total: 0,
+    };
+
+    for (const [key, relPedidos] of groupedByRel.entries()) {
+        const [remStr, destStr] = String(key).split('-');
+        const remId = Number(remStr || 0);
+        const destId = Number(destStr || 0);
+        const tarifaBase = resolveTarifa(remId, destId);
+        const calc = calcFactura(relPedidos, tarifaBase, override);
+        sum.moneda = calc.moneda || sum.moneda;
+        sum.bultos += Number(calc.bultos || 0);
+        sum.palets += Number(calc.palets || 0);
+        sum.valorDeclarado += Number(calc.valorDeclarado || 0);
+        sum.crImporte += Number(calc.crImporte || 0);
+        sum.flete += Number(calc.flete || 0);
+        sum.seguro += Number(calc.seguro || 0);
+        sum.comisionCr += Number(calc.comisionCr || 0);
+        sum.subtotalGravado += Number(calc.subtotalGravado || 0);
+        sum.iva += Number(calc.iva || 0);
+        sum.total += Number(calc.total || 0);
+    }
+
+    const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+    return {
+        ...sum,
+        valorDeclarado: round2(sum.valorDeclarado),
+        crImporte: round2(sum.crImporte),
+        flete: round2(sum.flete),
+        seguro: round2(sum.seguro),
+        comisionCr: round2(sum.comisionCr),
+        subtotalGravado: round2(sum.subtotalGravado),
+        iva: round2(sum.iva),
+        total: round2(sum.total),
+    };
+};
+
 const backfillForm = useForm({ confirm: true });
 const completarCuentas = () => {
     backfillForm.post(route('operacion.manifiestos.backfill-cuentas', props.manifiesto.id), { preserveScroll: true });
@@ -624,9 +690,9 @@ const comprobanteTipoLabel = (tipo) => {
                                 <div>
                                     <div class="text-xs text-gray-500">Cuenta de entrega</div>
                                     <div class="text-sm font-medium text-gray-900">#{{ g.entregaId }}</div>
-                                    <div class="text-xs text-gray-600">Pedidos: {{ g.pedidos.length }} · Total a facturar: {{ g.detalle.moneda }} {{ formatMoney(g.detalle.total) }}</div>
+                                    <div class="text-xs text-gray-600">Pedidos: {{ g.pedidos.length }} · Total a facturar: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}</div>
                                     <div class="mt-2 text-xs text-gray-600">
-                                        Flete {{ g.detalle.moneda }} {{ formatMoney(g.detalle.flete) }} · Seguro {{ g.detalle.moneda }} {{ formatMoney(g.detalle.seguro) }} · CR {{ g.detalle.moneda }} {{ formatMoney(g.detalle.comisionCr) }} · IVA {{ g.detalle.moneda }} {{ formatMoney(g.detalle.iva) }}
+                                        Flete {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).flete) }} · Seguro {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).seguro) }} · CR {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).comisionCr) }} · IVA {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).iva) }}
                                     </div>
                                 </div>
                                 <div class="min-w-[260px]">
@@ -657,27 +723,27 @@ const comprobanteTipoLabel = (tipo) => {
                             <div class="mt-3 grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
                                 <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
                                     <div class="text-gray-500">Bultos</div>
-                                    <div class="font-medium text-gray-900">{{ g.detalle.bultos }}</div>
+                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).bultos }}</div>
                                 </div>
                                 <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
                                     <div class="text-gray-500">Palets</div>
-                                    <div class="font-medium text-gray-900">{{ g.detalle.palets }}</div>
+                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).palets }}</div>
                                 </div>
                                 <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
                                     <div class="text-gray-500">Valor decl.</div>
-                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.valorDeclarado) }}</div>
+                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).valorDeclarado) }}</div>
                                 </div>
                                 <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
                                     <div class="text-gray-500">CR</div>
-                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.crImporte) }}</div>
+                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).crImporte) }}</div>
                                 </div>
                                 <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
                                     <div class="text-gray-500">Subtotal</div>
-                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.subtotalGravado) }}</div>
+                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).subtotalGravado) }}</div>
                                 </div>
                                 <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
                                     <div class="text-gray-500">Total</div>
-                                    <div class="font-medium text-gray-900">{{ g.detalle.moneda }} {{ formatMoney(g.detalle.total) }}</div>
+                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}</div>
                                 </div>
                             </div>
 
