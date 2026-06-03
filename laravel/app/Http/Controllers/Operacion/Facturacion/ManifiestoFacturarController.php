@@ -82,8 +82,17 @@ class ManifiestoFacturarController extends Controller
             ->where('recepcion_estado', 'con_error')
             ->count();
 
+        $sinControlRecepcion = Pedido::query()
+            ->where('manifiesto_ingreso_id', $manifiesto->id)
+            ->whereNull('recepcion_estado')
+            ->count();
+
         if ($erroresRecepcion > 0) {
             return back()->with('error', 'No se puede emitir: hay pedidos con error de recepcion pendientes de corregir.');
+        }
+
+        if ($sinControlRecepcion > 0) {
+            return back()->with('error', 'No se puede emitir: hay pedidos sin control de recepcion.');
         }
 
         DB::transaction(function () use ($empresa, $manifiesto, $map, $detalles, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {

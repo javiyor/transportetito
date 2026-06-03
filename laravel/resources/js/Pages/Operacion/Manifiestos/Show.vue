@@ -73,6 +73,8 @@ const submitPedido = () => {
 const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
 const recepcionConErrores = computed(() => (props.manifiesto.pedidos || []).filter((p) => p.recepcion_estado === 'con_error'));
 const bloquearEmisionPorRecepcion = computed(() => recepcionConErrores.value.length > 0);
+const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
+const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.value.length > 0);
 const filtroRecepcion = reactive({ soloErrores: false });
 
 const DEFAULT_TARIFA = {
@@ -225,17 +227,19 @@ const calcFactura = (pedidos, tarifa, override) => {
 const statsFacturacion = computed(() => {
     const pedidos = props.manifiesto.pedidos || [];
     const pendientes = pedidos.filter((p) => !(p.comprobantes && p.comprobantes.length));
+    const listos = pendientes.filter((p) => p.recepcion_estado === 'correcto');
     const sinEntrega = pendientes.filter((p) => !p.destinatario_cuenta_id);
     return {
         total: pedidos.length,
         pendientes: pendientes.length,
+        listos: listos.length,
         sinEntrega: sinEntrega.length,
         emitidos: (props.comprobantes || []).length,
     };
 });
 
 const pedidosPendientes = computed(() => {
-    return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
+    return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length) && p.recepcion_estado === 'correcto');
 });
 
 const pedidosVisibles = computed(() => {
@@ -641,8 +645,8 @@ const comprobanteTipoLabel = (tipo) => {
                         <p class="mt-1 text-sm text-gray-600">{{ totalPedidos }} cargados</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
-                        <SecondaryButton v-if="canFacturar && permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
+                        <PrimaryButton v-if="canFacturar" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion || bloquearEmisionPorControlPendiente" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
+                        <SecondaryButton v-if="canFacturar && permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion || bloquearEmisionPorControlPendiente" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
 
@@ -656,6 +660,9 @@ const comprobanteTipoLabel = (tipo) => {
                     </div>
                     <div v-if="bloquearEmisionPorRecepcion" class="mt-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                         Hay pedidos recibidos con error. Debes revisarlos/corregirlos antes de emitir facturas o guias.
+                    </div>
+                    <div v-if="bloquearEmisionPorControlPendiente" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        Hay pedidos sin controlar. Solo se pueden facturar o emitir guias los pedidos ya controlados como correctos.
                     </div>
 
                     <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
@@ -975,7 +982,7 @@ const comprobanteTipoLabel = (tipo) => {
                 </div>
 
                 <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-[1500px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
@@ -986,7 +993,7 @@ const comprobanteTipoLabel = (tipo) => {
                                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
                                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
                                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
-                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
+                                 <th class="sticky right-0 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
                              </tr>
                          </thead>
                          <tbody class="bg-white divide-y divide-gray-200">
@@ -1005,7 +1012,7 @@ const comprobanteTipoLabel = (tipo) => {
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.palets }}</td>
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.valor_declarado }}</td>
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
-                                 <td class="px-6 py-4 text-sm text-gray-700 min-w-[320px]">
+                                 <td class="sticky right-0 bg-white px-6 py-4 text-sm text-gray-700 min-w-[320px]">
                                      <div class="space-y-2">
                                          <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                                              <option value="correcto">Correctamente recibido</option>
