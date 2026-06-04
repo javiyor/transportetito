@@ -46,6 +46,14 @@ use App\Http\Controllers\Compras\ProveedorComprobanteUpdateController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteIndexController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteShowController;
 use App\Http\Controllers\Compras\ProveedorOrdenPagoStoreController;
+use App\Http\Controllers\Compras\ProveedorComprobantePrintController;
+use App\Http\Controllers\Compras\OrdenPagoPrintController;
+use App\Http\Controllers\Compras\ProveedorCuentaCorrienteExportController;
+use App\Http\Controllers\Compras\PagoCuentaCombustibleIndexController;
+use App\Http\Controllers\Compras\PagoCuentaCombustibleExportController;
+use App\Http\Controllers\Compras\GastoOperativoIndexController;
+use App\Http\Controllers\Compras\GastoOperativoExportController;
+use App\Http\Controllers\Compras\ProveedorComprobanteExportController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -171,15 +179,25 @@ Route::middleware([
 
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
+        Route::get('/proveedores/comprobantes/export', ProveedorComprobanteExportController::class)->name('proveedores.comprobantes.export');
         Route::post('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'store'])->name('proveedores.comprobantes.store');
         Route::get('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteShowController::class)->name('proveedores.comprobantes.show');
+        Route::get('/proveedores/comprobantes/{comprobante}/print', ProveedorComprobantePrintController::class)->name('proveedores.comprobantes.print');
         Route::put('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteUpdateController::class)->name('proveedores.comprobantes.update');
         Route::get('/proveedores/lookup-cuit', [ProveedorComprobanteIndexController::class, 'lookupByCuit'])->name('proveedores.lookup-cuit');
         Route::post('/proveedores', [ProveedorComprobanteIndexController::class, 'storeProveedor'])->name('proveedores.store');
         Route::put('/proveedores/{cuenta}', [ProveedorComprobanteIndexController::class, 'updateProveedor'])->name('proveedores.update');
         Route::get('/proveedores/cuentas-corrientes', ProveedorCuentaCorrienteIndexController::class)->name('proveedores.ctacte.index');
+        Route::get('/proveedores/cuentas-corrientes/export', ProveedorCuentaCorrienteExportController::class)->name('proveedores.ctacte.export');
         Route::get('/proveedores/cuentas-corrientes/{cuenta}', ProveedorCuentaCorrienteShowController::class)->name('proveedores.ctacte.show');
         Route::post('/proveedores/cuentas-corrientes/{cuenta}/ordenes-pago', ProveedorOrdenPagoStoreController::class)->name('proveedores.ctacte.ordenes-pago.store');
+        Route::get('/proveedores/ordenes-pago/{ordenPago}/print', OrdenPagoPrintController::class)->name('proveedores.ordenes-pago.print');
+        Route::get('/combustibles/pagos-a-cuenta', [PagoCuentaCombustibleIndexController::class, 'index'])->name('combustibles.index');
+        Route::post('/combustibles/pagos-a-cuenta', [PagoCuentaCombustibleIndexController::class, 'store'])->name('combustibles.store');
+        Route::get('/combustibles/pagos-a-cuenta/export', PagoCuentaCombustibleExportController::class)->name('combustibles.export');
+        Route::get('/gastos', [GastoOperativoIndexController::class, 'index'])->name('gastos.index');
+        Route::post('/gastos', [GastoOperativoIndexController::class, 'store'])->name('gastos.store');
+        Route::get('/gastos/export', GastoOperativoExportController::class)->name('gastos.export');
     });
 
     Route::middleware(['role:cobranzas|cobranzas_admin'])->prefix('cobranzas')->name('cobranzas.')->group(function () {

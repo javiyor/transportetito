@@ -23,7 +23,10 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Comprobante proveedor #{{ comprobante.id }}</h2>
                     <div class="mt-1 text-sm text-gray-600">{{ comprobante.cuenta?.tercero?.razon_social || '-' }}</div>
                 </div>
-                <Link :href="route('compras.proveedores.comprobantes.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                <div class="flex items-center gap-2">
+                    <a :href="route('compras.proveedores.comprobantes.print', comprobante.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
+                    <Link :href="route('compras.proveedores.comprobantes.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                </div>
             </div>
         </template>
 
@@ -35,6 +38,42 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                 <div><div class="text-xs text-gray-500">Pagado</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ pagado }}</div></div>
                 <div><div class="text-xs text-gray-500">Saldo</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ saldo }}</div></div>
                 <div><div class="text-xs text-gray-500">Obs.</div><div class="text-sm font-medium text-gray-900">{{ comprobante.observacion || '-' }}</div></div>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg p-6">
+                <h3 class="text-base font-semibold text-gray-900">Detalle fiscal</h3>
+                <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6 text-sm">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">IVA</div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(item, index) in (comprobante.detalle?.iva_items || [])" :key="index" class="rounded border border-gray-200 px-3 py-2">
+                                {{ item.alicuota }}% · Base {{ item.base_imponible }} · IVA {{ item.importe }}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Percepciones / Combustible</div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(item, index) in (comprobante.detalle?.percepciones || [])" :key="index" class="rounded border border-gray-200 px-3 py-2">
+                                {{ item.concepto || 'Percepcion' }} · {{ item.importe }}
+                            </div>
+                            <div v-if="Number(comprobante.detalle?.combustible?.impuestos_combustible || 0) > 0" class="rounded border border-gray-200 px-3 py-2">
+                                Impuestos combustible · {{ comprobante.detalle?.combustible?.impuestos_combustible }}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Retenciones / Pago a cuenta</div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(item, index) in (comprobante.detalle?.retenciones || [])" :key="index" class="rounded border border-gray-200 px-3 py-2">
+                                {{ item.concepto || 'Retencion' }} · {{ item.importe }}
+                            </div>
+                            <div v-if="Number(comprobante.detalle?.combustible?.pago_cuenta_combustible || 0) > 0" class="rounded border border-gray-200 px-3 py-2">
+                                Pago a cuenta combustible · {{ comprobante.detalle?.combustible?.pago_cuenta_combustible }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">

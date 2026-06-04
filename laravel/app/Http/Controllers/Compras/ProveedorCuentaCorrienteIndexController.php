@@ -14,6 +14,8 @@ class ProveedorCuentaCorrienteIndexController extends Controller
     public function __invoke(Request $request): Response
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        $filtro = (string) ($request->query('filtro') ?: 'todos');
+        $buscar = trim((string) ($request->query('buscar') ?: ''));
 
         $cuentas = TerceroCuenta::query()
             ->with(['tercero:id,cuit,razon_social'])
@@ -25,7 +27,16 @@ class ProveedorCuentaCorrienteIndexController extends Controller
                     ->whereColumn('te.tercero_cuenta_id', 'tercero_cuentas.id')
                     ->where('te.empresa_id', $empresaId)
                     ->where('te.es_proveedor', true);
-            })
+            });
+
+        if ($buscar !== '') {
+            $cuentas->whereHas('tercero', function ($q) use ($buscar) {
+                $q->where('razon_social', 'ilike', '%'.$buscar.'%')
+                    ->orWhere('cuit', 'ilike', '%'.$buscar.'%');
+            });
+        }
+
+        $cuentas = $cuentas
             ->orderBy('numero_cliente')
             ->get();
 
@@ -45,10 +56,20 @@ class ProveedorCuentaCorrienteIndexController extends Controller
                 'cuit' => $cuenta->tercero?->cuit,
                 'saldo' => round((float) $items->sum('importe_signed'), 2),
             ];
-        });
+        })->filter(function (array $row) use ($filtro) {
+            return match ($filtro) {
+                'con_saldo' => $row['saldo'] > 0,
+                'sin_saldo' => $row['saldo'] <= 0,
+                default => true,
+            };
+        })->values();
 
         return Inertia::render('Compras/Proveedores/CuentaCorriente/Index', [
             'cuentas' => $rows,
+            'filters' => [
+                'filtro' => $filtro,
+                'buscar' => $buscar !== '' ? $buscar : null,
+            ],
         ]);
     }
 }
