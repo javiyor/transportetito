@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Cheque;
+use App\Models\Empresa;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class ChequeController extends Controller
+{
+    public function index(Request $request)
+    {
+        $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
+
+        $query = Cheque::query()->with(['recibo.cuenta.tercero']);
+
+        if ($empresaId > 0) {
+            $query->where('empresa_id', $empresaId);
+        }
+
+        if ($estado = $request->query('estado')) {
+            $query->where('estado', $estado);
+        }
+
+        if ($tipo = $request->query('tipo')) {
+            $query->where('tipo', $tipo);
+        }
+
+        if ($origen = $request->query('origen')) {
+            $query->where('origen', $origen);
+        }
+
+        if ($desde = $request->query('desde')) {
+            $query->whereDate('fecha_emision', '>=', $desde);
+        }
+
+        if ($hasta = $request->query('hasta')) {
+            $query->whereDate('fecha_emision', '<=', $hasta);
+        }
+
+        $cheques = $query->orderByDesc('created_at')->paginate(30);
+
+        return Inertia::render('Admin/Cheques/Index', [
+            'cheques' => $cheques,
+            'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
+            'empresaId' => $empresaId > 0 ? $empresaId : null,
+            'filtros' => [
+                'estado' => $request->query('estado') ?: '',
+                'tipo' => $request->query('tipo') ?: '',
+                'origen' => $request->query('origen') ?: '',
+                'desde' => $request->query('desde') ?: '',
+                'hasta' => $request->query('hasta') ?: '',
+            ],
+        ]);
+    }
+
+    public function update(Request $request, Cheque $cheque): RedirectResponse
+    {
+        $data = $request->validate([
+            'estado' => ['required', 'in:' . implode(',', Cheque::ESTADOS)],
+            'fecha_deposito' => ['nullable', 'date'],
+            'fecha_cobro' => ['nullable', 'date'],
+            'fecha_rechazo' => ['nullable', 'date'],
+            'endosado_a' => ['nullable', 'string', 'max:255'],
+            'observacion' => ['nullable', 'string', 'max:1000'],
+            'tipo' => ['nullable', 'in:' . implode(',', Cheque::TIPOS)],
+            'numero' => ['nullable', 'string', 'max:64'],
+            'banco' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $cheque->update($data);
+
+        return back()->with('success', 'Cheque actualizado.');
+    }
+}

@@ -5,6 +5,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+import InputError from '@/Components/InputError.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     cuenta: Object,
@@ -15,7 +17,31 @@ const props = defineProps({
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
 const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
-const reciboForm = useForm({ fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', medio: 'efectivo', detalle: '', comprobante_id: '' });
+
+const reciboForm = useForm({
+    fecha: new Date().toISOString().slice(0, 10),
+    moneda: 'ARS',
+    comprobante_id: null,
+    items: [
+        { medio: 'efectivo', importe: '', detalle: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
+    ],
+});
+
+const reciboTotal = computed(() => {
+    return reciboForm.items.reduce((sum, item) => sum + (parseFloat(item.importe) || 0), 0);
+});
+
+const agregarItem = () => {
+    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
+};
+
+const quitarItem = (idx) => {
+    if (reciboForm.items.length > 1) {
+        reciboForm.items.splice(idx, 1);
+    }
+};
+
+const esCheque = (medio) => medio === 'cheque_propio' || medio === 'cheque_tercero';
 
 const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
@@ -55,9 +81,13 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                     <div class="mt-4 space-y-3">
                         <select v-model="ajusteForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="ajuste_debito">Ajuste debito</option><option value="ajuste_credito">Ajuste credito</option></select>
                         <TextInput v-model="ajusteForm.fecha" type="date" class="block w-full" />
+                        <InputError :message="ajusteForm.errors.fecha" />
                         <select v-model="ajusteForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                        <InputError :message="ajusteForm.errors.moneda" />
                         <TextInput v-model="ajusteForm.importe" type="number" min="0.01" step="0.01" class="block w-full" placeholder="Importe" />
+                        <InputError :message="ajusteForm.errors.importe" />
                         <TextInput v-model="ajusteForm.observacion" type="text" class="block w-full" placeholder="Observacion" />
+                        <InputError :message="ajusteForm.errors.observacion" />
                         <PrimaryButton :disabled="ajusteForm.processing" @click="submitAjuste">Guardar ajuste</PrimaryButton>
                     </div>
                 </div>
@@ -67,9 +97,13 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                     <div class="mt-4 space-y-3">
                         <select v-model="notaForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="nota_debito_manual">Nota de debito</option><option value="nota_credito_manual">Nota de credito</option></select>
                         <TextInput v-model="notaForm.fecha" type="date" class="block w-full" />
+                        <InputError :message="notaForm.errors.fecha" />
                         <select v-model="notaForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                        <InputError :message="notaForm.errors.moneda" />
                         <TextInput v-model="notaForm.importe" type="number" min="0.01" step="0.01" class="block w-full" placeholder="Importe" />
+                        <InputError :message="notaForm.errors.importe" />
                         <TextInput v-model="notaForm.motivo" type="text" class="block w-full" placeholder="Motivo" />
+                        <InputError :message="notaForm.errors.motivo" />
                         <PrimaryButton :disabled="notaForm.processing" @click="submitNota">Generar nota</PrimaryButton>
                     </div>
                 </div>
@@ -78,11 +112,41 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                     <h3 class="text-base font-semibold text-gray-900">Emitir recibo</h3>
                     <div class="mt-4 space-y-3">
                         <TextInput v-model="reciboForm.fecha" type="date" class="block w-full" />
+                        <InputError :message="reciboForm.errors.fecha" />
                         <select v-model="reciboForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
-                        <TextInput v-model="reciboForm.importe" type="number" min="0.01" step="0.01" class="block w-full" placeholder="Importe" />
-                        <select v-model="reciboForm.medio" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque_propio">Cheque propio</option><option value="cheque_tercero">Cheque tercero</option></select>
-                        <select v-model="reciboForm.comprobante_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">A cuenta</option><option v-for="c in comprobantes" :key="c.id" :value="c.id">#{{ c.id }} · {{ c.tipo }} · {{ c.moneda }} {{ c.total }}</option></select>
-                        <TextInput v-model="reciboForm.detalle" type="text" class="block w-full" placeholder="Detalle" />
+                        <InputError :message="reciboForm.errors.moneda" />
+                        <select v-model="reciboForm.comprobante_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option :value="null">A cuenta</option>
+                            <option v-for="c in comprobantes" :key="c.id" :value="c.id">#{{ c.id }} · {{ c.tipo }} · {{ c.moneda }} {{ c.total }}</option>
+                        </select>
+                        <InputError :message="reciboForm.errors.comprobante_id" />
+
+                        <div class="border border-gray-200 rounded-md p-3 space-y-3">
+                            <div class="text-sm font-medium text-gray-700">Medios de pago</div>
+                            <div v-for="(item, idx) in reciboForm.items" :key="idx" class="border border-gray-100 rounded p-2 space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <select v-model="item.medio" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="transferencia">Transferencia</option>
+                                        <option value="cheque_propio">Cheque propio</option>
+                                        <option value="cheque_tercero">Cheque tercero</option>
+                                    </select>
+                                    <TextInput v-model="item.importe" type="number" min="0.01" step="0.01" class="block w-32" placeholder="Importe" />
+                                    <button type="button" class="text-red-500 text-lg leading-none font-bold" @click="quitarItem(idx)" :disabled="reciboForm.items.length <= 1">&times;</button>
+                                </div>
+                                <div v-if="esCheque(item.medio)" class="grid grid-cols-2 gap-2">
+                                    <TextInput v-model="item.cheque_numero" type="text" class="block w-full" placeholder="Nro cheque" />
+                                    <TextInput v-model="item.cheque_banco" type="text" class="block w-full" placeholder="Banco" />
+                                    <TextInput v-model="item.cheque_fecha_vencimiento" type="date" class="block w-full" />
+                                    <TextInput v-model="item.cheque_titular" type="text" class="block w-full" placeholder="Titular" />
+                                </div>
+                                <TextInput v-model="item.detalle" type="text" class="block w-full" placeholder="Detalle (opcional)" />
+                            </div>
+                            <SecondaryButton type="button" @click="agregarItem">+ Agregar medio</SecondaryButton>
+                        </div>
+
+                        <div class="text-sm font-semibold text-gray-900 text-right">Total: {{ reciboTotal.toFixed(2) }}</div>
+
                         <PrimaryButton :disabled="reciboForm.processing" @click="submitRecibo">Emitir recibo</PrimaryButton>
                     </div>
                 </div>

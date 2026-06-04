@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\DepositoAdminController;
 use App\Http\Controllers\Admin\TerceroAdminController;
 use App\Http\Controllers\Admin\TarifaRelacionAdminController;
 use App\Http\Controllers\Admin\CotizacionAdminController;
+use App\Http\Controllers\Admin\ChequeController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
@@ -142,6 +143,9 @@ Route::middleware([
         Route::get('/cotizaciones', [CotizacionAdminController::class, 'index'])->name('cotizaciones.index');
         Route::post('/cotizaciones/oficial', [CotizacionAdminController::class, 'storeOficial'])->name('cotizaciones.oficial.store');
         Route::post('/cotizaciones/override', [CotizacionAdminController::class, 'storeOverride'])->name('cotizaciones.override.store');
+
+        Route::get('/cheques', [ChequeController::class, 'index'])->name('cheques.index');
+        Route::put('/cheques/{cheque}', [ChequeController::class, 'update'])->name('cheques.update');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {

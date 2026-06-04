@@ -4,6 +4,7 @@ namespace App\Services\Cobranzas;
 
 use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
+use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\CuentaContable;
 use App\Models\PreRecibo;
@@ -19,12 +20,15 @@ class PreReciboConfirmer
         return DB::transaction(function () use ($preRecibo, $userId) {
             $preRecibo->load(['items', 'aplicaciones']);
 
+            $maxInterno = Recibo::query()->where('empresa_id', $preRecibo->empresa_id)->max('numero_interno') ?? 0;
+
             $recibo = Recibo::query()->create([
                 'empresa_id' => $preRecibo->empresa_id,
                 'deposito_id' => $preRecibo->deposito_id,
                 'tercero_cuenta_id' => $preRecibo->tercero_cuenta_id,
                 'pre_recibo_id' => $preRecibo->id,
                 'sentido' => $preRecibo->sentido,
+                'numero_interno' => $maxInterno + 1,
                 'estado' => 'confirmado',
                 'moneda' => $preRecibo->moneda,
                 'cotizacion_ars' => $preRecibo->cotizacion_ars,
@@ -34,7 +38,7 @@ class PreReciboConfirmer
             ]);
 
             foreach ($preRecibo->items as $item) {
-                ReciboItem::query()->create([
+                $reciboItem = ReciboItem::query()->create([
                     'recibo_id' => $recibo->id,
                     'medio' => $item->medio,
                     'moneda' => $item->moneda,
@@ -42,6 +46,25 @@ class PreReciboConfirmer
                     'importe' => $item->importe,
                     'detalle' => $item->detalle,
                 ]);
+
+                if (in_array($item->medio, ['cheque_propio', 'cheque_tercero'])) {
+                    $detalle = $item->detalle ?? [];
+                    Cheque::query()->create([
+                        'empresa_id' => $preRecibo->empresa_id,
+                        'tipo' => ! empty($detalle['numero']) && str_starts_with($detalle['numero'], 'E') ? 'echeq' : 'fisico',
+                        'origen' => $item->medio === 'cheque_propio' ? 'propio' : 'tercero',
+                        'numero' => $detalle['numero'] ?? null,
+                        'banco' => $detalle['banco'] ?? null,
+                        'importe' => $item->importe,
+                        'moneda' => $item->moneda,
+                        'titular' => $detalle['titular'] ?? null,
+                        'fecha_emision' => $preRecibo->fecha,
+                        'fecha_vencimiento' => $detalle['fecha_vencimiento'] ?? null,
+                        'estado' => 'en_cartera',
+                        'recibo_id' => $recibo->id,
+                        'recibo_item_id' => $reciboItem->id,
+                    ]);
+                }
             }
 
             foreach ($preRecibo->aplicaciones as $ap) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cheque;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\Recibo;
@@ -22,14 +23,24 @@ class CuentaCorrienteReciboStoreController extends Controller
         $data = $request->validate([
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
-            'importe' => ['required', 'numeric', 'gt:0'],
-            'medio' => ['required', 'string', 'max:64'],
-            'detalle' => ['nullable', 'string', 'max:255'],
             'comprobante_id' => ['nullable', 'integer', 'exists:comprobantes,id'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.medio' => ['required', 'string', 'max:64'],
+            'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'items.*.importe' => ['required', 'numeric', 'gt:0'],
+            'items.*.detalle' => ['nullable', 'string', 'max:500'],
+            'items.*.cheque_numero' => ['nullable', 'string', 'max:64'],
+            'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],
+            'items.*.cheque_fecha_vencimiento' => ['nullable', 'date'],
+            'items.*.cheque_titular' => ['nullable', 'string', 'max:255'],
         ]);
 
         $empresa = $cuenta->empresa()->firstOrFail();
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
+
+        $total = collect($data['items'])->sum(fn ($i) => (float) $i['importe']);
+
+        $maxInterno = Recibo::query()->where('empresa_id', $cuenta->empresa_id)->max('numero_interno') ?? 0;
 
         $recibo = Recibo::query()->create([
             'empresa_id' => $cuenta->empresa_id,
@@ -37,22 +48,57 @@ class CuentaCorrienteReciboStoreController extends Controller
             'tercero_cuenta_id' => $cuenta->id,
             'pre_recibo_id' => null,
             'sentido' => 'cobro',
+            'numero_interno' => $maxInterno + 1,
             'estado' => 'confirmado',
             'moneda' => $data['moneda'],
             'cotizacion_ars' => $cotizacion['tasa_ars'],
-            'total' => $data['importe'],
+            'total' => $total,
             'fecha' => $data['fecha'],
             'confirmado_por_user_id' => $request->user()->id,
         ]);
 
-        ReciboItem::query()->create([
-            'recibo_id' => $recibo->id,
-            'medio' => $data['medio'],
-            'moneda' => $data['moneda'],
-            'cotizacion_ars' => $cotizacion['tasa_ars'],
-            'importe' => $data['importe'],
-            'detalle' => ['detalle' => $data['detalle'] ?: null],
-        ]);
+        foreach ($data['items'] as $item) {
+            $detalle = [];
+
+            if (! empty($item['detalle'])) {
+                $detalle['detalle'] = $item['detalle'];
+            }
+
+            if (in_array($item['medio'], ['cheque_propio', 'cheque_tercero'])) {
+                $detalle['numero'] = $item['cheque_numero'] ?? null;
+                $detalle['banco'] = $item['cheque_banco'] ?? null;
+                $detalle['fecha_vencimiento'] = $item['cheque_fecha_vencimiento'] ?? null;
+                $detalle['titular'] = $item['cheque_titular'] ?? null;
+            }
+
+            $reciboItem = ReciboItem::query()->create([
+                'recibo_id' => $recibo->id,
+                'medio' => $item['medio'],
+                'moneda' => $item['moneda'],
+                'cotizacion_ars' => $cotizacion['tasa_ars'],
+                'importe' => $item['importe'],
+                'detalle' => ! empty($detalle) ? $detalle : null,
+            ]);
+
+            if (in_array($item['medio'], ['cheque_propio', 'cheque_tercero'])) {
+                Cheque::query()->create([
+                    'empresa_id' => $cuenta->empresa_id,
+                    'tipo' => $item['cheque_numero'] && str_starts_with($item['cheque_numero'], 'E') ? 'echeq' : 'fisico',
+                    'origen' => $item['medio'] === 'cheque_propio' ? 'propio' : 'tercero',
+                    'numero' => $item['cheque_numero'] ?? null,
+                    'banco' => $item['cheque_banco'] ?? null,
+                    'importe' => $item['importe'],
+                    'moneda' => $item['moneda'],
+                    'titular' => $item['cheque_titular'] ?? null,
+                    'fecha_emision' => $data['fecha'],
+                    'fecha_vencimiento' => $item['cheque_fecha_vencimiento'] ?? null,
+                    'estado' => 'en_cartera',
+                    'librado_por' => $item['medio'] === 'cheque_tercero' ? ($cuenta->tercero->razon_social ?? null) : null,
+                    'recibo_id' => $recibo->id,
+                    'recibo_item_id' => $reciboItem->id,
+                ]);
+            }
+        }
 
         if (! empty($data['comprobante_id'])) {
             $comprobante = Comprobante::query()->findOrFail($data['comprobante_id']);
@@ -64,7 +110,7 @@ class CuentaCorrienteReciboStoreController extends Controller
                 'modo' => 'a_factura',
                 'moneda' => $data['moneda'],
                 'cotizacion_ars' => $cotizacion['tasa_ars'],
-                'importe' => $data['importe'],
+                'importe' => $total,
             ]);
         }
 
@@ -75,10 +121,10 @@ class CuentaCorrienteReciboStoreController extends Controller
             'tipo' => 'cobro',
             'moneda' => $data['moneda'],
             'cotizacion_ars' => $cotizacion['tasa_ars'],
-            'importe_signed' => (-1 * $data['importe']),
+            'importe_signed' => (-1 * $total),
             'referencia_tipo' => 'recibo',
             'referencia_id' => $recibo->id,
-            'observacion' => $data['detalle'] ?: 'Recibo manual',
+            'observacion' => 'Recibo manual',
         ]);
 
         return back()->with('success', 'Recibo emitido.');

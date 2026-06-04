@@ -49,6 +49,16 @@ class TerceroAdminController extends Controller
             'te.es_proveedor',
         ]);
 
+        $proximoNumero = TerceroCuenta::query()
+            ->where('empresa_id', $empresaId > 0 ? $empresaId : 0)
+            ->max('numero_cliente');
+
+        if ($empresaId <= 0) {
+            $proximoNumero = TerceroCuenta::query()
+                ->where('empresa_id', $request->user()->current_empresa_id ?: 0)
+                ->max('numero_cliente');
+        }
+
         return Inertia::render('Admin/Terceros/Index', [
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
@@ -56,6 +66,7 @@ class TerceroAdminController extends Controller
             'cuitInicial' => $request->query('cuit') ?: null,
             'provincias' => Provincia::query()->orderBy('nombre')->get(['id', 'nombre']),
             'tipoInicial' => $request->query('tipo') ?: null,
+            'proximoNumeroCliente' => ($proximoNumero ?? 0) + 1,
         ]);
     }
 

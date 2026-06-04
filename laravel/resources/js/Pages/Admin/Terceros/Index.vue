@@ -17,6 +17,7 @@ const props = defineProps({
     cuitInicial: String,
     provincias: Array,
     tipoInicial: String,
+    proximoNumeroCliente: Number,
 });
 
 const localidades = ref([]);
@@ -42,7 +43,7 @@ const buscarTercero = async (cuit, formObj) => {
 
 const form = useForm({
     empresa_id: props.empresaId || props.empresas?.[0]?.id || null,
-    numero_cliente: '',
+    numero_cliente: props.proximoNumeroCliente,
     cuit: props.cuitInicial || '',
     razon_social: '',
     condicion_iva: '',
@@ -167,7 +168,7 @@ const localidadNombre = (c) => {
 
                     <div>
                         <InputLabel value="Numero de cliente" />
-                        <TextInput v-model="form.numero_cliente" type="number" min="1" class="mt-1 block w-full" required />
+                        <TextInput :value="form.numero_cliente" type="number" class="mt-1 block w-full bg-gray-100" readonly />
                         <InputError class="mt-2" :message="form.errors.numero_cliente" />
                     </div>
 
