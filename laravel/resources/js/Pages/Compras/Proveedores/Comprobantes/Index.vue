@@ -37,21 +37,8 @@ const form = useForm({
 
 const submit = () => form.post(route('compras.proveedores.comprobantes.store'), { preserveScroll: true });
 
-const proveedorDialog = ref(false);
-const editingProveedorId = ref(null);
-const proveedorLookupInfo = ref('');
 const editComprobanteDialog = ref(false);
 const editComprobanteId = ref(null);
-
-const proveedorForm = useForm({
-    cuit: '',
-    razon_social: '',
-    condicion_iva: '',
-    nombre_cuenta: '',
-    email: '',
-    localidad: '',
-    barrio: '',
-});
 
 const editComprobanteForm = useForm({
     tipo: '',
@@ -138,8 +125,6 @@ watch(() => form.tipo, (tipo) => {
 });
 
 const buscarProveedorPorCuit = async () => {
-    proveedorLookupInfo.value = '';
-    proveedorForm.clearErrors();
     const cuit = String(form.proveedor_cuit_busqueda || '').trim();
     if (!cuit) return;
 
@@ -147,53 +132,11 @@ const buscarProveedorPorCuit = async () => {
     const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
     const data = await res.json();
 
-    if (!data.found) {
-        editingProveedorId.value = null;
-        proveedorForm.cuit = cuit;
-        proveedorForm.razon_social = '';
-        proveedorForm.condicion_iva = '';
-        proveedorForm.nombre_cuenta = '';
-        proveedorForm.email = '';
-        proveedorForm.localidad = '';
-        proveedorForm.barrio = '';
-        proveedorLookupInfo.value = 'No existe un tercero con ese CUIT. Puedes crearlo como proveedor.';
-        proveedorDialog.value = true;
-        return;
-    }
-
-    proveedorForm.cuit = data.tercero?.cuit || cuit;
-    proveedorForm.razon_social = data.tercero?.razon_social || '';
-    proveedorForm.condicion_iva = data.tercero?.condicion_iva || '';
-    proveedorForm.nombre_cuenta = data.cuenta?.nombre_cuenta || '';
-    proveedorForm.email = data.cuenta?.email || '';
-    proveedorForm.localidad = data.cuenta?.localidad || '';
-    proveedorForm.barrio = data.cuenta?.barrio || '';
-
     if (data.cuenta?.id) {
         form.tercero_cuenta_id = data.cuenta.id;
-        editingProveedorId.value = data.cuenta.id;
-        proveedorLookupInfo.value = 'Proveedor existente encontrado y seleccionado. Puedes editarlo si hace falta.';
     } else {
-        editingProveedorId.value = null;
-        proveedorLookupInfo.value = 'El CUIT existe, pero no tiene cuenta proveedor en esta empresa. Puedes crearla.';
+        window.location.href = route('admin.terceros.index', { cuit });
     }
-
-    proveedorDialog.value = true;
-};
-
-const submitProveedor = () => {
-    if (editingProveedorId.value) {
-        proveedorForm.put(route('compras.proveedores.update', editingProveedorId.value), {
-            preserveScroll: true,
-            onSuccess: () => { proveedorDialog.value = false; },
-        });
-        return;
-    }
-
-    proveedorForm.post(route('compras.proveedores.store'), {
-        preserveScroll: true,
-        onSuccess: () => { proveedorDialog.value = false; },
-    });
 };
 
 const openEditComprobante = (c) => {
@@ -255,8 +198,8 @@ const submitEditComprobante = () => {
                             <TextInput v-model="form.proveedor_cuit_busqueda" type="text" class="mt-1 block w-full" placeholder="CUIT" />
                         </div>
                         <div class="flex gap-2 sm:col-span-2">
-                            <SecondaryButton type="button" @click="buscarProveedorPorCuit">Buscar / crear</SecondaryButton>
-                            <SecondaryButton type="button" @click="proveedorDialog = true">Nuevo proveedor</SecondaryButton>
+                            <SecondaryButton type="button" @click="buscarProveedorPorCuit">Buscar CUIT</SecondaryButton>
+                            <Link :href="route('admin.terceros.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">Nuevo proveedor</Link>
                         </div>
                     </div>
                     <div class="sm:col-span-2">
@@ -344,26 +287,6 @@ const submitEditComprobante = () => {
                     </table>
                 </div>
             </div>
-
-            <DialogModal :show="proveedorDialog" @close="proveedorDialog = false">
-                <template #title>{{ editingProveedorId ? 'Editar proveedor' : 'Nuevo proveedor' }}</template>
-                <template #content>
-                    <div v-if="proveedorLookupInfo" class="mb-4 text-sm text-gray-600">{{ proveedorLookupInfo }}</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><InputLabel value="CUIT" /><TextInput v-model="proveedorForm.cuit" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.cuit" /></div>
-                        <div><InputLabel value="Razon social" /><TextInput v-model="proveedorForm.razon_social" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.razon_social" /></div>
-                        <div><InputLabel value="Condicion IVA" /><TextInput v-model="proveedorForm.condicion_iva" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.condicion_iva" /></div>
-                        <div><InputLabel value="Nombre cuenta" /><TextInput v-model="proveedorForm.nombre_cuenta" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.nombre_cuenta" /></div>
-                        <div><InputLabel value="Email" /><TextInput v-model="proveedorForm.email" type="email" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.email" /></div>
-                        <div><InputLabel value="Ciudad" /><TextInput v-model="proveedorForm.localidad" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.localidad" /></div>
-                        <div><InputLabel value="Barrio" /><TextInput v-model="proveedorForm.barrio" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="proveedorForm.errors.barrio" /></div>
-                    </div>
-                </template>
-                <template #footer>
-                    <SecondaryButton @click="proveedorDialog = false">Cancelar</SecondaryButton>
-                    <PrimaryButton class="ms-3" :disabled="proveedorForm.processing" @click="submitProveedor">Guardar proveedor</PrimaryButton>
-                </template>
-            </DialogModal>
 
             <DialogModal :show="editComprobanteDialog" @close="editComprobanteDialog = false">
                 <template #title>Editar comprobante proveedor</template>

@@ -14,12 +14,13 @@ const props = defineProps({
     empresas: Array,
     empresaId: [Number, null],
     cuentas: Array,
+    cuitInicial: String,
 });
 
 const form = useForm({
     empresa_id: props.empresaId || props.empresas?.[0]?.id || null,
     numero_cliente: '',
-    cuit: '',
+    cuit: props.cuitInicial || '',
     razon_social: '',
     condicion_iva: '',
     nombre_cuenta: '',

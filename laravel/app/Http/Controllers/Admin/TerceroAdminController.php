@@ -48,6 +48,7 @@ class TerceroAdminController extends Controller
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
             'cuentas' => $cuentas,
+            'cuitInicial' => $request->query('cuit') ?: null,
         ]);
     }
 
