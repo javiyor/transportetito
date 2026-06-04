@@ -199,7 +199,34 @@ class ProveedorComprobanteIndexController extends Controller
             $tipos[] = ['code' => 'ND'.$letra, 'label' => 'Nota de Debito '.$letra];
         }
 
-        return response()->json($tipos);
+        $condicionProveedor = $arcaTipos->normalizarCondicionIva($cuenta->tercero?->condicion_iva);
+        $esRI = $condicionProveedor === 'ri';
+
+        $percepciones = [
+            ['value' => 'iibb', 'label' => 'Percepcion Ingresos Brutos'],
+            ['value' => 'municipal', 'label' => 'Percepcion Municipal'],
+        ];
+        if ($esRI) {
+            $percepciones[] = ['value' => 'iva', 'label' => 'Percepcion IVA'];
+            $percepciones[] = ['value' => 'aduana', 'label' => 'Percepcion Aduanera'];
+        }
+
+        $retenciones = [
+            ['value' => 'iibb', 'label' => 'Retencion Ingresos Brutos'],
+        ];
+        if ($esRI) {
+            $retenciones[] = ['value' => 'ganancias', 'label' => 'Retencion Ganancias'];
+            $retenciones[] = ['value' => 'suss', 'label' => 'Retencion SUSS'];
+            $retenciones[] = ['value' => 'iva', 'label' => 'Retencion IVA'];
+        }
+
+        return response()->json([
+            'tipos' => $tipos,
+            'catalogos_impuestos' => [
+                'percepciones' => $percepciones,
+                'retenciones' => $retenciones,
+            ],
+        ]);
     }
 
     public function store(Request $request, TipoCambioResolver $tipoCambioResolver): RedirectResponse

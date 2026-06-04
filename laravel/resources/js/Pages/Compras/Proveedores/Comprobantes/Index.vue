@@ -98,14 +98,17 @@ const addRetencion = (target) => target.retenciones.push({ concepto: '', importe
 const removeAt = (arr, index) => arr.splice(index, 1);
 
 const tiposArca = ref([]);
+const catalogosImpuestos = ref(null);
 
 const fetchTiposArca = async (terceroCuentaId) => {
-    if (!terceroCuentaId) { tiposArca.value = []; return; }
+    if (!terceroCuentaId) { tiposArca.value = []; catalogosImpuestos.value = null; return; }
     try {
         const url = route('compras.proveedores.tipos-arca', { tercero_cuenta_id: terceroCuentaId });
         const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
-        tiposArca.value = await res.json();
-    } catch { tiposArca.value = []; }
+        const data = await res.json();
+        tiposArca.value = data.tipos || [];
+        catalogosImpuestos.value = data.catalogos_impuestos || null;
+    } catch { tiposArca.value = []; catalogosImpuestos.value = null; }
 };
 
 watch(() => form.tercero_cuenta_id, (val) => {
@@ -268,11 +271,11 @@ const submitEditComprobante = () => {
                     </div>
                     <div class="sm:col-span-2 rounded-lg border border-gray-200 p-4">
                         <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" @click="addPercepcion(form)">Agregar</SecondaryButton></div>
-                        <div class="mt-3 space-y-3"><div v-for="(item, index) in form.percepciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(form.percepciones, index)">Quitar</button></div></div></div>
+                        <div class="mt-3 space-y-3"><div v-for="(item, index) in form.percepciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(form.percepciones, index)">Quitar</button></div></div></div>
                     </div>
                     <div class="sm:col-span-2 rounded-lg border border-gray-200 p-4">
                         <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" @click="addRetencion(form)">Agregar</SecondaryButton></div>
-                        <div class="mt-3 space-y-3"><div v-for="(item, index) in form.retenciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(form.retenciones, index)">Quitar</button></div></div></div>
+                        <div class="mt-3 space-y-3"><div v-for="(item, index) in form.retenciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(form.retenciones, index)">Quitar</button></div></div></div>
                     </div>
                     <div><InputLabel value="Impuestos combustible" /><TextInput v-model="form.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
                     <div><InputLabel value="Pago a cuenta combustible" /><TextInput v-model="form.pago_cuenta_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
@@ -350,11 +353,11 @@ const submitEditComprobante = () => {
                             </div>
                             <div class="rounded-lg border border-gray-200 p-4">
                                 <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" @click="addPercepcion(editComprobanteForm)">Agregar</SecondaryButton></div>
-                                <div class="mt-3 space-y-3"><div v-for="(item, index) in editComprobanteForm.percepciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(editComprobanteForm.percepciones, index)">Quitar</button></div></div></div>
+                                <div class="mt-3 space-y-3"><div v-for="(item, index) in editComprobanteForm.percepciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(editComprobanteForm.percepciones, index)">Quitar</button></div></div></div>
                             </div>
                             <div class="rounded-lg border border-gray-200 p-4">
                                 <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" @click="addRetencion(editComprobanteForm)">Agregar</SecondaryButton></div>
-                                <div class="mt-3 space-y-3"><div v-for="(item, index) in editComprobanteForm.retenciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(editComprobanteForm.retenciones, index)">Quitar</button></div></div></div>
+                                <div class="mt-3 space-y-3"><div v-for="(item, index) in editComprobanteForm.retenciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(editComprobanteForm.retenciones, index)">Quitar</button></div></div></div>
                             </div>
                             <div><InputLabel value="Impuestos combustible" /><TextInput v-model="editComprobanteForm.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
                             <div><InputLabel value="Pago a cuenta combustible" /><TextInput v-model="editComprobanteForm.pago_cuenta_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
