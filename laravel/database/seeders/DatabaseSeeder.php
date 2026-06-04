@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             EmpresaSeeder::class,
             RolesSeeder::class,
             CombustibleTasaSeeder::class,
+            ProvinciaSeeder::class,
+            LocalidadSeeder::class,
         ]);
     }
 }

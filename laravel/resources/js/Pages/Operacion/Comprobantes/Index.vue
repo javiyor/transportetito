@@ -37,7 +37,10 @@ const tipoLabel = (tipo) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Comprobantes</h2>
-                <Link :href="route('operacion.manifiestos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                <div class="flex items-center gap-2">
+                    <Link :href="route('admin.terceros.index', { tipo: 'cliente' })"><SecondaryButton>Nuevo cliente</SecondaryButton></Link>
+                    <Link :href="route('operacion.manifiestos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                </div>
             </div>
         </template>
 

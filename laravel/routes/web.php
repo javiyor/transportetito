@@ -132,6 +132,8 @@ Route::middleware([
         Route::get('/terceros', [TerceroAdminController::class, 'index'])->name('terceros.index');
         Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
         Route::put('/terceros/{cuenta}', [TerceroAdminController::class, 'update'])->name('terceros.update');
+        Route::get('/terceros/lookup-cuit', [TerceroAdminController::class, 'lookupByCuit'])->name('terceros.lookup-cuit');
+        Route::get('/terceros/localidades-por-provincia/{provincia}', [TerceroAdminController::class, 'localidadesPorProvincia'])->name('terceros.localidades-por-provincia');
 
         Route::get('/tarifas', [TarifaRelacionAdminController::class, 'index'])->name('tarifas.index');
         Route::post('/tarifas', [TarifaRelacionAdminController::class, 'store'])->name('tarifas.store');

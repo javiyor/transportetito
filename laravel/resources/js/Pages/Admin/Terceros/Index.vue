@@ -8,14 +8,37 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
     empresas: Array,
     empresaId: [Number, null],
     cuentas: Array,
     cuitInicial: String,
+    provincias: Array,
+    tipoInicial: String,
 });
+
+const localidades = ref([]);
+const editLocalidades = ref([]);
+
+const cargarLocalidades = async (provinciaId, target) => {
+    if (!provinciaId) { target.value = []; return; }
+    const url = route('admin.terceros.localidades-por-provincia', { provincia: provinciaId });
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    target.value = await res.json();
+};
+
+const buscarTercero = async (cuit, formObj) => {
+    if (!cuit) return;
+    const url = route('admin.terceros.lookup-cuit', { cuit });
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    const data = await res.json();
+    if (data.found) {
+        formObj.razon_social = data.tercero.razon_social || '';
+        formObj.condicion_iva = data.tercero.condicion_iva || '';
+    }
+};
 
 const form = useForm({
     empresa_id: props.empresaId || props.empresas?.[0]?.id || null,
@@ -26,16 +49,23 @@ const form = useForm({
     nombre_cuenta: '',
     localidad: '',
     barrio: '',
+    provincia_id: '',
+    localidad_id: '',
     email: '',
     enviar_comprobantes_por_email: false,
-    es_cliente: true,
-    es_proveedor: false,
+    es_cliente: props.tipoInicial === 'cliente' || !props.tipoInicial,
+    es_proveedor: props.tipoInicial === 'proveedor',
+});
+
+watch(() => form.provincia_id, (val) => {
+    form.localidad_id = '';
+    cargarLocalidades(val, localidades);
 });
 
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'nombre_cuenta', 'localidad', 'barrio', 'email'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id'),
     });
 };
 
@@ -52,6 +82,8 @@ const editForm = useForm({
     nombre_cuenta: '',
     localidad: '',
     barrio: '',
+    provincia_id: '',
+    localidad_id: '',
     email: '',
     enviar_comprobantes_por_email: false,
     es_cliente: false,
@@ -66,16 +98,37 @@ const openEdit = (c) => {
     editForm.nombre_cuenta = c.nombre_cuenta || '';
     editForm.localidad = c.localidad || '';
     editForm.barrio = c.barrio || '';
+    editForm.provincia_id = c.provincia_id || '';
+    editForm.localidad_id = c.localidad_id || '';
     editForm.email = c.email || '';
     editForm.enviar_comprobantes_por_email = !!c.enviar_comprobantes_por_email;
     editForm.es_cliente = !!c.es_cliente;
     editForm.es_proveedor = !!c.es_proveedor;
     editForm.clearErrors();
     editing.value = true;
+    if (c.provincia_id) {
+        cargarLocalidades(c.provincia_id, editLocalidades);
+    }
 };
+
+watch(() => editForm.provincia_id, (val) => {
+    editForm.localidad_id = '';
+    cargarLocalidades(val, editLocalidades);
+});
 
 const submitEdit = () => {
     editForm.put(route('admin.terceros.update', editId.value), { preserveScroll: true, onSuccess: () => (editing.value = false) });
+};
+
+const provinciaNombre = (id) => {
+    const p = props.provincias.find((x) => x.id === id);
+    return p ? p.nombre : '';
+};
+
+const localidadNombre = (c) => {
+    if (c.localidadRel) return c.localidadRel.nombre;
+    if (c.localidad) return c.localidad;
+    return '-';
 };
 </script>
 
@@ -120,7 +173,10 @@ const submitEdit = () => {
 
                     <div>
                         <InputLabel value="CUIT" />
-                        <TextInput v-model="form.cuit" type="text" class="mt-1 block w-full" required />
+                        <div class="flex gap-2">
+                            <TextInput v-model="form.cuit" type="text" class="mt-1 block w-full" @blur="buscarTercero(form.cuit, form)" />
+                            <SecondaryButton type="button" class="mt-1 shrink-0" @click="buscarTercero(form.cuit, form)">Buscar</SecondaryButton>
+                        </div>
                         <InputError class="mt-2" :message="form.errors.cuit" />
                     </div>
 
@@ -143,10 +199,23 @@ const submitEdit = () => {
                     </div>
 
                     <div>
-                        <InputLabel value="Ciudad" />
-                        <TextInput v-model="form.localidad" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="form.errors.localidad" />
+                        <InputLabel value="Provincia" />
+                        <select v-model="form.provincia_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">(seleccionar)</option>
+                            <option v-for="p in provincias" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.provincia_id" />
                     </div>
+
+                    <div>
+                        <InputLabel value="Ciudad" />
+                        <select v-model="form.localidad_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">(seleccionar)</option>
+                            <option v-for="l in localidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.localidad_id" />
+                    </div>
+
                     <div>
                         <InputLabel value="Barrio" />
                         <TextInput v-model="form.barrio" type="text" class="mt-1 block w-full" />
@@ -205,8 +274,12 @@ const submitEdit = () => {
                                 <div class="font-medium text-gray-900">{{ c.nombre_cuenta || '-' }}</div>
                             </div>
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Ciudad / Barrio</div>
-                                <div class="font-medium text-gray-900">{{ c.localidad || '-' }} · {{ c.barrio || '-' }}</div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Provincia / Ciudad</div>
+                                <div class="font-medium text-gray-900">{{ provinciaNombre(c.provincia_id) || '-' }} / {{ localidadNombre(c) }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Barrio</div>
+                                <div class="font-medium text-gray-900">{{ c.barrio || '-' }}</div>
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Email</div>
@@ -233,6 +306,7 @@ const submitEdit = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provincia</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
@@ -248,7 +322,8 @@ const submitEdit = () => {
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.localidad || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ provinciaNombre(c.provincia_id) || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ localidadNombre(c) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.email || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
@@ -262,7 +337,7 @@ const submitEdit = () => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td colspan="11" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td colspan="12" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -275,7 +350,10 @@ const submitEdit = () => {
                     <form class="grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="submitEdit">
                         <div>
                             <InputLabel value="CUIT" />
-                            <TextInput v-model="editForm.cuit" type="text" class="mt-1 block w-full" required />
+                            <div class="flex gap-2">
+                                <TextInput v-model="editForm.cuit" type="text" class="mt-1 block w-full" @blur="buscarTercero(editForm.cuit, editForm)" />
+                                <SecondaryButton type="button" class="mt-1 shrink-0" @click="buscarTercero(editForm.cuit, editForm)">Buscar</SecondaryButton>
+                            </div>
                             <InputError class="mt-2" :message="editForm.errors.cuit" />
                         </div>
                         <div>
@@ -294,9 +372,20 @@ const submitEdit = () => {
                             <InputError class="mt-2" :message="editForm.errors.nombre_cuenta" />
                         </div>
                         <div>
+                            <InputLabel value="Provincia" />
+                            <select v-model="editForm.provincia_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">(seleccionar)</option>
+                                <option v-for="p in provincias" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="editForm.errors.provincia_id" />
+                        </div>
+                        <div>
                             <InputLabel value="Ciudad" />
-                            <TextInput v-model="editForm.localidad" type="text" class="mt-1 block w-full" />
-                            <InputError class="mt-2" :message="editForm.errors.localidad" />
+                            <select v-model="editForm.localidad_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">(seleccionar)</option>
+                                <option v-for="l in editLocalidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="editForm.errors.localidad_id" />
                         </div>
                         <div>
                             <InputLabel value="Barrio" />

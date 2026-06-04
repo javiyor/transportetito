@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
+use App\Models\Localidad;
+use App\Models\Provincia;
 use App\Models\Tercero;
 use App\Models\Zona;
 
@@ -22,6 +24,8 @@ class TerceroCuenta extends Model
         'direccion',
         'localidad',
         'barrio',
+        'provincia_id',
+        'localidad_id',
         'zona_id',
         'cp',
         'telefono',
@@ -32,6 +36,8 @@ class TerceroCuenta extends Model
 
     protected $casts = [
         'numero_cliente' => 'int',
+        'provincia_id' => 'int',
+        'localidad_id' => 'int',
         'zona_id' => 'int',
         'enviar_comprobantes_por_email' => 'bool',
         'activo' => 'bool',
@@ -50,6 +56,16 @@ class TerceroCuenta extends Model
     public function zona(): BelongsTo
     {
         return $this->belongsTo(Zona::class);
+    }
+
+    public function provincia(): BelongsTo
+    {
+        return $this->belongsTo(Provincia::class);
+    }
+
+    public function localidadRel(): BelongsTo
+    {
+        return $this->belongsTo(Localidad::class, 'localidad_id');
     }
 
     public function movimientosCtaCte(): HasMany

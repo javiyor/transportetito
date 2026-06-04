@@ -604,9 +604,14 @@ const comprobanteTipoLabel = (tipo) => {
                         {{ formatFecha(manifiesto.fecha) }} · {{ manifiesto.empresa?.razon_social || '-' }} · {{ manifiesto.deposito?.nombre || '-' }}
                     </div>
                 </div>
-                <Link :href="route('operacion.manifiestos.index')">
-                    <SecondaryButton>Volver</SecondaryButton>
-                </Link>
+                <div class="flex items-center gap-2">
+                    <Link :href="route('admin.terceros.index', { tipo: 'cliente' })">
+                        <SecondaryButton>Nuevo cliente</SecondaryButton>
+                    </Link>
+                    <Link :href="route('operacion.manifiestos.index')">
+                        <SecondaryButton>Volver</SecondaryButton>
+                    </Link>
+                </div>
             </div>
         </template>
 

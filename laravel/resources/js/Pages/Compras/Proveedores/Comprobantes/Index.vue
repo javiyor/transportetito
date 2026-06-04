@@ -171,7 +171,7 @@ const buscarProveedorPorCuit = async () => {
     if (data.cuenta?.id) {
         form.tercero_cuenta_id = data.cuenta.id;
     } else {
-        window.location.href = route('admin.terceros.index', { cuit });
+        window.location.href = route('admin.terceros.index', { cuit, tipo: 'proveedor' });
     }
 };
 
@@ -237,7 +237,7 @@ const submitEditComprobante = () => {
                         </div>
                         <div class="flex gap-2 sm:col-span-2">
                             <SecondaryButton type="button" @click="buscarProveedorPorCuit">Buscar CUIT</SecondaryButton>
-                            <Link :href="route('admin.terceros.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">Nuevo proveedor</Link>
+                            <Link :href="route('admin.terceros.index', { tipo: 'proveedor' })" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">Nuevo proveedor</Link>
                         </div>
                     </div>
                     <div class="sm:col-span-2">
