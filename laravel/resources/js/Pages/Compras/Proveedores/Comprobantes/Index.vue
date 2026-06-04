@@ -9,6 +9,8 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
 import { computed, ref, watch } from 'vue';
 
+const tasaActualCombustible = ref(0);
+
 const props = defineProps({
     proveedores: Array,
     comprobantes: Object,
@@ -137,8 +139,6 @@ const TIPOS_COMBUSTIBLE = [
     { value: 'fuel_oil', label: 'Fuel Oil' },
 ];
 
-let tasaActualCombustible = 0;
-
 const actualizarPagoCuenta = async (target) => {
     const tipo = target.combustible_tipo;
     const litros = Number(target.litros_combustible || 0);
@@ -150,8 +150,8 @@ const actualizarPagoCuenta = async (target) => {
         const url = route('compras.combustibles.tasa-actual', { combustible_tipo: tipo, fecha: target.fecha_emision || new Date().toISOString().slice(0, 10) });
         const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const data = await res.json();
-        tasaActualCombustible = data.monto_por_litro || 0;
-        target.pago_cuenta_combustible = (litros * tasaActualCombustible).toFixed(2);
+        tasaActualCombustible.value = data.monto_por_litro || 0;
+        target.pago_cuenta_combustible = (litros * tasaActualCombustible.value).toFixed(2);
     } catch {
         target.pago_cuenta_combustible = '';
     }
