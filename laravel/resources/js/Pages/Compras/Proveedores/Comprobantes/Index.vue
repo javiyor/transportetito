@@ -79,7 +79,10 @@ const fiscalSummary = (target) => computed(() => {
     const impComb = Number(target.impuestos_combustible || 0);
     const pagoCuentaComb = Number(target.pago_cuenta_combustible || 0);
     const tributos = percepciones + impComb;
-    const total = subtotal + iva + tributos - retenciones - pagoCuentaComb;
+    const ivaDesglosado = (target.tipo || '').endsWith('A');
+    const total = ivaDesglosado
+        ? subtotal + iva + tributos - retenciones - pagoCuentaComb
+        : subtotal + tributos - retenciones - pagoCuentaComb;
     return {
         subtotal: subtotal.toFixed(2),
         iva: iva.toFixed(2),

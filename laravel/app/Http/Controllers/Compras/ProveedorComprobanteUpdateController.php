@@ -11,8 +11,10 @@ use Illuminate\Http\Request;
 
 class ProveedorComprobanteUpdateController extends Controller
 {
-    private function fiscalDetail(array $data): array
+    private function fiscalDetail(array $data, ?string $tipo = null): array
     {
+        $ivaDesglosado = $tipo && str_ends_with($tipo, 'A');
+
         $ivaItems = collect($data['iva_items'] ?? [])
             ->map(function ($item) {
                 $alicuota = (float) ($item['alicuota'] ?? 0);
@@ -56,7 +58,9 @@ class ProveedorComprobanteUpdateController extends Controller
         $ivaTotal = round(collect($ivaItems)->sum('importe'), 2);
         $tributos = round(collect($percepciones)->sum('importe') + $combustible['impuestos_combustible'], 2);
         $retencionesTotal = round(collect($retenciones)->sum('importe') + $combustible['pago_cuenta_combustible'], 2);
-        $total = round($subtotal + $ivaTotal + $tributos - $retencionesTotal, 2);
+        $total = $ivaDesglosado
+            ? round($subtotal + $ivaTotal + $tributos - $retencionesTotal, 2)
+            : round($subtotal + $tributos - $retencionesTotal, 2);
 
         return [
             'subtotal' => $subtotal,
@@ -100,7 +104,7 @@ class ProveedorComprobanteUpdateController extends Controller
 
         $empresa = $comprobante->empresa()->firstOrFail();
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha_emision']);
-        $fiscal = $this->fiscalDetail($data);
+        $fiscal = $this->fiscalDetail($data, $data['tipo']);
 
         $comprobante->update([
             'tipo' => $data['tipo'],
