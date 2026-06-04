@@ -139,22 +139,29 @@ const TIPOS_COMBUSTIBLE = [
     { value: 'fuel_oil', label: 'Fuel Oil' },
 ];
 
+const fetchTasaCombustible = async (tipo, fecha) => {
+    if (!tipo) { tasaActualCombustible.value = 0; return 0; }
+    try {
+        const url = route('compras.combustibles.tasa-actual', { combustible_tipo: tipo, fecha: fecha || new Date().toISOString().slice(0, 10) });
+        const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const data = await res.json();
+        tasaActualCombustible.value = data.monto_por_litro || 0;
+        return tasaActualCombustible.value;
+    } catch {
+        tasaActualCombustible.value = 0;
+        return 0;
+    }
+};
+
 const actualizarPagoCuenta = async (target) => {
     const tipo = target.combustible_tipo;
     const litros = Number(target.litros_combustible || 0);
+    const tasa = await fetchTasaCombustible(tipo, target.fecha_emision);
     if (!tipo || litros <= 0) {
         target.pago_cuenta_combustible = '';
         return;
     }
-    try {
-        const url = route('compras.combustibles.tasa-actual', { combustible_tipo: tipo, fecha: target.fecha_emision || new Date().toISOString().slice(0, 10) });
-        const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
-        const data = await res.json();
-        tasaActualCombustible.value = data.monto_por_litro || 0;
-        target.pago_cuenta_combustible = (litros * tasaActualCombustible.value).toFixed(2);
-    } catch {
-        target.pago_cuenta_combustible = '';
-    }
+    target.pago_cuenta_combustible = (litros * tasa).toFixed(2);
 };
 
 watch([() => form.combustible_tipo, () => form.litros_combustible, () => form.fecha_emision], () => { actualizarPagoCuenta(form); });
