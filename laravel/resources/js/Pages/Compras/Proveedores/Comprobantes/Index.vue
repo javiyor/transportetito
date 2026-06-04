@@ -28,6 +28,8 @@ const form = useForm({
     ],
     percepciones: [],
     retenciones: [],
+    combustible_tipo: '',
+    litros_combustible: '',
     impuestos_combustible: '',
     pago_cuenta_combustible: '',
     fecha_emision: new Date().toISOString().slice(0, 10),
@@ -48,6 +50,8 @@ const editComprobanteForm = useForm({
     iva_items: [{ alicuota: 21, base_imponible: '' }],
     percepciones: [],
     retenciones: [],
+    combustible_tipo: '',
+    litros_combustible: '',
     impuestos_combustible: '',
     pago_cuenta_combustible: '',
     fecha_emision: '',
@@ -124,6 +128,38 @@ watch(() => form.tipo, (tipo) => {
     }
 });
 
+const TIPOS_COMBUSTIBLE = [
+    { value: 'gasoil_grado_2', label: 'Gasoil Grado 2' },
+    { value: 'gasoil_grado_3', label: 'Gasoil Grado 3' },
+    { value: 'nafta_super', label: 'Nafta Superior' },
+    { value: 'nafta_premium', label: 'Nafta Premium' },
+    { value: 'kerosene', label: 'Kerosene' },
+    { value: 'fuel_oil', label: 'Fuel Oil' },
+];
+
+let tasaActualCombustible = 0;
+
+const actualizarPagoCuenta = async (target) => {
+    const tipo = target.combustible_tipo;
+    const litros = Number(target.litros_combustible || 0);
+    if (!tipo || litros <= 0) {
+        target.pago_cuenta_combustible = '';
+        return;
+    }
+    try {
+        const url = route('compras.combustibles.tasa-actual', { combustible_tipo: tipo, fecha: target.fecha_emision || new Date().toISOString().slice(0, 10) });
+        const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const data = await res.json();
+        tasaActualCombustible = data.monto_por_litro || 0;
+        target.pago_cuenta_combustible = (litros * tasaActualCombustible).toFixed(2);
+    } catch {
+        target.pago_cuenta_combustible = '';
+    }
+};
+
+watch([() => form.combustible_tipo, () => form.litros_combustible, () => form.fecha_emision], () => { actualizarPagoCuenta(form); });
+watch([() => editComprobanteForm.combustible_tipo, () => editComprobanteForm.litros_combustible, () => editComprobanteForm.fecha_emision], () => { actualizarPagoCuenta(editComprobanteForm); });
+
 const buscarProveedorPorCuit = async () => {
     const cuit = String(form.proveedor_cuit_busqueda || '').trim();
     if (!cuit) return;
@@ -149,6 +185,8 @@ const openEditComprobante = (c) => {
     editComprobanteForm.iva_items = c.detalle?.iva_items?.length ? c.detalle.iva_items.map((x) => ({ alicuota: x.alicuota, base_imponible: x.base_imponible })) : [{ alicuota: 21, base_imponible: '' }];
     editComprobanteForm.percepciones = c.detalle?.percepciones?.length ? c.detalle.percepciones.map((x) => ({ concepto: x.concepto, importe: x.importe })) : [];
     editComprobanteForm.retenciones = c.detalle?.retenciones?.length ? c.detalle.retenciones.map((x) => ({ concepto: x.concepto, importe: x.importe })) : [];
+    editComprobanteForm.combustible_tipo = c.detalle?.combustible?.tipo || '';
+    editComprobanteForm.litros_combustible = c.detalle?.combustible?.litros || '';
     editComprobanteForm.impuestos_combustible = c.detalle?.combustible?.impuestos_combustible || '';
     editComprobanteForm.pago_cuenta_combustible = c.detalle?.combustible?.pago_cuenta_combustible || '';
     editComprobanteForm.fecha_emision = String(c.fecha_emision || '').slice(0, 10);
@@ -245,8 +283,34 @@ const submitEditComprobante = () => {
                         <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" @click="addRetencion(form)">Agregar</SecondaryButton></div>
                         <div class="mt-3 space-y-3"><div v-for="(item, index) in form.retenciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(form.retenciones, index)">Quitar</button></div></div></div>
                     </div>
-                    <div><InputLabel value="Impuestos combustible" /><TextInput v-model="form.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
-                    <div><InputLabel value="Pago a cuenta combustible" /><TextInput v-model="form.pago_cuenta_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
+                    <div class="sm:col-span-4 rounded-lg border border-gray-200 p-4">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-3">Combustible</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                            <div>
+                                <InputLabel value="Tipo combustible" />
+                                <select v-model="form.combustible_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="">(seleccionar)</option>
+                                    <option v-for="t in TIPOS_COMBUSTIBLE" :key="t.value" :value="t.value">{{ t.label }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <InputLabel value="Litros" />
+                                <TextInput v-model="form.litros_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <InputLabel value="Tasa x litro ($)" />
+                                <div class="mt-1 text-sm font-medium text-gray-700">{{ form.combustible_tipo && Number(form.litros_combustible || 0) > 0 ? `$${tasaActualCombustible.toFixed(4)}` : '-' }}</div>
+                            </div>
+                            <div>
+                                <InputLabel value="Pago a cuenta" />
+                                <div class="mt-1 text-sm font-semibold text-gray-900">{{ form.pago_cuenta_combustible ? `$${form.pago_cuenta_combustible}` : '-' }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <InputLabel value="Impuestos combustible (adicional)" />
+                            <TextInput v-model="form.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                        </div>
+                    </div>
                     <div><InputLabel value="Fecha emision" /><TextInput v-model="form.fecha_emision" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha_emision" /></div>
                     <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="form.fecha_vencimiento" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha_vencimiento" /></div>
                     <div class="sm:col-span-3"><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.observacion" /></div>
@@ -311,8 +375,34 @@ const submitEditComprobante = () => {
                                 <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" @click="addRetencion(editComprobanteForm)">Agregar</SecondaryButton></div>
                                 <div class="mt-3 space-y-3"><div v-for="(item, index) in editComprobanteForm.retenciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(editComprobanteForm.retenciones, index)">Quitar</button></div></div></div>
                             </div>
-                            <div><InputLabel value="Impuestos combustible" /><TextInput v-model="editComprobanteForm.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
-                            <div><InputLabel value="Pago a cuenta combustible" /><TextInput v-model="editComprobanteForm.pago_cuenta_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div>
+                            <div class="sm:col-span-2 rounded-lg border border-gray-200 p-4">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Combustible</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <InputLabel value="Tipo combustible" />
+                                        <select v-model="editComprobanteForm.combustible_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                            <option value="">(seleccionar)</option>
+                                            <option v-for="t in TIPOS_COMBUSTIBLE" :key="t.value" :value="t.value">{{ t.label }}</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Litros" />
+                                        <TextInput v-model="editComprobanteForm.litros_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Tasa x litro" />
+                                        <div class="mt-1 text-sm font-medium text-gray-700">{{ editComprobanteForm.combustible_tipo && Number(editComprobanteForm.litros_combustible || 0) > 0 ? `$${tasaActualCombustible.toFixed(4)}` : '-' }}</div>
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Pago a cuenta" />
+                                        <div class="mt-1 text-sm font-semibold text-gray-900">{{ editComprobanteForm.pago_cuenta_combustible ? `$${editComprobanteForm.pago_cuenta_combustible}` : '-' }}</div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <InputLabel value="Impuestos combustible" />
+                                    <TextInput v-model="editComprobanteForm.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                </div>
+                            </div>
                             <div><InputLabel value="Fecha emision" /><TextInput v-model="editComprobanteForm.fecha_emision" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.fecha_emision" /></div>
                             <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="editComprobanteForm.fecha_vencimiento" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.fecha_vencimiento" /></div>
                             <div class="sm:col-span-2"><InputLabel value="Observacion" /><TextInput v-model="editComprobanteForm.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.observacion" /></div>

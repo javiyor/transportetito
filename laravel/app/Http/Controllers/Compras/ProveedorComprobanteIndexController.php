@@ -70,6 +70,8 @@ class ProveedorComprobanteIndexController extends Controller
             ->all();
 
         $combustible = [
+            'tipo' => $data['combustible_tipo'] ?? null,
+            'litros' => $data['litros_combustible'] ?? null,
             'impuestos_combustible' => round((float) ($data['impuestos_combustible'] ?? 0), 2),
             'pago_cuenta_combustible' => round((float) ($data['pago_cuenta_combustible'] ?? 0), 2),
         ];
@@ -253,6 +255,8 @@ class ProveedorComprobanteIndexController extends Controller
             'retenciones' => ['nullable', 'array'],
             'retenciones.*.concepto' => ['nullable', 'string', 'max:255'],
             'retenciones.*.importe' => ['nullable', 'numeric', 'min:0'],
+            'combustible_tipo' => ['nullable', 'string', 'max:64'],
+            'litros_combustible' => ['nullable', 'numeric', 'min:0'],
             'impuestos_combustible' => ['nullable', 'numeric', 'min:0'],
             'pago_cuenta_combustible' => ['nullable', 'numeric', 'min:0'],
             'fecha_emision' => ['required', 'date'],

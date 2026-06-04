@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\CombustibleTasa;
 use App\Models\Empresa;
 use App\Models\PagoCuentaCombustible;
 use App\Services\Moneda\TipoCambioResolver;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -78,5 +81,74 @@ class PagoCuentaCombustibleIndexController extends Controller
         ]);
 
         return back()->with('success', 'Pago a cuenta combustibles registrado.');
+    }
+
+    public function tasas(Request $request): Response
+    {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+
+        $tasas = CombustibleTasa::query()
+            ->orderByDesc('mes')
+            ->orderBy('combustible_tipo')
+            ->get()
+            ->groupBy(fn ($t) => $t->mes->format('Y-m'));
+
+        return Inertia::render('Compras/Combustibles/Tasas', [
+            'tasasPorMes' => $tasas,
+        ]);
+    }
+
+    public function storeTasa(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'combustible_tipo' => ['required', 'string', 'max:64'],
+            'mes' => ['required', 'date_format:Y-m'],
+            'monto_por_litro' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $mes = Carbon::parse($data['mes'].'-01')->startOfMonth();
+
+        CombustibleTasa::query()->updateOrCreate(
+            ['combustible_tipo' => $data['combustible_tipo'], 'mes' => $mes->format('Y-m-d')],
+            ['monto_por_litro' => round((float) $data['monto_por_litro'], 4)],
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    public function destroyTasa(Request $request, CombustibleTasa $tasa): JsonResponse
+    {
+        $tasa->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function tasaActual(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'combustible_tipo' => ['required', 'string', 'max:64'],
+            'fecha' => ['required', 'date'],
+        ]);
+
+        $mes = Carbon::parse($data['fecha'])->startOfMonth()->format('Y-m-d');
+
+        $tasa = CombustibleTasa::query()
+            ->where('combustible_tipo', $data['combustible_tipo'])
+            ->where('mes', $mes)
+            ->first();
+
+        if (! $tasa) {
+            $tasa = CombustibleTasa::query()
+                ->where('combustible_tipo', $data['combustible_tipo'])
+                ->where('mes', '<=', $mes)
+                ->orderByDesc('mes')
+                ->first();
+        }
+
+        return response()->json([
+            'found' => $tasa !== null,
+            'monto_por_litro' => $tasa ? (float) $tasa->monto_por_litro : 0,
+            'mes' => $tasa ? $tasa->mes->format('Y-m') : null,
+        ]);
     }
 }

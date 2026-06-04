@@ -38,6 +38,7 @@ const applyFilters = () => router.get(route('compras.combustibles.index'), { bus
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Compras / Combustibles / Pagos a cuenta</h2>
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.export', { buscar: filtersForm.buscar || null })">Exportar CSV</a>
+                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.tasas')">Tasas por litro</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.index')">Volver a compras</Link>
                 </div>
             </div>
