@@ -7,7 +7,7 @@ import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     proveedores: Array,
@@ -19,7 +19,7 @@ const props = defineProps({
 const form = useForm({
     tercero_cuenta_id: '',
     proveedor_cuit_busqueda: '',
-    tipo: 'factura',
+    tipo: '',
     numero: '',
     moneda: 'ARS',
     iva_items: [
@@ -53,7 +53,7 @@ const proveedorForm = useForm({
 });
 
 const editComprobanteForm = useForm({
-    tipo: 'factura',
+    tipo: '',
     numero: '',
     moneda: 'ARS',
     iva_items: [{ alicuota: 21, base_imponible: '' }],
@@ -96,6 +96,23 @@ const addIvaItem = (target) => target.iva_items.push({ alicuota: 21, base_imponi
 const addPercepcion = (target) => target.percepciones.push({ concepto: '', importe: '' });
 const addRetencion = (target) => target.retenciones.push({ concepto: '', importe: '' });
 const removeAt = (arr, index) => arr.splice(index, 1);
+
+const tiposArca = ref([]);
+
+const fetchTiposArca = async (terceroCuentaId) => {
+    if (!terceroCuentaId) { tiposArca.value = []; return; }
+    try {
+        const url = route('compras.proveedores.tipos-arca', { tercero_cuenta_id: terceroCuentaId });
+        const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        tiposArca.value = await res.json();
+    } catch { tiposArca.value = []; }
+};
+
+watch(() => form.tercero_cuenta_id, (val) => {
+    if (editComprobanteDialog.value) return;
+    fetchTiposArca(val);
+    form.tipo = '';
+});
 
 const buscarProveedorPorCuit = async () => {
     proveedorLookupInfo.value = '';
@@ -158,7 +175,8 @@ const submitProveedor = () => {
 
 const openEditComprobante = (c) => {
     editComprobanteId.value = c.id;
-    editComprobanteForm.tipo = c.tipo || 'factura';
+    fetchTiposArca(c.tercero_cuenta_id);
+    editComprobanteForm.tipo = c.tipo || '';
     editComprobanteForm.numero = c.numero || '';
     editComprobanteForm.moneda = c.moneda || 'ARS';
     editComprobanteForm.iva_items = c.detalle?.iva_items?.length ? c.detalle.iva_items.map((x) => ({ alicuota: x.alicuota, base_imponible: x.base_imponible })) : [{ alicuota: 21, base_imponible: '' }];
@@ -225,7 +243,14 @@ const submitEditComprobante = () => {
                         </select>
                         <InputError class="mt-2" :message="form.errors.tercero_cuenta_id" />
                     </div>
-                    <div><InputLabel value="Tipo" /><TextInput v-model="form.tipo" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.tipo" /></div>
+                    <div>
+                        <InputLabel value="Tipo" />
+                        <select v-model="form.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <option value="">(seleccionar tipo)</option>
+                            <option v-for="t in tiposArca" :key="t.code" :value="t.code">{{ t.label }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.tipo" />
+                    </div>
                     <div><InputLabel value="Numero" /><TextInput v-model="form.numero" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.numero" /></div>
                     <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="form.errors.moneda" /></div>
                     <div class="sm:col-span-4 rounded-lg border border-gray-200 p-4">
@@ -316,7 +341,7 @@ const submitEditComprobante = () => {
                 <template #title>Editar comprobante proveedor</template>
                 <template #content>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div><InputLabel value="Tipo" /><TextInput v-model="editComprobanteForm.tipo" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.tipo" /></div>
+                            <div><InputLabel value="Tipo" /><select v-model="editComprobanteForm.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option value="">(seleccionar tipo)</option><option v-for="t in tiposArca" :key="t.code" :value="t.code">{{ t.label }}</option></select><InputError class="mt-2" :message="editComprobanteForm.errors.tipo" /></div>
                             <div><InputLabel value="Numero" /><TextInput v-model="editComprobanteForm.numero" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.numero" /></div>
                             <div><InputLabel value="Moneda" /><select v-model="editComprobanteForm.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="editComprobanteForm.errors.moneda" /></div>
                             <div class="sm:col-span-2 rounded-lg border border-gray-200 p-4">

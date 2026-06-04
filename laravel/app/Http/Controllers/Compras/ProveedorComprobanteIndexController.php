@@ -7,6 +7,7 @@ use App\Models\ProveedorComprobante;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Models\TerceroEmpresa;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -165,6 +166,40 @@ class ProveedorComprobanteIndexController extends Controller
                 'retenciones' => collect(self::RETENCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
             ],
         ]);
+    }
+
+    public function tiposArca(Request $request, ArcaTipoComprobanteResolver $arcaTipos): JsonResponse
+    {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        $data = $request->validate([
+            'tercero_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+        ]);
+
+        $cuenta = TerceroCuenta::query()
+            ->with('tercero:id,cuit,razon_social,condicion_iva')
+            ->where('empresa_id', $empresaId)
+            ->findOrFail($data['tercero_cuenta_id']);
+
+        $empresa = $cuenta->empresa()->firstOrFail();
+
+        $opciones = $arcaTipos->opcionesFactura(
+            $cuenta->tercero?->condicion_iva,
+            $empresa->condicion_iva,
+        );
+
+        $tipos = [];
+        $letras = [];
+        foreach ($opciones as $opt) {
+            $tipos[] = $opt;
+            $letras[substr($opt['code'], -1)] = true;
+        }
+
+        foreach (array_keys($letras) as $letra) {
+            $tipos[] = ['code' => 'NC'.$letra, 'label' => 'Nota de Credito '.$letra];
+            $tipos[] = ['code' => 'ND'.$letra, 'label' => 'Nota de Debito '.$letra];
+        }
+
+        return response()->json($tipos);
     }
 
     public function store(Request $request, TipoCambioResolver $tipoCambioResolver): RedirectResponse

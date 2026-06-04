@@ -184,6 +184,7 @@ Route::middleware([
         Route::get('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteShowController::class)->name('proveedores.comprobantes.show');
         Route::get('/proveedores/comprobantes/{comprobante}/print', ProveedorComprobantePrintController::class)->name('proveedores.comprobantes.print');
         Route::put('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteUpdateController::class)->name('proveedores.comprobantes.update');
+        Route::get('/proveedores/tipos-arca', [ProveedorComprobanteIndexController::class, 'tiposArca'])->name('proveedores.tipos-arca');
         Route::get('/proveedores/lookup-cuit', [ProveedorComprobanteIndexController::class, 'lookupByCuit'])->name('proveedores.lookup-cuit');
         Route::post('/proveedores', [ProveedorComprobanteIndexController::class, 'storeProveedor'])->name('proveedores.store');
         Route::put('/proveedores/{cuenta}', [ProveedorComprobanteIndexController::class, 'updateProveedor'])->name('proveedores.update');
