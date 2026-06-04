@@ -71,7 +71,10 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteShowController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteAjusteStoreController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteNotaStoreController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteReciboStoreController;
+use App\Http\Controllers\Cobranzas\CierreCajaController;
+use App\Http\Controllers\Cobranzas\CierreCajaPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteExportController;
+use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 
 Route::get('/', function () {
@@ -214,7 +217,7 @@ Route::middleware([
         Route::get('/gastos/export', GastoOperativoExportController::class)->name('gastos.export');
     });
 
-    Route::middleware(['role:cobranzas|cobranzas_admin'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
+    Route::middleware(['role:cobranzas|cobranzas_admin|cobrador'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
         Route::get('/pre-recibos', PreReciboIndexController::class)->name('pre-recibos.index');
         Route::get('/pre-recibos/export', PreReciboExportController::class)->name('pre-recibos.export');
         Route::get('/pre-recibos/{preRecibo}/print', PreReciboPrintController::class)->name('pre-recibos.print');
@@ -226,10 +229,14 @@ Route::middleware([
         Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
         Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');
+        Route::get('/cuentas-corrientes/listado-print', CuentaCorrienteListadoPrintController::class)->name('ctacte.listado-print');
         Route::get('/cuentas-corrientes/{cuenta}', CuentaCorrienteShowController::class)->name('ctacte.show');
         Route::get('/cuentas-corrientes/{cuenta}/print', CuentaCorrientePrintController::class)->name('ctacte.print');
         Route::post('/cuentas-corrientes/{cuenta}/ajustes', CuentaCorrienteAjusteStoreController::class)->name('ctacte.ajustes.store');
         Route::post('/cuentas-corrientes/{cuenta}/notas', CuentaCorrienteNotaStoreController::class)->name('ctacte.notas.store');
         Route::post('/cuentas-corrientes/{cuenta}/recibos', CuentaCorrienteReciboStoreController::class)->name('ctacte.recibos.store');
+
+        Route::get('/cierre', CierreCajaController::class)->name('cierre.index');
+        Route::get('/cierre/print', CierreCajaPrintController::class)->name('cierre.print');
     });
 });

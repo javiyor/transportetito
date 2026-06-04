@@ -18,6 +18,7 @@ const props = defineProps({
     provincias: Array,
     tipoInicial: String,
     proximoNumeroCliente: Number,
+    cobradores: Array,
 });
 
 const localidades = ref([]);
@@ -54,6 +55,7 @@ const form = useForm({
     localidad_id: '',
     email: '',
     enviar_comprobantes_por_email: false,
+    cobrador_user_id: '',
     es_cliente: props.tipoInicial === 'cliente' || !props.tipoInicial,
     es_proveedor: props.tipoInicial === 'proveedor',
 });
@@ -87,6 +89,7 @@ const editForm = useForm({
     localidad_id: '',
     email: '',
     enviar_comprobantes_por_email: false,
+    cobrador_user_id: '',
     es_cliente: false,
     es_proveedor: false,
 });
@@ -103,6 +106,7 @@ const openEdit = (c) => {
     editForm.localidad_id = c.localidad_id || '';
     editForm.email = c.email || '';
     editForm.enviar_comprobantes_por_email = !!c.enviar_comprobantes_por_email;
+    editForm.cobrador_user_id = c.cobrador_user_id || '';
     editForm.es_cliente = !!c.es_cliente;
     editForm.es_proveedor = !!c.es_proveedor;
     editForm.clearErrors();
@@ -218,15 +222,18 @@ const localidadNombre = (c) => {
                     </div>
 
                     <div>
-                        <InputLabel value="Barrio" />
-                        <TextInput v-model="form.barrio" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="form.errors.barrio" />
-                    </div>
-
-                    <div class="sm:col-span-3">
                         <InputLabel value="Email comprobantes" />
                         <TextInput v-model="form.email" type="email" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="form.errors.email" />
+                    </div>
+
+                    <div v-if="cobradores?.length">
+                        <InputLabel value="Cobrador" />
+                        <select v-model="form.cobrador_user_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">(sin asignar)</option>
+                            <option v-for="c in cobradores" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.cobrador_user_id" />
                     </div>
 
                     <div class="sm:col-span-3 flex items-center gap-6 pt-6">
@@ -286,6 +293,10 @@ const localidadNombre = (c) => {
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Email</div>
                                 <div class="font-medium text-gray-900">{{ c.email || '-' }}</div>
                             </div>
+                            <div v-if="c.cobrador_user">
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Cobrador</div>
+                                <div class="font-medium text-gray-900">{{ c.cobrador_user.name }}</div>
+                            </div>
                             <div class="flex flex-wrap gap-2 text-xs">
                                 <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 font-medium text-green-800">Cliente</span>
                                 <span v-if="c.es_proveedor" class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 font-medium text-blue-800">Proveedor</span>
@@ -311,6 +322,7 @@ const localidadNombre = (c) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrador</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flags</th>
                                 <th class="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
@@ -327,6 +339,7 @@ const localidadNombre = (c) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ localidadNombre(c) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.email || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.cobrador_user?.name || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Cliente</span>
                                     <span v-if="c.es_proveedor" class="ms-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Proveedor</span>
@@ -338,7 +351,7 @@ const localidadNombre = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td colspan="12" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td colspan="13" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -397,6 +410,14 @@ const localidadNombre = (c) => {
                             <InputLabel value="Email comprobantes" />
                             <TextInput v-model="editForm.email" type="email" class="mt-1 block w-full" />
                             <InputError class="mt-2" :message="editForm.errors.email" />
+                        </div>
+                        <div v-if="cobradores?.length">
+                            <InputLabel value="Cobrador" />
+                            <select v-model="editForm.cobrador_user_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">(sin asignar)</option>
+                                <option v-for="c in cobradores" :key="c.id" :value="c.id">{{ c.name }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="editForm.errors.cobrador_user_id" />
                         </div>
                         <div class="sm:col-span-2 flex flex-wrap items-center gap-6 pt-2">
                             <label class="flex items-center gap-2 text-sm text-gray-700">

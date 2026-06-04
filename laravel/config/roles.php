@@ -10,6 +10,7 @@ return [
         'cobranzas',
         'chofer',
         'cobranzas_admin',
+        'cobrador',
         'lectura',
     ],
 ];

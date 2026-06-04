@@ -9,6 +9,7 @@ use App\Models\Provincia;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Models\TerceroEmpresa;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class TerceroAdminController extends Controller
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
         $query = TerceroCuenta::query()
-            ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id'])
+            ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name'])
             ->leftJoin('tercero_empresa as te', function ($join) {
                 $join->on('te.tercero_cuenta_id', '=', 'tercero_cuentas.id')
                     ->on('te.empresa_id', '=', 'tercero_cuentas.empresa_id');
@@ -67,6 +68,7 @@ class TerceroAdminController extends Controller
             'provincias' => Provincia::query()->orderBy('nombre')->get(['id', 'nombre']),
             'tipoInicial' => $request->query('tipo') ?: null,
             'proximoNumeroCliente' => ($proximoNumero ?? 0) + 1,
+            'cobradores' => User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -85,6 +87,7 @@ class TerceroAdminController extends Controller
             'localidad_id' => ['nullable', 'integer', 'exists:localidades,id'],
             'email' => ['nullable', 'email', 'max:255'],
             'enviar_comprobantes_por_email' => ['sometimes', 'boolean'],
+            'cobrador_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'es_cliente' => ['required', 'boolean'],
             'es_proveedor' => ['required', 'boolean'],
         ]);
@@ -115,6 +118,7 @@ class TerceroAdminController extends Controller
                 'localidad_id' => $data['localidad_id'] ?: null,
                 'email' => $data['email'] ?: null,
                 'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
+                'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
                 'activo' => true,
             ]
         );
@@ -128,6 +132,7 @@ class TerceroAdminController extends Controller
             'localidad_id' => $data['localidad_id'] ?: null,
             'email' => $data['email'] ?: null,
             'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
+            'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
         ]);
 
         TerceroEmpresa::query()->updateOrCreate(
@@ -151,6 +156,7 @@ class TerceroAdminController extends Controller
             'localidad_id' => ['nullable', 'integer', 'exists:localidades,id'],
             'email' => ['nullable', 'email', 'max:255'],
             'enviar_comprobantes_por_email' => ['sometimes', 'boolean'],
+            'cobrador_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'es_cliente' => ['required', 'boolean'],
             'es_proveedor' => ['required', 'boolean'],
         ]);
@@ -179,6 +185,7 @@ class TerceroAdminController extends Controller
             'localidad_id' => $data['localidad_id'] ?: null,
             'email' => $data['email'] ?: null,
             'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
+            'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
         ]);
 
         TerceroEmpresa::query()->updateOrCreate(

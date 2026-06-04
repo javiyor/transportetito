@@ -77,11 +77,19 @@ const switchEmpresa = (empresaId) => {
                                 </NavLink>
 
                                 <NavLink
-                                    v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin'].includes(r))"
+                                    v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
                                     :href="route('cobranzas.pre-recibos.index')"
-                                    :active="route().current('cobranzas.*')"
+                                    :active="route().current('cobranzas.*') && !route().current('cobranzas.cierre.*')"
                                 >
                                     Cobranzas
+                                </NavLink>
+
+                                <NavLink
+                                    v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
+                                    :href="route('cobranzas.cierre.index')"
+                                    :active="route().current('cobranzas.cierre.*')"
+                                >
+                                    Cierre
                                 </NavLink>
 
                                 <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center sm:ms-3">
@@ -258,11 +266,19 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin'].includes(r))"
+                            v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
                             :href="route('cobranzas.pre-recibos.index')"
-                            :active="route().current('cobranzas.*')"
+                            :active="route().current('cobranzas.*') && !route().current('cobranzas.cierre.*')"
                         >
                             Cobranzas
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
+                            :href="route('cobranzas.cierre.index')"
+                            :active="route().current('cobranzas.cierre.*')"
+                        >
+                            Cierre
                         </ResponsiveNavLink>
 
                         <div v-if="($page.props.tt?.roles || []).includes('admin')" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">

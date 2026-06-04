@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Http\Controllers\Cobranzas;
+
+use App\Http\Controllers\Controller;
+use App\Models\AsientoContable;
+use App\Models\OrdenPago;
+use App\Models\PreRecibo;
+use App\Models\Recibo;
+use Illuminate\Http\Request;
+
+class CierreCajaPrintController extends Controller
+{
+    public function __invoke(Request $request)
+    {
+        $empresaId = (int) $request->user()->current_empresa_id;
+        $desde = (string) ($request->query('desde') ?: now()->startOfMonth()->toDateString());
+        $hasta = (string) ($request->query('hasta') ?: now()->toDateString());
+        $user = $request->user();
+        $empresa = $user->currentEmpresa;
+
+        $recibos = Recibo::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'confirmado')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->with('items')
+            ->orderBy('fecha')
+            ->get();
+
+        $ingresosPorMedio = collect();
+        foreach ($recibos as $recibo) {
+            foreach ($recibo->items as $item) {
+                $key = $item->medio;
+                $ingresosPorMedio->put($key, round(($ingresosPorMedio->get($key, 0) + (float) $item->importe), 2));
+            }
+        }
+        $totalIngresos = round($ingresosPorMedio->sum(), 2);
+
+        $preRecibos = PreRecibo::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'confirmado')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->with('items')
+            ->orderBy('fecha')
+            ->get();
+
+        $preIngresosPorMedio = collect();
+        foreach ($preRecibos as $pr) {
+            foreach ($pr->items as $item) {
+                $key = $item->medio;
+                $preIngresosPorMedio->put($key, round(($preIngresosPorMedio->get($key, 0) + (float) $item->importe), 2));
+            }
+        }
+        $totalPreIngresos = round($preIngresosPorMedio->sum(), 2);
+
+        $ordenesPago = OrdenPago::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'confirmado')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->orderBy('fecha')
+            ->get();
+
+        $egresosPorMedio = $ordenesPago
+            ->groupBy('medio')
+            ->map(fn ($items) => round((float) $items->sum('total'), 2));
+
+        $totalEgresos = round($egresosPorMedio->sum(), 2);
+
+        $asientos = AsientoContable::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'confirmado')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->with(['lineas.cuentaContable'])
+            ->orderBy('fecha')
+            ->get();
+
+        $resumenContable = $asientos
+            ->flatMap(fn ($a) => $a->lineas)
+            ->groupBy(fn ($l) => $l->cuentaContable?->codigo . ' - ' . $l->cuentaContable?->nombre)
+            ->map(fn ($lineas, $cuenta) => (object) [
+                'cuenta' => $cuenta ?: 'Sin cuenta',
+                'debe' => round((float) $lineas->sum('debe'), 2),
+                'haber' => round((float) $lineas->sum('haber'), 2),
+                'saldo' => round((float) $lineas->sum('debe') - (float) $lineas->sum('haber'), 2),
+            ])
+            ->values();
+
+        $resumenPorMes = $asientos
+            ->groupBy(fn ($a) => $a->fecha?->format('Y-m'))
+            ->map(fn ($asientos, $mes) => (object) [
+                'mes' => $mes,
+                'cantidad' => $asientos->count(),
+                'debe' => round((float) $asientos->flatMap->lineas->sum('debe'), 2),
+                'haber' => round((float) $asientos->flatMap->lineas->sum('haber'), 2),
+            ])
+            ->values();
+
+        return response()->view('cobranzas.cierre.print', [
+            'empresa' => $empresa,
+            'desde' => $desde,
+            'hasta' => $hasta,
+            'ingresosPorMedio' => $ingresosPorMedio,
+            'totalIngresos' => $totalIngresos,
+            'preIngresosPorMedio' => $preIngresosPorMedio,
+            'totalPreIngresos' => $totalPreIngresos,
+            'egresosPorMedio' => $egresosPorMedio,
+            'totalEgresos' => $totalEgresos,
+            'saldoNeto' => round($totalIngresos + $totalPreIngresos - $totalEgresos, 2),
+            'resumenContable' => $resumenContable,
+            'resumenPorMes' => $resumenPorMes,
+            'totalDebe' => round($asientos->flatMap->lineas->sum('debe'), 2),
+            'totalHaber' => round($asientos->flatMap->lineas->sum('haber'), 2),
+            'fecha_generacion' => now()->format('d/m/Y H:i'),
+        ]);
+    }
+}

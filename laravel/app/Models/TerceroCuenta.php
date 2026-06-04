@@ -10,6 +10,7 @@ use App\Models\Empresa;
 use App\Models\Localidad;
 use App\Models\Provincia;
 use App\Models\Tercero;
+use App\Models\User;
 use App\Models\Zona;
 
 class TerceroCuenta extends Model
@@ -31,6 +32,7 @@ class TerceroCuenta extends Model
         'telefono',
         'email',
         'enviar_comprobantes_por_email',
+        'cobrador_user_id',
         'activo',
     ];
 
@@ -39,6 +41,7 @@ class TerceroCuenta extends Model
         'provincia_id' => 'int',
         'localidad_id' => 'int',
         'zona_id' => 'int',
+        'cobrador_user_id' => 'int',
         'enviar_comprobantes_por_email' => 'bool',
         'activo' => 'bool',
     ];
@@ -71,5 +74,10 @@ class TerceroCuenta extends Model
     public function movimientosCtaCte(): HasMany
     {
         return $this->hasMany(CtaCteMovimiento::class, 'tercero_cuenta_id');
+    }
+
+    public function cobradorUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cobrador_user_id');
     }
 }
