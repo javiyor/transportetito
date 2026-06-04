@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\Empresa;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -54,6 +56,7 @@ class ChequeController extends Controller
                 'desde' => $request->query('desde') ?: '',
                 'hasta' => $request->query('hasta') ?: '',
             ],
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -74,5 +77,12 @@ class ChequeController extends Controller
         $cheque->update($data);
 
         return back()->with('success', 'Cheque actualizado.');
+    }
+
+    public function bancos(): JsonResponse
+    {
+        return response()->json(
+            Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre'])
+        );
     }
 }

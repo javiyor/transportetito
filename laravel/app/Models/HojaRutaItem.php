@@ -32,6 +32,9 @@ class HojaRutaItem extends Model
         'cobro_detalle',
         'cobro_registrado_por_user_id',
         'cobro_registrado_at',
+        'recibe_nombre',
+        'recibe_dni',
+        'fecha_entrega',
     ];
 
     protected $casts = [
@@ -39,6 +42,7 @@ class HojaRutaItem extends Model
         'cobro_importe' => 'decimal:2',
         'cobro_detalle' => 'array',
         'cobro_registrado_at' => 'datetime',
+        'fecha_entrega' => 'datetime',
     ];
 
     public function hojaRuta(): BelongsTo

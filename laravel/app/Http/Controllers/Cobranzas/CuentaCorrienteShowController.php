@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banco;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\TerceroCuenta;
@@ -41,6 +42,7 @@ class CuentaCorrienteShowController extends Controller
                 'saldo_total' => round((float) $movimientos->sum('importe_signed'), 2),
                 'vencido_30' => round(max(0, (float) $movimientos->where('fecha', '<=', now()->subDays(30)->toDateString())->sum('importe_signed')), 2),
             ],
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }

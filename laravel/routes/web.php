@@ -33,6 +33,7 @@ use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaDebitoStoreContro
 use App\Http\Controllers\Operacion\Manifiestos\ManifiestoBackfillCuentasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Operacion\Repartos\FacturasListController;
+use App\Http\Controllers\Operacion\Repartos\HojaRutaIndexController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaStoreController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaShowController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
@@ -146,6 +147,7 @@ Route::middleware([
 
         Route::get('/cheques', [ChequeController::class, 'index'])->name('cheques.index');
         Route::put('/cheques/{cheque}', [ChequeController::class, 'update'])->name('cheques.update');
+        Route::get('/bancos', [ChequeController::class, 'bancos'])->name('bancos.index');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
@@ -175,6 +177,7 @@ Route::middleware([
 
         Route::middleware(['role:operaciones'])->prefix('repartos')->name('repartos.')->group(function () {
             Route::get('/facturas', FacturasListController::class)->name('facturas');
+            Route::get('/hojas', HojaRutaIndexController::class)->name('hojas.index');
             Route::post('/hojas', HojaRutaStoreController::class)->name('hojas.store');
             Route::get('/hojas/{hoja}', HojaRutaShowController::class)->name('hojas.show');
             Route::get('/hojas/{hoja}/print', HojaRutaPrintController::class)->name('hojas.print');

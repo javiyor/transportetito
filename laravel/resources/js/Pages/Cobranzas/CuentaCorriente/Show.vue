@@ -13,6 +13,7 @@ const props = defineProps({
     movimientos: Array,
     comprobantes: Array,
     saldos: Object,
+    bancos: Array,
 });
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
@@ -136,7 +137,10 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                                 </div>
                                 <div v-if="esCheque(item.medio)" class="grid grid-cols-2 gap-2">
                                     <TextInput v-model="item.cheque_numero" type="text" class="block w-full" placeholder="Nro cheque" />
-                                    <TextInput v-model="item.cheque_banco" type="text" class="block w-full" placeholder="Banco" />
+                                    <select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                        <option value="">Banco</option>
+                                        <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                                    </select>
                                     <TextInput v-model="item.cheque_fecha_vencimiento" type="date" class="block w-full" />
                                     <TextInput v-model="item.cheque_titular" type="text" class="block w-full" placeholder="Titular" />
                                 </div>

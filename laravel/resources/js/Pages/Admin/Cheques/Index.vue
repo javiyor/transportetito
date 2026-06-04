@@ -12,6 +12,7 @@ const props = defineProps({
     empresas: Array,
     empresaId: [Number, null],
     filtros: Object,
+    bancos: Array,
 });
 
 const editId = ref(null);
@@ -232,7 +233,10 @@ const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Banco</div>
-                        <TextInput v-model="editForm.banco" type="text" class="block w-full" />
+                        <select v-model="editForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">(seleccionar)</option>
+                            <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                        </select>
                         <InputError :message="editForm.errors.banco" />
                     </div>
                     <div v-if="editForm.estado === 'depositado' || editForm.estado === 'cobrado'">

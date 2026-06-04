@@ -31,6 +31,14 @@ const setObs = (itemId, observacion_operador) => {
     useForm({ observacion_operador }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
 };
 
+const setRecibeNombre = (itemId, recibe_nombre) => {
+    useForm({ recibe_nombre }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
+};
+
+const setRecibeDni = (itemId, recibe_dni) => {
+    useForm({ recibe_dni }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
+};
+
 const stats = computed(() => {
     const items = props.hoja.items || [];
     const total = items.reduce((acc, it) => acc + Number(it.comprobante?.total || 0), 0);
@@ -109,7 +117,34 @@ const stats = computed(() => {
                                     <div class="text-xs text-gray-500">{{ it.direccion || it.entrega_cuenta?.direccion || '' }} {{ it.localidad || it.entrega_cuenta?.localidad ? '· ' + (it.localidad || it.entrega_cuenta?.localidad) : '' }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.estado_entrega }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">
+                                    <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                                        :class="{
+                                            'bg-yellow-100 text-yellow-800': it.estado_entrega === 'pendiente',
+                                            'bg-green-100 text-green-800': it.estado_entrega === 'entregado',
+                                            'bg-red-100 text-red-800': it.estado_entrega === 'no_entregado',
+                                        }"
+                                    >{{ it.estado_entrega }}</span>
+                                    <div v-if="it.estado_entrega === 'entregado'" class="mt-2 space-y-1">
+                                        <TextInput
+                                            :disabled="hoja.estado === 'cerrada'"
+                                            :model-value="it.recibe_nombre || ''"
+                                            type="text"
+                                            class="block w-full text-xs"
+                                            placeholder="Recibe nombre"
+                                            @change="setRecibeNombre(it.id, $event.target.value)"
+                                        />
+                                        <TextInput
+                                            :disabled="hoja.estado === 'cerrada'"
+                                            :model-value="it.recibe_dni || ''"
+                                            type="text"
+                                            class="block w-full text-xs"
+                                            placeholder="Recibe DNI"
+                                            @change="setRecibeDni(it.id, $event.target.value)"
+                                        />
+                                        <div v-if="it.fecha_entrega" class="text-xs text-gray-400">Entrega: {{ it.fecha_entrega }}</div>
+                                    </div>
+                                </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <TextInput
                                         :disabled="hoja.estado === 'cerrada'"

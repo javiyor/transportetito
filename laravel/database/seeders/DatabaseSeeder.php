@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             CombustibleTasaSeeder::class,
             ProvinciaSeeder::class,
             LocalidadSeeder::class,
+            BancoSeeder::class,
         ]);
     }
 }
