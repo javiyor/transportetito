@@ -255,7 +255,7 @@ const submitEditComprobante = () => {
                     <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="form.fecha_vencimiento" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha_vencimiento" /></div>
                     <div class="sm:col-span-3"><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.observacion" /></div>
                     <div class="sm:col-span-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
-                        Subtotal {{ summary.value.subtotal }} · IVA {{ summary.value.iva }} · Tributos {{ summary.value.tributos }} · Retenciones {{ summary.value.retenciones }} · Total {{ summary.value.total }}
+                        Subtotal {{ summary.subtotal }} · IVA {{ summary.iva }} · Tributos {{ summary.tributos }} · Retenciones {{ summary.retenciones }} · Total {{ summary.total }}
                     </div>
                     <div class="sm:col-span-4 flex justify-end"><PrimaryButton :disabled="form.processing">Guardar</PrimaryButton></div>
                 </form>
@@ -337,7 +337,7 @@ const submitEditComprobante = () => {
                             <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="editComprobanteForm.fecha_vencimiento" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.fecha_vencimiento" /></div>
                             <div class="sm:col-span-2"><InputLabel value="Observacion" /><TextInput v-model="editComprobanteForm.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="editComprobanteForm.errors.observacion" /></div>
                             <div class="sm:col-span-2 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
-                                Subtotal {{ editSummary.value.subtotal }} · IVA {{ editSummary.value.iva }} · Tributos {{ editSummary.value.tributos }} · Retenciones {{ editSummary.value.retenciones }} · Total {{ editSummary.value.total }}
+                                Subtotal {{ editSummary.subtotal }} · IVA {{ editSummary.iva }} · Tributos {{ editSummary.tributos }} · Retenciones {{ editSummary.retenciones }} · Total {{ editSummary.total }}
                             </div>
                         </div>
                 </template>

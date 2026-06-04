@@ -34,7 +34,7 @@ class ProveedorComprobanteExportController extends Controller
                     $c->subtotal,
                     $c->iva_total,
                     $c->tributos_total,
-                    $c->detalle['retenciones_total'] ?? 0,
+                    ($c->detalle ?? [])['retenciones_total'] ?? 0,
                     $c->total,
                     $c->observacion,
                 ]);

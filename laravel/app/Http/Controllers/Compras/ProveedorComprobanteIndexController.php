@@ -151,7 +151,7 @@ class ProveedorComprobanteIndexController extends Controller
                 $acc['subtotal'] += (float) $c->subtotal;
                 $acc['iva_total'] += (float) $c->iva_total;
                 $acc['tributos_total'] += (float) $c->tributos_total;
-                $acc['retenciones_total'] += (float) ($c->detalle['retenciones_total'] ?? 0);
+                $acc['retenciones_total'] += (float) (($c->detalle ?? [])['retenciones_total'] ?? 0);
                 $acc['total'] += (float) $c->total;
                 return $acc;
             }, ['subtotal' => 0, 'iva_total' => 0, 'tributos_total' => 0, 'retenciones_total' => 0, 'total' => 0]);
