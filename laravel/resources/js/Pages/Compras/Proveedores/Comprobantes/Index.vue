@@ -22,6 +22,7 @@ const form = useForm({
     tipo: '',
     numero: '',
     moneda: 'ARS',
+    subtotal: '',
     iva_items: [
         { alicuota: 21, base_imponible: '' },
     ],
@@ -56,6 +57,7 @@ const editComprobanteForm = useForm({
     tipo: '',
     numero: '',
     moneda: 'ARS',
+    subtotal: '',
     iva_items: [{ alicuota: 21, base_imponible: '' }],
     percepciones: [],
     retenciones: [],
@@ -67,19 +69,25 @@ const editComprobanteForm = useForm({
 });
 
 const fiscalSummary = (target) => computed(() => {
-    const ivaItems = (target.iva_items || []).map((item) => {
-        const base = Number(item.base_imponible || 0);
-        const alicuota = Number(item.alicuota || 0);
-        return { base, importe: Math.round((base * (alicuota / 100) + Number.EPSILON) * 100) / 100 };
-    });
-    const subtotal = ivaItems.reduce((acc, x) => acc + x.base, 0);
-    const iva = ivaItems.reduce((acc, x) => acc + x.importe, 0);
+    const ivaDesglosado = (target.tipo || '').endsWith('A');
+    let subtotal = 0;
+    let iva = 0;
+    if (ivaDesglosado) {
+        const ivaItems = (target.iva_items || []).map((item) => {
+            const base = Number(item.base_imponible || 0);
+            const alicuota = Number(item.alicuota || 0);
+            return { base, importe: Math.round((base * (alicuota / 100) + Number.EPSILON) * 100) / 100 };
+        });
+        subtotal = ivaItems.reduce((acc, x) => acc + x.base, 0);
+        iva = ivaItems.reduce((acc, x) => acc + x.importe, 0);
+    } else {
+        subtotal = Number(target.subtotal || 0);
+    }
     const percepciones = (target.percepciones || []).reduce((acc, x) => acc + Number(x.importe || 0), 0);
     const retenciones = (target.retenciones || []).reduce((acc, x) => acc + Number(x.importe || 0), 0);
     const impComb = Number(target.impuestos_combustible || 0);
     const pagoCuentaComb = Number(target.pago_cuenta_combustible || 0);
     const tributos = percepciones + impComb;
-    const ivaDesglosado = (target.tipo || '').endsWith('A');
     const total = ivaDesglosado
         ? subtotal + iva + tributos - retenciones - pagoCuentaComb
         : subtotal + tributos - retenciones - pagoCuentaComb;
@@ -118,6 +126,15 @@ watch(() => form.tercero_cuenta_id, (val) => {
     if (editComprobanteDialog.value) return;
     fetchTiposArca(val);
     form.tipo = '';
+});
+
+watch(() => form.tipo, (tipo) => {
+    if (!tipo) return;
+    if (tipo.endsWith('A')) {
+        form.subtotal = '';
+    } else {
+        form.iva_items = [{ alicuota: 21, base_imponible: '' }];
+    }
 });
 
 const buscarProveedorPorCuit = async () => {
@@ -185,6 +202,7 @@ const openEditComprobante = (c) => {
     editComprobanteForm.tipo = c.tipo || '';
     editComprobanteForm.numero = c.numero || '';
     editComprobanteForm.moneda = c.moneda || 'ARS';
+    editComprobanteForm.subtotal = c.subtotal || '';
     editComprobanteForm.iva_items = c.detalle?.iva_items?.length ? c.detalle.iva_items.map((x) => ({ alicuota: x.alicuota, base_imponible: x.base_imponible })) : [{ alicuota: 21, base_imponible: '' }];
     editComprobanteForm.percepciones = c.detalle?.percepciones?.length ? c.detalle.percepciones.map((x) => ({ concepto: x.concepto, importe: x.importe })) : [];
     editComprobanteForm.retenciones = c.detalle?.retenciones?.length ? c.detalle.retenciones.map((x) => ({ concepto: x.concepto, importe: x.importe })) : [];
@@ -272,6 +290,10 @@ const submitEditComprobante = () => {
                             </div>
                         </div>
                     </div>
+                    <div v-if="form.tipo && !form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-4">
+                        <InputLabel value="Subtotal / Importe (IVA incluido)" />
+                        <TextInput v-model="form.subtotal" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                    </div>
                     <div class="sm:col-span-2 rounded-lg border border-gray-200 p-4">
                         <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" @click="addPercepcion(form)">Agregar</SecondaryButton></div>
                         <div class="mt-3 space-y-3"><div v-for="(item, index) in form.percepciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full" placeholder="Importe" /><button type="button" class="text-sm text-red-600" @click="removeAt(form.percepciones, index)">Quitar</button></div></div></div>
@@ -353,6 +375,10 @@ const submitEditComprobante = () => {
                             <div v-if="editComprobanteForm.tipo && editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-4">
                                 <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">IVA</h4><SecondaryButton type="button" @click="addIvaItem(editComprobanteForm)">Agregar IVA</SecondaryButton></div>
                                 <div class="mt-3 space-y-3"><div v-for="(item, index) in editComprobanteForm.iva_items" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"><div><InputLabel value="Alicuota" /><select v-model="item.alicuota" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option :value="27">27%</option><option :value="21">21%</option><option :value="10.5">10.5%</option><option :value="5">5%</option><option :value="2.5">2.5%</option><option :value="0">0%</option></select></div><div><InputLabel value="Base imponible" /><TextInput v-model="item.base_imponible" type="number" min="0" step="0.01" class="mt-1 block w-full" /></div><div class="flex items-end gap-2"><div class="text-sm text-gray-700">IVA {{ (Number(item.base_imponible || 0) * Number(item.alicuota || 0) / 100).toFixed(2) }}</div><button v-if="editComprobanteForm.iva_items.length > 1" type="button" class="text-sm text-red-600" @click="removeAt(editComprobanteForm.iva_items, index)">Quitar</button></div></div></div>
+                            </div>
+                            <div v-if="editComprobanteForm.tipo && !editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-4">
+                                <InputLabel value="Subtotal / Importe (IVA incluido)" />
+                                <TextInput v-model="editComprobanteForm.subtotal" type="number" min="0" step="0.01" class="mt-3 block w-full" />
                             </div>
                             <div class="rounded-lg border border-gray-200 p-4">
                                 <div class="flex items-center justify-between gap-4"><h4 class="text-sm font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" @click="addPercepcion(editComprobanteForm)">Agregar</SecondaryButton></div>
