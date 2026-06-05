@@ -15,7 +15,13 @@ const toggleHoja = (id) => {
     expandedHojaId.value = expandedHojaId.value === id ? null : id;
 };
 
-const deliveryForm = useForm({});
+const deliveryForm = useForm({
+    estado_entrega: 'entregado',
+    recibe_nombre: '',
+    recibe_dni: '',
+    observacion_operador: '',
+    firma_recibo: '',
+});
 const activeItem = ref(null);
 const showDelivery = ref(false);
 

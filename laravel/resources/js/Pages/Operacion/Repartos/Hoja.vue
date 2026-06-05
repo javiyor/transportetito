@@ -36,7 +36,13 @@ const setObs = (itemId, observacion_operador) => {
     useForm({ observacion_operador }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
 };
 
-const deliveryForm = useForm({});
+const deliveryForm = useForm({
+    estado_entrega: 'entregado',
+    recibe_nombre: '',
+    recibe_dni: '',
+    observacion_operador: '',
+    firma_recibo: '',
+});
 const deliveryItem = ref(null);
 const showDelivery = ref(false);
 
