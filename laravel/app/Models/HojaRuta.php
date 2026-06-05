@@ -20,7 +20,8 @@ class HojaRuta extends Model
         'fecha',
         'estado',
         'chofer_user_id',
-        'vehiculo',
+        'vehiculo_id',
+        'zona_id',
         'observaciones',
     ];
 
@@ -41,6 +42,16 @@ class HojaRuta extends Model
     public function chofer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'chofer_user_id');
+    }
+
+    public function vehiculo(): BelongsTo
+    {
+        return $this->belongsTo(Vehiculo::class);
+    }
+
+    public function zona(): BelongsTo
+    {
+        return $this->belongsTo(Zona::class);
     }
 
     public function items(): HasMany

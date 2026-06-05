@@ -1,5 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     hoja: Object,
@@ -13,6 +14,12 @@ const formatFecha = (value) => {
 const totalImporte = () => {
     return (props.hoja.items || []).reduce((acc, it) => acc + Number(it.comprobante?.total || 0), 0).toFixed(2);
 };
+
+const vehiculoLabel = computed(() => {
+    if (!props.hoja.vehiculo) return '-';
+    const v = props.hoja.vehiculo;
+    return `${v.patente}${v.marca ? ' - ' + v.marca : ''}${v.modelo ? ' ' + v.modelo : ''}`;
+});
 </script>
 
 <template>
@@ -35,6 +42,21 @@ const totalImporte = () => {
                 </div>
             </div>
 
+            <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                <div>
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Chofer</div>
+                    <div class="font-medium">{{ hoja.chofer?.name || '-' }}</div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Vehiculo</div>
+                    <div class="font-medium">{{ vehiculoLabel }}</div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Zona</div>
+                    <div class="font-medium">{{ hoja.zona?.nombre || '-' }}</div>
+                </div>
+            </div>
+
             <div class="mt-6 border-t border-gray-200" />
 
             <table class="mt-6 w-full text-sm">
@@ -46,6 +68,8 @@ const totalImporte = () => {
                         <th class="py-2 text-left w-28">Factura</th>
                         <th class="py-2 text-left w-28">Total</th>
                         <th class="py-2 text-left w-28">Estado</th>
+                        <th class="py-2 text-left w-36">Recibe</th>
+                        <th class="py-2 text-left w-36">Firma</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,9 +86,27 @@ const totalImporte = () => {
                         <td class="py-2 font-mono">#{{ it.comprobante_id }}</td>
                         <td class="py-2">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
                         <td class="py-2">{{ it.estado_entrega }}</td>
+                        <td class="py-2 text-xs">
+                            <template v-if="it.estado_entrega === 'entregado'">
+                                <div>{{ it.recibe_nombre || '' }}</div>
+                                <div class="text-gray-500">DNI: {{ it.recibe_dni || '' }}</div>
+                                <div class="text-gray-500">{{ formatFecha(it.fecha_entrega) }}</div>
+                            </template>
+                            <div v-else class="text-gray-400 italic">Pendiente</div>
+                        </td>
+                        <td class="py-2">
+                            <div v-if="it.firma_recibo" class="h-10">
+                                <img :src="it.firma_recibo" alt="Firma" class="h-10 border border-gray-200 rounded" />
+                            </div>
+                            <div v-else class="border-b border-gray-300 h-8 w-28">&nbsp;</div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
+
+            <div class="mt-8 text-xs text-gray-400 text-center">
+                Documento generado el {{ new Date().toLocaleString('es-AR') }}
+            </div>
         </div>
     </div>
 </template>
@@ -72,8 +114,8 @@ const totalImporte = () => {
 <style>
 @media print {
     @page {
-        size: A4;
-        margin: 12mm;
+        size: A4 landscape;
+        margin: 10mm;
     }
 }
 </style>

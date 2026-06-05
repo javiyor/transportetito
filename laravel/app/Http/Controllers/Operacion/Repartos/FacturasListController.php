@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Operacion\Repartos;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
+use App\Models\Deposito;
 use App\Models\TerceroCuenta;
+use App\Models\User;
+use App\Models\Vehiculo;
 use App\Models\Zona;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -74,6 +77,9 @@ class FacturasListController extends Controller
                 'tipo' => $tipo,
             ],
             'facturas' => $comprobantes,
+            'vehiculos' => Vehiculo::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('patente')->get(['id', 'patente', 'marca', 'modelo']),
+            'choferes' => User::query()->role('chofer')->orderBy('name')->get(['id', 'name', 'email']),
+            'depositos' => Deposito::query()->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }

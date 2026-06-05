@@ -14,6 +14,8 @@ class HojaRutaPrintController extends Controller
             'empresa:id,razon_social,cuit',
             'deposito:id,nombre',
             'chofer:id,name,email',
+            'vehiculo:id,patente,marca,modelo',
+            'zona:id,nombre',
             'items' => function ($q) {
                 $q->with([
                     'comprobante:id,total,moneda,fecha_emision',

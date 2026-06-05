@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\TerceroAdminController;
 use App\Http\Controllers\Admin\TarifaRelacionAdminController;
 use App\Http\Controllers\Admin\CotizacionAdminController;
 use App\Http\Controllers\Admin\ChequeController;
+use App\Http\Controllers\Admin\VehiculoAdminController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
@@ -39,6 +40,7 @@ use App\Http\Controllers\Operacion\Repartos\HojaRutaShowController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaCerrarController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaPrintController;
+use App\Http\Controllers\Operacion\Repartos\RepartidorController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoEmitirGuiasController;
 use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaController;
@@ -152,6 +154,10 @@ Route::middleware([
         Route::get('/cheques', [ChequeController::class, 'index'])->name('cheques.index');
         Route::put('/cheques/{cheque}', [ChequeController::class, 'update'])->name('cheques.update');
         Route::get('/bancos', [ChequeController::class, 'bancos'])->name('bancos.index');
+
+        Route::get('/vehiculos', [VehiculoAdminController::class, 'index'])->name('vehiculos.index');
+        Route::post('/vehiculos', [VehiculoAdminController::class, 'store'])->name('vehiculos.store');
+        Route::put('/vehiculos/{vehiculo}', [VehiculoAdminController::class, 'update'])->name('vehiculos.update');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
@@ -187,6 +193,11 @@ Route::middleware([
             Route::get('/hojas/{hoja}/print', HojaRutaPrintController::class)->name('hojas.print');
             Route::put('/hojas/{hoja}/items/{item}', HojaRutaItemUpdateController::class)->name('hojas.items.update');
             Route::post('/hojas/{hoja}/cerrar', HojaRutaCerrarController::class)->name('hojas.cerrar');
+        });
+
+        Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
+            Route::get('/', [RepartidorController::class, 'index'])->name('index');
+            Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
         });
     });
 

@@ -4,10 +4,14 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { computed } from 'vue';
+import DialogModal from '@/Components/DialogModal.vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     hoja: Object,
+    vehiculos: Array,
+    zonas: Array,
+    choferes: Array,
 });
 
 const page = usePage();
@@ -31,12 +35,77 @@ const setObs = (itemId, observacion_operador) => {
     useForm({ observacion_operador }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
 };
 
-const setRecibeNombre = (itemId, recibe_nombre) => {
-    useForm({ recibe_nombre }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
+const deliveryForm = useForm({});
+const deliveryItem = ref(null);
+const showDelivery = ref(false);
+
+const openDelivery = (item) => {
+    deliveryItem.value = item;
+    deliveryForm.estado_entrega = 'entregado';
+    deliveryForm.recibe_nombre = item.recibe_nombre || '';
+    deliveryForm.recibe_dni = item.recibe_dni || '';
+    deliveryForm.observacion_operador = item.observacion_operador || '';
+    deliveryForm.firma_recibo = '';
+    deliveryForm.clearErrors();
+    showDelivery.value = true;
 };
 
-const setRecibeDni = (itemId, recibe_dni) => {
-    useForm({ recibe_dni }).put(route('operacion.repartos.hojas.items.update', [props.hoja.id, itemId]), { preserveScroll: true });
+const canvasRef = ref(null);
+const isDrawing = ref(false);
+
+const startDrawing = (e) => {
+    const canvas = canvasRef.value;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX || 0) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY || 0) - rect.top;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    isDrawing.value = true;
+};
+
+const draw = (e) => {
+    if (!isDrawing.value) return;
+    const canvas = canvasRef.value;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX || 0) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY || 0) - rect.top;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+};
+
+const stopDrawing = () => {
+    isDrawing.value = false;
+};
+
+const clearCanvas = () => {
+    const canvas = canvasRef.value;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    deliveryForm.firma_recibo = '';
+};
+
+const saveSignature = () => {
+    const canvas = canvasRef.value;
+    if (!canvas) return;
+    deliveryForm.firma_recibo = canvas.toDataURL('image/png');
+};
+
+const submitDelivery = () => {
+    saveSignature();
+    deliveryForm.put(route('operacion.repartos.hojas.items.update', [props.hoja.id, deliveryItem.value.id]), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDelivery.value = false;
+        },
+    });
 };
 
 const stats = computed(() => {
@@ -46,6 +115,12 @@ const stats = computed(() => {
     const noEntregados = items.filter((it) => it.estado_entrega === 'no_entregado').length;
     const pendientes = items.filter((it) => it.estado_entrega === 'pendiente').length;
     return { total: total.toFixed(2), entregados, noEntregados, pendientes, count: items.length };
+});
+
+const vehiculoLabel = computed(() => {
+    if (!props.hoja.vehiculo) return null;
+    const v = props.hoja.vehiculo;
+    return `${v.patente}${v.marca ? ' - ' + v.marca : ''}${v.modelo ? ' ' + v.modelo : ''}`;
 });
 </script>
 
@@ -57,10 +132,19 @@ const stats = computed(() => {
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Hoja #{{ hoja.id }}</h2>
-                    <div class="mt-1 text-sm text-gray-600">{{ hoja.fecha }} · {{ hoja.deposito?.nombre || '-' }} · Estado: {{ hoja.estado }}</div>
+                    <div class="mt-1 text-sm text-gray-600">
+                        {{ hoja.fecha }}
+                        · {{ hoja.deposito?.nombre || '-' }}
+                        · Estado: {{ hoja.estado }}
+                        <template v-if="hoja.chofer"> · Chofer: {{ hoja.chofer.name }}</template>
+                        <template v-if="vehiculoLabel"> · Vehiculo: {{ vehiculoLabel }}</template>
+                        <template v-if="hoja.zona"> · Zona: {{ hoja.zona.nombre }}</template>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <SecondaryButton :href="route('operacion.repartos.facturas')" as="a">Volver</SecondaryButton>
+                    <Link :href="route('operacion.repartos.facturas')" class="inline-flex">
+                        <SecondaryButton>Volver</SecondaryButton>
+                    </Link>
                     <Link :href="route('operacion.repartos.hojas.print', hoja.id)" target="_blank" class="inline-flex">
                         <SecondaryButton>Imprimir</SecondaryButton>
                     </Link>
@@ -126,23 +210,11 @@ const stats = computed(() => {
                                         }"
                                     >{{ it.estado_entrega }}</span>
                                     <div v-if="it.estado_entrega === 'entregado'" class="mt-2 space-y-1">
-                                        <TextInput
-                                            :disabled="hoja.estado === 'cerrada'"
-                                            :model-value="it.recibe_nombre || ''"
-                                            type="text"
-                                            class="block w-full text-xs"
-                                            placeholder="Recibe nombre"
-                                            @change="setRecibeNombre(it.id, $event.target.value)"
-                                        />
-                                        <TextInput
-                                            :disabled="hoja.estado === 'cerrada'"
-                                            :model-value="it.recibe_dni || ''"
-                                            type="text"
-                                            class="block w-full text-xs"
-                                            placeholder="Recibe DNI"
-                                            @change="setRecibeDni(it.id, $event.target.value)"
-                                        />
+                                        <div v-if="it.recibe_nombre" class="text-xs text-gray-600">Recibe: {{ it.recibe_nombre }} (DNI: {{ it.recibe_dni || '-' }})</div>
                                         <div v-if="it.fecha_entrega" class="text-xs text-gray-400">Entrega: {{ it.fecha_entrega }}</div>
+                                        <div v-if="it.firma_recibo" class="mt-1">
+                                            <img :src="it.firma_recibo" alt="Firma" class="h-12 border border-gray-200 rounded" />
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
@@ -156,7 +228,7 @@ const stats = computed(() => {
                                     />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                    <div class="flex justify-end gap-2">
+                                    <div class="flex justify-end gap-2 flex-wrap">
                                         <TextInput
                                             v-if="hoja.estado !== 'cerrada'"
                                             :model-value="it.orden"
@@ -165,7 +237,9 @@ const stats = computed(() => {
                                             class="w-20 text-xs"
                                             @change="setOrden(it.id, parseInt($event.target.value, 10))"
                                         />
-                                        <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="setEntrega(it.id, 'entregado')">Entregado</SecondaryButton>
+                                        <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="openDelivery(it)">
+                                            {{ it.estado_entrega === 'entregado' ? 'Editar' : 'Entregar' }}
+                                        </SecondaryButton>
                                         <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="setEntrega(it.id, 'no_entregado')">No entregado</SecondaryButton>
                                     </div>
                                 </td>
@@ -178,5 +252,56 @@ const stats = computed(() => {
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="showDelivery" @close="showDelivery = false">
+            <template #title>Registrar entrega</template>
+            <template #content>
+                <div class="space-y-4">
+                    <div>
+                        <InputLabel value="Estado" />
+                        <select v-model="deliveryForm.estado_entrega" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="entregado">Entregado</option>
+                            <option value="no_entregado">No entregado</option>
+                        </select>
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado'">
+                        <InputLabel value="Recibe nombre" />
+                        <TextInput v-model="deliveryForm.recibe_nombre" type="text" class="mt-1 block w-full" />
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado'">
+                        <InputLabel value="Recibe DNI" />
+                        <TextInput v-model="deliveryForm.recibe_dni" type="text" class="mt-1 block w-full" />
+                    </div>
+                    <div>
+                        <InputLabel value="Observacion" />
+                        <textarea v-model="deliveryForm.observacion_operador" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" rows="2"></textarea>
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado'">
+                        <InputLabel value="Firma digital" />
+                        <div class="mt-1 border border-gray-300 rounded-md overflow-hidden">
+                            <canvas
+                                ref="canvasRef"
+                                width="400"
+                                height="150"
+                                class="w-full touch-none"
+                                style="height: 150px;"
+                                @mousedown="startDrawing"
+                                @mousemove="draw"
+                                @mouseup="stopDrawing"
+                                @mouseleave="stopDrawing"
+                                @touchstart.prevent="startDrawing"
+                                @touchmove.prevent="draw"
+                                @touchend="stopDrawing"
+                            />
+                        </div>
+                        <SecondaryButton class="mt-2 text-xs" @click="clearCanvas">Limpiar</SecondaryButton>
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="showDelivery = false">Cancelar</SecondaryButton>
+                <PrimaryButton :disabled="deliveryForm.processing" @click="submitDelivery">Guardar</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

@@ -18,6 +18,9 @@ class HojaRutaStoreController extends Controller
         $data = $request->validate([
             'deposito_id' => ['required', 'integer', 'exists:depositos,id'],
             'fecha' => ['required', 'date'],
+            'vehiculo_id' => ['nullable', 'integer', 'exists:vehiculos,id'],
+            'zona_id' => ['nullable', 'integer', 'exists:zonas,id'],
+            'chofer_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'comprobante_ids' => ['required', 'array', 'min:1'],
             'comprobante_ids.*' => ['integer', 'exists:comprobantes,id'],
         ]);
@@ -26,6 +29,9 @@ class HojaRutaStoreController extends Controller
             'empresa_id' => $empresaId,
             'deposito_id' => (int) $data['deposito_id'],
             'fecha' => $data['fecha'],
+            'vehiculo_id' => ! empty($data['vehiculo_id']) ? (int) $data['vehiculo_id'] : null,
+            'zona_id' => ! empty($data['zona_id']) ? (int) $data['zona_id'] : null,
+            'chofer_user_id' => ! empty($data['chofer_user_id']) ? (int) $data['chofer_user_id'] : null,
             'estado' => 'borrador',
         ]);
 

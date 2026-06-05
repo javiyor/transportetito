@@ -20,10 +20,15 @@ class HojaRutaItemUpdateController extends Controller
             'orden' => ['nullable', 'integer', 'min:1'],
             'recibe_nombre' => ['nullable', 'string', 'max:255'],
             'recibe_dni' => ['nullable', 'string', 'max:32'],
+            'firma_recibo' => ['nullable', 'string'],
         ]);
 
         if (isset($data['estado_entrega']) && $data['estado_entrega'] === 'entregado' && $item->estado_entrega !== 'entregado') {
             $data['fecha_entrega'] = now();
+        }
+
+        if (! empty($data['firma_recibo'])) {
+            $data['firma_recibo_at'] = now();
         }
 
         $item->fill(array_filter($data, static fn ($v) => $v !== null))->save();

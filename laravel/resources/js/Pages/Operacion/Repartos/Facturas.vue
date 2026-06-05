@@ -4,15 +4,22 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import Checkbox from '@/Components/Checkbox.vue';
+import DialogModal from '@/Components/DialogModal.vue';
+import InputError from '@/Components/InputError.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import { ref } from 'vue';
 
 const props = defineProps({
     zonas: Array,
     localidades: Array,
     filters: Object,
     facturas: Array,
+    vehiculos: Array,
+    choferes: Array,
+    depositos: Array,
 });
 
-const form = useForm({
+const filterForm = useForm({
     zona_id: props.filters?.zona_id || '',
     localidad: props.filters?.localidad || '',
     fecha: props.filters?.fecha || '',
@@ -20,10 +27,41 @@ const form = useForm({
     comprobante_ids: [],
 });
 
+const createForm = useForm({
+    deposito_id: '',
+    fecha: '',
+    vehiculo_id: '',
+    zona_id: '',
+    chofer_user_id: '',
+    comprobante_ids: [],
+});
+
+const showCreateModal = ref(false);
+
+const openCreateModal = () => {
+    createForm.deposito_id = '';
+    createForm.fecha = filterForm.fecha || new Date().toISOString().slice(0, 10);
+    createForm.vehiculo_id = '';
+    createForm.zona_id = '';
+    createForm.chofer_user_id = '';
+    createForm.comprobante_ids = [...filterForm.comprobante_ids];
+    createForm.clearErrors();
+    showCreateModal.value = true;
+};
+
+const submitCreate = () => {
+    createForm.post(route('operacion.repartos.hojas.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showCreateModal.value = false;
+        },
+    });
+};
+
 const applyFilters = () => {
     router.get(
         route('operacion.repartos.facturas'),
-        { zona_id: form.zona_id || null, localidad: form.localidad || null, fecha: form.fecha || null, tipo: form.tipo || 'todos' },
+        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos' },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -35,13 +73,7 @@ const tipoLabel = (tipo) => {
 };
 
 const toggleAll = (checked) => {
-    form.comprobante_ids = checked ? props.facturas.map((f) => f.id) : [];
-};
-
-const createHoja = () => {
-    form.post(route('operacion.repartos.hojas.store'), {
-        preserveScroll: true,
-    });
+    filterForm.comprobante_ids = checked ? props.facturas.map((f) => f.id) : [];
 };
 </script>
 
@@ -63,25 +95,25 @@ const createHoja = () => {
                 <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Zona</div>
-                        <select v-model="form.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <select v-model="filterForm.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="">Todos</option>
                             <option v-for="z in zonas" :key="z.id" :value="z.id">{{ z.nombre }}</option>
                         </select>
                     </div>
                     <div>
                         <div class="text-sm font-medium text-gray-900">Ciudad</div>
-                        <select v-model="form.localidad" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <select v-model="filterForm.localidad" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="">Todas</option>
                             <option v-for="loc in localidades" :key="loc" :value="loc">{{ loc }}</option>
                         </select>
                     </div>
                     <div>
                         <div class="text-sm font-medium text-gray-900">Fecha</div>
-                        <input v-model="form.fecha" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <input v-model="filterForm.fecha" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
                     </div>
                     <div>
                         <div class="text-sm font-medium text-gray-900">Tipo</div>
-                        <select v-model="form.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <select v-model="filterForm.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="todos">Todos</option>
                             <option value="factura_interna">Facturas</option>
                             <option value="guia_envio">Guias</option>
@@ -99,7 +131,7 @@ const createHoja = () => {
                         <h3 class="text-base font-semibold text-gray-900">Comprobantes emitidos (listas)</h3>
                         <p class="mt-1 text-sm text-gray-600">Selecciona facturas o guias para armar hoja de ruta.</p>
                     </div>
-                    <PrimaryButton :disabled="form.processing || !form.comprobante_ids.length" @click.prevent="createHoja">
+                    <PrimaryButton :disabled="filterForm.processing || !filterForm.comprobante_ids.length" @click.prevent="openCreateModal">
                         Crear hoja
                     </PrimaryButton>
                 </div>
@@ -111,7 +143,7 @@ const createHoja = () => {
                                 <div class="text-sm font-semibold text-gray-900">#{{ f.id }}</div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(f.tipo) }}</div>
                             </div>
-                            <Checkbox v-model:checked="form.comprobante_ids" :value="f.id" />
+                            <Checkbox v-model:checked="filterForm.comprobante_ids" :value="f.id" />
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
@@ -139,7 +171,7 @@ const createHoja = () => {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <input type="checkbox" :checked="form.comprobante_ids.length === facturas.length && facturas.length" @change="toggleAll($event.target.checked)" />
+                                    <input type="checkbox" :checked="filterForm.comprobante_ids.length === facturas.length && facturas.length" @change="toggleAll($event.target.checked)" />
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
@@ -152,7 +184,7 @@ const createHoja = () => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="f in facturas" :key="f.id">
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <Checkbox v-model:checked="form.comprobante_ids" :value="f.id" />
+                                    <Checkbox v-model:checked="filterForm.comprobante_ids" :value="f.id" />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ f.id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ tipoLabel(f.tipo) }}</td>
@@ -173,5 +205,57 @@ const createHoja = () => {
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="showCreateModal" @close="showCreateModal = false">
+            <template #title>Crear hoja de ruta</template>
+            <template #content>
+                <div class="space-y-4">
+                    <div>
+                        <InputLabel value="Deposito" />
+                        <select v-model="createForm.deposito_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                            <option value="">Seleccionar...</option>
+                            <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.deposito_id" />
+                    </div>
+                    <div>
+                        <InputLabel value="Fecha" />
+                        <input v-model="createForm.fecha" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required />
+                        <InputError class="mt-2" :message="createForm.errors.fecha" />
+                    </div>
+                    <div>
+                        <InputLabel value="Vehiculo (opcional)" />
+                        <select v-model="createForm.vehiculo_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="v in vehiculos" :key="v.id" :value="v.id">{{ v.patente }} {{ v.marca ? '- ' + v.marca : '' }} {{ v.modelo ? v.modelo : '' }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.vehiculo_id" />
+                    </div>
+                    <div>
+                        <InputLabel value="Zona (opcional)" />
+                        <select v-model="createForm.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="z in zonas" :key="z.id" :value="z.id">{{ z.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.zona_id" />
+                    </div>
+                    <div>
+                        <InputLabel value="Chofer (opcional)" />
+                        <select v-model="createForm.chofer_user_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="c in choferes" :key="c.id" :value="c.id">{{ c.name }} ({{ c.email }})</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.chofer_user_id" />
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        Comprobantes seleccionados: {{ createForm.comprobante_ids.length }}
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="showCreateModal = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="createForm.processing" @click="submitCreate">Crear hoja</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>
