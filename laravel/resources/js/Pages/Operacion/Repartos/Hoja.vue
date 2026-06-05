@@ -5,6 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import DialogModal from '@/Components/DialogModal.vue';
+import InputLabel from '@/Components/InputLabel.vue';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
