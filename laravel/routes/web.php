@@ -195,10 +195,11 @@ Route::middleware([
             Route::post('/hojas/{hoja}/cerrar', HojaRutaCerrarController::class)->name('hojas.cerrar');
         });
 
-        Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
-            Route::get('/', [RepartidorController::class, 'index'])->name('index');
-            Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
-        });
+    });
+
+    Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
+        Route::get('/', [RepartidorController::class, 'index'])->name('index');
+        Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
     });
 
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
