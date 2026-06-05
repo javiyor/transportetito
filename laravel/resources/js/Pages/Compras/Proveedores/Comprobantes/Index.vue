@@ -7,6 +7,7 @@ import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
+import PdfImportDialog from '@/Components/PdfImportDialog.vue';
 import { computed, ref, watch } from 'vue';
 
 const tasaActualCombustible = ref(0);
@@ -167,6 +168,52 @@ const actualizarPagoCuenta = async (target) => {
 watch([() => form.combustible_tipo, () => form.litros_combustible, () => form.fecha_emision], () => { actualizarPagoCuenta(form); });
 watch([() => editComprobanteForm.combustible_tipo, () => editComprobanteForm.litros_combustible, () => editComprobanteForm.fecha_emision], () => { actualizarPagoCuenta(editComprobanteForm); });
 
+const pdfImportDialog = ref(false);
+
+const onPdfImported = (datos) => {
+    if (datos.cuit) {
+        form.proveedor_cuit_busqueda = datos.cuit;
+        fetchTiposArcaPorCuit(datos.cuit).then((cuenta) => {
+            if (cuenta) {
+                form.tercero_cuenta_id = cuenta.id;
+            }
+        });
+    }
+    if (datos.tipo && tiposArca.value.some((t) => t.code === datos.tipo)) {
+        form.tipo = datos.tipo;
+    }
+    if (datos.numero) form.numero = datos.numero;
+    if (datos.fecha_emision) form.fecha_emision = datos.fecha_emision;
+    if (datos.subtotal && form.tipo && !form.tipo.endsWith('A')) {
+        form.subtotal = String(datos.subtotal);
+    }
+    if (datos.iva_items?.length && form.tipo?.endsWith('A')) {
+        form.iva_items = datos.iva_items.map((item) => ({
+            alicuota: item.alicuota,
+            base_imponible: String(item.base_imponible || item.importe * 100 / item.alicuota),
+        }));
+    }
+    if (datos.percepciones?.length) {
+        form.percepciones = datos.percepciones.map((p) => ({ concepto: p.concepto, importe: String(p.importe) }));
+    }
+    if (datos.retenciones?.length) {
+        form.retenciones = datos.retenciones.map((r) => ({ concepto: r.concepto, importe: String(r.importe) }));
+    }
+};
+
+const fetchTiposArcaPorCuit = async (cuit) => {
+    try {
+        const url = route('compras.proveedores.lookup-cuit', { cuit });
+        const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.cuenta?.id) {
+            await fetchTiposArca(data.cuenta.id);
+            return data.cuenta;
+        }
+    } catch { /* ignore */ }
+    return null;
+};
+
 const buscarProveedorPorCuit = async () => {
     const cuit = String(form.proveedor_cuit_busqueda || '').trim();
     if (!cuit) return;
@@ -219,6 +266,7 @@ const submitEditComprobante = () => {
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Compras / Proveedores / Comprobantes</h2>
                 <div class="flex items-center gap-3">
+                    <button type="button" class="text-sm text-indigo-600 hover:text-indigo-800" @click.prevent="pdfImportDialog = true">Importar PDF</button>
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.export')">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.index')">Cta. cte. proveedores</Link>
                 </div>
@@ -423,6 +471,7 @@ const submitEditComprobante = () => {
                     <PrimaryButton class="ms-3" :disabled="editComprobanteForm.processing" @click="submitEditComprobante">Guardar cambios</PrimaryButton>
                 </template>
             </DialogModal>
+            <PdfImportDialog v-model:show="pdfImportDialog" @imported="onPdfImported" />
         </div>
     </AppLayout>
 </template>

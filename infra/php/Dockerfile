@@ -13,6 +13,9 @@ RUN apk add --no-cache \
     zip \
     git \
     curl \
+    tesseract-ocr \
+    tesseract-ocr-data-spa \
+    poppler-utils \
     $PHPIZE_DEPS
 # PHP extensions
 RUN docker-php-ext-install -j"$(nproc)" \

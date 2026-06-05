@@ -13,6 +13,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "spatie/laravel-permission": "^7.4",
+        "smalot/pdfparser": "^2.11",
         "tightenco/ziggy": "^2.6"
     },
     "require-dev": {

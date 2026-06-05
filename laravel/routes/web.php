@@ -56,6 +56,7 @@ use App\Http\Controllers\Compras\PagoCuentaCombustibleExportController;
 use App\Http\Controllers\Compras\GastoOperativoIndexController;
 use App\Http\Controllers\Compras\GastoOperativoExportController;
 use App\Http\Controllers\Compras\ProveedorComprobanteExportController;
+use App\Http\Controllers\Compras\ProveedorComprobantePdfImportController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -192,9 +193,8 @@ Route::middleware([
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
         Route::get('/proveedores/comprobantes/export', ProveedorComprobanteExportController::class)->name('proveedores.comprobantes.export');
-        Route::post('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'store'])->name('proveedores.comprobantes.store');
+        Route::post('/proveedores/comprobantes/pdf-import', ProveedorComprobantePdfImportController::class)->name('proveedores.comprobantes.pdf-import');
         Route::get('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteShowController::class)->name('proveedores.comprobantes.show');
-        Route::get('/proveedores/comprobantes/{comprobante}/print', ProveedorComprobantePrintController::class)->name('proveedores.comprobantes.print');
         Route::put('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteUpdateController::class)->name('proveedores.comprobantes.update');
         Route::get('/proveedores/tipos-arca', [ProveedorComprobanteIndexController::class, 'tiposArca'])->name('proveedores.tipos-arca');
         Route::get('/proveedores/lookup-cuit', [ProveedorComprobanteIndexController::class, 'lookupByCuit'])->name('proveedores.lookup-cuit');
