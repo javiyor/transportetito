@@ -47,6 +47,7 @@ class FacturasListController extends Controller
             ])
             ->where('empresa_id', $empresaId)
             ->where('estado', 'emitida')
+            ->whereDoesntHave('hojaRutaItems', fn ($q) => $q->where('estado_entrega', 'entregado'))
             ->orderBy('id');
 
         if ($fecha) {
