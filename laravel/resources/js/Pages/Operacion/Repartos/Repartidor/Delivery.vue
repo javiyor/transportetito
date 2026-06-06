@@ -19,6 +19,7 @@ const deliveryForm = useForm({
     estado_entrega: 'entregado',
     recibe_nombre: '',
     recibe_dni: '',
+    email_contacto: '',
     observacion_operador: '',
     firma_recibo: '',
 });
@@ -33,6 +34,7 @@ const openDelivery = (item) => {
     deliveryForm.estado_entrega = 'entregado';
     deliveryForm.recibe_nombre = '';
     deliveryForm.recibe_dni = '';
+    deliveryForm.email_contacto = item.entrega_cuenta?.email || '';
     deliveryForm.observacion_operador = '';
     deliveryForm.firma_recibo = '';
     deliveryForm.clearErrors();
@@ -217,6 +219,18 @@ const statusClass = (estado) => {
                                 @click="deliveryForm.estado_entrega = 'no_entregado'"
                             >No entregado</button>
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-900 mb-1">Email del destinatario</label>
+                        <div v-if="activeItem?.entrega_cuenta?.email" class="flex items-center gap-2 text-sm">
+                            <span class="text-gray-900">{{ activeItem.entrega_cuenta.email }}</span>
+                            <span class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Verificar</span>
+                        </div>
+                        <div v-else class="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+                            Solicitar email al cliente
+                        </div>
+                        <input v-model="deliveryForm.email_contacto" type="email" class="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="Email de contacto (opcional)" />
                     </div>
 
                     <template v-if="deliveryForm.estado_entrega === 'entregado'">

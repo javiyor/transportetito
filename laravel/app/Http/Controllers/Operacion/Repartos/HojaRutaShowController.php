@@ -23,7 +23,7 @@ class HojaRutaShowController extends Controller
             'items' => function ($q) {
                 $q->with([
                     'comprobante:id,total,moneda,fecha_emision',
-                    'entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,cp,telefono',
+                    'entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,cp,telefono,email',
                     'entregaCuenta.tercero:id,cuit,razon_social',
                 ])->orderBy('orden');
             },

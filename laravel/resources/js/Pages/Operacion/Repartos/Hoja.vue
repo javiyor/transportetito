@@ -40,6 +40,7 @@ const deliveryForm = useForm({
     estado_entrega: 'entregado',
     recibe_nombre: '',
     recibe_dni: '',
+    email_contacto: '',
     observacion_operador: '',
     firma_recibo: '',
 });
@@ -51,6 +52,7 @@ const openDelivery = (item) => {
     deliveryForm.estado_entrega = 'entregado';
     deliveryForm.recibe_nombre = item.recibe_nombre || '';
     deliveryForm.recibe_dni = item.recibe_dni || '';
+    deliveryForm.email_contacto = item.entrega_cuenta?.email || '';
     deliveryForm.observacion_operador = item.observacion_operador || '';
     deliveryForm.firma_recibo = '';
     deliveryForm.clearErrors();
@@ -270,6 +272,17 @@ const vehiculoLabel = computed(() => {
                             <option value="entregado">Entregado</option>
                             <option value="no_entregado">No entregado</option>
                         </select>
+                    </div>
+                    <div>
+                        <InputLabel value="Email del destinatario" />
+                        <div v-if="deliveryItem?.entrega_cuenta?.email" class="flex items-center gap-2 text-sm">
+                            <span class="text-gray-900">{{ deliveryItem.entrega_cuenta.email }}</span>
+                            <span class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Verificar</span>
+                        </div>
+                        <div v-else class="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+                            Solicitar email al cliente
+                        </div>
+                        <TextInput v-model="deliveryForm.email_contacto" type="email" class="mt-2 block w-full" placeholder="Email de contacto (opcional)" />
                     </div>
                     <div v-if="deliveryForm.estado_entrega === 'entregado'">
                         <InputLabel value="Recibe nombre" />

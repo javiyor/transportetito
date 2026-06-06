@@ -23,7 +23,7 @@ class RepartidorController extends Controller
                     $q->with([
                         'comprobante:id,total,moneda,fecha_emision',
                         'entregaCuenta.tercero:id,cuit,razon_social',
-                    ])->orderBy('orden');
+                    ])->with('entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,cp,telefono,email')->orderBy('orden');
                 },
             ])
             ->where('chofer_user_id', $userId)
@@ -48,6 +48,7 @@ class RepartidorController extends Controller
             'recibe_dni' => ['nullable', 'string', 'max:32'],
             'observacion_operador' => ['nullable', 'string', 'max:1000'],
             'firma_recibo' => ['nullable', 'string'],
+            'email_contacto' => ['nullable', 'email', 'max:255'],
         ]);
 
         if ($data['estado_entrega'] === 'entregado' && $item->estado_entrega !== 'entregado') {
@@ -56,6 +57,10 @@ class RepartidorController extends Controller
 
         if (! empty($data['firma_recibo'])) {
             $data['firma_recibo_at'] = now();
+        }
+
+        if (! empty($data['email_contacto'])) {
+            $item->entregaCuenta()->update(['email' => $data['email_contacto']]);
         }
 
         $item->fill(array_filter($data, static fn ($v) => $v !== null))->save();

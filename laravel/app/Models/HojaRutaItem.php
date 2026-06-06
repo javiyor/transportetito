@@ -34,6 +34,7 @@ class HojaRutaItem extends Model
         'cobro_registrado_at',
         'recibe_nombre',
         'recibe_dni',
+        'email_contacto',
         'fecha_entrega',
         'firma_recibo',
         'firma_recibo_at',
