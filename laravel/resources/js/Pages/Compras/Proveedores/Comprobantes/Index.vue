@@ -269,6 +269,7 @@ const submitEditComprobante = () => {
                     <button type="button" class="text-sm text-indigo-600 hover:text-indigo-800" @click.prevent="pdfImportDialog = true">Importar PDF</button>
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.export')">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.index')">Cta. cte. proveedores</Link>
+                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.index')">Combustibles</Link>
                 </div>
             </div>
         </template>
@@ -354,7 +355,7 @@ const submitEditComprobante = () => {
                             </div>
                             <div>
                                 <InputLabel value="Tasa x litro ($)" />
-                                <div class="mt-1 text-sm font-medium text-gray-700">{{ form.combustible_tipo && Number(form.litros_combustible || 0) > 0 ? `$${tasaActualCombustible.toFixed(4)}` : '-' }}</div>
+                                <div class="mt-1 text-sm font-medium" :class="tasaActualCombustible > 0 ? 'text-gray-700' : 'text-yellow-700'">{{ form.combustible_tipo && Number(form.litros_combustible || 0) > 0 ? (tasaActualCombustible > 0 ? `$${tasaActualCombustible.toFixed(4)}` : 'Sin tasa configurada') : '-' }}</div>
                             </div>
                             <div>
                                 <InputLabel value="Pago a cuenta" />
@@ -446,7 +447,7 @@ const submitEditComprobante = () => {
                                     </div>
                                     <div>
                                         <InputLabel value="Tasa x litro" />
-                                        <div class="mt-1 text-sm font-medium text-gray-700">{{ editComprobanteForm.combustible_tipo && Number(editComprobanteForm.litros_combustible || 0) > 0 ? `$${tasaActualCombustible.toFixed(4)}` : '-' }}</div>
+                                        <div class="mt-1 text-sm font-medium" :class="tasaActualCombustible > 0 ? 'text-gray-700' : 'text-yellow-700'">{{ editComprobanteForm.combustible_tipo && Number(editComprobanteForm.litros_combustible || 0) > 0 ? (tasaActualCombustible > 0 ? `$${tasaActualCombustible.toFixed(4)}` : 'Sin tasa configurada') : '-' }}</div>
                                     </div>
                                     <div>
                                         <InputLabel value="Pago a cuenta" />
