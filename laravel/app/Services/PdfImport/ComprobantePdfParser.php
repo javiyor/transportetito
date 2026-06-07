@@ -74,6 +74,12 @@ class ComprobantePdfParser
         try {
             $this->pdfToImages($path, $tmpDir);
             $text = $this->ocrImages($tmpDir);
+
+            if (trim($text) === '') {
+                $text = $this->ocrImagesWithEnglishFallback($tmpDir);
+            }
+
+            Log::debug('OCR result length: '.strlen($text).' chars, preview: '.mb_substr($text, 0, 200));
         } catch (\Throwable $e) {
             Log::warning('PDF OCR failed: '.$e->getMessage());
             $text = '';
@@ -84,6 +90,37 @@ class ComprobantePdfParser
         return $text;
     }
 
+    private function ocrImagesWithEnglishFallback(string $dir): string
+    {
+        if (! file_exists(self::TESSERACT_BIN)) {
+            return '';
+        }
+
+        $fullText = '';
+        $files = glob($dir.'/page-*.png') ?: glob($dir.'/*.png');
+        sort($files);
+
+        foreach ($files as $imagePath) {
+            $baseName = pathinfo($imagePath, PATHINFO_FILENAME);
+            $outputBase = $dir.'/ocr_en_'.$baseName;
+
+            $escapedImage = escapeshellarg($imagePath);
+            $escapedOutput = escapeshellarg($outputBase);
+            $cmd = self::TESSERACT_BIN.' '.$escapedImage.' '.$escapedOutput.' -l spa+eng --psm 6 2>&1';
+
+            exec($cmd, $output, $exitCode);
+
+            if ($exitCode === 0) {
+                $txtFile = $outputBase.'.txt';
+                if (file_exists($txtFile)) {
+                    $fullText .= file_get_contents($txtFile)."\n";
+                }
+            }
+        }
+
+        return trim($fullText);
+    }
+
     private function pdfToImages(string $pdfPath, string $outputDir): void
     {
         if (! file_exists(self::PDFTOPPM_BIN)) {
@@ -92,7 +129,7 @@ class ComprobantePdfParser
 
         $escaped = escapeshellarg($pdfPath);
         $outPrefix = escapeshellarg($outputDir.'/page');
-        $cmd = self::PDFTOPPM_BIN.' -png -r 300 '.$escaped.' '.$outPrefix.' 2>&1';
+        $cmd = self::PDFTOPPM_BIN.' -png -r 600 -gray '.$escaped.' '.$outPrefix.' 2>&1';
 
         exec($cmd, $output, $exitCode);
 
@@ -122,7 +159,7 @@ class ComprobantePdfParser
 
             $escapedImage = escapeshellarg($imagePath);
             $escapedOutput = escapeshellarg($outputBase);
-            $cmd = self::TESSERACT_BIN.' '.$escapedImage.' '.$escapedOutput.' -l spa 2>&1';
+            $cmd = self::TESSERACT_BIN.' '.$escapedImage.' '.$escapedOutput.' -l spa --psm 6 2>&1';
 
             exec($cmd, $output, $exitCode);
 

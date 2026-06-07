@@ -15,6 +15,7 @@ RUN apk add --no-cache \
     curl \
     tesseract-ocr \
     tesseract-ocr-data-spa \
+    tesseract-ocr-data-eng \
     poppler-utils \
     $PHPIZE_DEPS
 # PHP extensions

@@ -44,11 +44,15 @@ class ArcaInvoiceTextParser
 
     private function extractCuit(string $fullText, array $lines): ?string
     {
-        if (preg_match('/CUIT[:\s]*([\d\-]{11,13})/', $fullText, $m)) {
-            return preg_replace('/\D/', '', $m[1]);
-        }
-        if (preg_match('/CUIT\s*(?:DEL\s+)?(?:EMISOR|COMPRADOR|PROVEEDOR|CLIENTE)?[:\s]*(\d{2}[\-\.]?\d{8}[\-\.]?\d{1})/', $fullText, $m)) {
-            return preg_replace('/\D/', '', $m[1]);
+        $cuitPatterns = [
+            '/C[U0]IT[:\s]*([\d\-]{11,13})/',
+            '/C[U0]IT\s*(?:DEL\s+)?(?:EMISOR|COMPRADOR|PROVEEDOR|CLIENTE)?[:\s]*(\d{2}[\-\.]?\d{8}[\-\.]?\d{1})/',
+            '/C[U0][IL][T1][:\s]*([\d\-]{11,13})/',
+        ];
+        foreach ($cuitPatterns as $pat) {
+            if (preg_match($pat, $fullText, $m)) {
+                return preg_replace('/\D/', '', $m[1]);
+            }
         }
         foreach ($lines as $line) {
             $line = mb_strtoupper(trim($line));
@@ -67,7 +71,7 @@ class ArcaInvoiceTextParser
         $searching = false;
         foreach ($lines as $line) {
             $upper = mb_strtoupper(trim($line));
-            if (preg_match('/RAZ[OÓ]N\s*SOCIAL/', $upper)) {
+            if (preg_match('/RAZ[OÓ0][N]\s*S[O0]C[IL]AL/', $upper)) {
                 $searching = true;
                 continue;
             }
@@ -80,24 +84,25 @@ class ArcaInvoiceTextParser
 
     private function extractTipo(string $fullText, array $lines): ?string
     {
-        if (preg_match('/(FACTURA|NOTA\s*CR[EÉ]DITO|NOTA\s*D[EÉ]BITO|RECIBO|COMPROBANTE)\s*([A-E])/i', $fullText, $m)) {
+        $tipoPat = 'FACTURA|FACTURA\s*ELECTRONICA';
+        $ncPat = 'NOTA\s*CR[EÉ][D]ITO|N[O0]TA\s*CR[EÉ][D]IT[O0]|N[O0][T1][A0]\s*CR[EÉ][D]IT[O0]';
+        $ndPat = 'NOTA\s*D[EÉ]BITO|N[O0]TA\s*D[EÉ]BIT[O0]|N[O0][T1][A0]\s*D[EÉ]BIT[O0]';
+        if (preg_match('/('.$tipoPat.'|'.$ncPat.'|'.$ndPat.')\s*([A-E])/i', $fullText, $m)) {
             $tipo = strtoupper($m[1]);
             $letra = strtoupper($m[2]);
-            return match (true) {
-                str_contains($tipo, 'CREDITO') || str_contains($tipo, 'CRÉDITO') => 'NC'.$letra,
-                str_contains($tipo, 'DEBITO') || str_contains($tipo, 'DÉBITO') => 'ND'.$letra,
-                str_contains($tipo, 'FACTURA') => 'FA'.$letra,
-                default => null,
-            };
+            if (preg_match('/CR[EÉ][D]IT[O0]/', $tipo)) return 'NC'.$letra;
+            if (preg_match('/D[EÉ]BIT[O0]/', $tipo)) return 'ND'.$letra;
+            return 'FA'.$letra;
         }
         foreach ($lines as $line) {
             $upper = mb_strtoupper(trim($line));
-            if (preg_match('/(FACTURA|NOTA)\s*(?:DE\s*)?(?:CR[EÉ]DITO|D[EÉ]BITO)?\s*([A-E])\b/i', $upper, $m)) {
+            $pat = '/('.$tipoPat.'|NOTA)\s*(?:DE\s*)?(?:CR[EÉ][D]ITO|D[EÉ]BITO)?\s*([A-E])\b/i';
+            if (preg_match($pat, $upper, $m)) {
                 $tipo = strtoupper($m[1]);
                 $letra = strtoupper($m[2]);
-                if ($tipo === 'NOTA') {
-                    if (str_contains($upper, 'CREDITO') || str_contains($upper, 'CRÉDITO')) return 'NC'.$letra;
-                    if (str_contains($upper, 'DEBITO') || str_contains($upper, 'DÉBITO')) return 'ND'.$letra;
+                if (str_contains($tipo, 'NOTA')) {
+                    if (preg_match('/CR[EÉ][D]IT[O0]/', $upper)) return 'NC'.$letra;
+                    if (preg_match('/D[EÉ]BIT[O0]/', $upper)) return 'ND'.$letra;
                 }
                 return 'FA'.$letra;
             }
@@ -107,11 +112,15 @@ class ArcaInvoiceTextParser
 
     private function extractNumero(string $fullText, array $lines): ?string
     {
-        if (preg_match('/(?:N[UÚ]MERO|COMP\w*)\s*(?:DE\s*)?:?\s*(\d{4,5}\s*-?\s*\d{6,8})/i', $fullText, $m)) {
+        $fullText = preg_replace('/[|!\(\)\[\]{}_=]/', ' ', $fullText);
+        if (preg_match('/(?:N[UÚ0]MER[O0]|COMP\w*)\s*(?:DE\s*)?:?\s*(\d{3,5}\s*-?\s*\d{6,8})/i', $fullText, $m)) {
+            return trim($m[1]);
+        }
+        if (preg_match('/(?:N[UÚ0]MER[O0]|COMP\w*)\s*(?:DE\s*)?:?\s*(\d{3,5}\s*\d{6,8})/i', $fullText, $m)) {
             return trim($m[1]);
         }
         foreach ($lines as $line) {
-            if (preg_match('/(\d{4,5}\s*-?\s*\d{6,8})/', $line, $m)) {
+            if (preg_match('/(\d{3,5}\s*-?\s*\d{6,8})/', $line, $m)) {
                 return trim($m[1]);
             }
         }
@@ -120,8 +129,10 @@ class ArcaInvoiceTextParser
 
     private function extractFecha(string $fullText, array $lines): ?string
     {
+        $fullText = preg_replace('/[|!\(\)\[\]{}_=]/', ' ', $fullText);
         $patterns = [
-            '/FECHA\s*(?:DE\s*)?(?:EMISI[OÓ]N)?\s*:?\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i',
+            '/FECHA\s*(?:DE\s*)?(?:EMISI[OÓ0][N])?\s*:?\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i',
+            '/FECHA\s*(?:DE\s*)?(?:EMISI[OÓ0][N])?\s*:?\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{2,4})/i',
             '/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/',
         ];
         foreach ($patterns as $pat) {
@@ -139,27 +150,48 @@ class ArcaInvoiceTextParser
 
     private function extractTotal(string $fullText, array $lines): ?float
     {
-        if (preg_match('/IMPORTE\s*(?:TOTAL|CONSTANCIA)?\s*:?\s*\$?\s*([\d\.]+\,[\d]{2})/i', $fullText, $m)) {
-            return $this->parseDecimal($m[1]);
+        $fullText = preg_replace('/[|!\(\)\[\]{}]/', ' ', $fullText);
+        $patterns = [
+            '/IMPORTE\s*(?:TOTAL|C[O0]NSTANCIA)?\s*:?\s*\$?\s*([\d]\S*[\d])/i',
+            '/TOTAL\s*(?:GENERAL)?\s*:?\s*\$?\s*([\d]\S*[\d])/i',
+        ];
+        foreach ($patterns as $pat) {
+            if (preg_match($pat, $fullText, $m)) {
+                $candidate = $this->parseOcrNumber($m[1]);
+                if ($candidate !== null) return $candidate;
+            }
         }
-        if (preg_match('/TOTAL\s*:?\s*\$?\s*([\d\.]+\,[\d]{2})/i', $fullText, $m)) {
-            return $this->parseDecimal($m[1]);
+        return null;
+    }
+
+    private function parseOcrNumber(string $raw): ?float
+    {
+        $raw = trim($raw);
+        $raw = preg_replace('/[^0-9\.,]/', '', $raw);
+        if (preg_match('/^\d{1,3}(?:\.\d{3})*(?:\,\d{2})$/', $raw)) {
+            return $this->parseDecimal($raw);
         }
+        $raw = str_replace(',', '.', $raw);
+        if (is_numeric($raw)) return (float) $raw;
         return null;
     }
 
     private function extractSubtotal(string $fullText, array $lines, ?float $total): ?float
     {
-        if (preg_match('/(?:SUBTOTAL|IMPORTE\s*NETO|NETO)\s*:?\s*\$?\s*([\d\.]+\,[\d]{2})/i', $fullText, $m)) {
-            return $this->parseDecimal($m[1]);
+        $fullText = preg_replace('/[|!\(\)\[\]{}]/', ' ', $fullText);
+        if (preg_match('/(?:S[U0]BTOTAL|IMP[O0]RTE\s*NET[O0]|NET[O0])\s*:?\s*\$?\s*([\d]\S*[\d])/i', $fullText, $m)) {
+            $candidate = $this->parseOcrNumber($m[1]);
+            if ($candidate !== null) return $candidate;
         }
         return $total;
     }
 
     private function extractIvaTotal(string $fullText, array $lines): ?float
     {
-        if (preg_match('/IVA\s*(?:TOTAL|?)\s*:?\s*\$?\s*([\d\.]+\,[\d]{2})/i', $fullText, $m)) {
-            return $this->parseDecimal($m[1]);
+        $fullText = preg_replace('/[|!\(\)\[\]{}]/', ' ', $fullText);
+        if (preg_match('/IVA\s*(?:TOTAL|?)\s*:?\s*\$?\s*([\d]\S*[\d])/i', $fullText, $m)) {
+            $candidate = $this->parseOcrNumber($m[1]);
+            if ($candidate !== null) return $candidate;
         }
         return null;
     }
@@ -170,19 +202,19 @@ class ArcaInvoiceTextParser
         $inIva = false;
         foreach ($lines as $line) {
             $upper = mb_strtoupper(trim($line));
-            if (preg_match('/ALICUOTA\s*IVA|DETALLE\s*IVA/', $upper)) {
+            if (preg_match('/ALICUOTA\s*IVA|DETALLE\s*IVA|IVA\s*D[EÉ]|D[EÉ]TALLE/', $upper)) {
                 $inIva = true;
                 continue;
             }
-            if ($inIva && preg_match('/([\d\.]+\,[\d]{1,4})\s*%\s*(?:SOBRE)?\s*\$?\s*([\d\.]+\,[\d]{2})\s*\$?\s*([\d\.]+\,[\d]{2})/', $line, $m)) {
+            if ($inIva && preg_match('/([\d]{1,2}(?:[\.,][\d]{1,4})?)\s*%\s*(?:\$?)\s*([\d][\d\.,]*[\d])\s*(?:\$?)\s*([\d][\d\.,]*[\d])/', $line, $m)) {
                 $items[] = [
                     'alicuota' => $this->parseDecimal($m[1]),
                     'base_imponible' => $this->parseDecimal($m[2]),
-                    'importe' => $this->parseDecimal($m[3]),
+                    'importe' => $this->parseDecimal(trim($m[3])),
                 ];
                 continue;
             }
-            if ($inIva && preg_match('/([\d\.]+\,[\d]{1,4})\s*%\s*\$?\s*([\d\.]+\,[\d]{2})/', $line, $m)) {
+            if ($inIva && preg_match('/([\d]{1,2}(?:[\.,][\d]{1,4})?)\s*%\s*(?:\$?)\s*([\d][\d\.,]*[\d])/', $line, $m)) {
                 $items[] = [
                     'alicuota' => $this->parseDecimal($m[1]),
                     'base_imponible' => $this->parseDecimal($m[2]),
@@ -199,15 +231,16 @@ class ArcaInvoiceTextParser
         $inPercep = false;
         foreach ($lines as $line) {
             $upper = mb_strtoupper(trim($line));
-            if (str_contains($upper, 'PERCEPCION') || str_contains($upper, 'PERCEPCIÓN')) {
+            if (preg_match('/PERCEPCI[O0][N]/', $upper)) {
                 $inPercep = true;
             }
-            if ($inPercep && preg_match('/([\d\.]+\,[\d]{2})\s*$/', $line, $m)) {
-                $importe = $this->parseDecimal($m[1]);
+            if ($inPercep && preg_match('/([\d][\d\.,]*[\d]{2})\s*$/', $line, $m)) {
+                $importe = $this->parseOcrNumber($m[1]);
+                if ($importe === null) continue;
                 $concepto = $this->detectConcepto($upper);
                 $items[] = ['concepto' => $concepto, 'importe' => $importe];
             }
-            if ($inPercep && (str_contains($upper, 'RETENCION') || str_contains($upper, 'RETENCIÓN') || str_contains($upper, 'TOTAL'))) {
+            if ($inPercep && (preg_match('/RETENCI[O0][N]/', $upper) || str_contains($upper, 'TOTAL'))) {
                 $inPercep = false;
             }
         }
@@ -220,15 +253,16 @@ class ArcaInvoiceTextParser
         $inRet = false;
         foreach ($lines as $line) {
             $upper = mb_strtoupper(trim($line));
-            if (str_contains($upper, 'RETENCION') || str_contains($upper, 'RETENCIÓN')) {
+            if (preg_match('/RETENCI[O0][N]/', $upper)) {
                 $inRet = true;
             }
-            if ($inRet && preg_match('/([\d\.]+\,[\d]{2})\s*$/', $line, $m)) {
-                $importe = $this->parseDecimal($m[1]);
+            if ($inRet && preg_match('/([\d][\d\.,]*[\d]{2})\s*$/', $line, $m)) {
+                $importe = $this->parseOcrNumber($m[1]);
+                if ($importe === null) continue;
                 $concepto = $this->detectConceptoRetencion($upper);
                 $items[] = ['concepto' => $concepto, 'importe' => $importe];
             }
-            if ($inRet && (str_contains($upper, 'PERCEPCION') || str_contains($upper, 'PERCEPCIÓN') || str_contains($upper, 'TOTAL'))) {
+            if ($inRet && (preg_match('/PERCEPCI[O0][N]/', $upper) || str_contains($upper, 'TOTAL'))) {
                 $inRet = false;
             }
         }
