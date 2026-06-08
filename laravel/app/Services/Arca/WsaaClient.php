@@ -54,7 +54,18 @@ class WsaaClient
         $cms = $this->signTra($traXml, $paths['certPath'], $paths['keyPath']);
 
         try {
-            $client = new SoapClient($wsdl, ['exceptions' => true, 'trace' => false]);
+            $client = new SoapClient($wsdl, [
+                'exceptions' => true,
+                'trace' => false,
+                'stream_context' => stream_context_create([
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ],
+                ]),
+                'connection_timeout' => 30,
+            ]);
             $result = $client->loginCms(['in0' => $cms]);
         } catch (SoapFault $e) {
             throw new RuntimeException('WSAA loginCms fallo: '.$e->getMessage(), 0, $e);

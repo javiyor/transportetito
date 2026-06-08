@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
+use App\Services\Arca\ArcaCertificateResolver;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -65,5 +67,22 @@ class EmpresaAdminController extends Controller
         $empresa->update($data);
 
         return back();
+    }
+
+    public function arcaDiagnostic(Request $request, ArcaCertificateResolver $resolver): JsonResponse
+    {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        $empresa = Empresa::query()->find($empresaId);
+
+        if (! $empresa) {
+            return response()->json(['error' => 'No hay empresa activa.']);
+        }
+
+        $checks = $resolver->diagnostic($empresa);
+
+        return response()->json([
+            'empresa' => $empresa->only(['id', 'razon_social', 'cuit', 'arca_env']),
+            'checks' => $checks,
+        ]);
     }
 }

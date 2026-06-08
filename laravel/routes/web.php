@@ -158,6 +158,8 @@ Route::middleware([
         Route::get('/vehiculos', [VehiculoAdminController::class, 'index'])->name('vehiculos.index');
         Route::post('/vehiculos', [VehiculoAdminController::class, 'store'])->name('vehiculos.store');
         Route::put('/vehiculos/{vehiculo}', [VehiculoAdminController::class, 'update'])->name('vehiculos.update');
+
+        Route::get('/arca-diagnostic', [EmpresaAdminController::class, 'arcaDiagnostic'])->name('arca-diagnostic');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {

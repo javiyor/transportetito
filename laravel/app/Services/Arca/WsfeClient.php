@@ -233,7 +233,18 @@ class WsfeClient
             throw new RuntimeException('WSDL WSFE no configurado para '.$env);
         }
 
-        return new SoapClient($wsdl, ['exceptions' => true, 'trace' => false]);
+        return new SoapClient($wsdl, [
+            'exceptions' => true,
+            'trace' => false,
+            'stream_context' => stream_context_create([
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true,
+                ],
+            ]),
+            'connection_timeout' => 30,
+        ]);
     }
 
     private function resolveDocCliente(?string $condicionIva, ?string $cuit): array
