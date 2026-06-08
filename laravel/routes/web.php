@@ -206,6 +206,7 @@ Route::middleware([
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
         Route::get('/proveedores/comprobantes/export', ProveedorComprobanteExportController::class)->name('proveedores.comprobantes.export');
         Route::post('/proveedores/comprobantes/pdf-import', ProveedorComprobantePdfImportController::class)->name('proveedores.comprobantes.pdf-import');
+        Route::post('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'store'])->name('proveedores.comprobantes.store');
         Route::get('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteShowController::class)->name('proveedores.comprobantes.show');
         Route::put('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteUpdateController::class)->name('proveedores.comprobantes.update');
         Route::get('/proveedores/tipos-arca', [ProveedorComprobanteIndexController::class, 'tiposArca'])->name('proveedores.tipos-arca');

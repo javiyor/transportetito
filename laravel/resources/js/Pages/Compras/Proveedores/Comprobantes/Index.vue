@@ -165,8 +165,34 @@ const actualizarPagoCuenta = async (target) => {
     target.pago_cuenta_combustible = (litros * tasa).toFixed(2);
 };
 
+const guardarTasaCombustible = async (target) => {
+    const tipo = target.combustible_tipo;
+    const litros = Number(target.litros_combustible || 0);
+    const impuestos = Number(target.impuestos_combustible || 0);
+    if (!tipo || litros <= 0 || impuestos <= 0) return;
+    const tasaCalculada = Math.round((impuestos / litros) * 10000) / 10000;
+    const mes = (target.fecha_emision || new Date().toISOString().slice(0, 10)).slice(0, 7);
+    try {
+        await fetch(route('compras.combustibles.tasas.store'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: JSON.stringify({ combustible_tipo: tipo, mes, monto_por_litro: tasaCalculada }),
+        });
+        tasaActualCombustible.value = tasaCalculada;
+        target.pago_cuenta_combustible = (litros * tasaCalculada).toFixed(2);
+    } catch { /* silencioso */ }
+};
+
+const debounceTimer = ref(null);
+const programarGuardarTasa = (target) => {
+    if (debounceTimer.value) clearTimeout(debounceTimer.value);
+    debounceTimer.value = setTimeout(() => guardarTasaCombustible(target), 800);
+};
+
 watch([() => form.combustible_tipo, () => form.litros_combustible, () => form.fecha_emision], () => { actualizarPagoCuenta(form); });
+watch([() => form.combustible_tipo, () => form.litros_combustible, () => form.impuestos_combustible, () => form.fecha_emision], () => { programarGuardarTasa(form); });
 watch([() => editComprobanteForm.combustible_tipo, () => editComprobanteForm.litros_combustible, () => editComprobanteForm.fecha_emision], () => { actualizarPagoCuenta(editComprobanteForm); });
+watch([() => editComprobanteForm.combustible_tipo, () => editComprobanteForm.litros_combustible, () => editComprobanteForm.impuestos_combustible, () => editComprobanteForm.fecha_emision], () => { programarGuardarTasa(editComprobanteForm); });
 
 const pdfImportDialog = ref(false);
 
