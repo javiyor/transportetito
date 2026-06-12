@@ -14,7 +14,7 @@ class PedidoRecepcionControlController extends Controller
         abort_unless((int) $pedido->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
 
         $data = $request->validate([
-            'recepcion_estado' => ['required', 'in:correcto,con_error'],
+            'recepcion_estado' => ['required', 'in:recibido,correcto,con_error'],
             'recepcion_observacion' => ['nullable', 'string', 'max:2000'],
         ]);
 

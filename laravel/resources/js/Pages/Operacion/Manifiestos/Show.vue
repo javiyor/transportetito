@@ -1094,8 +1094,9 @@ const comprobanteTipoLabel = (tipo) => {
 
                         <div class="mt-4 space-y-2 border-t border-gray-200 pt-4">
                             <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                <option value="correcto">Correctamente recibido</option>
-                                <option value="con_error">Recibido con error</option>
+                                <option value="recibido">Recibido</option>
+                                <option value="correcto">Correcto</option>
+                                <option value="con_error">Con error</option>
                             </select>
                             <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" :placeholder="recepcionForms[p.id].recepcion_estado === 'con_error' ? 'Describir error' : 'Observacion opcional'" />
                             <div class="flex items-center justify-between gap-2">
@@ -1195,10 +1196,11 @@ const comprobanteTipoLabel = (tipo) => {
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
                                  <td class="sticky right-0 bg-white px-6 py-4 text-sm text-gray-700 min-w-[260px]">
                                      <div class="space-y-2">
-                                         <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                             <option value="correcto">Correcto</option>
-                                             <option value="con_error">Con error</option>
-                                         </select>
+                                          <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                              <option value="recibido">Recibido</option>
+                                              <option value="correcto">Correcto</option>
+                                              <option value="con_error">Con error</option>
+                                          </select>
                                          <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" :placeholder="recepcionForms[p.id].recepcion_estado === 'con_error' ? 'Describir error' : 'Observacion opcional'" />
                                          <div class="flex items-center justify-between gap-2">
                                              <div class="text-xs text-gray-500">
