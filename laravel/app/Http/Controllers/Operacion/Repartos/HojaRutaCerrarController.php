@@ -79,7 +79,10 @@ class HojaRutaCerrarController extends Controller
                         'moneda' => (string) ($item->cobro_moneda ?: $moneda),
                         'cotizacion_ars' => $tipoCambioResolver->resolver($empresa, (string) ($item->cobro_moneda ?: $moneda), $hoja->fecha->toDateString())['tasa_ars'],
                         'importe' => $importe,
-                        'detalle' => $item->cobro_detalle,
+                        'detalle' => array_merge((array) ($item->cobro_detalle ?? []), array_filter([
+                            'foto_remito_firmado' => $item->foto_remito_firmado,
+                            'foto_comprobante_pago' => $item->foto_comprobante_pago,
+                        ])),
                     ]);
 
                     if (($item->cobro_destino ?: 'a_factura') === 'a_cuenta') {

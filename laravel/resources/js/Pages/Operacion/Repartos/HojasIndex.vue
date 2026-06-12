@@ -8,6 +8,7 @@ import TextInput from '@/Components/TextInput.vue';
 const props = defineProps({
     hojas: Object,
     depositos: Array,
+    empresas: Array,
     filtros: Object,
     resumen: Object,
 });
@@ -17,6 +18,7 @@ const filterForm = useForm({
     hasta: props.filtros.hasta,
     estado: props.filtros.estado,
     deposito_id: props.filtros.deposito_id,
+    empresa_id: props.filtros.empresa_id,
 });
 
 const applyFilters = () => {
@@ -25,6 +27,7 @@ const applyFilters = () => {
         ...(filterForm.hasta && { hasta: filterForm.hasta }),
         ...(filterForm.estado && { estado: filterForm.estado }),
         ...(filterForm.deposito_id && { deposito_id: filterForm.deposito_id }),
+        ...(filterForm.empresa_id && { empresa_id: filterForm.empresa_id }),
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
@@ -51,7 +54,7 @@ const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
+                <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
                         <TextInput v-model="filterForm.desde" type="date" class="block w-full" />
@@ -73,6 +76,13 @@ const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
                         <select v-model="filterForm.deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">Todos</option>
                             <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Empresa</div>
+                        <select v-model="filterForm.empresa_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">Todas</option>
+                            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
                         </select>
                     </div>
                     <div>
@@ -116,6 +126,7 @@ const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Depósito</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empresa</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>
@@ -126,6 +137,7 @@ const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
                                 <td class="px-6 py-4 text-sm font-mono text-gray-900">#{{ h.id }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(h.fecha) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ h.deposito?.nombre || '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">{{ h.empresa?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ h.items?.length || 0 }}</td>
                                 <td class="px-6 py-4 text-sm">
                                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="h.estado === 'cerrada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">{{ h.estado }}</span>
@@ -135,7 +147,7 @@ const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
                                 </td>
                             </tr>
                             <tr v-if="!hojas.data.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin hojas de ruta.</td>
+                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">Sin hojas de ruta.</td>
                             </tr>
                         </tbody>
                     </table>

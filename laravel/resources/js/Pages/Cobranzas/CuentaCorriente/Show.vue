@@ -16,6 +16,9 @@ const props = defineProps({
     bancos: Array,
 });
 
+const roles = computed(() => page.props.tt?.roles || []);
+const esSoloCobrador = computed(() => roles.value.includes('cobrador') && !roles.value.includes('cobranzas_admin') && !roles.value.includes('admin'));
+
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
 const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
 
@@ -76,8 +79,9 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                 <div><div class="text-xs text-gray-500">Vencido +30</div><div class="text-sm font-medium" :class="saldos.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ saldos.vencido_30 }}</div></div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="grid grid-cols-1 gap-6" :class="esSoloCobrador ? '' : 'lg:grid-cols-3'">
+                <!-- Ajuste panel (solo cobranzas_admin/admin, no cobrador) -->
+                <div v-if="!esSoloCobrador" class="bg-white shadow sm:rounded-lg p-6">
                     <h3 class="text-base font-semibold text-gray-900">Generar ajuste</h3>
                     <div class="mt-4 space-y-3">
                         <select v-model="ajusteForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="ajuste_debito">Ajuste debito</option><option value="ajuste_credito">Ajuste credito</option></select>
@@ -93,7 +97,8 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                     </div>
                 </div>
 
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <!-- Nota panel (solo cobranzas_admin/admin, no cobrador) -->
+                <div v-if="!esSoloCobrador" class="bg-white shadow sm:rounded-lg p-6">
                     <h3 class="text-base font-semibold text-gray-900">Nota de debito / credito</h3>
                     <div class="mt-4 space-y-3">
                         <select v-model="notaForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="nota_debito_manual">Nota de debito</option><option value="nota_credito_manual">Nota de credito</option></select>

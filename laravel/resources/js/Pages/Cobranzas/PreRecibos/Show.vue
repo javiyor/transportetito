@@ -84,6 +84,12 @@ const formatFecha = (value) => {
                             </div>
                             <div class="text-xs text-gray-500">{{ it.moneda === 'ARS' ? '-' : it.cotizacion_ars }}</div>
                         </div>
+                        <template v-if="it.detalle?.foto_remito_firmado">
+                            <a :href="'/storage/' + it.detalle.foto_remito_firmado" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline block mt-2">Ver remito firmado</a>
+                        </template>
+                        <template v-if="it.detalle?.foto_comprobante_pago">
+                            <a :href="'/storage/' + it.detalle.foto_comprobante_pago" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline block">Ver comprobante pago</a>
+                        </template>
                         <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-auto whitespace-pre-wrap">{{ it.detalle ? JSON.stringify(it.detalle, null, 2) : '' }}</pre>
                     </div>
                 </div>
@@ -104,7 +110,13 @@ const formatFecha = (value) => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.moneda }} {{ it.importe }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.moneda === 'ARS' ? '-' : it.cotizacion_ars }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
-                                    <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-auto">{{ it.detalle ? JSON.stringify(it.detalle, null, 2) : '' }}</pre>
+                                    <template v-if="it.detalle?.foto_remito_firmado">
+                                        <a :href="'/storage/' + it.detalle.foto_remito_firmado" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline block">Ver remito firmado</a>
+                                    </template>
+                                    <template v-if="it.detalle?.foto_comprobante_pago">
+                                        <a :href="'/storage/' + it.detalle.foto_comprobante_pago" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline block">Ver comprobante pago</a>
+                                    </template>
+                                    <pre v-if="it.detalle" class="text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-auto mt-1">{{ JSON.stringify(it.detalle, null, 2) }}</pre>
                                 </td>
                             </tr>
 

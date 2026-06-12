@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\HojaRutaItem;
 use App\Models\Deposito;
 use App\Models\Empresa;
+use App\Models\PreRecibo;
 use App\Models\User;
 
 class HojaRuta extends Model
@@ -60,5 +61,10 @@ class HojaRuta extends Model
     public function items(): HasMany
     {
         return $this->hasMany(HojaRutaItem::class, 'hoja_ruta_id')->orderBy('orden');
+    }
+
+    public function preRecibos(): HasMany
+    {
+        return $this->hasMany(PreRecibo::class, 'hoja_ruta_id');
     }
 }

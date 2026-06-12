@@ -20,6 +20,9 @@ const props = defineProps({
     cantidadPreRecibos: Number,
     cantidadOrdenes: Number,
     cantidadAsientos: Number,
+    hojas: Array,
+    cantidadHojas: Number,
+    totalGeneralHojas: Number,
 });
 
 const form = useForm({
@@ -140,6 +143,50 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                         </div>
                     </div>
                     <p v-else class="text-sm text-gray-400">Sin asientos contables en el periodo.</p>
+                </div>
+            </div>
+
+            <div v-if="hojas?.length" class="bg-white shadow sm:rounded-lg overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-base font-semibold text-gray-900">Control hojas de reparto</h3>
+                    <p class="text-xs text-gray-500 mt-1">{{ cantidadHojas }} hojas en el periodo</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehículo</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrado items</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pre-recibos</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="h in hojas" :key="h.id">
+                                <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{{ h.fecha }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ h.chofer || '—' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ h.vehiculo || '—' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700 text-center">{{ h.cantidad_items }}</td>
+                                <td class="px-4 py-3 text-sm font-mono text-right">${{ Number(h.total_items_cobrado).toFixed(2) }}</td>
+                                <td class="px-4 py-3 text-sm font-mono text-right">${{ Number(h.total_pre_recibos).toFixed(2) }}</td>
+                                <td class="px-4 py-3 text-sm font-mono font-semibold text-right">${{ Number(h.total_general).toFixed(2) }}</td>
+                                <td class="px-4 py-3 text-sm text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="h.estado === 'cerrado' ? 'bg-green-100 text-green-800' : h.estado === 'en_viaje' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'">{{ h.estado }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="bg-gray-50">
+                            <tr>
+                                <td colspan="6" class="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Total general hojas</td>
+                                <td class="px-4 py-3 text-sm font-mono font-bold text-right text-gray-900">${{ Number(totalGeneralHojas).toFixed(2) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
 

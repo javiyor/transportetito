@@ -36,7 +36,15 @@
                     <td>{{ $item->medio }}</td>
                     <td>{{ $item->moneda }} {{ number_format((float) $item->importe, 2, ',', '.') }}</td>
                     <td>{{ $item->moneda === 'ARS' ? '-' : number_format((float) $item->cotizacion_ars, 6, ',', '.') }}</td>
-                    <td>{{ $item->detalle ? json_encode($item->detalle, JSON_UNESCAPED_UNICODE) : '' }}</td>
+                    <td>
+                        @if (!empty($item->detalle['foto_remito_firmado']))
+                            <a href="{{ asset('storage/'.$item->detalle['foto_remito_firmado']) }}" target="_blank">Ver remito firmado</a><br>
+                        @endif
+                        @if (!empty($item->detalle['foto_comprobante_pago']))
+                            <a href="{{ asset('storage/'.$item->detalle['foto_comprobante_pago']) }}" target="_blank">Ver comprobante pago</a><br>
+                        @endif
+                        {{ $item->detalle ? json_encode($item->detalle, JSON_UNESCAPED_UNICODE) : '' }}
+                    </td>
                 </tr>
             @endforeach
         </tbody>

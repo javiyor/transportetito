@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
@@ -49,15 +50,24 @@ class ProveedorCuentaCorrienteShowController extends Controller
         $ordenesPago = OrdenPago::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)
+            ->with('cheque')
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->get();
+
+        $chequesDisponibles = Cheque::query()
+            ->where('empresa_id', $empresaId)
+            ->where('origen', 'tercero')
+            ->where('estado', 'en_cartera')
+            ->orderByDesc('fecha_vencimiento')
+            ->get(['id', 'numero', 'banco', 'importe', 'moneda', 'fecha_vencimiento', 'titular', 'librado_por']);
 
         return Inertia::render('Compras/Proveedores/CuentaCorriente/Show', [
             'cuenta' => $cuenta,
             'movimientos' => $movimientos,
             'comprobantes' => $comprobantes,
             'ordenesPago' => $ordenesPago,
+            'chequesDisponibles' => $chequesDisponibles,
             'saldoTotal' => round((float) $movimientos->sum('importe_signed'), 2),
         ]);
     }

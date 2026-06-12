@@ -191,6 +191,8 @@ Route::middleware([
         Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');
         Route::post('/import/carga', [ImportCargaController::class, 'store'])->name('import.carga.store');
 
+        Route::middleware(['role:operaciones|facturacion|admin'])->get('/fletes', \App\Http\Controllers\Operacion\FleteIndexController::class)->name('fletes.index');
+
         Route::middleware(['role:operaciones'])->prefix('repartos')->name('repartos.')->group(function () {
             Route::get('/facturas', FacturasListController::class)->name('facturas');
             Route::get('/hojas', HojaRutaIndexController::class)->name('hojas.index');

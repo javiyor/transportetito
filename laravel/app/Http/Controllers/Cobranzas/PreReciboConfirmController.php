@@ -19,7 +19,9 @@ class PreReciboConfirmController extends Controller
             return redirect()->route('cobranzas.pre-recibos.show', $preRecibo);
         }
 
-        $confirmer->confirm($preRecibo, (int) $request->user()->id);
+        $recibo = $confirmer->confirm($preRecibo, (int) $request->user()->id);
+
+        $confirmer->sendEmail($recibo);
 
         return redirect()
             ->route('cobranzas.pre-recibos.show', $preRecibo)

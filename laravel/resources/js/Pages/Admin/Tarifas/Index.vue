@@ -138,16 +138,16 @@ const terceroLabel = (t) => `${t.razon_social} · CUIT ${t.cuit}`;
                     </div>
                     <div>
                         <InputLabel value="Remitente" />
-                        <select v-model="createForm.remitente_tercero_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                            <option value="" disabled>(seleccionar)</option>
+                        <select v-model="createForm.remitente_tercero_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Global (cualquier relación)</option>
                             <option v-for="t in terceros" :key="t.id" :value="t.id">{{ terceroLabel(t) }}</option>
                         </select>
                         <InputError class="mt-2" :message="createForm.errors.remitente_tercero_id" />
                     </div>
                     <div>
                         <InputLabel value="Destinatario" />
-                        <select v-model="createForm.destinatario_tercero_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                            <option value="" disabled>(seleccionar)</option>
+                        <select v-model="createForm.destinatario_tercero_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Global (cualquier relación)</option>
                             <option v-for="t in terceros" :key="t.id" :value="t.id">{{ terceroLabel(t) }}</option>
                         </select>
                         <InputError class="mt-2" :message="createForm.errors.destinatario_tercero_id" />
@@ -249,8 +249,8 @@ const terceroLabel = (t) => `${t.razon_social} · CUIT ${t.cuit}`;
                             <tr v-for="t in tarifas" :key="t.id">
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ t.empresa?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900">
-                                    <div class="font-medium">{{ t.remitente?.razon_social || '-' }} → {{ t.destinatario?.razon_social || '-' }}</div>
-                                    <div class="text-xs text-gray-500">CUIT {{ t.remitente?.cuit || '-' }} → {{ t.destinatario?.cuit || '-' }}</div>
+                                    <div class="font-medium">{{ t.remitente?.razon_social || '(Global)' }} → {{ t.destinatario?.razon_social || '(Global)' }}</div>
+                                    <div class="text-xs text-gray-500">{{ t.remitente ? 'CUIT ' + t.remitente.cuit : 'Cualquier remitente' }} → {{ t.destinatario ? 'CUIT ' + t.destinatario.cuit : 'Cualquier destinatario' }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ t.moneda }}</td>
                                 <td class="px-6 py-4 text-xs text-gray-700">

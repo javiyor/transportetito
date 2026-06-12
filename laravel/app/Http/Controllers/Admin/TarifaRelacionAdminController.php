@@ -40,8 +40,8 @@ class TarifaRelacionAdminController extends Controller
     {
         $data = $request->validate([
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
-            'remitente_tercero_id' => ['required', 'integer', 'exists:terceros,id'],
-            'destinatario_tercero_id' => ['required', 'integer', 'exists:terceros,id', 'different:remitente_tercero_id'],
+            'remitente_tercero_id' => ['nullable', 'integer', 'exists:terceros,id'],
+            'destinatario_tercero_id' => ['nullable', 'integer', 'exists:terceros,id'],
             'moneda' => ['required', 'string', 'max:8'],
 
             'tarifa_bulto' => ['required', 'numeric', 'min:0'],
@@ -64,8 +64,8 @@ class TarifaRelacionAdminController extends Controller
         TarifaRelacion::query()->updateOrCreate(
             [
                 'empresa_id' => (int) $data['empresa_id'],
-                'remitente_tercero_id' => (int) $data['remitente_tercero_id'],
-                'destinatario_tercero_id' => (int) $data['destinatario_tercero_id'],
+                'remitente_tercero_id' => ! empty($data['remitente_tercero_id']) ? (int) $data['remitente_tercero_id'] : null,
+                'destinatario_tercero_id' => ! empty($data['destinatario_tercero_id']) ? (int) $data['destinatario_tercero_id'] : null,
             ],
             $data
         );

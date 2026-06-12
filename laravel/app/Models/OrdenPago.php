@@ -20,6 +20,7 @@ class OrdenPago extends Model
         'fecha',
         'medio',
         'detalle',
+        'cheque_id',
         'observacion',
         'creado_por_user_id',
     ];
@@ -40,5 +41,10 @@ class OrdenPago extends Model
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+    public function cheque(): BelongsTo
+    {
+        return $this->belongsTo(Cheque::class);
     }
 }

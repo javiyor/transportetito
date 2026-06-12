@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion\Repartos;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\HojaRuta;
 use App\Models\Deposito;
 use Illuminate\Http\Request;
@@ -15,8 +16,11 @@ class HojaRutaIndexController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
         $query = HojaRuta::query()
-            ->with(['deposito:id,nombre', 'items:id,hoja_ruta_id,cobro_estado,cobro_medio,cobro_importe'])
-            ->where('empresa_id', $empresaId);
+            ->with(['deposito:id,nombre', 'empresa:id,razon_social', 'items:id,hoja_ruta_id,cobro_estado,cobro_medio,cobro_importe']);
+
+        if ($empresaFiltro = (int) ($request->query('empresa_id') ?: 0)) {
+            $query->where('empresa_id', $empresaFiltro);
+        }
 
         if ($desde = $request->query('desde')) {
             $query->whereDate('fecha', '>=', $desde);
@@ -58,14 +62,18 @@ class HojaRutaIndexController extends Controller
         $resumen['total_cobrado'] = round($resumen['total_cobrado'], 2);
         $resumen['por_medio'] = collect($resumen['por_medio'])->map(fn ($v) => round($v, 2))->sortDesc()->toArray();
 
+        $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']);
+
         return Inertia::render('Operacion/Repartos/HojasIndex', [
             'hojas' => $hojas,
             'depositos' => Deposito::query()->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre']),
+            'empresas' => $empresas,
             'filtros' => [
                 'desde' => $request->query('desde') ?: '',
                 'hasta' => $request->query('hasta') ?: '',
                 'estado' => $request->query('estado') ?: '',
                 'deposito_id' => $request->query('deposito_id') ?: '',
+                'empresa_id' => $request->query('empresa_id') ?: '',
             ],
             'resumen' => $resumen,
         ]);

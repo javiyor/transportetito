@@ -111,6 +111,30 @@
         <p style="color: #6b7280;">Sin asientos contables en el periodo.</p>
     @endif
 
+    <h2>Control hojas de reparto</h2>
+    @if($hojas->count())
+    <table>
+        <thead><tr><th>Fecha</th><th>Chofer</th><th>Vehículo</th><th class="num">Items</th><th class="num">Cobrado items</th><th class="num">Pre-recibos</th><th class="num">Total</th><th>Estado</th></tr></thead>
+        <tbody>
+            @foreach($hojas as $h)
+                <tr>
+                    <td>{{ $h->fecha }}</td>
+                    <td>{{ $h->chofer ?? '—' }}</td>
+                    <td>{{ $h->vehiculo ?? '—' }}</td>
+                    <td class="num">{{ $h->cantidad_items }}</td>
+                    <td class="num">${{ number_format($h->total_items_cobrado, 2, ',', '.') }}</td>
+                    <td class="num">${{ number_format($h->total_pre_recibos, 2, ',', '.') }}</td>
+                    <td class="num">${{ number_format($h->total_general, 2, ',', '.') }}</td>
+                    <td>{{ $h->estado }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+        <tfoot><tr class="total-row"><td colspan="6" style="text-align: right;">Total general hojas</td><td class="num">${{ number_format($totalGeneralHojas, 2, ',', '.') }}</td><td></td></tr></tfoot>
+    </table>
+    @else
+        <p style="color: #6b7280;">Sin hojas de reparto en el periodo.</p>
+    @endif
+
     <h2>Asientos por mes</h2>
     @if($resumenPorMes->count())
     <table>

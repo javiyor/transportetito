@@ -12,6 +12,7 @@ import { ref } from 'vue';
 const props = defineProps({
     zonas: Array,
     localidades: Array,
+    empresas: Array,
     filters: Object,
     facturas: Array,
     vehiculos: Array,
@@ -24,6 +25,7 @@ const filterForm = useForm({
     localidad: props.filters?.localidad || '',
     fecha: props.filters?.fecha || '',
     tipo: props.filters?.tipo || 'todos',
+    empresa_id: props.filters?.empresa_id || '',
     comprobante_ids: [],
 });
 
@@ -61,7 +63,7 @@ const submitCreate = () => {
 const applyFilters = () => {
     router.get(
         route('operacion.repartos.facturas'),
-        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos' },
+        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos', empresa_id: filterForm.empresa_id || null },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -92,7 +94,7 @@ const toggleAll = (checked) => {
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Zona</div>
                         <select v-model="filterForm.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
@@ -119,6 +121,13 @@ const toggleAll = (checked) => {
                             <option value="guia_envio">Guias</option>
                         </select>
                     </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Empresa</div>
+                        <select v-model="filterForm.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                            <option value="">Todas</option>
+                            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
+                        </select>
+                    </div>
                     <div class="flex items-end justify-end">
                         <SecondaryButton type="button" @click="applyFilters">Aplicar</SecondaryButton>
                     </div>
@@ -142,6 +151,7 @@ const toggleAll = (checked) => {
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">#{{ f.id }}</div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(f.tipo) }}</div>
+                                <div v-if="f.empresa" class="text-xs text-gray-400">{{ f.empresa.razon_social }}</div>
                             </div>
                             <Checkbox v-model:checked="filterForm.comprobante_ids" :value="f.id" />
                         </div>
@@ -175,6 +185,7 @@ const toggleAll = (checked) => {
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
@@ -188,6 +199,7 @@ const toggleAll = (checked) => {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ f.id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ tipoLabel(f.tipo) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ f.empresa?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ f.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                     <div class="text-xs text-gray-500">CUIT {{ f.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ f.entrega_cuenta?.numero_cliente || '-' }}</div>
@@ -198,7 +210,7 @@ const toggleAll = (checked) => {
                                 <td class="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">Seleccionar</td>
                             </tr>
                             <tr v-if="!facturas.length">
-                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
+                                <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>

@@ -9,9 +9,12 @@ use App\Models\CtaCteMovimiento;
 use App\Models\CuentaContable;
 use App\Models\PreRecibo;
 use App\Models\Recibo;
+use App\Mail\ReciboConfirmadoMail;
 use App\Models\ReciboAplicacion;
 use App\Models\ReciboItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PreReciboConfirmer
 {
@@ -98,6 +101,22 @@ class PreReciboConfirmer
 
             return $recibo;
         });
+    }
+
+    public function sendEmail(Recibo $recibo): void
+    {
+        try {
+            $cuenta = $recibo->cuenta()->with('tercero:id,razon_social,cuit')->first();
+            $email = $cuenta?->email;
+            if ($email) {
+                Mail::to($email)->send(new ReciboConfirmadoMail($recibo));
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error enviando email de recibo', [
+                'recibo_id' => $recibo->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function createAsiento(PreRecibo $preRecibo, Recibo $recibo): void

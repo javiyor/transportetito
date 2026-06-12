@@ -36,7 +36,6 @@ class HojaRutaStoreController extends Controller
         ]);
 
         $comprobantes = Comprobante::query()
-            ->where('empresa_id', $empresaId)
             ->whereIn('id', $data['comprobante_ids'])
             ->get();
 

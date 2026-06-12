@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
 use App\Models\CuentaContable;
+use App\Models\HojaRuta;
 use App\Models\OrdenPago;
 use App\Models\PreRecibo;
 use App\Models\Recibo;
@@ -101,6 +102,43 @@ class CierreCajaController extends Controller
         $totalDebe = round($asientos->flatMap->lineas->sum('debe'), 2);
         $totalHaber = round($asientos->flatMap->lineas->sum('haber'), 2);
 
+        $hojas = HojaRuta::query()
+            ->where('empresa_id', $empresaId)
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->with(['chofer', 'vehiculo'])
+            ->withCount('items')
+            ->withSum('items as total_items_cobrado', 'importe_cobrado')
+            ->orderBy('fecha')
+            ->get();
+
+        $hojaIds = $hojas->pluck('id');
+
+        $preRecibosSumPorHoja = PreRecibo::query()
+            ->whereIn('hoja_ruta_id', $hojaIds)
+            ->where('estado', 'confirmado')
+            ->groupBy('hoja_ruta_id')
+            ->selectRaw('hoja_ruta_id, SUM(total) as total')
+            ->pluck('total', 'hoja_ruta_id');
+
+        $hojasData = $hojas->map(function ($hoja) use ($preRecibosSumPorHoja): array {
+            $totalItemsCobrado = round((float) ($hoja->total_items_cobrado ?? 0), 2);
+            $totalPreRecibos = round((float) ($preRecibosSumPorHoja[$hoja->id] ?? 0), 2);
+
+            return [
+                'id' => $hoja->id,
+                'fecha' => $hoja->fecha?->format('Y-m-d'),
+                'estado' => $hoja->estado,
+                'chofer' => $hoja->chofer?->name,
+                'vehiculo' => $hoja->vehiculo?->patente ?? $hoja->vehiculo?->descripcion,
+                'cantidad_items' => $hoja->items_count,
+                'total_items_cobrado' => $totalItemsCobrado,
+                'total_pre_recibos' => $totalPreRecibos,
+                'total_general' => round($totalItemsCobrado + $totalPreRecibos, 2),
+            ];
+        })->values();
+
+        $totalGeneralHojas = round($hojasData->sum('total_general'), 2);
+
         return Inertia::render('Cobranzas/Cierre/Index', [
             'desde' => $desde,
             'hasta' => $hasta,
@@ -119,6 +157,9 @@ class CierreCajaController extends Controller
             'cantidadPreRecibos' => $preRecibos->count(),
             'cantidadOrdenes' => $ordenesPago->count(),
             'cantidadAsientos' => $asientos->count(),
+            'hojas' => $hojasData,
+            'cantidadHojas' => $hojas->count(),
+            'totalGeneralHojas' => $totalGeneralHojas,
         ]);
     }
 }

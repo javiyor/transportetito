@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Operacion\Repartos;
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
 use App\Models\Deposito;
+use App\Models\Empresa;
 use App\Models\TerceroCuenta;
 use App\Models\User;
 use App\Models\Vehiculo;
@@ -25,6 +26,9 @@ class FacturasListController extends Controller
         if ($fecha === '') {
             $fecha = null;
         }
+        $empresaFiltro = (int) ($request->query('empresa_id') ?: 0);
+
+        $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']);
 
         $zonas = Zona::query()
             ->where('empresa_id', $empresaId)
@@ -42,13 +46,17 @@ class FacturasListController extends Controller
 
         $query = Comprobante::query()
             ->with([
+                'empresa:id,razon_social',
                 'entregaCuenta.tercero:id,cuit,razon_social',
                 'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta,direccion,localidad,cp,telefono,zona_id',
             ])
-            ->where('empresa_id', $empresaId)
             ->where('estado', 'emitida')
             ->whereDoesntHave('hojaRutaItems', fn ($q) => $q->where('estado_entrega', 'entregado'))
             ->orderBy('id');
+
+        if ($empresaFiltro > 0) {
+            $query->where('empresa_id', $empresaFiltro);
+        }
 
         if ($fecha) {
             $query->whereDate('fecha_emision', $fecha);
@@ -71,11 +79,13 @@ class FacturasListController extends Controller
         return Inertia::render('Operacion/Repartos/Facturas', [
             'zonas' => $zonas,
             'localidades' => $localidades,
+            'empresas' => $empresas,
             'filters' => [
                 'zona_id' => $zonaId ?: null,
                 'localidad' => $localidad !== '' ? $localidad : null,
                 'fecha' => $fecha,
                 'tipo' => $tipo,
+                'empresa_id' => $empresaFiltro ?: null,
             ],
             'facturas' => $comprobantes,
             'vehiculos' => Vehiculo::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('patente')->get(['id', 'patente', 'marca', 'modelo']),

@@ -34,6 +34,15 @@ class TarifaResolver
             ->first();
 
         if (! $tarifa) {
+            $tarifa = TarifaRelacion::query()
+                ->where('empresa_id', $empresaId)
+                ->whereNull('remitente_tercero_id')
+                ->whereNull('destinatario_tercero_id')
+                ->where('activo', true)
+                ->first();
+        }
+
+        if (! $tarifa) {
             return self::DEFAULTS;
         }
 
