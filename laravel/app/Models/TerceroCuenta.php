@@ -31,6 +31,7 @@ class TerceroCuenta extends Model
         'cp',
         'telefono',
         'email',
+        'whatsapp_numero',
         'enviar_comprobantes_por_email',
         'cobrador_user_id',
         'activo',

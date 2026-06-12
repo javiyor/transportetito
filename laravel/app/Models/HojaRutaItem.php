@@ -38,6 +38,10 @@ class HojaRutaItem extends Model
         'fecha_entrega',
         'firma_recibo',
         'firma_recibo_at',
+        'forma_pago',
+        'importe_cobrado',
+        'foto_comprobante_pago',
+        'foto_remito_firmado',
     ];
 
     protected $casts = [
@@ -47,6 +51,7 @@ class HojaRutaItem extends Model
         'cobro_registrado_at' => 'datetime',
         'fecha_entrega' => 'datetime',
         'firma_recibo_at' => 'datetime',
+        'importe_cobrado' => 'decimal:2',
     ];
 
     public function hojaRuta(): BelongsTo

@@ -23,10 +23,13 @@ class HojaRuta extends Model
         'vehiculo_id',
         'zona_id',
         'observaciones',
+        'observacion_reparto',
+        'notificaciones_enviadas',
     ];
 
     protected $casts = [
         'fecha' => 'date',
+        'notificaciones_enviadas' => 'array',
     ];
 
     public function empresa(): BelongsTo

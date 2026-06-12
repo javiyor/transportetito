@@ -7,12 +7,11 @@ use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Services\WhatsApp\WhatsAppClient::class, function () {
+            return new \App\Services\WhatsApp\WhatsAppClient;
+        });
     }
 
     /**

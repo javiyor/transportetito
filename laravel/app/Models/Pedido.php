@@ -26,10 +26,12 @@ class Pedido extends Model
         'remito_numero',
         'remito_interno_pv',
         'remito_interno_nro',
+        'numero_hoja_ruta_origen',
         'bultos',
         'unidad',
         'palets',
         'valor_declarado',
+        'foto_bultos',
         'es_devolucion',
         'cr_importe',
         'estado',
@@ -41,6 +43,10 @@ class Pedido extends Model
         'recepcion_observacion',
         'recepcion_controlado_at',
         'recepcion_controlado_por_user_id',
+        'recepcion_corregido_por_user_id',
+        'recepcion_corregido_at',
+        'recepcion_facturacion_estado',
+        'recepcion_facturacion_observacion',
     ];
 
     protected $casts = [
@@ -50,6 +56,7 @@ class Pedido extends Model
         'external_facturado' => 'bool',
         'external_retiro' => 'bool',
         'recepcion_controlado_at' => 'datetime',
+        'recepcion_corregido_at' => 'datetime',
     ];
 
     public function manifiestoIngreso(): BelongsTo

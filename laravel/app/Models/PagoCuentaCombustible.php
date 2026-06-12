@@ -15,6 +15,7 @@ class PagoCuentaCombustible extends Model
         'moneda',
         'cotizacion_ars',
         'importe',
+        'monto_fijo_mes',
         'referencia',
         'proveedor',
         'observacion',
@@ -25,6 +26,7 @@ class PagoCuentaCombustible extends Model
         'fecha' => 'date',
         'cotizacion_ars' => 'decimal:6',
         'importe' => 'decimal:2',
+        'monto_fijo_mes' => 'decimal:2',
     ];
 
     public function empresa(): BelongsTo
