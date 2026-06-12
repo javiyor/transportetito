@@ -1160,79 +1160,77 @@ const comprobanteTipoLabel = (tipo) => {
                 </div>
 
                 <div class="mt-4 hidden lg:block overflow-x-auto">
-                    <table class="min-w-[1800px] w-full divide-y divide-gray-200">
+                    <table class="min-w-[1400px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Hoja Ruta</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paga</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
-                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
-                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
-                                 <th class="sticky right-0 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
-                                 <th class="sticky right-0 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correccion</th>
-                                 <th class="sticky right-0 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturacion</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Hoja Ruta</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
+                                 <th class="sticky right-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correccion</th>
+                                 <th class="sticky right-0 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturacion</th>
                              </tr>
                          </thead>
                          <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="p in pedidosVisibles" :key="p.id" :class="p.recepcion_estado === 'con_error' ? 'bg-red-50' : (p.recepcion_estado === 'correcto' ? 'bg-green-50/40' : '')">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ p.id }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.numero_hoja_ruta_origen || '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ p.id }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-1">
+                                        <select v-model="recepcionForms[p.id].recepcion_estado" class="border-gray-300 rounded text-xs py-1 px-1 w-24 focus:border-indigo-500 focus:ring-indigo-500">
+                                            <option value="recibido">Recibido</option>
+                                            <option value="correcto">Correcto</option>
+                                            <option value="con_error">Con error</option>
+                                        </select>
+                                        <button type="button" class="inline-flex items-center px-2 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50" :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">✓</button>
+                                    </div>
+                                    <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="mt-1">
+                                        <input v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Describir error" />
+                                        <InputError class="mt-0.5" :message="recepcionForms[p.id].errors.recepcion_observacion" />
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-0.5">
+                                        <span v-if="p.recepcion_controlado_at">{{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
+                                        <span v-else>Sin control</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.numero_hoja_ruta_origen || '-' }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
                                     <div class="text-xs text-gray-500">{{ p.remitente?.cuit || '' }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ p.destinatario?.razon_social || '-' }}</div>
                                     <div class="text-xs text-gray-500">{{ p.destinatario?.cuit || '' }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.paga }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.bultos }}</td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.palets }}</td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.valor_declarado }}</td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
-                                 <td class="sticky right-0 bg-white px-6 py-4 text-sm text-gray-700 min-w-[260px]">
-                                     <div class="space-y-2">
-                                          <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                              <option value="recibido">Recibido</option>
-                                              <option value="correcto">Correcto</option>
-                                              <option value="con_error">Con error</option>
-                                          </select>
-                                         <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" :placeholder="recepcionForms[p.id].recepcion_estado === 'con_error' ? 'Describir error' : 'Observacion opcional'" />
-                                         <div class="flex items-center justify-between gap-2">
-                                             <div class="text-xs text-gray-500">
-                                                 <span v-if="p.recepcion_controlado_at">Control: {{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 16) }}</span>
-                                                 <span v-else>Sin control</span>
-                                             </div>
-                                             <PrimaryButton :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">Guardar</PrimaryButton>
-                                         </div>
-                                         <InputError class="mt-1" :message="recepcionForms[p.id].errors.recepcion_observacion" />
-                                     </div>
-                                 </td>
-                                 <td class="sticky right-0 bg-white px-6 py-4 text-sm text-gray-700 min-w-[260px]">
-                                     <div v-if="p.recepcion_estado === 'con_error' && canFacturar" class="space-y-2">
-                                         <TextInput v-model="correccionForms[p.id].bultos" type="number" min="0" class="block w-full" placeholder="Bultos" />
-                                         <TextInput v-model="correccionForms[p.id].palets" type="number" min="0" class="block w-full" placeholder="Palets" />
-                                         <TextInput v-model="correccionForms[p.id].valor_declarado" type="number" min="0" step="0.01" class="block w-full" placeholder="Valor declarado" />
-                                         <TextInput v-model="correccionForms[p.id].observacion" type="text" class="block w-full" placeholder="Observacion" />
-                                         <div class="flex items-center justify-between gap-2">
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700 text-center">{{ p.bultos }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700 text-center">{{ p.palets }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm font-mono text-gray-700">${{ Number(p.valor_declarado).toFixed(2) }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
+                                 <td class="sticky right-0 bg-white px-4 py-4 text-sm text-gray-700 min-w-[220px]">
+                                     <div v-if="p.recepcion_estado === 'con_error' && canFacturar" class="space-y-1">
+                                         <input v-model="correccionForms[p.id].bultos" type="number" min="0" class="block w-full border-gray-300 rounded text-xs py-1" placeholder="Bultos" />
+                                         <input v-model="correccionForms[p.id].palets" type="number" min="0" class="block w-full border-gray-300 rounded text-xs py-1" placeholder="Palets" />
+                                         <input v-model="correccionForms[p.id].valor_declarado" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded text-xs py-1" placeholder="Valor declarado" />
+                                         <input v-model="correccionForms[p.id].observacion" type="text" class="block w-full border-gray-300 rounded text-xs py-1" placeholder="Observacion" />
+                                         <div class="flex items-center justify-between gap-2 pt-1">
                                              <span v-if="p.recepcion_corregido_at" class="text-xs text-green-700">Corregido</span>
-                                             <PrimaryButton :disabled="correccionForms[p.id].processing" @click.prevent="corregirPedido(p.id)">Marcar corregido</PrimaryButton>
+                                             <button type="button" class="inline-flex items-center px-2 py-1 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-green-700 disabled:opacity-50" :disabled="correccionForms[p.id].processing" @click.prevent="corregirPedido(p.id)">Marcar corregido</button>
                                          </div>
                                      </div>
                                      <div v-else class="text-xs text-gray-500">
                                          {{ p.recepcion_corregido_at ? 'Corregido' : 'Sin correcciones' }}
                                      </div>
                                  </td>
-                                 <td class="sticky right-0 bg-white px-6 py-4 text-sm text-gray-700 min-w-[260px]">
-                                     <div v-if="p.recepcion_corregido_at && canFacturar" class="space-y-2">
+                                 <td class="sticky right-0 bg-white px-4 py-4 text-sm text-gray-700 min-w-[220px]">
+                                     <div v-if="p.recepcion_corregido_at && canFacturar" class="space-y-1">
                                          <div v-if="p.foto_bultos" class="text-xs text-green-700">Foto adjuntada</div>
                                          <div v-else>
                                              <input type="file" accept="image/*" class="block w-full text-xs" @change="seleccionarArchivo(p.id, $event)" />
-                                             <PrimaryButton v-if="fotoForms[p.id].foto_bultos" :disabled="fotoForms[p.id].processing" class="mt-1 text-xs" @click.prevent="adjuntarFoto(p.id)">Subir foto</PrimaryButton>
+                                             <button v-if="fotoForms[p.id].foto_bultos" type="button" class="mt-1 inline-flex items-center px-2 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-indigo-700 disabled:opacity-50" :disabled="fotoForms[p.id].processing" @click.prevent="adjuntarFoto(p.id)">Subir foto</button>
                                          </div>
                                          <div class="flex items-center gap-2 pt-1">
                                              <select v-model="facturacionForms[p.id].recepcion_facturacion_estado" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
@@ -1240,7 +1238,7 @@ const comprobanteTipoLabel = (tipo) => {
                                                  <option value="facturado">Facturar</option>
                                                  <option value="devuelto">Devolver</option>
                                              </select>
-                                             <PrimaryButton :disabled="facturacionForms[p.id].processing || !facturacionForms[p.id].recepcion_facturacion_estado" class="text-xs whitespace-nowrap" @click.prevent="marcarFacturacion(p.id)">Confirmar</PrimaryButton>
+                                             <button type="button" class="inline-flex items-center px-2 py-1 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-green-700 disabled:opacity-50" :disabled="facturacionForms[p.id].processing || !facturacionForms[p.id].recepcion_facturacion_estado" @click.prevent="marcarFacturacion(p.id)">Confirmar</button>
                                          </div>
                                          <div v-if="p.recepcion_facturacion_estado" class="text-xs font-medium" :class="p.recepcion_facturacion_estado === 'facturado' ? 'text-green-700' : 'text-red-700'">
                                              {{ p.recepcion_facturacion_estado === 'facturado' ? 'Facturado' : 'Devuelto' }}
@@ -1251,7 +1249,7 @@ const comprobanteTipoLabel = (tipo) => {
                              </tr>
 
                              <tr v-if="!pedidosVisibles.length">
-                                 <td colspan="12" class="px-6 py-10 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
+                                 <td colspan="11" class="px-4 py-10 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
                              </tr>
                         </tbody>
                     </table>
