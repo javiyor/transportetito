@@ -33,6 +33,6 @@ RUN pecl install redis && docker-php-ext-enable redis
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # php.ini
 COPY php.ini /usr/local/etc/php/conf.d/99-app.ini
-# PHP-FPM pool config (limit workers to avoid OOM)
-COPY www.conf /usr/local/etc/php-fpm.d/www.conf
+# PHP-FPM pool tuning (zz- loads after www.conf, overrides only these values)
+RUN { echo '[www]'; echo 'pm.max_children = 3'; echo 'pm.start_servers = 1'; echo 'pm.min_spare_servers = 1'; echo 'pm.max_spare_servers = 2'; echo 'pm.max_requests = 200'; } > /usr/local/etc/php-fpm.d/zz-app.conf
 CMD ["php-fpm"]
