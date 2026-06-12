@@ -8,9 +8,11 @@ use App\Models\Deposito;
 use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
+use App\Models\Pedido;
 use App\Models\TarifaRelacion;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Moneda\TipoCambioResolver;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -114,11 +116,92 @@ class ManifiestoIngresoController extends Controller
             }
         }
 
+        $pedidosPendientes = Pedido::query()
+            ->where('estado', 'en_deposito')
+            ->whereNull('manifiesto_ingreso_id')
+            ->with([
+                'remitente:id,cuit,razon_social',
+                'destinatario:id,cuit,razon_social',
+                'remitenteCuenta.tercero:id,razon_social,cuit',
+                'destinatarioCuenta.tercero:id,razon_social,cuit',
+            ])
+            ->orderByDesc('id')
+            ->get();
+
+        $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']);
+
         return Inertia::render('Operacion/Manifiestos/Show', [
             'manifiesto' => $manifiesto,
             'comprobantes' => $comprobantes,
             'tarifas' => $tarifas,
             'cotizacionesReferencia' => $cotizacionesReferencia,
+            'pedidosPendientes' => $pedidosPendientes,
+            'empresas' => $empresas,
         ]);
+    }
+
+    public function corregirPedido(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
+    {
+        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
+        abort_unless((int) $manifiesto->empresa_id === $empresaId, 404);
+
+        $data = $request->validate([
+            'bultos' => ['nullable', 'integer', 'min:0'],
+            'palets' => ['nullable', 'integer', 'min:0'],
+            'valor_declarado' => ['nullable', 'numeric', 'min:0'],
+            'observacion' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $pedido->update([
+            'bultos' => $data['bultos'] ?? $pedido->bultos,
+            'palets' => $data['palets'] ?? $pedido->palets,
+            'valor_declarado' => $data['valor_declarado'] ?? $pedido->valor_declarado,
+            'observacion' => $data['observacion'] ?? $pedido->observacion,
+            'recepcion_corregido_por_user_id' => $request->user()->id,
+            'recepcion_corregido_at' => now(),
+        ]);
+
+        return back()->with('success', 'Pedido corregido.');
+    }
+
+    public function adjuntarFotoBultos(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
+    {
+        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
+        abort_unless((int) $manifiesto->empresa_id === $empresaId, 404);
+
+        $data = $request->validate([
+            'foto_bultos' => ['required', 'image', 'max:10240'],
+        ]);
+
+        $path = $data['foto_bultos']->store('fotos-bultos', 'public');
+
+        $pedido->update(['foto_bultos' => $path]);
+
+        return back()->with('success', 'Foto de bultos adjuntada.');
+    }
+
+    public function asignarPedido(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
+    {
+        $pedido->update(['manifiesto_ingreso_id' => $manifiesto->id]);
+
+        return back()->with('success', 'Pedido asignado al manifiesto.');
+    }
+
+    public function marcarFacturacion(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
+    {
+        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
+        abort_unless((int) $manifiesto->empresa_id === $empresaId, 404);
+
+        $data = $request->validate([
+            'recepcion_facturacion_estado' => ['required', 'in:pendiente,facturado,devuelto'],
+            'recepcion_facturacion_observacion' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $pedido->update([
+            'recepcion_facturacion_estado' => $data['recepcion_facturacion_estado'],
+            'recepcion_facturacion_observacion' => $data['recepcion_facturacion_observacion'] ?? null,
+        ]);
+
+        return back()->with('success', 'Estado de facturacion actualizado.');
     }
 }

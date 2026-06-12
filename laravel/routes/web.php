@@ -177,6 +177,10 @@ Route::middleware([
 
         Route::post('/manifiestos/{manifiesto}/pedidos', PedidoStoreController::class)->name('manifiestos.pedidos.store');
         Route::put('/pedidos/{pedido}/recepcion', PedidoRecepcionControlController::class)->name('pedidos.recepcion.update');
+        Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/pedidos/{pedido}/corregir', [ManifiestoIngresoController::class, 'corregirPedido'])->name('manifiestos.pedidos.corregir');
+        Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/pedidos/{pedido}/foto-bultos', [ManifiestoIngresoController::class, 'adjuntarFotoBultos'])->name('manifiestos.pedidos.foto-bultos');
+        Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/pedidos/{pedido}/marcar-facturacion', [ManifiestoIngresoController::class, 'marcarFacturacion'])->name('manifiestos.pedidos.marcar-facturacion');
+        Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/pedidos/{pedido}/asignar', [ManifiestoIngresoController::class, 'asignarPedido'])->name('manifiestos.pedidos.asignar');
 
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/facturar', ManifiestoFacturarController::class)->name('manifiestos.facturar');
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/emitir-guias', ManifiestoEmitirGuiasController::class)->name('manifiestos.emitir-guias');
