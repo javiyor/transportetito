@@ -16,6 +16,7 @@ const form = useForm({
     fecha: new Date().toISOString().slice(0, 10),
     moneda: 'ARS',
     importe: '',
+    monto_fijo_mes: '',
     referencia: '',
     proveedor: '',
     observacion: '',
@@ -63,6 +64,7 @@ const applyFilters = () => router.get(route('compras.combustibles.index'), { bus
                     <div><InputLabel value="Fecha" /><TextInput v-model="form.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha" /></div>
                     <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="form.errors.moneda" /></div>
                     <div><InputLabel value="Importe" /><TextInput v-model="form.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.importe" /></div>
+                    <div><InputLabel value="Monto fijo del mes" /><TextInput v-model="form.monto_fijo_mes" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="Variable por mes" /><InputError class="mt-2" :message="form.errors.monto_fijo_mes" /></div>
                     <div><InputLabel value="Referencia" /><TextInput v-model="form.referencia" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.referencia" /></div>
                     <div><InputLabel value="Proveedor / estacion" /><TextInput v-model="form.proveedor" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.proveedor" /></div>
                     <div class="sm:col-span-3"><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.observacion" /></div>
@@ -72,7 +74,7 @@ const applyFilters = () => router.get(route('compras.combustibles.index'), { bus
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Pagos registrados</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="p in pagos.data" :key="p.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(p.fecha || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.proveedor || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.referencia || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.moneda }} {{ p.importe }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.observacion || '-' }}</td></tr></tbody></table></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto fijo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="p in pagos.data" :key="p.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(p.fecha || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.proveedor || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.referencia || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.moneda }} {{ p.importe }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.monto_fijo_mes ? '$' + p.monto_fijo_mes : '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ p.observacion || '-' }}</td></tr></tbody></table></div>
             </div>
         </div>
     </AppLayout>
