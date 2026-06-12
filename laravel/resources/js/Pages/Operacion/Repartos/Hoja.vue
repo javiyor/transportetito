@@ -43,18 +43,26 @@ const deliveryForm = useForm({
     email_contacto: '',
     observacion_operador: '',
     firma_recibo: '',
+    forma_pago: '',
+    importe_cobrado: '',
+    foto_comprobante_pago: null,
+    foto_remito_firmado: null,
 });
 const deliveryItem = ref(null);
 const showDelivery = ref(false);
 
 const openDelivery = (item) => {
     deliveryItem.value = item;
-    deliveryForm.estado_entrega = 'entregado';
+    deliveryForm.estado_entrega = item.estado_entrega || 'entregado';
     deliveryForm.recibe_nombre = item.recibe_nombre || '';
     deliveryForm.recibe_dni = item.recibe_dni || '';
     deliveryForm.email_contacto = item.entrega_cuenta?.email || '';
     deliveryForm.observacion_operador = item.observacion_operador || '';
     deliveryForm.firma_recibo = '';
+    deliveryForm.forma_pago = item.forma_pago || '';
+    deliveryForm.importe_cobrado = item.importe_cobrado || '';
+    deliveryForm.foto_comprobante_pago = null;
+    deliveryForm.foto_remito_firmado = null;
     deliveryForm.clearErrors();
     showDelivery.value = true;
 };
@@ -120,7 +128,7 @@ const submitDelivery = () => {
 const stats = computed(() => {
     const items = props.hoja.items || [];
     const total = items.reduce((acc, it) => acc + Number(it.comprobante?.total || 0), 0);
-    const entregados = items.filter((it) => it.estado_entrega === 'entregado').length;
+    const entregados = items.filter((it) => it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia').length;
     const noEntregados = items.filter((it) => it.estado_entrega === 'no_entregado').length;
     const pendientes = items.filter((it) => it.estado_entrega === 'pendiente').length;
     return { total: total.toFixed(2), entregados, noEntregados, pendientes, count: items.length };
@@ -215,12 +223,20 @@ const vehiculoLabel = computed(() => {
                                         :class="{
                                             'bg-yellow-100 text-yellow-800': it.estado_entrega === 'pendiente',
                                             'bg-green-100 text-green-800': it.estado_entrega === 'entregado',
+                                            'bg-blue-100 text-blue-800': it.estado_entrega === 'entregado_con_diferencia',
                                             'bg-red-100 text-red-800': it.estado_entrega === 'no_entregado',
                                         }"
                                     >{{ it.estado_entrega }}</span>
-                                    <div v-if="it.estado_entrega === 'entregado'" class="mt-2 space-y-1">
+                                    <div v-if="it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia'" class="mt-2 space-y-1">
                                         <div v-if="it.recibe_nombre" class="text-xs text-gray-600">Recibe: {{ it.recibe_nombre }} (DNI: {{ it.recibe_dni || '-' }})</div>
                                         <div v-if="it.fecha_entrega" class="text-xs text-gray-400">Entrega: {{ it.fecha_entrega }}</div>
+                                        <div v-if="it.forma_pago" class="text-xs text-gray-600">Pago: {{ it.forma_pago }} <template v-if="it.importe_cobrado">- ${{ it.importe_cobrado }}</template></div>
+                                        <div v-if="it.foto_comprobante_pago" class="mt-1">
+                                            <a :href="'/storage/' + it.foto_comprobante_pago" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">Ver comprobante de pago</a>
+                                        </div>
+                                        <div v-if="it.foto_remito_firmado" class="mt-1">
+                                            <a :href="'/storage/' + it.foto_remito_firmado" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">Ver remito firmado</a>
+                                        </div>
                                         <div v-if="it.firma_recibo" class="mt-1">
                                             <img :src="it.firma_recibo" alt="Firma" class="h-12 border border-gray-200 rounded" />
                                         </div>
@@ -247,7 +263,7 @@ const vehiculoLabel = computed(() => {
                                             @change="setOrden(it.id, parseInt($event.target.value, 10))"
                                         />
                                         <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="openDelivery(it)">
-                                            {{ it.estado_entrega === 'entregado' ? 'Editar' : 'Entregar' }}
+                                            {{ it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia' ? 'Editar' : 'Entregar' }}
                                         </SecondaryButton>
                                         <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="setEntrega(it.id, 'no_entregado')">No entregado</SecondaryButton>
                                     </div>
@@ -270,6 +286,7 @@ const vehiculoLabel = computed(() => {
                         <InputLabel value="Estado" />
                         <select v-model="deliveryForm.estado_entrega" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="entregado">Entregado</option>
+                            <option value="entregado_con_diferencia">Entregado con diferencia</option>
                             <option value="no_entregado">No entregado</option>
                         </select>
                     </div>
@@ -284,19 +301,41 @@ const vehiculoLabel = computed(() => {
                         </div>
                         <TextInput v-model="deliveryForm.email_contacto" type="email" class="mt-2 block w-full" placeholder="Email de contacto (opcional)" />
                     </div>
-                    <div v-if="deliveryForm.estado_entrega === 'entregado'">
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
                         <InputLabel value="Recibe nombre" />
                         <TextInput v-model="deliveryForm.recibe_nombre" type="text" class="mt-1 block w-full" />
                     </div>
-                    <div v-if="deliveryForm.estado_entrega === 'entregado'">
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
                         <InputLabel value="Recibe DNI" />
                         <TextInput v-model="deliveryForm.recibe_dni" type="text" class="mt-1 block w-full" />
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
+                        <InputLabel value="Forma de pago" />
+                        <select v-model="deliveryForm.forma_pago" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="cuenta_corriente">Cuenta corriente</option>
+                        </select>
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
+                        <InputLabel value="Importe cobrado" />
+                        <TextInput v-model="deliveryForm.importe_cobrado" type="number" step="0.01" min="0" class="mt-1 block w-full" placeholder="0.00" />
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
+                        <InputLabel value="Foto comprobante de pago" />
+                        <input type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @input="deliveryForm.foto_comprobante_pago = $event.target.files[0]" />
+                    </div>
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
+                        <InputLabel value="Foto remito firmado" />
+                        <input type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @input="deliveryForm.foto_remito_firmado = $event.target.files[0]" />
                     </div>
                     <div>
                         <InputLabel value="Observacion" />
                         <textarea v-model="deliveryForm.observacion_operador" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" rows="2"></textarea>
                     </div>
-                    <div v-if="deliveryForm.estado_entrega === 'entregado'">
+                    <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
                         <InputLabel value="Firma digital" />
                         <div class="mt-1 border border-gray-300 rounded-md overflow-hidden">
                             <canvas

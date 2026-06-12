@@ -1,6 +1,7 @@
 services:
   caddy:
     image: caddy:2.8-alpine
+    restart: unless-stopped
     depends_on:
       - nginx
     ports:
@@ -15,6 +16,7 @@ services:
 
   nginx:
     image: nginx:1.27-alpine
+    restart: unless-stopped
     depends_on:
       - app
     volumes:
@@ -26,6 +28,8 @@ services:
   app:
     build:
       context: ./infra/php
+    restart: unless-stopped
+    mem_limit: 512m
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
@@ -40,6 +44,7 @@ services:
 
   node:
     image: node:20-alpine
+    restart: "no"
     working_dir: /var/www/html
     volumes:
       - ./laravel:/var/www/html
@@ -50,6 +55,8 @@ services:
   queue:
     build:
       context: ./infra/php
+    restart: unless-stopped
+    mem_limit: 256m
     command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90"]
     volumes:
       - ./laravel:/var/www/html
@@ -63,6 +70,8 @@ services:
   scheduler:
     build:
       context: ./infra/php
+    restart: unless-stopped
+    mem_limit: 128m
     command: ["php", "artisan", "schedule:work"]
     volumes:
       - ./laravel:/var/www/html

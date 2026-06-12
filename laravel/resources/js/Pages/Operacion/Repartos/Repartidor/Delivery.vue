@@ -22,6 +22,10 @@ const deliveryForm = useForm({
     email_contacto: '',
     observacion_operador: '',
     firma_recibo: '',
+    forma_pago: '',
+    importe_cobrado: '',
+    foto_comprobante_pago: null,
+    foto_remito_firmado: null,
 });
 const activeItem = ref(null);
 const showDelivery = ref(false);
@@ -31,12 +35,16 @@ const isDrawing = ref(false);
 
 const openDelivery = (item) => {
     activeItem.value = item;
-    deliveryForm.estado_entrega = 'entregado';
-    deliveryForm.recibe_nombre = '';
-    deliveryForm.recibe_dni = '';
+    deliveryForm.estado_entrega = item.estado_entrega || 'entregado';
+    deliveryForm.recibe_nombre = item.recibe_nombre || '';
+    deliveryForm.recibe_dni = item.recibe_dni || '';
     deliveryForm.email_contacto = item.entrega_cuenta?.email || '';
-    deliveryForm.observacion_operador = '';
+    deliveryForm.observacion_operador = item.observacion_operador || '';
     deliveryForm.firma_recibo = '';
+    deliveryForm.forma_pago = item.forma_pago || '';
+    deliveryForm.importe_cobrado = item.importe_cobrado || '';
+    deliveryForm.foto_comprobante_pago = null;
+    deliveryForm.foto_remito_firmado = null;
     deliveryForm.clearErrors();
     showDelivery.value = true;
 };
@@ -99,6 +107,7 @@ const submitDelivery = () => {
 
 const statusClass = (estado) => {
     if (estado === 'entregado') return 'bg-green-100 text-green-800 border-green-200';
+    if (estado === 'entregado_con_diferencia') return 'bg-blue-100 text-blue-800 border-blue-200';
     if (estado === 'no_entregado') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-yellow-100 text-yellow-800 border-yellow-200';
 };
@@ -145,7 +154,7 @@ const statusClass = (estado) => {
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-                            {{ hoja.items.filter(i => i.estado_entrega === 'entregado').length }}/{{ hoja.items.length }}
+                            {{ hoja.items.filter(i => i.estado_entrega === 'entregado' || i.estado_entrega === 'entregado_con_diferencia').length }}/{{ hoja.items.length }}
                         </span>
                         <svg class="size-5 text-gray-400 transition-transform" :class="{ 'rotate-180': expandedHojaId === hoja.id }" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -171,8 +180,17 @@ const statusClass = (estado) => {
                                 <div v-if="item.comprobante" class="text-xs text-gray-500 mt-0.5">
                                     Factura: {{ item.comprobante.moneda }} {{ item.comprobante.total }}
                                 </div>
-                                <div v-if="item.estado_entrega === 'entregado' && item.recibe_nombre" class="text-xs text-green-700 mt-1">
+                                <div v-if="(item.estado_entrega === 'entregado' || item.estado_entrega === 'entregado_con_diferencia') && item.recibe_nombre" class="text-xs text-green-700 mt-1">
                                     Recibio: {{ item.recibe_nombre }} (DNI: {{ item.recibe_dni || '-' }})
+                                </div>
+                                <div v-if="(item.estado_entrega === 'entregado' || item.estado_entrega === 'entregado_con_diferencia') && item.forma_pago" class="text-xs text-gray-600 mt-0.5">
+                                    Pago: {{ item.forma_pago }} <template v-if="item.importe_cobrado">- ${{ item.importe_cobrado }}</template>
+                                </div>
+                                <div v-if="item.foto_comprobante_pago" class="mt-1">
+                                    <a :href="'/storage/' + item.foto_comprobante_pago" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">Ver comprobante de pago</a>
+                                </div>
+                                <div v-if="item.foto_remito_firmado" class="mt-1">
+                                    <a :href="'/storage/' + item.foto_remito_firmado" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">Ver remito firmado</a>
                                 </div>
                             </div>
                             <div class="flex flex-col items-end gap-1 shrink-0">
@@ -183,7 +201,7 @@ const statusClass = (estado) => {
                                     class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 transition-colors"
                                     @click="openDelivery(item)"
                                 >
-                                    {{ item.estado_entrega === 'entregado' ? 'Editar' : 'Entregar' }}
+                                    {{ item.estado_entrega === 'entregado' || item.estado_entrega === 'entregado_con_diferencia' ? 'Editar' : 'Entregar' }}
                                 </button>
                             </div>
                         </div>
@@ -207,12 +225,17 @@ const statusClass = (estado) => {
                 <div class="p-4 space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-900 mb-1">Estado</label>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-3 gap-2">
                             <button
                                 class="px-3 py-2 text-sm font-medium rounded-md border text-center transition-colors"
                                 :class="deliveryForm.estado_entrega === 'entregado' ? 'bg-green-100 border-green-400 text-green-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
                                 @click="deliveryForm.estado_entrega = 'entregado'"
                             >Entregado</button>
+                            <button
+                                class="px-3 py-2 text-sm font-medium rounded-md border text-center transition-colors"
+                                :class="deliveryForm.estado_entrega === 'entregado_con_diferencia' ? 'bg-blue-100 border-blue-400 text-blue-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+                                @click="deliveryForm.estado_entrega = 'entregado_con_diferencia'"
+                            >C/ Diferencia</button>
                             <button
                                 class="px-3 py-2 text-sm font-medium rounded-md border text-center transition-colors"
                                 :class="deliveryForm.estado_entrega === 'no_entregado' ? 'bg-red-100 border-red-400 text-red-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
@@ -233,7 +256,7 @@ const statusClass = (estado) => {
                         <input v-model="deliveryForm.email_contacto" type="email" class="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="Email de contacto (opcional)" />
                     </div>
 
-                    <template v-if="deliveryForm.estado_entrega === 'entregado'">
+                    <template v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">
                         <div>
                             <label class="block text-sm font-medium text-gray-900 mb-1">Recibe nombre</label>
                             <input v-model="deliveryForm.recibe_nombre" type="text" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="Nombre y apellido" />
@@ -241,6 +264,29 @@ const statusClass = (estado) => {
                         <div>
                             <label class="block text-sm font-medium text-gray-900 mb-1">Recibe DNI</label>
                             <input v-model="deliveryForm.recibe_dni" type="text" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="DNI" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Forma de pago</label>
+                            <select v-model="deliveryForm.forma_pago" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">Seleccionar...</option>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="cheque">Cheque</option>
+                                <option value="cuenta_corriente">Cuenta corriente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Importe cobrado</label>
+                            <input v-model="deliveryForm.importe_cobrado" type="number" step="0.01" min="0" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="0.00" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Foto comprobante de pago</label>
+                            <input type="file" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @input="deliveryForm.foto_comprobante_pago = $event.target.files[0]" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Foto remito firmado</label>
+                            <input type="file" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @input="deliveryForm.foto_remito_firmado = $event.target.files[0]" />
                         </div>
 
                         <div>
