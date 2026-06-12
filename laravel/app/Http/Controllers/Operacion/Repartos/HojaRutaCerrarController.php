@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Operacion\Repartos;
 
 use App\Http\Controllers\Controller;
+use App\Mail\EntregaNotificacionMail;
 use App\Models\HojaRuta;
 use App\Models\PreRecibo;
 use App\Models\PreReciboAplicacion;
 use App\Models\PreReciboItem;
 use App\Models\Empresa;
 use App\Services\Moneda\TipoCambioResolver;
+use App\Services\WhatsApp\WhatsAppClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class HojaRutaCerrarController extends Controller
 {
@@ -107,7 +111,80 @@ class HojaRutaCerrarController extends Controller
             $hoja->update(['estado' => 'cerrada']);
         });
 
+        // Send notifications after closing (best-effort, outside transaction)
+        $notifResults = $this->enviarNotificaciones($hoja);
+
+        $msg = "Hoja cerrada. Pre-recibos generados: $created.";
+        if ($notifResults['email_count'] > 0 || $notifResults['whatsapp_count'] > 0) {
+            $msg .= " Notificaciones: {$notifResults['email_count']} email(s), {$notifResults['whatsapp_count']} WhatsApp(s).";
+        }
+
         return redirect()->route('operacion.repartos.hojas.show', $hoja)
-            ->with('success', "Hoja cerrada. Pre-recibos generados: $created.");
+            ->with('success', $msg);
+    }
+
+    private function enviarNotificaciones(HojaRuta $hoja): array
+    {
+        $emailCount = 0;
+        $whatsappCount = 0;
+        $resultados = [];
+
+        $hoja->load(['items' => function ($q) {
+            $q->with('entregaCuenta:id,email,whatsapp_numero,tercero_id');
+            $q->with('entregaCuenta.tercero:id,razon_social');
+        }]);
+
+        $whatsapp = app(WhatsAppClient::class);
+
+        foreach ($hoja->items as $item) {
+            if (! in_array($item->estado_entrega, ['entregado', 'entregado_con_diferencia'])) {
+                continue;
+            }
+
+            $toEmail = $item->email_contacto ?: $item->entregaCuenta?->email;
+            $toWhatsapp = $item->entregaCuenta?->whatsapp_numero;
+
+            $itemResult = ['item_id' => $item->id, 'email' => false, 'whatsapp' => false];
+
+            if ($toEmail) {
+                try {
+                    Mail::to($toEmail)->send(new EntregaNotificacionMail($item, ''));
+                    $itemResult['email'] = true;
+                    $emailCount++;
+                } catch (\Throwable $e) {
+                    Log::error('Error enviando email de entrega', [
+                        'item_id' => $item->id,
+                        'to' => $toEmail,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if ($toWhatsapp) {
+                try {
+                    $mensaje = "Transporte Tito - Tu envio fue entregado a {$item->recibe_nombre} el ".(optional($item->fecha_entrega)->format('d/m/Y H:i') ?? '-');
+                    $ok = $whatsapp->sendText($toWhatsapp, $mensaje);
+                    $itemResult['whatsapp'] = $ok;
+                    if ($ok) {
+                        $whatsappCount++;
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Error enviando WhatsApp de entrega', [
+                        'item_id' => $item->id,
+                        'to' => $toWhatsapp,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            $resultados[] = $itemResult;
+        }
+
+        $hoja->update(['notificaciones_enviadas' => $resultados]);
+
+        return [
+            'email_count' => $emailCount,
+            'whatsapp_count' => $whatsappCount,
+        ];
     }
 }

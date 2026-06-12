@@ -156,6 +156,9 @@ const vehiculoLabel = computed(() => {
                         <template v-if="hoja.chofer"> · Chofer: {{ hoja.chofer.name }}</template>
                         <template v-if="vehiculoLabel"> · Vehiculo: {{ vehiculoLabel }}</template>
                         <template v-if="hoja.zona"> · Zona: {{ hoja.zona.nombre }}</template>
+                        <div v-if="hoja.observacion_reparto" class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                            Obs. reparto: {{ hoja.observacion_reparto }}
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
