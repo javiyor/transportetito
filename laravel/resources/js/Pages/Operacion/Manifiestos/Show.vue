@@ -298,7 +298,7 @@ const pedidosVisibles = computed(() => {
     return filtroRecepcion.soloErrores ? items.filter((p) => p.recepcion_estado === 'con_error') : items;
 });
 
-const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {} });
+const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {}, empresa_por_entrega: {} });
 
 const detalleOverridesSnapshot = computed(() => JSON.stringify(facturarPorEntrega.detalles_por_entrega || {}));
 
@@ -524,8 +524,11 @@ const autorizarArca = (comprobanteId, tipo) => {
 const initFacturarMap = () => {
     const map = {};
     const det = {};
+    const emp = {};
     for (const g of gruposFacturacion.value) {
+        const empresaId = props.manifiesto?.empresa?.id || '';
         map[g.entregaId] = g.suggested || '';
+        emp[g.entregaId] = String(empresaId);
         det[g.entregaId] = {
             editar: false,
             persistir_tarifa: false,
@@ -547,6 +550,7 @@ const initFacturarMap = () => {
     }
     facturarPorEntrega.facturar_por_entrega = map;
     facturarPorEntrega.detalles_por_entrega = det;
+    facturarPorEntrega.empresa_por_entrega = emp;
 };
 
 initFacturarMap();
@@ -769,6 +773,18 @@ const comprobanteTipoLabel = (tipo) => {
                                             {{ c.label }}{{ c.cuit ? ' · CUIT ' + c.cuit : '' }}
                                         </option>
                                     </select>
+
+                                    <div class="mt-2">
+                                        <div class="text-xs text-gray-500">Empresa</div>
+                                        <select
+                                            v-model="facturarPorEntrega.empresa_por_entrega[g.entregaId]"
+                                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                        >
+                                            <option v-for="emp in empresas" :key="emp.id" :value="String(emp.id)">
+                                                {{ emp.razon_social }}
+                                            </option>
+                                        </select>
+                                    </div>
 
                                     <div class="mt-3 flex items-center justify-between gap-2">
                                         <button

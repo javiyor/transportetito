@@ -63,10 +63,13 @@ class ManifiestoFacturarController extends Controller
             'detalles_por_entrega.*.iva_pct' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.persistir_tarifa' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.moneda' => ['nullable', 'in:ARS,USD,EUR,BRL'],
+            'empresa_por_entrega' => ['nullable', 'array'],
+            'empresa_por_entrega.*' => ['nullable', 'integer', 'exists:empresas,id'],
         ]);
 
         $map = $request->input('facturar_por_entrega', []);
         $detalles = $request->input('detalles_por_entrega', []);
+        $empresaPorEntrega = $request->input('empresa_por_entrega', []);
         $created = 0;
         $skipped = 0;
         $missingCuentas = 0;
@@ -75,7 +78,6 @@ class ManifiestoFacturarController extends Controller
 
         $tarifaResolver = new TarifaResolver();
         $calculator = new FacturaCalculator();
-        $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id);
 
         $erroresRecepcion = Pedido::query()
             ->where('manifiesto_ingreso_id', $manifiesto->id)
@@ -95,7 +97,7 @@ class ManifiestoFacturarController extends Controller
             return back()->with('error', 'No se puede emitir: hay pedidos sin control de recepcion.');
         }
 
-        DB::transaction(function () use ($empresa, $manifiesto, $map, $detalles, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
+        DB::transaction(function () use ($manifiesto, $map, $detalles, $empresaPorEntrega, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
             $pedidos = Pedido::query()
                 ->where('manifiesto_ingreso_id', $manifiesto->id)
                 ->whereDoesntHave('comprobantes')
@@ -162,6 +164,9 @@ class ManifiestoFacturarController extends Controller
 
                 $facturarCuentaId = $selected;
 
+                $empresaId = isset($empresaPorEntrega[$entregaCuentaId]) ? (int) $empresaPorEntrega[$entregaCuentaId] : (int) $manifiesto->empresa_id;
+                $empresa = Empresa::query()->findOrFail($empresaId);
+
                 $override = $detalles[(string) $g['entrega']] ?? null;
 
                 $relationGroups = [];
@@ -189,7 +194,7 @@ class ManifiestoFacturarController extends Controller
                 $crImporte = 0.0;
 
                 foreach ($relationGroups as $rg) {
-                    $tarifa = $tarifaResolver->resolve((int) $manifiesto->empresa_id, (int) $rg['remitente_id'], (int) $rg['destinatario_id']);
+                    $tarifa = $tarifaResolver->resolve((int) $empresa->id, (int) $rg['remitente_id'], (int) $rg['destinatario_id']);
 
                     if (is_array($override)) {
                         if (! empty($override['moneda'])) {
@@ -278,7 +283,7 @@ class ManifiestoFacturarController extends Controller
                 ];
 
                 $comprobante = Comprobante::query()->create([
-                    'empresa_id' => $manifiesto->empresa_id,
+                    'empresa_id' => $empresa->id,
                     'deposito_id' => $manifiesto->deposito_id,
                     'facturar_cuenta_id' => $facturarCuentaId,
                     'entrega_cuenta_id' => $g['entrega'],
@@ -310,7 +315,7 @@ class ManifiestoFacturarController extends Controller
                     if (is_array($first) && is_array($params)) {
                         TarifaRelacion::query()->updateOrCreate(
                             [
-                                'empresa_id' => (int) $manifiesto->empresa_id,
+                                'empresa_id' => (int) $empresa->id,
                                 'remitente_tercero_id' => (int) $first['remitente_tercero_id'],
                                 'destinatario_tercero_id' => (int) $first['destinatario_tercero_id'],
                             ],
@@ -345,7 +350,7 @@ class ManifiestoFacturarController extends Controller
                 }
 
                 CtaCteMovimiento::query()->create([
-                    'empresa_id' => $manifiesto->empresa_id,
+                    'empresa_id' => $empresa->id,
                     'tercero_cuenta_id' => $facturarCuentaId,
                     'fecha' => $manifiesto->fecha->toDateString(),
                     'tipo' => 'factura',
