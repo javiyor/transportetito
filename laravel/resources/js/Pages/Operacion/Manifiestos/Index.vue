@@ -20,12 +20,12 @@ const formatFecha = (value) => {
 </script>
 
 <template>
-    <AppLayout title="Operacion / Manifiestos">
-        <Head title="Operacion / Manifiestos" />
+    <AppLayout title="Control de pedidos / Manifiestos">
+        <Head title="Control de pedidos / Manifiestos" />
 
         <template #header>
             <div class="flex items-center justify-between gap-4">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Manifiestos</h2>
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Control de pedidos / Manifiestos</h2>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <Link v-if="canRepartos" :href="route('operacion.repartos.facturas')">
                         <SecondaryButton>Repartos</SecondaryButton>
