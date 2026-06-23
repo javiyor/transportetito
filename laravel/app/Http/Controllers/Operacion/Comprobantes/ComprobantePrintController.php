@@ -15,7 +15,7 @@ class ComprobantePrintController extends Controller
         }
 
         $comprobante->load([
-            'empresa:id,razon_social,cuit',
+            'empresa:id,razon_social,cuit,condicion_iva,telefono,email,whatsapp,sitio_web,arca_pv_default',
             'deposito:id,nombre',
             'entregaCuenta.tercero:id,cuit,razon_social',
             'facturarCuenta.tercero:id,cuit,razon_social',

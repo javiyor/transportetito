@@ -28,6 +28,7 @@ const reciboForm = useForm({
     fecha: new Date().toISOString().slice(0, 10),
     moneda: 'ARS',
     comprobante_id: null,
+    send_email: !!(props.cuenta?.email),
     items: [
         { medio: 'efectivo', importe: '', detalle: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
     ],
@@ -158,6 +159,10 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
 
                         <div class="text-sm font-semibold text-gray-900 text-right">Total: {{ reciboTotal.toFixed(2) }}</div>
 
+                        <label v-if="cuenta.email" class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" v-model="reciboForm.send_email" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                            Enviar recibo por email
+                        </label>
                         <PrimaryButton :disabled="reciboForm.processing" @click="submitRecibo">Emitir recibo</PrimaryButton>
                     </div>
                 </div>

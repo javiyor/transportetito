@@ -12,7 +12,9 @@ const props = defineProps({
 const page = usePage();
 const flashSuccess = computed(() => page.props.flash?.success);
 
-const confirmForm = useForm({});
+const confirmForm = useForm({
+    send_email: !!(props.preRecibo?.cuenta?.email),
+});
 const confirmar = () => {
     confirmForm.post(route('cobranzas.pre-recibos.confirm', props.preRecibo.id));
 };
@@ -39,6 +41,10 @@ const formatFecha = (value) => {
                     <a :href="route('cobranzas.pre-recibos.print', preRecibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
                     <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Recibos</SecondaryButton></Link>
                     <SecondaryButton :href="route('cobranzas.pre-recibos.index')" as="a">Volver</SecondaryButton>
+                    <label v-if="preRecibo.estado !== 'confirmado' && preRecibo.cuenta?.email" class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" v-model="confirmForm.send_email" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                        Enviar recibo por email
+                    </label>
                     <PrimaryButton v-if="preRecibo.estado !== 'confirmado'" :disabled="confirmForm.processing" @click.prevent="confirmar">Confirmar</PrimaryButton>
                 </div>
             </div>

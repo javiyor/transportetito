@@ -11,8 +11,10 @@ use App\Models\ReciboAplicacion;
 use App\Models\ReciboItem;
 use App\Models\TerceroCuenta;
 use App\Services\Moneda\TipoCambioResolver;
+use App\Mail\ReciboConfirmadoMail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class CuentaCorrienteReciboStoreController extends Controller
 {
@@ -24,6 +26,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'comprobante_id' => ['nullable', 'integer', 'exists:comprobantes,id'],
+            'send_email' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.medio' => ['required', 'string', 'max:64'],
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
@@ -126,6 +129,20 @@ class CuentaCorrienteReciboStoreController extends Controller
             'referencia_id' => $recibo->id,
             'observacion' => 'Recibo manual',
         ]);
+
+        if (! empty($data['send_email'])) {
+            try {
+                $cuentaEmail = $cuenta->email;
+                if ($cuentaEmail) {
+                    Mail::to($cuentaEmail)->send(new ReciboConfirmadoMail($recibo));
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Error enviando email de recibo manual', [
+                    'recibo_id' => $recibo->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return back()->with('success', 'Recibo emitido.');
     }

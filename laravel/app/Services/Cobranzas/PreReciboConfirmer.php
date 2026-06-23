@@ -119,6 +119,13 @@ class PreReciboConfirmer
         }
     }
 
+    public function sendEmailIfRequested(Recibo $recibo, bool $sendEmail): void
+    {
+        if ($sendEmail) {
+            $this->sendEmail($recibo);
+        }
+    }
+
     private function createAsiento(PreRecibo $preRecibo, Recibo $recibo): void
     {
         $asiento = AsientoContable::query()->create([

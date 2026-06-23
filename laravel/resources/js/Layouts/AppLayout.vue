@@ -49,7 +49,7 @@ const switchEmpresa = (empresaId) => {
                                 </NavLink>
 
                                 <NavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
-                                    Control de pedidos
+                                    Ctrl pedidos
                                 </NavLink>
 
                                 <NavLink
@@ -123,7 +123,7 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('admin.users.index')">Usuarios</DropdownLink>
                                             <DropdownLink :href="route('admin.empresas.index')">Empresas</DropdownLink>
                                             <DropdownLink :href="route('admin.depositos.index')">Depositos</DropdownLink>
-                                            <DropdownLink :href="route('admin.terceros.index')">Terceros</DropdownLink>
+                                            <DropdownLink :href="route('admin.terceros.index')">Clientes/Proveedores</DropdownLink>
                                             <DropdownLink :href="route('admin.cheques.index')">Cheques</DropdownLink>
                                             <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
                                             <DropdownLink :href="route('admin.cotizaciones.index')">Cotizaciones</DropdownLink>
@@ -255,7 +255,7 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
-                            Control de pedidos
+                            Ctrl pedidos
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink
@@ -343,7 +343,7 @@ const switchEmpresa = (empresaId) => {
                             :href="route('admin.terceros.index')"
                             :active="route().current('admin.terceros.*')"
                         >
-                            Terceros
+                            Clientes/Proveedores
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

@@ -19,9 +19,13 @@ class PreReciboConfirmController extends Controller
             return redirect()->route('cobranzas.pre-recibos.show', $preRecibo);
         }
 
+        $data = $request->validate([
+            'send_email' => ['nullable', 'boolean'],
+        ]);
+
         $recibo = $confirmer->confirm($preRecibo, (int) $request->user()->id);
 
-        $confirmer->sendEmail($recibo);
+        $confirmer->sendEmailIfRequested($recibo, (bool) ($data['send_email'] ?? false));
 
         return redirect()
             ->route('cobranzas.pre-recibos.show', $preRecibo)
