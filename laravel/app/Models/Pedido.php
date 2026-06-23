@@ -41,6 +41,8 @@ class Pedido extends Model
         'external_retiro',
         'recepcion_estado',
         'recepcion_observacion',
+        'recepcion_errores',
+        'recepcion_fotos',
         'recepcion_controlado_at',
         'recepcion_controlado_por_user_id',
         'recepcion_corregido_por_user_id',
@@ -57,6 +59,8 @@ class Pedido extends Model
         'external_retiro' => 'bool',
         'recepcion_controlado_at' => 'datetime',
         'recepcion_corregido_at' => 'datetime',
+        'recepcion_errores' => 'array',
+        'recepcion_fotos' => 'array',
     ];
 
     public function manifiestoIngreso(): BelongsTo

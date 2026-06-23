@@ -61,6 +61,8 @@ for (const p of (props.manifiesto?.pedidos || [])) {
     recepcionForms[p.id] = useForm({
         recepcion_estado: p.recepcion_estado || 'correcto',
         recepcion_observacion: p.recepcion_observacion || '',
+        recepcion_errores: p.recepcion_errores || [],
+        recepcion_foto: null,
     });
     correccionForms[p.id] = useForm({
         bultos: p.bultos || 0,
@@ -74,6 +76,20 @@ for (const p of (props.manifiesto?.pedidos || [])) {
         recepcion_facturacion_observacion: p.recepcion_facturacion_observacion || '',
     });
 }
+
+const toggleError = (pedidoId, campo) => {
+    const form = recepcionForms[pedidoId];
+    const idx = form.recepcion_errores.indexOf(campo);
+    if (idx >= 0) {
+        form.recepcion_errores.splice(idx, 1);
+    } else {
+        form.recepcion_errores.push(campo);
+    }
+};
+
+const onRecepcionFotoChange = (pedidoId, e) => {
+    recepcionForms[pedidoId].recepcion_foto = e.target.files[0] || null;
+};
 
 const guardarRecepcion = (pedidoId) => {
     recepcionForms[pedidoId].put(route('operacion.pedidos.recepcion.update', pedidoId), { preserveScroll: true });
@@ -1098,7 +1114,21 @@ const comprobanteTipoLabel = (tipo) => {
                                 <option value="correcto">Correcto</option>
                                 <option value="con_error">Con error</option>
                             </select>
-                            <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" :placeholder="recepcionForms[p.id].recepcion_estado === 'con_error' ? 'Describir error' : 'Observacion opcional'" />
+                            <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="space-y-1 pt-1">
+                                <div class="text-xs font-medium text-red-700">Campos con error:</div>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="remitente" :checked="recepcionForms[p.id].recepcion_errores?.includes('remitente')" @change="toggleError(p.id, 'remitente')" class="rounded border-gray-300" /> Remitente</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="destinatario" :checked="recepcionForms[p.id].recepcion_errores?.includes('destinatario')" @change="toggleError(p.id, 'destinatario')" class="rounded border-gray-300" /> Destinatario</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor declarado</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
+                                <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" placeholder="Observacion adicional" />
+                                <InputError class="mt-1" :message="recepcionForms[p.id].errors.recepcion_errores" />
+                                <div class="pt-1">
+                                    <label class="text-xs text-gray-500">Foto del bulto:</label>
+                                    <input type="file" accept="image/*" class="block w-full text-sm mt-1" @change="onRecepcionFotoChange(p.id, $event)" />
+                                </div>
+                                <div v-if="p.recepcion_fotos?.length" class="text-xs text-green-600">Fotos: {{ p.recepcion_fotos.length }}</div>
+                            </div>
                             <div class="flex items-center justify-between gap-2">
                                 <div class="text-xs text-gray-500">
                                     <span v-if="p.recepcion_controlado_at">Ultimo control: {{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 16) }}</span>
@@ -1106,7 +1136,6 @@ const comprobanteTipoLabel = (tipo) => {
                                 </div>
                                 <PrimaryButton :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">Guardar</PrimaryButton>
                             </div>
-                            <InputError class="mt-1" :message="recepcionForms[p.id].errors.recepcion_observacion" />
                         </div>
 
                         <div v-if="p.recepcion_estado === 'con_error' && canFacturar" class="mt-4 space-y-2 border-t border-gray-200 pt-4">
@@ -1179,7 +1208,7 @@ const comprobanteTipoLabel = (tipo) => {
                          <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="p in pedidosVisibles" :key="p.id" :class="p.recepcion_estado === 'con_error' ? 'bg-red-50' : (p.recepcion_estado === 'correcto' ? 'bg-green-50/40' : '')">
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ p.id }}</td>
-                                <td class="px-4 py-4 whitespace-nowrap">
+                                <td class="px-4 py-4 whitespace-nowrap align-top">
                                     <div class="flex items-center gap-1">
                                         <select v-model="recepcionForms[p.id].recepcion_estado" class="border-gray-300 rounded text-xs py-1 px-1 w-24 focus:border-indigo-500 focus:ring-indigo-500">
                                             <option value="recibido">Recibido</option>
@@ -1188,11 +1217,22 @@ const comprobanteTipoLabel = (tipo) => {
                                         </select>
                                         <button type="button" class="inline-flex items-center px-2 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50" :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">✓</button>
                                     </div>
-                                    <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="mt-1">
-                                        <input v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Describir error" />
-                                        <InputError class="mt-0.5" :message="recepcionForms[p.id].errors.recepcion_observacion" />
+                                    <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="mt-2 space-y-1">
+                                        <div class="text-xs font-medium text-red-700">Campos con error:</div>
+                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="remitente" :checked="recepcionForms[p.id].recepcion_errores?.includes('remitente')" @change="toggleError(p.id, 'remitente')" class="rounded border-gray-300" /> Remitente</label>
+                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="destinatario" :checked="recepcionForms[p.id].recepcion_errores?.includes('destinatario')" @change="toggleError(p.id, 'destinatario')" class="rounded border-gray-300" /> Destinatario</label>
+                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor declarado</label>
+                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
+                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
+                                        <input v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1 mt-1" placeholder="Observacion adicional" />
+                                        <InputError class="mt-0.5" :message="recepcionForms[p.id].errors.recepcion_errores" />
+                                        <div class="pt-1">
+                                            <label class="text-xs text-gray-500">Foto del bulto:</label>
+                                            <input type="file" accept="image/*" class="block w-full text-xs mt-0.5" @change="onRecepcionFotoChange(p.id, $event)" />
+                                        </div>
+                                        <div v-if="p.recepcion_fotos?.length" class="text-xs text-green-600">Fotos: {{ p.recepcion_fotos.length }}</div>
                                     </div>
-                                    <div class="text-xs text-gray-400 mt-0.5">
+                                    <div class="text-xs text-gray-400 mt-1">
                                         <span v-if="p.recepcion_controlado_at">{{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
                                         <span v-else>Sin control</span>
                                     </div>
