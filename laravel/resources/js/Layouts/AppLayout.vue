@@ -78,6 +78,14 @@ const switchEmpresa = (empresaId) => {
 
                                 <NavLink
                                     v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
+                                    :href="route('facturacion.manifiestos.index')"
+                                    :active="route().current('facturacion.*')"
+                                >
+                                    Facturacion
+                                </NavLink>
+
+                                <NavLink
+                                    v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
                                     :href="route('operacion.comprobantes.index')"
                                     :active="route().current('operacion.comprobantes.*')"
                                 >
@@ -280,6 +288,14 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('repartidor.*')"
                         >
                             Repartidor
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
+                            :href="route('facturacion.manifiestos.index')"
+                            :active="route().current('facturacion.*')"
+                        >
+                            Facturacion
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

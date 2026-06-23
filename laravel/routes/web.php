@@ -80,6 +80,9 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteExportController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 
+use App\Http\Controllers\Facturacion\ManifiestoIndexController;
+use App\Http\Controllers\Facturacion\ManifiestoShowController;
+
 Route::get('/', function () {
     $empresa = Empresa::query()
         ->with(['depositos:id,empresa_id,nombre,direccion'])
@@ -203,6 +206,11 @@ Route::middleware([
             Route::post('/hojas/{hoja}/cerrar', HojaRutaCerrarController::class)->name('hojas.cerrar');
         });
 
+    });
+
+    Route::middleware(['role:facturacion|admin'])->prefix('facturacion')->name('facturacion.')->group(function () {
+        Route::get('/manifiestos', ManifiestoIndexController::class)->name('manifiestos.index');
+        Route::get('/manifiestos/{manifiesto}', ManifiestoShowController::class)->name('manifiestos.show');
     });
 
     Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
