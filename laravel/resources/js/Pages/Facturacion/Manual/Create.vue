@@ -54,7 +54,7 @@ const submit = () => {
                         >
                             <option value="">Seleccionar cliente...</option>
                             <option v-for="c in cuentas" :key="c.id" :value="c.id">
-                                {{ c.nombre_cuenta || c.tercero?.razon_social }} ({{ c.tercero?.cuit || c.tercero?.documento || '-' }})
+                                {{ c.nombre_cuenta || c.tercero?.razon_social }} ({{ c.tercero?.cuit || '-' }})
                             </option>
                         </select>
                         <InputError :message="form.errors.facturar_cuenta_id" />

@@ -20,7 +20,7 @@ class ManualInvoiceCreateController extends Controller
         $cuentas = TerceroCuenta::query()
             ->where('empresa_id', $empresaId)
             ->where('activo', true)
-            ->with('tercero:id,razon_social,cuit,documento')
+            ->with('tercero:id,razon_social,cuit')
             ->orderBy('nombre_cuenta')
             ->get(['id', 'tercero_id', 'nombre_cuenta', 'email']);
 
