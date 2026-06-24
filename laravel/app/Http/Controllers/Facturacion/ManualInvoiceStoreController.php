@@ -22,6 +22,9 @@ class ManualInvoiceStoreController extends Controller
             'fecha_emision' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'total' => ['required', 'numeric', 'gt:0'],
+            'subtotal' => ['nullable', 'numeric', 'min:0'],
+            'iva' => ['nullable', 'numeric', 'min:0'],
+            'discrimina' => ['nullable', 'boolean'],
             'disponible_para_hoja_ruta' => ['nullable', 'boolean'],
             'arca_punto_venta' => ['nullable', 'integer', 'min:1', 'max:9999'],
             'arca_tipo_cbte' => ['nullable', 'string', 'max:8'],
@@ -33,6 +36,17 @@ class ManualInvoiceStoreController extends Controller
 
         $cuenta = TerceroCuenta::query()->findOrFail($data['facturar_cuenta_id']);
         abort_unless((int) $cuenta->empresa_id === $empresaId, 404);
+
+        $detalleCalulo = [
+            'total' => (float) $data['total'],
+            'moneda' => $data['moneda'],
+        ];
+
+        $discrimina = (bool) ($data['discrimina'] ?? false);
+        if ($discrimina) {
+            $detalleCalulo['subtotal_gravado'] = (float) ($data['subtotal'] ?? $data['total']);
+            $detalleCalulo['iva'] = (float) ($data['iva'] ?? 0);
+        }
 
         $comprobante = Comprobante::query()->create([
             'empresa_id' => $empresaId,
@@ -55,6 +69,8 @@ class ManualInvoiceStoreController extends Controller
                 'version' => 'v1',
                 'manual' => true,
                 'observacion' => $data['observacion'] ?? null,
+                'discrimina' => $discrimina,
+                'calculo' => $detalleCalulo,
             ],
         ]);
 
@@ -80,6 +96,7 @@ class ManualInvoiceStoreController extends Controller
                 'total' => $data['total'],
                 'moneda' => $data['moneda'],
                 'cuenta_id' => $cuenta->id,
+                'arca_tipo_cbte' => $data['arca_tipo_cbte'] ?? null,
                 'disponible_hoja_ruta' => (bool) ($data['disponible_para_hoja_ruta'] ?? true),
             ],
         ]);
