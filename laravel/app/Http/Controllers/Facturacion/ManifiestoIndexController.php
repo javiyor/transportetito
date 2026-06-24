@@ -19,7 +19,7 @@ class ManifiestoIndexController extends Controller
                 $q->where('recepcion_estado', 'correcto')
                   ->whereDoesntHave('comprobantes');
             })
-            ->with(['empresa:id,razon_social', 'deposito:id,nombre'])
+            ->with(['deposito:id,nombre'])
             ->withCount(['pedidos as pendientes_count' => function ($q) {
                 $q->where('recepcion_estado', 'correcto')
                   ->whereDoesntHave('comprobantes');

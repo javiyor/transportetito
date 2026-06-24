@@ -657,87 +657,85 @@ const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.valu
                         <PrimaryButton :disabled="backfillForm.processing" @click.prevent="completarCuentas">Completar cuentas</PrimaryButton>
                     </div>
 
-                    <div class="mt-4 space-y-3">
-                        <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border border-gray-200 p-4">
-                            <div class="flex items-start justify-between gap-4 flex-wrap">
-                                <div>
-                                    <div class="text-xs text-gray-500">Cuenta de entrega</div>
-                                    <div class="text-sm font-medium text-gray-900">#{{ g.entregaId }}</div>
-                                    <div class="text-xs text-gray-600">Pedidos: {{ g.pedidos.length }} · Total a facturar: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}</div>
-                                    <div class="mt-2 text-xs text-gray-600">
-                                        Flete {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).flete) }} · Seguro {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).seguro) }} · CR {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).comisionCr) }} · IVA {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).iva) }}
-                                    </div>
+                    <div class="mt-4 space-y-2">
+                        <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border border-gray-200">
+                            <div class="flex items-center justify-between gap-2 px-4 py-2 border-b border-gray-100 bg-gray-50">
+                                <div class="text-xs font-medium text-gray-700">
+                                    Entrega #{{ g.entregaId }} · {{ g.pedidos.length }} ped · Total: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}
                                 </div>
-                                <div class="min-w-[260px]">
-                                    <div class="text-xs text-gray-500">Facturar a</div>
+                                <div class="flex items-center gap-2">
                                     <select
                                         v-model="facturarPorEntrega.facturar_por_entrega[g.entregaId]"
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                        class="border-gray-300 rounded text-xs py-1 px-1 w-44 focus:border-indigo-500 focus:ring-indigo-500"
                                     >
-                                        <option value="">(seleccionar)</option>
+                                        <option value="">(facturar a)</option>
                                         <option v-for="c in g.cuentas" :key="c.id" :value="String(c.id)">
-                                            {{ c.label }}{{ c.cuit ? ' · CUIT ' + c.cuit : '' }}
+                                            {{ c.label }}{{ c.cuit ? ' CUIT ' + c.cuit : '' }}
                                         </option>
                                     </select>
-
-                                    <div class="mt-2">
-                                        <div class="text-xs text-gray-500">Empresa</div>
-                                        <select
-                                            v-model="facturarPorEntrega.empresa_por_entrega[g.entregaId]"
-                                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                        >
-                                            <option v-for="emp in empresas" :key="emp.id" :value="String(emp.id)">
-                                                {{ emp.razon_social }}
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <div class="mt-3 flex items-center justify-between gap-2">
-                                        <button
-                                            type="button"
-                                            class="text-xs text-gray-700 underline"
-                                            @click.prevent="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar = !facturarPorEntrega.detalles_por_entrega[g.entregaId].editar"
-                                        >
-                                            {{ facturarPorEntrega.detalles_por_entrega[g.entregaId].editar ? 'Ocultar edicion' : 'Editar tarifa' }}
-                                        </button>
-                                        <div v-if="!g.isSingleRelacion" class="text-[11px] text-gray-500">(mezcla remitente/destinatario)</div>
-                                    </div>
+                                    <select
+                                        v-model="facturarPorEntrega.empresa_por_entrega[g.entregaId]"
+                                        class="border-gray-300 rounded text-xs py-1 px-1 w-36 focus:border-indigo-500 focus:ring-indigo-500"
+                                    >
+                                        <option v-for="emp in empresas" :key="emp.id" :value="String(emp.id)">
+                                            {{ emp.razon_social }}
+                                        </option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div class="mt-3 grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
-                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
-                                    <div class="text-gray-500">Bultos</div>
-                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).bultos }}</div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
+                                            <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
+                                            <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
+                                            <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
+                                            <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-for="p in g.pedidos" :key="p.id" class="hover:bg-gray-50">
+                                            <td class="px-3 py-1.5 whitespace-nowrap font-mono text-gray-900">{{ p.remito_numero || '-' }}</td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap">
+                                                <div class="text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
+                                                <div class="text-gray-500">{{ p.remitente?.cuit || '' }}</div>
+                                            </td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap">
+                                                <div class="text-gray-900">{{ p.destinatario?.razon_social || '-' }}</div>
+                                                <div class="text-gray-500">{{ p.destinatario?.cuit || '' }}</div>
+                                            </td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap text-center text-gray-700">{{ p.bultos }}</td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap text-center text-gray-700">{{ p.palets }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-2 px-4 py-2 border-t border-gray-100">
+                                <div class="text-xs text-gray-600">
+                                    Bultos: {{ detalleGrupo(g).bultos }} · Palets: {{ detalleGrupo(g).palets }} · Valor: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).valorDeclarado) }} · CR: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).crImporte) }}
+                                    · Flete: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).flete) }} · IVA: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).iva) }}
                                 </div>
-                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
-                                    <div class="text-gray-500">Palets</div>
-                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).palets }}</div>
-                                </div>
-                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
-                                    <div class="text-gray-500">Valor decl.</div>
-                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).valorDeclarado) }}</div>
-                                </div>
-                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
-                                    <div class="text-gray-500">CR</div>
-                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).crImporte) }}</div>
-                                </div>
-                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
-                                    <div class="text-gray-500">Subtotal</div>
-                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).subtotalGravado) }}</div>
-                                </div>
-                                <div class="rounded border border-gray-100 bg-gray-50 px-3 py-2">
-                                    <div class="text-gray-500">Total</div>
-                                    <div class="font-medium text-gray-900">{{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}</div>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="text-xs text-gray-700 underline"
+                                        @click.prevent="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar = !facturarPorEntrega.detalles_por_entrega[g.entregaId].editar"
+                                    >
+                                        {{ facturarPorEntrega.detalles_por_entrega[g.entregaId].editar ? 'Ocultar edicion' : 'Editar tarifa' }}
+                                    </button>
+                                    <div v-if="!g.isSingleRelacion" class="text-[10px] text-gray-500">(mezcla)</div>
                                 </div>
                             </div>
 
-                            <div v-if="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar" class="mt-4 rounded-md border border-gray-200 bg-white p-4">
-                                <div class="text-sm font-medium text-gray-900">Detalle a facturar (edicion)</div>
-                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                            <div v-if="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar" class="border-t border-gray-100 p-4 bg-gray-50">
+                                <div class="text-xs font-medium text-gray-900 mb-2">Editar tarifa</div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                                     <div>
                                         <InputLabel value="Moneda" />
-                                        <select v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                        <select v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].moneda" class="mt-0.5 block w-full border-gray-300 rounded text-xs py-1 px-1">
                                             <option value="ARS">ARS</option>
                                             <option value="USD">USD</option>
                                             <option value="EUR">EUR</option>
@@ -746,49 +744,46 @@ const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.valu
                                     </div>
                                     <div>
                                         <InputLabel value="Tarifa bulto" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
                                     </div>
                                     <div>
                                         <InputLabel value="Tarifa palet" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
                                     </div>
                                     <div>
                                         <InputLabel value="% valor declarado" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.03" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.03" />
                                     </div>
-
                                     <div>
                                         <InputLabel value="Flete minimo" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa tarifa)" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
                                     </div>
                                     <div>
                                         <InputLabel value="% seguro" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.007" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.007" />
                                     </div>
                                     <div>
                                         <InputLabel value="% CR" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_comision_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.025" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_comision_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.025" />
                                     </div>
                                     <div>
                                         <InputLabel value="CR manual" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_importe_manual" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(usa CR pedidos)" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_importe_manual" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa CR pedidos)" />
                                     </div>
                                     <div>
                                         <InputLabel value="Comision CR manual" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].comision_cr_manual" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(calcula automatica)" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].comision_cr_manual" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(calcula automatica)" />
                                     </div>
-
                                     <div>
                                         <InputLabel value="% IVA" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-1 block w-full" placeholder="0.21" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.21" />
                                     </div>
                                 </div>
-
-                                <div v-if="g.isSingleRelacion" class="mt-4 flex items-center gap-2">
+                                <div v-if="g.isSingleRelacion" class="mt-2 flex items-center gap-2">
                                     <Checkbox v-model:checked="facturarPorEntrega.detalles_por_entrega[g.entregaId].persistir_tarifa" />
-                                    <span class="text-sm text-gray-700">Actualizar tarifa para esta relacion (remitente/destinatario)</span>
+                                    <span class="text-xs text-gray-700">Actualizar tarifa</span>
                                 </div>
-                                <div v-else class="mt-4 text-sm text-gray-500">No se puede actualizar tarifa porque el grupo mezcla remitente/destinatario.</div>
+                                <div v-else class="mt-2 text-xs text-gray-500">No se puede persistir tarifa (mezcla remitente/destinatario).</div>
                             </div>
                         </div>
 

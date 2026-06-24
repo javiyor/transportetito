@@ -21,6 +21,20 @@ const page = usePage();
 const flashSuccess = computed(() => page.props.flash?.success);
 const flashError = computed(() => page.props.flash?.error);
 
+const showAddForm = reactive({ value: false });
+
+const filtroTexto = reactive({ remitente: '', destinatario: '' });
+const sortDest = reactive({ field: 'none' });
+
+const corrigiendoPedidoId = reactive({ value: null });
+const correccionForm = reactive({
+    bultos: null,
+    palets: null,
+    valor_declarado: null,
+    observacion: '',
+    processing: false,
+});
+
 const pedidoForm = useForm({
     remitente: { cuit: '', razon_social: '' },
     destinatario: { cuit: '', razon_social: '' },
@@ -75,6 +89,41 @@ const asignarAManifiesto = async (pedidoId) => {
     }
 };
 
+const toggleCorregir = (pedido) => {
+    if (corrigiendoPedidoId.value === pedido.id) {
+        corrigiendoPedidoId.value = null;
+        return;
+    }
+    corrigiendoPedidoId.value = pedido.id;
+    correccionForm.bultos = pedido.bultos;
+    correccionForm.palets = pedido.palets;
+    correccionForm.valor_declarado = pedido.valor_declarado;
+    correccionForm.observacion = pedido.observacion || '';
+};
+
+const enviarCorreccion = async (pedidoId) => {
+    correccionForm.processing = true;
+    try {
+        const res = await fetch(route('operacion.manifiestos.pedidos.corregir', [props.manifiesto.id, pedidoId]), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: JSON.stringify({
+                bultos: correccionForm.bultos,
+                palets: correccionForm.palets,
+                valor_declarado: correccionForm.valor_declarado,
+                observacion: correccionForm.observacion,
+            }),
+        });
+        if (!res.ok) throw new Error('Error al corregir');
+        corrigiendoPedidoId.value = null;
+        window.location.reload();
+    } catch {
+        alert('Error al corregir pedido.');
+    } finally {
+        correccionForm.processing = false;
+    }
+};
+
 const submitPedido = () => {
     pedidoForm.post(route('operacion.manifiestos.pedidos.store', props.manifiesto.id), {
         preserveScroll: true,
@@ -92,8 +141,32 @@ const totalPedidos = computed(() => (props.manifiesto.pedidos || []).length);
 const filtroRecepcion = reactive({ soloErrores: false });
 
 const pedidosVisibles = computed(() => {
-    const items = props.manifiesto.pedidos || [];
-    return filtroRecepcion.soloErrores ? items.filter((p) => p.recepcion_estado === 'con_error') : items;
+    let items = props.manifiesto.pedidos || [];
+    if (filtroRecepcion.soloErrores) {
+        items = items.filter((p) => p.recepcion_estado === 'con_error');
+    }
+    const rem = (filtroTexto.remitente || '').toLowerCase().trim();
+    const dest = (filtroTexto.destinatario || '').toLowerCase().trim();
+    if (rem) {
+        items = items.filter((p) => {
+            const rs = (p.remitente?.razon_social || '').toLowerCase();
+            const cu = (p.remitente?.cuit || '').toLowerCase();
+            return rs.includes(rem) || cu.includes(rem);
+        });
+    }
+    if (dest) {
+        items = items.filter((p) => {
+            const rs = (p.destinatario?.razon_social || '').toLowerCase();
+            const cu = (p.destinatario?.cuit || '').toLowerCase();
+            return rs.includes(dest) || cu.includes(dest);
+        });
+    }
+    if (sortDest.field === 'asc') {
+        items = [...items].sort((a, b) => (a.destinatario?.razon_social || '').localeCompare(b.destinatario?.razon_social || ''));
+    } else if (sortDest.field === 'desc') {
+        items = [...items].sort((a, b) => (b.destinatario?.razon_social || '').localeCompare(a.destinatario?.razon_social || ''));
+    }
+    return items;
 });
 
 const formatFecha = (value) => {
@@ -117,9 +190,13 @@ const formatFecha = (value) => {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('admin.terceros.index', { tipo: 'cliente' })">
-                        <SecondaryButton>Nuevo cliente</SecondaryButton>
-                    </Link>
+                    <button
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50"
+                        @click="showAddForm.value = !showAddForm.value"
+                    >
+                        {{ showAddForm.value ? 'Cancelar' : 'Agregar pedido' }}
+                    </button>
                     <Link :href="route('operacion.manifiestos.index')">
                         <SecondaryButton>Volver</SecondaryButton>
                     </Link>
@@ -163,7 +240,7 @@ const formatFecha = (value) => {
                     </div>
                 </div>
 
-                <form class="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitPedido">
+                <form v-show="showAddForm.value" class="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitPedido">
                     <div class="sm:col-span-2">
                         <div class="text-sm font-medium text-gray-900">Remitente</div>
                         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -245,11 +322,31 @@ const formatFecha = (value) => {
                     </div>
                 </form>
 
-                <div class="mt-8 flex items-center justify-between gap-4 flex-wrap">
-                    <div class="text-sm text-gray-600">Control de recepcion de pedidos importados.</div>
-                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                <div class="mt-4 flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <input
+                            v-model="filtroTexto.remitente"
+                            type="text"
+                            placeholder="Filtrar remitente (nombre/CUIT)"
+                            class="border-gray-300 rounded text-xs py-1 px-2 w-48 focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                        <input
+                            v-model="filtroTexto.destinatario"
+                            type="text"
+                            placeholder="Filtrar destinatario (nombre/CUIT)"
+                            class="border-gray-300 rounded text-xs py-1 px-2 w-48 focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                        <button
+                            type="button"
+                            class="text-xs text-gray-600 hover:text-gray-900 underline"
+                            @click="sortDest.field = sortDest.field === 'asc' ? 'desc' : sortDest.field === 'desc' ? 'none' : 'asc'"
+                        >
+                            Destinatario {{ sortDest.field === 'asc' ? 'A-Z' : sortDest.field === 'desc' ? 'Z-A' : '' }}
+                        </button>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs text-gray-700">
                         <Checkbox v-model:checked="filtroRecepcion.soloErrores" />
-                        Mostrar solo pedidos con error
+                        Solo errores
                     </label>
                 </div>
 
@@ -285,14 +382,37 @@ const formatFecha = (value) => {
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Valor declarado</div>
                                     <div class="font-medium text-gray-900">{{ p.valor_declarado }}</div>
                                 </div>
-                                <div>
-                                    <div class="text-xs uppercase tracking-wider text-gray-500">CR</div>
-                                    <div class="font-medium text-gray-900">{{ p.cr_importe || '-' }}</div>
-                                </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">CR</div>
+                                <div class="font-medium text-gray-900">{{ p.cr_importe || '-' }}</div>
                             </div>
                         </div>
+                        <div class="mt-2">
+                            <button
+                                type="button"
+                                class="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                @click="toggleCorregir(p)"
+                            >
+                                {{ corrigiendoPedidoId.value === p.id ? 'Cancelar' : 'Corregir' }}
+                            </button>
+                            <div v-if="corrigiendoPedidoId.value === p.id" class="mt-2 space-y-1">
+                                <input v-model="correccionForm.bultos" type="number" min="0" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Bultos" />
+                                <input v-model="correccionForm.palets" type="number" min="0" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Palets" />
+                                <input v-model="correccionForm.valor_declarado" type="number" min="0" step="0.01" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Valor declarado" />
+                                <input v-model="correccionForm.observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Observacion" />
+                                <button
+                                    type="button"
+                                    class="w-full px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 disabled:opacity-50"
+                                    :disabled="correccionForm.processing"
+                                    @click="enviarCorreccion(p.id)"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                        <div class="mt-4 space-y-2 border-t border-gray-200 pt-4">
+                    <div class="mt-4 space-y-2 border-t border-gray-200 pt-4">
                             <select v-model="recepcionForms[p.id].recepcion_estado" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                                 <option value="recibido">Recibido</option>
                                 <option value="correcto">Correcto</option>
@@ -331,18 +451,18 @@ const formatFecha = (value) => {
                 </div>
 
                 <div class="mt-4 hidden lg:block overflow-x-auto">
-                    <table class="min-w-[1400px] w-full divide-y divide-gray-200">
+                    <table class="min-w-[1000px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Hoja Ruta</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Corregir</th>
                              </tr>
                          </thead>
                          <tbody class="bg-white divide-y divide-gray-200">
@@ -377,7 +497,6 @@ const formatFecha = (value) => {
                                         <span v-else>Sin control</span>
                                     </div>
                                 </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.numero_hoja_ruta_origen || '-' }}</td>
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
                                     <div class="text-xs text-gray-500">{{ p.remitente?.cuit || '' }}</div>
@@ -390,6 +509,29 @@ const formatFecha = (value) => {
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700 text-center">{{ p.palets }}</td>
                                 <td class="px-4 py-4 whitespace-nowrap text-sm font-mono text-gray-700">${{ Number(p.valor_declarado).toFixed(2) }}</td>
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap text-center align-top">
+                                    <button
+                                        type="button"
+                                        class="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                        @click="toggleCorregir(p)"
+                                    >
+                                        {{ corrigiendoPedidoId.value === p.id ? 'Cancelar' : 'Corregir' }}
+                                    </button>
+                                    <div v-if="corrigiendoPedidoId.value === p.id" class="mt-2 space-y-1 text-left">
+                                        <input v-model="correccionForm.bultos" type="number" min="0" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Bultos" />
+                                        <input v-model="correccionForm.palets" type="number" min="0" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Palets" />
+                                        <input v-model="correccionForm.valor_declarado" type="number" min="0" step="0.01" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Valor declarado" />
+                                        <input v-model="correccionForm.observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Observacion" />
+                                        <button
+                                            type="button"
+                                            class="w-full px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 disabled:opacity-50"
+                                            :disabled="correccionForm.processing"
+                                            @click="enviarCorreccion(p.id)"
+                                        >
+                                            Guardar
+                                        </button>
+                                    </div>
+                                </td>
                              </tr>
 
                              <tr v-if="!pedidosVisibles.length">
@@ -406,7 +548,6 @@ const formatFecha = (value) => {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">N° Hoja Ruta</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Remitente</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Destinatario</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bultos</th>
@@ -417,7 +558,6 @@ const formatFecha = (value) => {
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="p in pedidosPendientes" :key="p.id" class="hover:bg-gray-50">
                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ p.id }}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ p.numero_hoja_ruta_origen || '-' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ p.remitente?.razon_social || '-' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ p.destinatario?.razon_social || '-' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ p.bultos }}</td>

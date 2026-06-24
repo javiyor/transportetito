@@ -21,7 +21,8 @@ class ManifiestoIngresoController extends Controller
     public function index(Request $request)
     {
         $manifiestos = ManifiestoIngreso::query()
-            ->with(['empresa:id,razon_social', 'deposito:id,nombre'])
+            ->with(['deposito:id,nombre'])
+            ->orderBy('deposito_id')
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate(20)
