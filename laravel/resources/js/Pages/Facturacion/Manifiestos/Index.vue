@@ -24,11 +24,16 @@ const monedaSymbol = (moneda) => {
         <Head title="Facturacion / Pendientes" />
 
         <template #header>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-3">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Facturacion / Manifiestos pendientes</h2>
-                <Link :href="route('operacion.comprobantes.index')">
-                    <button type="button" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">Comprobantes emitidos</button>
-                </Link>
+                <div class="flex items-center gap-2">
+                    <Link :href="route('facturacion.manual.create')">
+                        <button type="button" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">+ Carga manual</button>
+                    </Link>
+                    <Link :href="route('operacion.comprobantes.index')">
+                        <button type="button" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">Comprobantes emitidos</button>
+                    </Link>
+                </div>
             </div>
         </template>
 

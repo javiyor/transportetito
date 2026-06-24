@@ -211,6 +211,8 @@ Route::middleware([
     Route::middleware(['role:facturacion|admin'])->prefix('facturacion')->name('facturacion.')->group(function () {
         Route::get('/manifiestos', ManifiestoIndexController::class)->name('manifiestos.index');
         Route::get('/manifiestos/{manifiesto}', ManifiestoShowController::class)->name('manifiestos.show');
+        Route::get('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceCreateController::class)->name('manual.create');
+        Route::post('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceStoreController::class)->name('manual.store');
     });
 
     Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {

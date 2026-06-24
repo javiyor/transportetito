@@ -31,6 +31,8 @@ class Comprobante extends Model
 
         'detalle_facturacion',
 
+        'disponible_para_hoja_ruta',
+
         'requiere_autorizacion_arca',
         'arca_punto_venta',
         'arca_tipo_cbte',
@@ -47,6 +49,7 @@ class Comprobante extends Model
         'numero_interno' => 'int',
         'comprobante_origen_id' => 'int',
         'fecha_emision' => 'date',
+        'disponible_para_hoja_ruta' => 'bool',
         'requiere_autorizacion_arca' => 'bool',
         'arca_punto_venta' => 'int',
         'arca_numero' => 'int',

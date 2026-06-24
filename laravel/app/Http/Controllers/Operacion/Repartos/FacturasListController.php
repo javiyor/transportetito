@@ -51,6 +51,7 @@ class FacturasListController extends Controller
                 'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta,direccion,localidad,cp,telefono,zona_id',
             ])
             ->where('estado', 'emitida')
+            ->where('disponible_para_hoja_ruta', true)
             ->whereDoesntHave('hojaRutaItems', fn ($q) => $q->where('estado_entrega', 'entregado'))
             ->orderBy('id');
 
