@@ -1,22 +1,11 @@
 <script setup>
-import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
-const props = defineProps({
+defineProps({
     manifiestos: Object,
-});
-
-const depositoGroups = computed(() => {
-    const groups = {};
-    for (const m of props.manifiestos.data) {
-        const key = m.deposito?.nombre || 'Sin depósito';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(m);
-    }
-    return Object.entries(groups);
 });
 
 const formatFecha = (value) => {
@@ -53,64 +42,54 @@ const formatFecha = (value) => {
                     Sin manifiestos todavia.
                 </div>
 
-                <template v-for="[depositoNombre, items] in depositoGroups" :key="depositoNombre">
-                    <div class="sm:hidden">
-                        <div class="px-4 py-2 bg-gray-100 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            {{ depositoNombre }}
+                <div class="sm:hidden space-y-3 p-3">
+                    <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border border-gray-200 bg-white p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
+                                <div class="text-xs text-gray-500">{{ m.chofer || '-' }}</div>
+                            </div>
+                            <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
                         </div>
-                        <div class="space-y-3 p-3">
-                            <div v-for="m in items" :key="m.id" class="rounded-lg border border-gray-200 bg-white p-3">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
-                                        <div class="text-xs text-gray-500">{{ m.chofer || '-' }}</div>
-                                    </div>
-                                    <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
-                                </div>
-                                <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
-                                    <div>
-                                        <div class="text-xs uppercase tracking-wider text-gray-500">Deposito</div>
-                                        <div class="font-medium text-gray-900">{{ m.deposito?.nombre || '-' }}</div>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs uppercase tracking-wider text-gray-500">Transporte</div>
-                                        <div class="font-medium text-gray-900">{{ m.transporte || '-' }}</div>
-                                    </div>
-                                </div>
+                        <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Deposito</div>
+                                <div class="font-medium text-gray-900">{{ m.deposito?.nombre || '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Transporte</div>
+                                <div class="font-medium text-gray-900">{{ m.transporte || '-' }}</div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="hidden sm:block">
-                        <div class="px-4 py-1.5 bg-gray-100 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                            {{ depositoNombre }}
-                        </div>
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
-                                    <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
-                                    <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transporte</th>
-                                    <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="m in items" :key="m.id" class="hover:bg-gray-50">
-                                    <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
-                                    <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
-                                    <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
-                                    <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.transporte || '-' }}</td>
-                                    <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs">
-                                        <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">
-                                            Ver
-                                        </Link>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </template>
+                <div class="hidden sm:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transporte</th>
+                                <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="m in manifiestos.data" :key="m.id" class="hover:bg-gray-50">
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.transporte || '-' }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs">
+                                    <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">
+                                        Ver
+                                    </Link>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <div v-if="manifiestos.links?.length" class="p-3 border-t border-gray-200 flex flex-wrap gap-2">
                     <Link
