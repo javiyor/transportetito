@@ -38,14 +38,18 @@ select
   o.numclie as idorigen,
   d.numclie as iddest,
   carga.id as id,
-  cd.nomchof as chofer
+  (
+    select cd.nomchof
+    from cargaporenvio cpe
+    left join hojaderuta hr on cpe.idenvio = hr.id
+    left join conductores cd on hr.idchofer = cd.nrochof
+    where cpe.idcarga = carga.id
+    limit 1
+  ) as chofer
 from carga
 inner join clientes as o on carga.idproveedor = o.numclie
 inner join clientes as d on carga.idcliente = d.numclie
 inner join depositos on carga.iddeposito = depositos.id
-left join cargaporenvio cpe on carga.id = cpe.idcarga
-left join hojaderuta hr on cpe.idenvio = hr.id
-left join conductores cd on hr.idchofer = cd.nrochof
 where carga.fecha > ?
 order by date(carga.fecha) desc, d.nomclie asc
 SQL,
