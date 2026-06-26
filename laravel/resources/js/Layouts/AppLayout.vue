@@ -128,6 +128,7 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
                                             <DropdownLink :href="route('admin.cotizaciones.index')">Cotizaciones</DropdownLink>
                                             <DropdownLink :href="route('admin.vehiculos.index')">Vehiculos</DropdownLink>
+                                            <DropdownLink :href="route('admin.reportes.seguro')">Informe seguro</DropdownLink>
                                         </template>
                                     </Dropdown>
                                 </div>
@@ -372,6 +373,13 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('admin.vehiculos.*')"
                         >
                             Vehiculos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.reportes.seguro')"
+                            :active="route().current('admin.reportes.seguro')"
+                        >
+                            Informe seguro
                         </ResponsiveNavLink>
                     </div>
 

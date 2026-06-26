@@ -163,6 +163,7 @@ Route::middleware([
         Route::put('/vehiculos/{vehiculo}', [VehiculoAdminController::class, 'update'])->name('vehiculos.update');
 
         Route::get('/arca-diagnostic', [EmpresaAdminController::class, 'arcaDiagnostic'])->name('arca-diagnostic');
+        Route::get('/reportes/seguro', \App\Http\Controllers\Admin\InformeSeguroController::class)->name('reportes.seguro');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
