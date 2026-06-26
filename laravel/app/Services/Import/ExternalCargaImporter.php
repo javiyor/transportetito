@@ -38,14 +38,13 @@ select
   o.numclie as idorigen,
   d.numclie as iddest,
   carga.id as id,
-  coalesce(ch.nomchof, cd.nomchof) as chofer
+  cd.nomchof as chofer
 from carga
 inner join clientes as o on carga.idproveedor = o.numclie
 inner join clientes as d on carga.idcliente = d.numclie
 inner join depositos on carga.iddeposito = depositos.id
 left join cargaporenvio cpe on carga.id = cpe.idcarga
 left join hojaderuta hr on cpe.idenvio = hr.id
-left join chofer ch on hr.idchofer = ch.nrochof
 left join conductores cd on hr.idchofer = cd.nrochof
 where carga.fecha > ?
 order by date(carga.fecha) desc, d.nomclie asc
