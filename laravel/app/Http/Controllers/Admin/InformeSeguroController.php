@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\InformeSeguroOverride;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,41 @@ class InformeSeguroController extends Controller
             [$desde->toDateString(), $hasta->toDateString()]
         );
 
+        $overrides = InformeSeguroOverride::where('mes', $mes)
+            ->where('anio', $anio)
+            ->get()
+            ->keyBy('nummovil');
+
+        foreach ($rows as $r) {
+            $ov = $overrides->get($r->nummovil);
+            if (!$ov) {
+                continue;
+            }
+            if ($ov->desmovil !== null) {
+                $r->desmovil = $ov->desmovil;
+            }
+            if ($ov->patmovil !== null) {
+                $r->patmovil = $ov->patmovil;
+            }
+            if ($ov->pacmovil !== null) {
+                $r->pacmovil = $ov->pacmovil;
+            }
+            if ($ov->total_viajes !== null) {
+                $r->total_viajes = (int) $ov->total_viajes;
+            }
+            if ($ov->total_cargas !== null) {
+                $r->total_cargas = (int) $ov->total_cargas;
+            }
+            if ($ov->total_valor_declarado !== null) {
+                $r->total_valor_declarado = (float) $ov->total_valor_declarado;
+            }
+            $r->override_fields = [
+                'total_viajes' => $ov->total_viajes,
+                'total_cargas' => $ov->total_cargas,
+                'total_valor_declarado' => $ov->total_valor_declarado,
+            ];
+        }
+
         $totalGeneral = array_sum(array_column($rows, 'total_valor_declarado'));
 
         return Inertia::render('Admin/Reportes/Seguro', [
@@ -63,11 +99,23 @@ class InformeSeguroController extends Controller
             'desmovil' => ['nullable', 'string', 'max:45'],
             'patmovil' => ['nullable', 'string', 'max:45'],
             'pacmovil' => ['nullable', 'string', 'max:45'],
+            'total_viajes' => ['nullable', 'integer', 'min:0'],
+            'total_cargas' => ['nullable', 'integer', 'min:0'],
+            'total_valor_declarado' => ['nullable', 'numeric', 'min:0'],
+            'mes' => ['required', 'integer', 'between:1,12'],
+            'anio' => ['required', 'integer', 'min:2020'],
         ]);
 
-        DB::connection('mysql_external')->update(
-            'update moviles set desmovil = ?, patmovil = ?, pacmovil = ? where nummovil = ?',
-            [$data['desmovil'], $data['patmovil'], $data['pacmovil'], $data['nummovil']]
+        InformeSeguroOverride::updateOrCreate(
+            ['nummovil' => $data['nummovil'], 'mes' => $data['mes'], 'anio' => $data['anio']],
+            [
+                'desmovil' => $data['desmovil'],
+                'patmovil' => $data['patmovil'],
+                'pacmovil' => $data['pacmovil'],
+                'total_viajes' => $data['total_viajes'],
+                'total_cargas' => $data['total_cargas'],
+                'total_valor_declarado' => $data['total_valor_declarado'],
+            ]
         );
 
         return back()->with('flash.success', 'Móvil actualizado.');
@@ -75,14 +123,18 @@ class InformeSeguroController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        $data = $request->validate(['nummovil' => ['required', 'integer']]);
+        $data = $request->validate([
+            'nummovil' => ['required', 'integer'],
+            'mes' => ['required', 'integer', 'between:1,12'],
+            'anio' => ['required', 'integer', 'min:2020'],
+        ]);
 
-        DB::connection('mysql_external')->delete(
-            'delete from moviles where nummovil = ?',
-            [$data['nummovil']]
-        );
+        InformeSeguroOverride::where('nummovil', $data['nummovil'])
+            ->where('mes', $data['mes'])
+            ->where('anio', $data['anio'])
+            ->delete();
 
-        return back()->with('flash.success', 'Móvil eliminado.');
+        return back()->with('flash.success', 'Móvil eliminado del informe.');
     }
 
     public function exportCsv(Request $request): StreamedResponse
@@ -116,6 +168,36 @@ class InformeSeguroController extends Controller
             SQL,
             [$desde->toDateString(), $hasta->toDateString()]
         );
+
+        $overrides = InformeSeguroOverride::where('mes', $mes)
+            ->where('anio', $anio)
+            ->get()
+            ->keyBy('nummovil');
+
+        foreach ($rows as $r) {
+            $ov = $overrides->get($r->nummovil);
+            if (!$ov) {
+                continue;
+            }
+            if ($ov->desmovil !== null) {
+                $r->desmovil = $ov->desmovil;
+            }
+            if ($ov->patmovil !== null) {
+                $r->patmovil = $ov->patmovil;
+            }
+            if ($ov->pacmovil !== null) {
+                $r->pacmovil = $ov->pacmovil;
+            }
+            if ($ov->total_viajes !== null) {
+                $r->total_viajes = (int) $ov->total_viajes;
+            }
+            if ($ov->total_cargas !== null) {
+                $r->total_cargas = (int) $ov->total_cargas;
+            }
+            if ($ov->total_valor_declarado !== null) {
+                $r->total_valor_declarado = (float) $ov->total_valor_declarado;
+            }
+        }
 
         $filename = sprintf('informe-seguro-%s-%d.csv', str_pad($mes, 2, '0', STR_PAD_LEFT), $anio);
 

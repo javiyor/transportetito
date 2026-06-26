@@ -21,7 +21,7 @@ const props = defineProps({
 const flash = usePage().props.flash || {};
 
 const editando = ref(null);
-const editForm = ref({ desmovil: '', patmovil: '', pacmovil: '' });
+const editForm = ref({ desmovil: '', patmovil: '', pacmovil: '', total_viajes: null, total_cargas: null, total_valor_declarado: null });
 const editProcessing = ref(false);
 
 const confirmandoEliminar = ref(null);
@@ -42,19 +42,29 @@ const cambiarMes = (dir) => {
 };
 
 const abrirEditar = (r) => {
-    editForm.value = { desmovil: r.desmovil || '', patmovil: r.patmovil || '', pacmovil: r.pacmovil || '' };
+    const ov = r.override_fields || {};
+    editForm.value = {
+        desmovil: ov.desmovil ?? r.desmovil ?? '',
+        patmovil: ov.patmovil ?? r.patmovil ?? '',
+        pacmovil: ov.pacmovil ?? r.pacmovil ?? '',
+        total_viajes: ov.total_viajes ?? null,
+        total_cargas: ov.total_cargas ?? null,
+        total_valor_declarado: ov.total_valor_declarado ?? null,
+    };
     editando.value = r.nummovil;
 };
 
 const cerrarEditar = () => {
     editando.value = null;
-    editForm.value = { desmovil: '', patmovil: '', pacmovil: '' };
+    editForm.value = { desmovil: '', patmovil: '', pacmovil: '', total_viajes: null, total_cargas: null, total_valor_declarado: null };
 };
 
 const guardarEditar = () => {
     editProcessing.value = true;
     router.post(route('admin.reportes.seguro.update'), {
         nummovil: editando.value,
+        mes: props.mes,
+        anio: props.anio,
         ...editForm.value,
     }, {
         preserveScroll: true,
@@ -71,6 +81,8 @@ const ejecutarEliminar = () => {
     deleteProcessing.value = true;
     router.post(route('admin.reportes.seguro.destroy'), {
         nummovil: confirmandoEliminar.value,
+        mes: props.mes,
+        anio: props.anio,
     }, {
         preserveScroll: true,
         onSuccess: () => { confirmandoEliminar.value = null; deleteProcessing.value = false; },
@@ -80,6 +92,11 @@ const ejecutarEliminar = () => {
 
 const descargarCsv = () => {
     window.open(route('admin.reportes.seguro.csv', { mes: props.mes, anio: props.anio }), '_blank');
+};
+
+const hasOverride = (r, field) => {
+    const ov = r.override_fields || {};
+    return ov[field] !== null && ov[field] !== undefined;
 };
 </script>
 
@@ -134,9 +151,9 @@ const descargarCsv = () => {
                                 <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-700">{{ r.pacmovil || '-' }}</td>
                                 <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ r.nomchof || '-' }}</td>
                                 <td class="px-3 py-2 text-gray-700 max-w-[200px]">{{ r.depositos_origen || '-' }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700">{{ r.total_viajes }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700">{{ r.total_cargas }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-right font-mono text-gray-700">{{ formatNum(r.total_valor_declarado) }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_viajes') }">{{ r.total_viajes }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_cargas') }">{{ r.total_cargas }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-right font-mono text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_valor_declarado') }">{{ formatNum(r.total_valor_declarado) }}</td>
                                 <td class="px-3 py-2 whitespace-nowrap text-center print:hidden">
                                     <div class="flex items-center justify-center gap-1">
                                         <button @click="abrirEditar(r)" class="text-indigo-600 hover:text-indigo-800 text-[10px] underline">Editar</button>
@@ -147,8 +164,9 @@ const descargarCsv = () => {
                         </tbody>
                         <tfoot class="bg-gray-100">
                             <tr>
-                                <td colspan="9" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
+                                <td colspan="8" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
                                 <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
+                                <td class="print:hidden"></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -156,7 +174,7 @@ const descargarCsv = () => {
             </div>
 
             <div class="mt-4 text-xs text-gray-500 text-center print:hidden">
-                Los datos corresponden al período {{ mesNombre }} {{ anio }}. Fuente: base de datos externa.
+                Los datos corresponden al período {{ mesNombre }} {{ anio }}. Fuente: base de datos externa. Los valores en <span class="font-bold text-amber-700">ámbar</span> fueron editados manualmente.
             </div>
         </div>
 
@@ -178,6 +196,20 @@ const descargarCsv = () => {
                         <InputLabel value="Acoplado" />
                         <TextInput v-model="editForm.pacmovil" type="text" class="mt-1 block w-full" />
                     </div>
+                    <hr class="border-gray-200">
+                    <p class="text-xs text-gray-500">Dejar en blanco para usar los valores originales de la base externa.</p>
+                    <div>
+                        <InputLabel value="Total viajes" />
+                        <TextInput v-model="editForm.total_viajes" type="number" min="0" class="mt-1 block w-full" />
+                    </div>
+                    <div>
+                        <InputLabel value="Total cargas" />
+                        <TextInput v-model="editForm.total_cargas" type="number" min="0" class="mt-1 block w-full" />
+                    </div>
+                    <div>
+                        <InputLabel value="Valor declarado" />
+                        <TextInput v-model="editForm.total_valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                    </div>
                 </div>
             </template>
             <template #footer>
@@ -193,7 +225,7 @@ const descargarCsv = () => {
                 Eliminar móvil #{{ confirmandoEliminar }}
             </template>
             <template #content>
-                <p class="text-sm text-gray-600">¿Estás seguro de eliminar este móvil? Esta acción no se puede deshacer.</p>
+                <p class="text-sm text-gray-600">¿Estás seguro de eliminar este móvil del informe? Se quitarán las ediciones manuales. Esta acción no se puede deshacer.</p>
             </template>
             <template #footer>
                 <div class="flex items-center justify-end gap-2">
