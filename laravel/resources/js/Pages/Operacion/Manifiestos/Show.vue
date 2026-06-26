@@ -451,87 +451,58 @@ const formatFecha = (value) => {
                 </div>
 
                 <div class="mt-4 hidden lg:block overflow-x-auto">
-                    <table class="min-w-[1000px] w-full divide-y divide-gray-200">
+                    <table class="min-w-full w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recepcion</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Corregir</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Control de depósito</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
+                                <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cant</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
+                                <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor declarado</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depósito destino</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observación</th>
                              </tr>
                          </thead>
                          <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="p in pedidosVisibles" :key="p.id" :class="p.recepcion_estado === 'con_error' ? 'bg-red-50' : (p.recepcion_estado === 'correcto' ? 'bg-green-50/40' : '')">
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ p.id }}</td>
-                                <td class="px-4 py-4 whitespace-nowrap align-top">
+                                <td class="px-3 py-1.5 whitespace-nowrap align-top">
                                     <div class="flex items-center gap-1">
-                                        <select v-model="recepcionForms[p.id].recepcion_estado" class="border-gray-300 rounded text-xs py-1 px-1 w-24 focus:border-indigo-500 focus:ring-indigo-500">
+                                        <select v-model="recepcionForms[p.id].recepcion_estado" class="border-gray-300 rounded text-xs py-0.5 px-1 w-20 focus:border-indigo-500 focus:ring-indigo-500">
                                             <option value="recibido">Recibido</option>
                                             <option value="correcto">Correcto</option>
                                             <option value="con_error">Con error</option>
                                         </select>
-                                        <button type="button" class="inline-flex items-center px-2 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50" :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">✓</button>
+                                        <button type="button" class="inline-flex items-center px-1.5 py-0.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-50" :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">✓</button>
                                     </div>
-                                    <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="mt-2 space-y-1">
-                                        <div class="text-xs font-medium text-red-700">Campos con error:</div>
-                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="remitente" :checked="recepcionForms[p.id].recepcion_errores?.includes('remitente')" @change="toggleError(p.id, 'remitente')" class="rounded border-gray-300" /> Remitente</label>
-                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="destinatario" :checked="recepcionForms[p.id].recepcion_errores?.includes('destinatario')" @change="toggleError(p.id, 'destinatario')" class="rounded border-gray-300" /> Destinatario</label>
-                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor declarado</label>
-                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
-                                        <label class="flex items-center gap-1 text-xs"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
-                                        <input v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1 mt-1" placeholder="Observacion adicional" />
-                                        <InputError class="mt-0.5" :message="recepcionForms[p.id].errors.recepcion_errores" />
-                                        <div class="pt-1">
-                                            <label class="text-xs text-gray-500">Foto del bulto:</label>
-                                            <input type="file" accept="image/*" class="block w-full text-xs mt-0.5" @change="onRecepcionFotoChange(p.id, $event)" />
-                                        </div>
-                                        <div v-if="p.recepcion_fotos?.length" class="text-xs text-green-600">Fotos: {{ p.recepcion_fotos.length }}</div>
+                                    <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="mt-1 space-y-0.5">
+                                        <div class="text-[10px] font-medium text-red-700">Errores:</div>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="remitente" :checked="recepcionForms[p.id].recepcion_errores?.includes('remitente')" @change="toggleError(p.id, 'remitente')" class="rounded border-gray-300" /> Remitente</label>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="destinatario" :checked="recepcionForms[p.id].recepcion_errores?.includes('destinatario')" @change="toggleError(p.id, 'destinatario')" class="rounded border-gray-300" /> Destinatario</label>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor</label>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
                                     </div>
-                                    <div class="text-xs text-gray-400 mt-1">
+                                    <div class="text-[10px] text-gray-400 mt-0.5">
                                         <span v-if="p.recepcion_controlado_at">{{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
                                         <span v-else>Sin control</span>
                                     </div>
                                 </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                                    <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
-                                    <div class="text-xs text-gray-500">{{ p.remitente?.cuit || '' }}</div>
-                                </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">
                                     <div class="font-medium text-gray-900">{{ p.destinatario?.razon_social || '-' }}</div>
-                                    <div class="text-xs text-gray-500">{{ p.destinatario?.cuit || '' }}</div>
+                                    <div class="text-gray-500">{{ p.destinatario?.cuit || '' }}</div>
                                 </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700 text-center">{{ p.bultos }}</td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700 text-center">{{ p.palets }}</td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm font-mono text-gray-700">${{ Number(p.valor_declarado).toFixed(2) }}</td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cr_importe || '-' }}</td>
-                                <td class="px-4 py-4 whitespace-nowrap text-center align-top">
-                                    <button
-                                        type="button"
-                                        class="text-xs text-indigo-600 hover:text-indigo-800 underline"
-                                        @click="toggleCorregir(p)"
-                                    >
-                                        {{ corrigiendoPedidoId.value === p.id ? 'Cancelar' : 'Corregir' }}
-                                    </button>
-                                    <div v-if="corrigiendoPedidoId.value === p.id" class="mt-2 space-y-1 text-left">
-                                        <input v-model="correccionForm.bultos" type="number" min="0" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Bultos" />
-                                        <input v-model="correccionForm.palets" type="number" min="0" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Palets" />
-                                        <input v-model="correccionForm.valor_declarado" type="number" min="0" step="0.01" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Valor declarado" />
-                                        <input v-model="correccionForm.observacion" type="text" class="w-full border-gray-300 rounded text-xs py-1 px-1" placeholder="Observacion" />
-                                        <button
-                                            type="button"
-                                            class="w-full px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 disabled:opacity-50"
-                                            :disabled="correccionForm.processing"
-                                            @click="enviarCorreccion(p.id)"
-                                        >
-                                            Guardar
-                                        </button>
-                                    </div>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">
+                                    <div class="font-medium text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
+                                    <div class="text-gray-500">{{ p.remitente?.cuit || '' }}</div>
                                 </td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700 text-center">{{ p.bultos }}b / {{ p.palets }}p</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700 font-mono">{{ p.remito_numero || '-' }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs font-mono text-gray-700 text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ manifiesto.depositoDestino?.nombre || '-' }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ String(p.created_at || '').slice(0, 10) }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700 max-w-[120px] truncate">{{ p.observacion || '-' }}</td>
                              </tr>
 
                              <tr v-if="!pedidosVisibles.length">

@@ -205,19 +205,12 @@ const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, de
 
 const detalleOverridesSnapshot = computed(() => JSON.stringify(facturarPorEntrega.detalles_por_entrega || {}));
 
+const splitRelaciones = reactive({});
+
 const gruposFacturacion = computed(() => {
     detalleOverridesSnapshot.value;
 
-    const grouped = new Map();
-    for (const p of pedidosPendientes.value) {
-        const entregaId = p.destinatario_cuenta_id;
-        if (!entregaId) continue;
-        if (!grouped.has(entregaId)) grouped.set(entregaId, []);
-        grouped.get(entregaId).push(p);
-    }
-
-    const out = [];
-    for (const [entregaId, pedidos] of grouped.entries()) {
+    const ensureDet = (entregaId) => {
         if (!facturarPorEntrega.facturar_por_entrega?.[entregaId]) {
             facturarPorEntrega.facturar_por_entrega[entregaId] = '';
         }
@@ -241,166 +234,64 @@ const gruposFacturacion = computed(() => {
                 iva_pct: null,
             };
         }
+    };
 
-        const remitenteIds = Array.from(new Set(pedidos.map((p) => Number(p.remitente_tercero_id || 0)).filter(Boolean)));
-        const destinatarioIds = Array.from(new Set(pedidos.map((p) => Number(p.destinatario_tercero_id || 0)).filter(Boolean)));
-        const isSingleRelacion = remitenteIds.length === 1 && destinatarioIds.length === 1;
-
-        const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
-
-        let detalle;
-        if (isSingleRelacion) {
-            const tarifaBase = resolveTarifa(remitenteIds[0], destinatarioIds[0]);
-            detalle = calcFactura(pedidos, tarifaBase, override);
-        } else {
-            const groupedByRel = new Map();
-            for (const p of pedidos) {
-                const key = tarifaKey(p.remitente_tercero_id, p.destinatario_tercero_id);
-                if (!groupedByRel.has(key)) groupedByRel.set(key, []);
-                groupedByRel.get(key).push(p);
-            }
-
-            const sum = {
-                moneda: 'ARS',
-                bultos: 0,
-                palets: 0,
-                valorDeclarado: 0,
-                crImporte: 0,
-                flete: 0,
-                seguro: 0,
-                comisionCr: 0,
-                subtotalGravado: 0,
-                iva: 0,
-                total: 0,
-                porRelacion: [],
-                parametros: null,
-            };
-
-            for (const [key, relPedidos] of groupedByRel.entries()) {
-                const [remStr, destStr] = String(key).split('-');
-                const remId = Number(remStr || 0);
-                const destId = Number(destStr || 0);
-                const tarifaBase = resolveTarifa(remId, destId);
-                const calc = calcFactura(relPedidos, tarifaBase, override);
-                sum.moneda = calc.moneda || sum.moneda;
-                sum.bultos += Number(calc.bultos || 0);
-                sum.palets += Number(calc.palets || 0);
-                sum.valorDeclarado += Number(calc.valorDeclarado || 0);
-                sum.crImporte += Number(calc.crImporte || 0);
-                sum.flete += Number(calc.flete || 0);
-                sum.seguro += Number(calc.seguro || 0);
-                sum.comisionCr += Number(calc.comisionCr || 0);
-                sum.subtotalGravado += Number(calc.subtotalGravado || 0);
-                sum.iva += Number(calc.iva || 0);
-                sum.total += Number(calc.total || 0);
-                sum.porRelacion.push({ remitenteId: remId, destinatarioId: destId, detalle: calc });
-            }
-
-            const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-            detalle = {
-                ...sum,
-                valorDeclarado: round2(sum.valorDeclarado),
-                crImporte: round2(sum.crImporte),
-                flete: round2(sum.flete),
-                seguro: round2(sum.seguro),
-                comisionCr: round2(sum.comisionCr),
-                subtotalGravado: round2(sum.subtotalGravado),
-                iva: round2(sum.iva),
-                total: round2(sum.total),
-            };
-        }
-        const cuentas = new Map();
-        for (const p of pedidos) {
-            if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
-            if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
-        }
-
-        const pagas = Array.from(new Set(pedidos.map((p) => p.paga)));
-        let suggested = '';
-        if (pagas.length === 1) {
-            if (pagas[0] === 'origen' && pedidos[0].remitente_cuenta) suggested = String(pedidos[0].remitente_cuenta.id);
-            if (pagas[0] === 'destino' && pedidos[0].destinatario_cuenta) suggested = String(pedidos[0].destinatario_cuenta.id);
-        }
-
-        out.push({
-            entregaId,
-            pedidos,
-            detalle,
-            cuentas: Array.from(cuentas.values()),
-            suggested,
-            isSingleRelacion,
-            remitenteId: isSingleRelacion ? remitenteIds[0] : null,
-            destinatarioId: isSingleRelacion ? destinatarioIds[0] : null,
-        });
+    const grouped = new Map();
+    for (const p of pedidosPendientes.value) {
+        const key = tarifaKey(p.remitente_tercero_id, p.destinatario_tercero_id);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(p);
     }
 
-    return out.sort((a, b) => a.entregaId - b.entregaId);
+    const out = [];
+    for (const [relKey, pedidos] of grouped.entries()) {
+        const [remIdStr, destIdStr] = relKey.split('-');
+        const remId = Number(remIdStr || 0);
+        const destId = Number(destIdStr || 0);
+        const tarifaBase = resolveTarifa(remId, destId);
+
+        if (splitRelaciones[relKey]) {
+            for (const p of pedidos) {
+                const entregaId = relKey + '-p' + p.id;
+                ensureDet(entregaId);
+                const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
+                const detalle = calcFactura([p], tarifaBase, override);
+                const cuentas = new Map();
+                if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
+                if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
+                let suggested = '';
+                if (p.paga === 'origen' && p.remitente_cuenta) suggested = String(p.remitente_cuenta.id);
+                if (p.paga === 'destino' && p.destinatario_cuenta) suggested = String(p.destinatario_cuenta.id);
+                out.push({ entregaId, pedidos: [p], detalle, cuentas: Array.from(cuentas.values()), suggested, isSingleRelacion: true, remitenteId: remId || null, destinatarioId: destId || null, relKey });
+            }
+        } else {
+            const entregaId = relKey;
+            ensureDet(entregaId);
+            const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
+            const detalle = calcFactura(pedidos, tarifaBase, override);
+            const cuentas = new Map();
+            for (const p of pedidos) {
+                if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
+                if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
+            }
+            const pagas = Array.from(new Set(pedidos.map((p) => p.paga)));
+            let suggested = '';
+            if (pagas.length === 1) {
+                if (pagas[0] === 'origen' && pedidos[0].remitente_cuenta) suggested = String(pedidos[0].remitente_cuenta.id);
+                if (pagas[0] === 'destino' && pedidos[0].destinatario_cuenta) suggested = String(pedidos[0].destinatario_cuenta.id);
+            }
+            out.push({ entregaId, pedidos, detalle, cuentas: Array.from(cuentas.values()), suggested, isSingleRelacion: true, remitenteId: remId || null, destinatarioId: destId || null, relKey });
+        }
+    }
+
+    return out.sort((a, b) => (b.pedidos[0]?.id || 0) - (a.pedidos[0]?.id || 0));
 });
 
 const detalleGrupo = (g) => {
     const pedidos = g?.pedidos || [];
-    const remitenteIds = Array.from(new Set(pedidos.map((p) => Number(p.remitente_tercero_id || 0)).filter(Boolean)));
-    const destinatarioIds = Array.from(new Set(pedidos.map((p) => Number(p.destinatario_tercero_id || 0)).filter(Boolean)));
-    const isSingleRelacion = remitenteIds.length === 1 && destinatarioIds.length === 1;
     const override = facturarPorEntrega.detalles_por_entrega?.[g.entregaId] || null;
-
-    if (isSingleRelacion) {
-        const tarifaBase = resolveTarifa(remitenteIds[0], destinatarioIds[0]);
-        return calcFactura(pedidos, tarifaBase, override);
-    }
-
-    const groupedByRel = new Map();
-    for (const p of pedidos) {
-        const key = tarifaKey(p.remitente_tercero_id, p.destinatario_tercero_id);
-        if (!groupedByRel.has(key)) groupedByRel.set(key, []);
-        groupedByRel.get(key).push(p);
-    }
-
-    const sum = {
-        moneda: 'ARS',
-        bultos: 0,
-        palets: 0,
-        valorDeclarado: 0,
-        crImporte: 0,
-        flete: 0,
-        seguro: 0,
-        comisionCr: 0,
-        subtotalGravado: 0,
-        iva: 0,
-        total: 0,
-    };
-
-    for (const [key, relPedidos] of groupedByRel.entries()) {
-        const [remStr, destStr] = String(key).split('-');
-        const remId = Number(remStr || 0);
-        const destId = Number(destStr || 0);
-        const tarifaBase = resolveTarifa(remId, destId);
-        const calc = calcFactura(relPedidos, tarifaBase, override);
-        sum.moneda = calc.moneda || sum.moneda;
-        sum.bultos += Number(calc.bultos || 0);
-        sum.palets += Number(calc.palets || 0);
-        sum.valorDeclarado += Number(calc.valorDeclarado || 0);
-        sum.crImporte += Number(calc.crImporte || 0);
-        sum.flete += Number(calc.flete || 0);
-        sum.seguro += Number(calc.seguro || 0);
-        sum.comisionCr += Number(calc.comisionCr || 0);
-        sum.subtotalGravado += Number(calc.subtotalGravado || 0);
-        sum.iva += Number(calc.iva || 0);
-        sum.total += Number(calc.total || 0);
-    }
-
-    const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
-    return {
-        ...sum,
-        valorDeclarado: round2(sum.valorDeclarado),
-        crImporte: round2(sum.crImporte),
-        flete: round2(sum.flete),
-        seguro: round2(sum.seguro),
-        comisionCr: round2(sum.comisionCr),
-        subtotalGravado: round2(sum.subtotalGravado),
-        iva: round2(sum.iva),
-        total: round2(sum.total),
-    };
+    const tarifaBase = resolveTarifa(g.remitenteId, g.destinatarioId);
+    return calcFactura(pedidos, tarifaBase, override);
 };
 
 const backfillForm = useForm({ confirm: true });
@@ -660,8 +551,14 @@ const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.valu
                     <div class="mt-4 space-y-2">
                         <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border border-gray-200">
                             <div class="flex items-center justify-between gap-2 px-4 py-2 border-b border-gray-100 bg-gray-50">
-                                <div class="text-xs font-medium text-gray-700">
-                                    Entrega #{{ g.entregaId }} · {{ g.pedidos.length }} ped · Total: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}
+                                <div class="text-xs font-medium text-gray-700 flex items-center gap-2">
+                                    <span>{{ g.pedidos[0]?.remitente?.razon_social || '-' }} → {{ g.pedidos[0]?.destinatario?.razon_social || '-' }}</span>
+                                    <span class="text-gray-400">·</span>
+                                    <span>{{ g.pedidos.length }} ped · {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}</span>
+                                    <label v-if="g.relKey && (g.pedidos.length > 1 || splitRelaciones[g.relKey])" class="inline-flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer select-none">
+                                        <input type="checkbox" v-model="splitRelaciones[g.relKey]" class="rounded border-gray-300" />
+                                        {{ splitRelaciones[g.relKey] ? 'Unificar' : 'Separar' }}
+                                    </label>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <select

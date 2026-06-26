@@ -87,6 +87,7 @@ class ManifiestoIngresoController extends Controller
         $manifiesto->load([
             'empresa:id,razon_social,permite_guias_no_fiscales,condicion_iva,moneda_base',
             'deposito:id,nombre',
+            'depositoDestino:id,nombre',
             'pedidos' => function ($q) {
                 $q->with([
                     'remitente:id,cuit,razon_social',
