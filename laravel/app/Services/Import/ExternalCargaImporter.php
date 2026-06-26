@@ -37,7 +37,9 @@ select
   d.cuiclie as cuitdest,
   o.numclie as idorigen,
   d.numclie as iddest,
-  carga.id as id
+  carga.id as id,
+  carga.chofer as chofer,
+  carga.transporte as transporte
 from carga
 inner join clientes as o on carga.idproveedor = o.numclie
 inner join clientes as d on carga.idcliente = d.numclie
@@ -84,8 +86,8 @@ SQL,
                     'fecha' => $fecha,
                 ],
                 [
-                    'transporte' => null,
-                    'chofer' => null,
+                    'transporte' => ($row->transporte ?? null) !== null ? (string) $row->transporte : null,
+                    'chofer' => ($row->chofer ?? null) !== null ? (string) $row->chofer : null,
                     'patente_camion' => null,
                     'patente_acoplado' => null,
                     'ciudad_origen' => $depositoOrigen->nombre,
