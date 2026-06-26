@@ -48,18 +48,9 @@ const formatFecha = (value) => {
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
                                 <div class="text-xs text-gray-500">{{ m.chofer || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ m.deposito?.nombre || '-' }}</div>
                             </div>
                             <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
-                        </div>
-                        <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Deposito</div>
-                                <div class="font-medium text-gray-900">{{ m.deposito?.nombre || '-' }}</div>
-                            </div>
-                            <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Transporte</div>
-                                <div class="font-medium text-gray-900">{{ m.transporte || '-' }}</div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -71,7 +62,6 @@ const formatFecha = (value) => {
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
-                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transporte</th>
                                 <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -80,7 +70,6 @@ const formatFecha = (value) => {
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
-                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.transporte || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs">
                                     <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">
                                         Ver

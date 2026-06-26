@@ -50,8 +50,6 @@ const monedaSymbol = (moneda) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transporte</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pendientes</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
@@ -60,8 +58,6 @@ const monedaSymbol = (moneda) => {
                             <tr v-for="m in manifiestos.data" :key="m.id" class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">#{{ m.id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.chofer || '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.transporte || '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ m.pendientes_count }}</span>
