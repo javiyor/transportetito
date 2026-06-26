@@ -38,8 +38,7 @@ select
   o.numclie as idorigen,
   d.numclie as iddest,
   carga.id as id,
-  coalesce(ch.nomchof, cd.nomchof) as chofer,
-  coalesce(ch.trachof, cd.trachof) as transporte
+  coalesce(ch.nomchof, cd.nomchof) as chofer
 from carga
 inner join clientes as o on carga.idproveedor = o.numclie
 inner join clientes as d on carga.idcliente = d.numclie
@@ -90,7 +89,6 @@ SQL,
                     'fecha' => $fecha,
                 ],
                 [
-                    'transporte' => ($row->transporte ?? null) !== null ? (string) $row->transporte : null,
                     'chofer' => ($row->chofer ?? null) !== null ? (string) $row->chofer : null,
                     'patente_camion' => null,
                     'patente_acoplado' => null,
