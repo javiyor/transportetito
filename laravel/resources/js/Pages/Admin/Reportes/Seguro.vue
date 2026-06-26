@@ -1,6 +1,14 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import DangerButton from '@/Components/DangerButton.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     rows: Array,
@@ -9,6 +17,15 @@ const props = defineProps({
     anio: Number,
     mesNombre: String,
 });
+
+const flash = usePage().props.flash || {};
+
+const editando = ref(null);
+const editForm = ref({ desmovil: '', patmovil: '', pacmovil: '' });
+const editProcessing = ref(false);
+
+const confirmandoEliminar = ref(null);
+const deleteProcessing = ref(false);
 
 const formatNum = (n) => {
     const val = Number(n || 0);
@@ -23,6 +40,47 @@ const cambiarMes = (dir) => {
     if (mes > 12) { mes = 1; anio++; }
     router.get(route('admin.reportes.seguro', { mes, anio }));
 };
+
+const abrirEditar = (r) => {
+    editForm.value = { desmovil: r.desmovil || '', patmovil: r.patmovil || '', pacmovil: r.pacmovil || '' };
+    editando.value = r.nummovil;
+};
+
+const cerrarEditar = () => {
+    editando.value = null;
+    editForm.value = { desmovil: '', patmovil: '', pacmovil: '' };
+};
+
+const guardarEditar = () => {
+    editProcessing.value = true;
+    router.post(route('admin.reportes.seguro.update'), {
+        nummovil: editando.value,
+        ...editForm.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { cerrarEditar(); editProcessing.value = false; },
+        onError: () => { editProcessing.value = false; },
+    });
+};
+
+const confirmarEliminar = (nummovil) => {
+    confirmandoEliminar.value = nummovil;
+};
+
+const ejecutarEliminar = () => {
+    deleteProcessing.value = true;
+    router.post(route('admin.reportes.seguro.destroy'), {
+        nummovil: confirmandoEliminar.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { confirmandoEliminar.value = null; deleteProcessing.value = false; },
+        onError: () => { deleteProcessing.value = false; },
+    });
+};
+
+const descargarCsv = () => {
+    window.open(route('admin.reportes.seguro.csv', { mes: props.mes, anio: props.anio }), '_blank');
+};
 </script>
 
 <template>
@@ -36,12 +94,17 @@ const cambiarMes = (dir) => {
                     <button @click="cambiarMes(-1)" class="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50">&larr; Mes anterior</button>
                     <span class="text-sm font-medium">{{ mesNombre }} {{ anio }}</span>
                     <button @click="cambiarMes(1)" class="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50">Mes siguiente &rarr;</button>
+                    <button @click="descargarCsv" class="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50">CSV</button>
                     <button @click="window.print()" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Imprimir</button>
                 </div>
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+        <div v-if="flash.success" class="max-w-7xl mx-auto mt-4 px-4 sm:px-6 lg:px-8">
+            <div class="bg-green-100 border border-green-200 text-green-800 px-4 py-2 rounded text-sm">{{ flash.success }}</div>
+        </div>
+
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div v-if="!rows.length" class="px-6 py-10 text-center text-sm text-gray-500">
                     No hay movimientos en {{ mesNombre }} {{ anio }}.
@@ -60,6 +123,7 @@ const cambiarMes = (dir) => {
                                 <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Viajes</th>
                                 <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Cargas</th>
                                 <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Valor declarado</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider print:hidden">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -73,11 +137,17 @@ const cambiarMes = (dir) => {
                                 <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700">{{ r.total_viajes }}</td>
                                 <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700">{{ r.total_cargas }}</td>
                                 <td class="px-3 py-2 whitespace-nowrap text-right font-mono text-gray-700">{{ formatNum(r.total_valor_declarado) }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center print:hidden">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button @click="abrirEditar(r)" class="text-indigo-600 hover:text-indigo-800 text-[10px] underline">Editar</button>
+                                        <button @click="confirmarEliminar(r.nummovil)" class="text-red-600 hover:text-red-800 text-[10px] underline">Eliminar</button>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                         <tfoot class="bg-gray-100">
                             <tr>
-                                <td colspan="8" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
+                                <td colspan="9" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
                                 <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
                             </tr>
                         </tfoot>
@@ -89,6 +159,49 @@ const cambiarMes = (dir) => {
                 Los datos corresponden al período {{ mesNombre }} {{ anio }}. Fuente: base de datos externa.
             </div>
         </div>
+
+        <DialogModal :show="!!editando" @close="cerrarEditar">
+            <template #title>
+                Editar móvil #{{ editando }}
+            </template>
+            <template #content>
+                <div class="space-y-4">
+                    <div>
+                        <InputLabel value="Descripción" />
+                        <TextInput v-model="editForm.desmovil" type="text" class="mt-1 block w-full" />
+                    </div>
+                    <div>
+                        <InputLabel value="Patente" />
+                        <TextInput v-model="editForm.patmovil" type="text" class="mt-1 block w-full" />
+                    </div>
+                    <div>
+                        <InputLabel value="Acoplado" />
+                        <TextInput v-model="editForm.pacmovil" type="text" class="mt-1 block w-full" />
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <div class="flex items-center justify-end gap-2">
+                    <SecondaryButton @click="cerrarEditar">Cancelar</SecondaryButton>
+                    <PrimaryButton :disabled="editProcessing" @click="guardarEditar">Guardar</PrimaryButton>
+                </div>
+            </template>
+        </DialogModal>
+
+        <DialogModal :show="!!confirmandoEliminar" @close="confirmandoEliminar = null">
+            <template #title>
+                Eliminar móvil #{{ confirmandoEliminar }}
+            </template>
+            <template #content>
+                <p class="text-sm text-gray-600">¿Estás seguro de eliminar este móvil? Esta acción no se puede deshacer.</p>
+            </template>
+            <template #footer>
+                <div class="flex items-center justify-end gap-2">
+                    <SecondaryButton @click="confirmandoEliminar = null">Cancelar</SecondaryButton>
+                    <DangerButton :disabled="deleteProcessing" @click="ejecutarEliminar">Eliminar</DangerButton>
+                </div>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>
 

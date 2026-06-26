@@ -163,7 +163,10 @@ Route::middleware([
         Route::put('/vehiculos/{vehiculo}', [VehiculoAdminController::class, 'update'])->name('vehiculos.update');
 
         Route::get('/arca-diagnostic', [EmpresaAdminController::class, 'arcaDiagnostic'])->name('arca-diagnostic');
-        Route::get('/reportes/seguro', \App\Http\Controllers\Admin\InformeSeguroController::class)->name('reportes.seguro');
+        Route::get('/reportes/seguro', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'index'])->name('reportes.seguro');
+        Route::post('/reportes/seguro/actualizar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'update'])->name('reportes.seguro.update');
+        Route::post('/reportes/seguro/eliminar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'destroy'])->name('reportes.seguro.destroy');
+        Route::get('/reportes/seguro/csv', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'exportCsv'])->name('reportes.seguro.csv');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
