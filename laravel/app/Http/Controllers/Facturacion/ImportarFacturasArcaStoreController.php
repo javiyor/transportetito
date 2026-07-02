@@ -17,7 +17,6 @@ class ImportarFacturasArcaStoreController extends Controller
     public function __invoke(Request $request, WsfeClient $wsfe): RedirectResponse
     {
         $data = $request->validate([
-            'deposito_id' => ['nullable', 'integer', 'exists:depositos,id'],
             'punto_venta' => ['required', 'integer', 'min:1'],
             'tipo_comprobante' => ['required', 'string', 'max:10'],
             'numero_desde' => ['required', 'integer', 'min:1'],
@@ -25,9 +24,6 @@ class ImportarFacturasArcaStoreController extends Controller
         ]);
 
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
-        $deposito = $data['deposito_id']
-            ? $empresa->depositos()->findOrFail($data['deposito_id'])
-            : null;
 
         $importados = 0;
         $omitidos = 0;
@@ -82,7 +78,7 @@ class ImportarFacturasArcaStoreController extends Controller
 
             Comprobante::create([
                 'empresa_id' => $empresa->id,
-                'deposito_id' => $deposito?->id,
+                'deposito_id' => null,
                 'facturar_cuenta_id' => $cuenta?->id,
                 'tipo' => 'factura_interna',
                 'estado' => 'emitida',

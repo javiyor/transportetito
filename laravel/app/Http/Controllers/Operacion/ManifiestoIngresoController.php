@@ -10,6 +10,7 @@ use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\TarifaRelacion;
+use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
@@ -20,8 +21,27 @@ class ManifiestoIngresoController extends Controller
 {
     public function index(Request $request)
     {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+
+        $empresaIds = [$empresaId];
+
+        if ($empresaId > 0) {
+            $shared = TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresaId) {
+                $q->select('tercero_id')
+                    ->from('tercero_cuentas')
+                    ->where('empresa_id', $empresaId);
+            })
+                ->where('empresa_id', '!=', $empresaId)
+                ->distinct()
+                ->pluck('empresa_id')
+                ->toArray();
+
+            $empresaIds = array_merge([$empresaId], $shared);
+        }
+
         $manifiestos = ManifiestoIngreso::query()
             ->with(['deposito:id,nombre'])
+            ->whereIn('empresa_id', $empresaIds)
             ->orderBy('deposito_id')
             ->orderByDesc('fecha')
             ->orderByDesc('id')

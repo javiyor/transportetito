@@ -5,7 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
-const props = defineProps({
+defineProps({
     depositos: Array,
 });
 
@@ -15,12 +15,10 @@ const importResult = computed(() => page.props.tt?.flash?.importResult);
 const modo = ref('csv');
 
 const csvForm = useForm({
-    deposito_id: '',
     rows: [],
 });
 
 const arcaForm = useForm({
-    deposito_id: '',
     punto_venta: '',
     tipo_comprobante: 'FA',
     numero_desde: '',
@@ -103,14 +101,6 @@ const submitArca = () => {
                 <p class="text-sm text-gray-500 mb-4">Columnas: tipo, pv, numero, cuit_cliente, razon_social, fecha_emision, total, moneda</p>
 
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Depósito (opcional)</label>
-                    <select v-model="csvForm.deposito_id" class="block w-64 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                        <option value="">Sin depósito</option>
-                        <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
-                    </select>
-                </div>
-
-                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Pegar CSV</label>
                     <textarea v-model="csvText" rows="8" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-mono" placeholder="tipo,pv,numero,cuit_cliente,razon_social,fecha_emision,total,moneda&#10;FA,1,5,20333999911,CLIENTE SA,2026-06-01,15000.00,ARS"></textarea>
                 </div>
@@ -146,14 +136,7 @@ const submitArca = () => {
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde ARCA (WSFE)</h3>
                 <p class="text-sm text-gray-500 mb-4">Consultar comprobantes emitidos en AFIP/ARCA por rango de numeración.</p>
 
-                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Depósito</label>
-                        <select v-model="arcaForm.deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                            <option value="">Sin depósito</option>
-                            <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
-                        </select>
-                    </div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Punto de venta</label>
                         <input v-model="arcaForm.punto_venta" type="number" min="1" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />

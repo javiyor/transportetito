@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Operacion\Comprobantes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
+use App\Models\TerceroCuenta;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,13 +16,29 @@ class ComprobanteIndexController extends Controller
         $tipo = (string) ($request->query('tipo') ?: 'todos');
         $estado = (string) ($request->query('estado') ?: 'todos');
 
+        $empresaIds = [$empresaId];
+
+        if ($empresaId > 0) {
+            $shared = TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresaId) {
+                $q->select('tercero_id')
+                    ->from('tercero_cuentas')
+                    ->where('empresa_id', $empresaId);
+            })
+                ->where('empresa_id', '!=', $empresaId)
+                ->distinct()
+                ->pluck('empresa_id')
+                ->toArray();
+
+            $empresaIds = array_merge([$empresaId], $shared);
+        }
+
         $query = Comprobante::query()
             ->with([
                 'entregaCuenta.tercero:id,cuit,razon_social',
                 'facturarCuenta.tercero:id,cuit,razon_social',
                 'notasCredito:id,comprobante_origen_id,estado,total',
             ])
-            ->where('empresa_id', $empresaId)
+            ->whereIn('empresa_id', $empresaIds)
             ->orderByDesc('id');
 
         if (in_array($tipo, ['factura_interna', 'guia_envio', 'nota_credito_interna'], true)) {

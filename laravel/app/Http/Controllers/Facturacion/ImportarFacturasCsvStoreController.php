@@ -16,7 +16,6 @@ class ImportarFacturasCsvStoreController extends Controller
     public function __invoke(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'deposito_id' => ['nullable', 'integer', 'exists:depositos,id'],
             'rows' => ['required', 'array', 'min:1'],
             'rows.*.tipo' => ['required', 'string', 'max:64'],
             'rows.*.pv' => ['required', 'integer', 'min:1'],
@@ -62,7 +61,7 @@ class ImportarFacturasCsvStoreController extends Controller
 
                 Comprobante::create([
                     'empresa_id' => $empresa->id,
-                    'deposito_id' => $data['deposito_id'] ?: null,
+                    'deposito_id' => null,
                     'facturar_cuenta_id' => $cuenta?->id,
                     'tipo' => 'factura_interna',
                     'estado' => 'emitida',

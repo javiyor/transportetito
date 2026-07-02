@@ -52,20 +52,24 @@ const switchEmpresa = (empresaId) => {
                                     Control pedidos
                                 </NavLink>
 
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
-                                    :href="route('facturacion.manifiestos.index')"
-                                    :active="route().current('facturacion.*') || route().current('operacion.comprobantes.*')"
-                                >
-                                    Facturacion
-                                </NavLink>
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
-                                    :href="route('facturacion.importar.index')"
-                                    :active="route().current('facturacion.importar.*')"
-                                >
-                                    Importar
-                                </NavLink>
+                                <div v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="56">
+                                        <template #trigger>
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('facturacion.*') || route().current('operacion.comprobantes.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                                Facturacion
+                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                        </template>
+
+                                        <template #content>
+                                            <DropdownLink :href="route('facturacion.manifiestos.index')">Manifiestos</DropdownLink>
+                                            <DropdownLink :href="route('facturacion.manual.create')">Cargas manuales</DropdownLink>
+                                            <DropdownLink :href="route('facturacion.importar.index')">Importar facturas</DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
 
                                 <NavLink
                                     v-if="($page.props.tt?.roles || []).includes('operaciones')"
@@ -229,19 +233,29 @@ const switchEmpresa = (empresaId) => {
                             Control pedidos
                         </ResponsiveNavLink>
 
+                        <div v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">
+                            Facturacion
+                        </div>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
                             :href="route('facturacion.manifiestos.index')"
-                            :active="route().current('facturacion.*') || route().current('operacion.comprobantes.*')"
+                            :active="route().current('facturacion.manifiestos.*') || route().current('operacion.comprobantes.*')"
                         >
-                            Facturacion
+                            Manifiestos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
+                            :href="route('facturacion.manual.create')"
+                            :active="route().current('facturacion.manual.*')"
+                        >
+                            Cargas manuales
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
                             :href="route('facturacion.importar.index')"
                             :active="route().current('facturacion.importar.*')"
                         >
-                            Importar
+                            Importar facturas
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

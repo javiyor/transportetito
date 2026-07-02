@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Operacion\Comprobantes;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
+use App\Models\TerceroCuenta;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,7 +13,24 @@ class ComprobanteShowController extends Controller
 {
     public function __invoke(Request $request, Comprobante $comprobante)
     {
-        abort_unless((int) $comprobante->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
+        $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        $allowedIds = [$currentEmpresaId];
+
+        if ($currentEmpresaId > 0) {
+            $shared = TerceroCuenta::whereIn('tercero_id', function ($q) use ($currentEmpresaId) {
+                $q->select('tercero_id')
+                    ->from('tercero_cuentas')
+                    ->where('empresa_id', $currentEmpresaId);
+            })
+                ->where('empresa_id', '!=', $currentEmpresaId)
+                ->distinct()
+                ->pluck('empresa_id')
+                ->toArray();
+
+            $allowedIds = array_merge([$currentEmpresaId], $shared);
+        }
+
+        abort_unless(in_array((int) $comprobante->empresa_id, $allowedIds, true), 404);
 
         $comprobante->load([
             'empresa:id,razon_social,cuit',
