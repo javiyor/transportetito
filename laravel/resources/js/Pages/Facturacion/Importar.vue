@@ -5,9 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
-defineProps({
-    depositos: Array,
-});
+defineProps({});
 
 const page = usePage();
 const importResult = computed(() => page.props.tt?.flash?.importResult);
