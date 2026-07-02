@@ -19,9 +19,11 @@ const csvForm = useForm({
 
 const headerMap = {
     'nro. doc. receptor': 'proveedor_cuit', 'denominación receptor': 'proveedor_razon_social',
+    'nro. doc. emisor': 'proveedor_cuit', 'denominación emisor': 'proveedor_razon_social',
     'tipo de comprobante': 'tipo', 'número desde': 'numero',
     'punto de venta': 'pv', 'fecha de emisión': 'fecha_emision',
     'imp. total': 'total', 'moneda': 'moneda', 'tipo cambio': 'tipo_cambio',
+    'cód. autorización': 'arca_cae', 'código de autorización': 'arca_cae',
     'proveedor_cuit': 'proveedor_cuit', 'proveedor_razon_social': 'proveedor_razon_social',
     'tipo': 'tipo', 'numero': 'numero', 'pv': 'pv',
     'fecha_emision': 'fecha_emision', 'total': 'total', 'moneda': 'moneda',
@@ -30,11 +32,17 @@ const headerMap = {
 const tipoArcaMap = {
     '1': 'FA', '2': 'FB', '3': 'FC', '4': 'FCA', '5': 'FCB', '6': 'FCC',
     'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC',
-    'nota de debito a': 'NDA', 'nota de debito b': 'NDB',
-    'nota de credito a': 'NCA', 'nota de credito b': 'NCB',
+    'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
+    'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de credito a': 'NCA', 'nota de credito b': 'NCB',
+    'nota de débito a': 'NDA', 'nota de débito b': 'NDB', 'nota de crédito a': 'NCA', 'nota de crédito b': 'NCB',
 };
 
-const monedaArcaMap = { 'pes': 'ARS', 'dol': 'USD', 'eur': 'EUR', 'brl': 'BRL' };
+const monedaArcaMap = {
+    'pes': 'ARS', 'pesos': 'ARS', '$': 'ARS',
+    'dol': 'USD', 'dolares': 'USD', 'usd': 'USD',
+    'eur': 'EUR', 'euros': 'EUR',
+    'brl': 'BRL', 'real': 'BRL', 'reales': 'BRL',
+};
 
 const parseCsv = () => {
     const lines = csvText.value.trim().split('\n').filter(Boolean);
@@ -69,8 +77,8 @@ const parseCsv = () => {
         if (tipoArcaMap[tipo]) tipo = tipoArcaMap[tipo];
         else if (tipoArcaMap[tipoLower]) tipo = tipoArcaMap[tipoLower];
 
-        let moneda = (r.moneda || 'ARS').trim().toLowerCase();
-        moneda = monedaArcaMap[moneda] || moneda.toUpperCase();
+        let moneda = (r.moneda || 'ARS').trim().toLowerCase().replace(/[^a-z$]/g, '');
+        moneda = monedaArcaMap[moneda] || (['ars','usd','eur','brl'].includes(moneda) ? moneda.toUpperCase() : 'ARS');
 
         return {
             proveedor_cuit: r.proveedor_cuit || '',
@@ -107,6 +115,13 @@ const submitCsv = () => {
                 {{ importResult }}
             </div>
 
+            <div v-if="Object.keys(csvForm.errors).length" class="bg-red-50 border border-red-200 text-red-900 px-4 py-3 rounded">
+                <p class="font-semibold mb-1">Errores de validacion:</p>
+                <ul class="list-disc list-inside text-sm">
+                    <li v-for="(msg, field) in csvForm.errors" :key="field">{{ field }}: {{ msg }}</li>
+                </ul>
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde CSV</h3>
                 <p class="text-sm text-gray-500 mb-4">Pegue el CSV. Detecta columnas automaticamente. Requiere: proveedor_cuit/CUIT, proveedor_razon_social/denominacion, fecha_emision, total.</p>
@@ -118,8 +133,8 @@ const submitCsv = () => {
 
                 <SecondaryButton :disabled="!csvText.trim()" @click="parseCsv">Previsualizar</SecondaryButton>
 
-                <div v-if="csvPreview.length" class="mt-4">
-                    <p class="text-sm font-medium text-gray-700 mb-2">{{ csvPreview.length }} fila(s) detectada(s)</p>
+                <div v-if="csvForm.rows.length" class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-2">{{ csvForm.rows.length }} fila(s) detectada(s)</p>
                     <div class="overflow-x-auto max-h-60 overflow-y-auto border border-gray-200 rounded">
                         <table class="min-w-full divide-y divide-gray-200 text-xs">
                             <thead class="bg-gray-50"><tr>
@@ -132,20 +147,20 @@ const submitCsv = () => {
                                 <th class="px-2 py-1 text-left">Mon</th>
                             </tr></thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="(r, i) in csvPreview" :key="i">
+                                <tr v-for="(r, i) in csvForm.rows" :key="i">
                                     <td class="px-2 py-1 font-mono">{{ r.proveedor_cuit }}</td>
                                     <td class="px-2 py-1">{{ r.proveedor_razon_social }}</td>
                                     <td class="px-2 py-1">{{ r.tipo }}</td>
                                     <td class="px-2 py-1">{{ r.numero }}</td>
                                     <td class="px-2 py-1">{{ r.fecha_emision }}</td>
                                     <td class="px-2 py-1 text-right">{{ r.total }}</td>
-                                    <td class="px-2 py-1">{{ r.moneda }}</td>
+                                    <td class="px-2 py-1 font-bold">{{ r.moneda }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="mt-4">
-                        <PrimaryButton :disabled="csvForm.processing" @click="submitCsv">Importar {{ csvPreview.length }} comprobante(s)</PrimaryButton>
+                        <PrimaryButton :disabled="csvForm.processing" @click="submitCsv">Importar {{ csvForm.rows.length }} comprobante(s)</PrimaryButton>
                     </div>
                 </div>
             </div>
