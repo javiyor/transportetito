@@ -11,6 +11,9 @@ laravel/vendor/
 laravel/node_modules/
 laravel/public/storage
 
+# CSV exports (data files, never commit)
+*.csv
+
 # Certificates (never commit)
 certificados/
 laravel/certificados/
