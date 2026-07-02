@@ -48,7 +48,12 @@ const tipoArcaMap = {
     'nota de débito a': 'NDA', 'nota de débito b': 'NDB', 'nota de crédito a': 'NCA', 'nota de crédito b': 'NCB',
 };
 
-const monedaArcaMap = { 'pes': 'ARS', 'dol': 'USD', 'eur': 'EUR', 'brl': 'BRL' };
+const monedaArcaMap = {
+    'pes': 'ARS', 'pesos': 'ARS', '$': 'ARS',
+    'dol': 'USD', 'dolares': 'USD', 'usd': 'USD',
+    'eur': 'EUR', 'euros': 'EUR',
+    'brl': 'BRL', 'real': 'BRL', 'reales': 'BRL',
+};
 
 const parseCsv = () => {
     const lines = csvText.value.trim().split('\n').filter(Boolean);
@@ -84,8 +89,8 @@ const parseCsv = () => {
         if (tipoArcaMap[tipo]) tipo = tipoArcaMap[tipo];
         else if (tipoArcaMap[tipoLower]) tipo = tipoArcaMap[tipoLower];
 
-        let moneda = (r.moneda || 'ARS').trim().toLowerCase();
-        moneda = monedaArcaMap[moneda] || moneda.toUpperCase();
+        let moneda = (r.moneda || 'ARS').trim().toLowerCase().replace(/[^a-z$]/g, '');
+        moneda = monedaArcaMap[moneda] || (['ars','usd','eur','brl'].includes(moneda) ? moneda.toUpperCase() : 'ARS');
 
         return {
             tipo: tipo || 'FA',
@@ -102,11 +107,10 @@ const parseCsv = () => {
 };
 
 const submitCsv = () => {
-    if (!csvForm.rows.length) { alert('No hay filas en csvForm.rows (length=' + csvForm.rows.length + ')'); return; }
+    if (!csvForm.rows.length) return;
     csvForm.post(route('facturacion.importar.csv'), {
         preserveScroll: true,
         onSuccess: () => { csvText.value = ''; csvPreview.value = []; csvForm.rows = []; },
-        onError: (e) => { alert('Error: ' + JSON.stringify(e)); },
     });
 };
 
@@ -132,6 +136,13 @@ const submitArca = () => {
                 {{ importResult }}
             </div>
 
+            <div v-if="Object.keys(csvForm.errors).length" class="bg-red-50 border border-red-200 text-red-900 px-4 py-3 rounded">
+                <p class="font-semibold mb-1">Errores de validacion:</p>
+                <ul class="list-disc list-inside text-sm">
+                    <li v-for="(msg, field) in csvForm.errors" :key="field">{{ field }}: {{ msg }}</li>
+                </ul>
+            </div>
+
             <div class="flex gap-4 mb-4">
                 <button class="px-4 py-2 text-sm rounded" :class="modo === 'csv' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300'" @click="modo = 'csv'">CSV / Archivo</button>
                 <button class="px-4 py-2 text-sm rounded" :class="modo === 'arca' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300'" @click="modo = 'arca'">ARCA WSFE</button>
@@ -149,8 +160,8 @@ const submitArca = () => {
 
                 <SecondaryButton :disabled="!csvText.trim()" @click="parseCsv">Previsualizar</SecondaryButton>
 
-                <div v-if="csvPreview.length" class="mt-4">
-                    <p class="text-sm font-medium text-gray-700 mb-2">{{ csvPreview.length }} fila(s) detectada(s)</p>
+                <div v-if="csvForm.rows.length" class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-2">{{ csvForm.rows.length }} fila(s) detectada(s)</p>
                     <div class="overflow-x-auto max-h-60 overflow-y-auto border border-gray-200 rounded">
                         <table class="min-w-full divide-y divide-gray-200 text-xs">
                             <thead class="bg-gray-50"><tr>
@@ -159,16 +170,16 @@ const submitArca = () => {
                                 <th class="px-2 py-1 text-right">Total</th><th class="px-2 py-1 text-left">Mon</th>
                             </tr></thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="(r, i) in csvPreview" :key="i">
+                                <tr v-for="(r, i) in csvForm.rows" :key="i">
                                     <td class="px-2 py-1">{{ r.tipo }}</td><td class="px-2 py-1">{{ r.pv }}</td><td class="px-2 py-1">{{ r.numero }}</td>
                                     <td class="px-2 py-1 font-mono">{{ r.cuit_cliente }}</td><td class="px-2 py-1">{{ r.razon_social }}</td><td class="px-2 py-1">{{ r.fecha_emision }}</td>
-                                    <td class="px-2 py-1 text-right">{{ r.total }}</td><td class="px-2 py-1">{{ r.moneda }}</td>
+                                    <td class="px-2 py-1 text-right">{{ r.total }}</td><td class="px-2 py-1 font-bold">{{ r.moneda }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="mt-4">
-                        <PrimaryButton :disabled="csvForm.processing" @click="submitCsv">Importar {{ csvPreview.length }} factura(s)</PrimaryButton>
+                        <PrimaryButton :disabled="csvForm.processing" @click="submitCsv">Importar {{ csvForm.rows.length }} factura(s)</PrimaryButton>
                     </div>
                 </div>
             </div>

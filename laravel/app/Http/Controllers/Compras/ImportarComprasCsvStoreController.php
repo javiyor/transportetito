@@ -25,10 +25,19 @@ class ImportarComprasCsvStoreController extends Controller
             'rows.*.pv' => ['nullable', 'integer', 'min:0'],
             'rows.*.fecha_emision' => ['required', 'date'],
             'rows.*.total' => ['required', 'numeric', 'min:0'],
-            'rows.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'rows.*.moneda' => ['required', 'string', 'max:16'],
         ]);
 
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
+
+        $monedaMap = ['pes' => 'ARS', 'pesos' => 'ARS', 'dol' => 'USD', 'dolares' => 'USD', 'usd' => 'USD', 'eur' => 'EUR', 'euros' => 'EUR', 'brl' => 'BRL', 'real' => 'BRL', 'reales' => 'BRL'];
+        foreach ($data['rows'] as $i => $row) {
+            $m = strtolower(trim(preg_replace('/[^a-zA-Z]/', '', $row['moneda'])));
+            $data['rows'][$i]['moneda'] = $monedaMap[$m] ?? strtoupper($m);
+            if (! in_array($data['rows'][$i]['moneda'], ['ARS', 'USD', 'EUR', 'BRL'], true)) {
+                $data['rows'][$i]['moneda'] = 'ARS';
+            }
+        }
 
         $importados = 0;
         $omitidos = 0;
