@@ -21,7 +21,7 @@ class TerceroAdminController extends Controller
 {
     public function index(Request $request)
     {
-        $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
+        $empresaId = $request->user()->current_empresa_id ?: 0;
 
         $query = TerceroCuenta::query()
             ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name'])
@@ -33,6 +33,17 @@ class TerceroAdminController extends Controller
 
         if ($empresaId > 0) {
             $query->where('tercero_cuentas.empresa_id', $empresaId);
+        }
+
+        $compartidos = $request->query('compartidos') === '1';
+
+        if ($compartidos) {
+            $query->whereIn('tercero_cuentas.tercero_id', function ($q) {
+                $q->select('tercero_id')
+                    ->from('tercero_cuentas')
+                    ->groupBy('tercero_id')
+                    ->havingRaw('COUNT(DISTINCT empresa_id) > 1');
+            });
         }
 
         $cuentas = $query->get([
@@ -51,6 +62,25 @@ class TerceroAdminController extends Controller
             'te.es_cliente',
             'te.es_proveedor',
         ]);
+
+        if ($compartidos) {
+            $sharedEmpresas = TerceroCuenta::query()
+                ->whereIn('tercero_id', $cuentas->pluck('tercero_id')->unique())
+                ->with('empresa:id,razon_social')
+                ->get()
+                ->groupBy('tercero_id');
+
+            $cuentas = $cuentas->map(function ($cuenta) use ($sharedEmpresas) {
+                $otras = $sharedEmpresas->get($cuenta->tercero_id, collect())
+                    ->where('empresa_id', '!=', $cuenta->empresa_id)
+                    ->pluck('empresa.razon_social')
+                    ->values()
+                    ->toArray();
+                $cuenta->shared_empresas = $otras;
+
+                return $cuenta;
+            });
+        }
 
         $proximoNumero = TerceroCuenta::query()
             ->where('empresa_id', $empresaId > 0 ? $empresaId : 0)
@@ -72,6 +102,7 @@ class TerceroAdminController extends Controller
             'proximoNumeroCliente' => ($proximoNumero ?? 0) + 1,
             'cobradores' => User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']),
             'condicionesIva' => CondicionIva::query()->orderBy('codigo_afip')->get(['id', 'codigo_afip', 'nombre']),
+            'compartidos' => $compartidos,
         ]);
     }
 

@@ -143,43 +143,6 @@ const switchEmpresa = (empresaId) => {
                         </div>
 
                         <div class="hidden sm:flex sm:items-center sm:ms-6">
-                            <div v-if="($page.props.tt?.roles || []).includes('admin')" class="me-3 relative">
-                                <Dropdown align="right" width="60">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button type="button" class="inline-flex items-center px-3 py-2 border border-gray-200 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition ease-in-out duration-150">
-                                                {{ $page.props.tt?.currentEmpresa?.razon_social || 'Empresa' }}
-
-                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <div class="w-60">
-                                            <div class="block px-4 py-2 text-xs text-gray-400">
-                                                Empresa activa
-                                            </div>
-
-                                            <template v-for="e in ($page.props.tt?.empresasDisponibles || [])" :key="e.id">
-                                                <form @submit.prevent="switchEmpresa(e.id)">
-                                                    <DropdownLink as="button">
-                                                        <div class="flex items-center justify-between gap-3">
-                                                            <div class="truncate">{{ e.razon_social }}</div>
-                                                            <svg v-if="e.id === $page.props.tt?.currentEmpresa?.id" class="size-5 text-green-500 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                            </svg>
-                                                        </div>
-                                                    </DropdownLink>
-                                                </form>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </Dropdown>
-                            </div>
-
                             <!-- Settings Dropdown -->
                             <div class="ms-3 relative">
                                 <Dropdown align="right" width="48">
@@ -444,6 +407,21 @@ const switchEmpresa = (empresaId) => {
                     </div>
                 </div>
             </nav>
+
+            <div v-if="($page.props.tt?.roles || []).includes('admin') && $page.props.tt?.empresasDisponibles?.length" class="hidden sm:block bg-white border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center gap-3 h-10">
+                        <span class="text-xs text-gray-500 shrink-0">Empresa:</span>
+                        <select
+                            class="block w-64 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            :value="$page.props.tt?.currentEmpresa?.id || ''"
+                            @change="switchEmpresa(parseInt($event.target.value, 10))"
+                        >
+                            <option v-for="e in ($page.props.tt?.empresasDisponibles || [])" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
             <!-- Page Heading -->
             <header v-if="$slots.header" class="bg-white shadow">

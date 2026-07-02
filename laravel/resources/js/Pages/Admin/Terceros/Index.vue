@@ -20,6 +20,7 @@ const props = defineProps({
     proximoNumeroCliente: Number,
     cobradores: Array,
     condicionesIva: Array,
+    compartidos: Boolean,
 });
 
 const localidades = ref([]);
@@ -98,8 +99,10 @@ const submit = () => {
     });
 };
 
-const changeEmpresa = (id) => {
-    router.get(route('admin.terceros.index'), { empresa_id: id || null }, { preserveState: true, preserveScroll: true, replace: true });
+const mostrarCompartidos = ref(props.compartidos);
+
+const toggleCompartidos = () => {
+    router.get(route('admin.terceros.index'), { compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
 const editing = ref(false);
@@ -170,19 +173,7 @@ const localidadNombre = (c) => {
         <Head title="Admin / Terceros" />
 
         <template #header>
-            <div class="flex items-center justify-between gap-4">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Terceros</h2>
-                <div class="w-72">
-                    <select
-                        class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                        :value="empresaId || ''"
-                        @change="changeEmpresa($event.target.value ? parseInt($event.target.value, 10) : null)"
-                    >
-                        <option value="">Todas las empresas</option>
-                        <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
-                    </select>
-                </div>
-            </div>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Terceros</h2>
         </template>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
@@ -291,8 +282,16 @@ const localidadNombre = (c) => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-base font-semibold text-gray-900">Cuentas</h3>
-                    <p class="mt-1 text-sm text-gray-600">Cada cuenta es un Numero de cliente dentro de una empresa.</p>
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900">Cuentas</h3>
+                            <p class="mt-1 text-sm text-gray-600">Cada cuenta es un Numero de cliente dentro de una empresa.</p>
+                        </div>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 shrink-0">
+                            <Checkbox :checked="mostrarCompartidos" @click="mostrarCompartidos = !mostrarCompartidos; toggleCompartidos()" />
+                            Comparten clientes
+                        </label>
+                    </div>
                 </div>
 
                 <div class="space-y-4 p-4 sm:hidden">
@@ -301,6 +300,9 @@ const localidadNombre = (c) => {
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ c.tercero?.razon_social || '-' }}</div>
                                 <div class="text-xs text-gray-500">{{ c.empresa?.razon_social || '-' }} · Nro {{ c.numero_cliente }}</div>
+                                <div v-if="mostrarCompartidos && c.shared_empresas?.length" class="mt-1 flex flex-wrap gap-1">
+                                    <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">{{ name }}</span>
+                                </div>
                             </div>
                             <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
                         </div>
@@ -345,6 +347,7 @@ const localidadNombre = (c) => {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                                <th v-if="mostrarCompartidos" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compartida con</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro cliente</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
@@ -362,6 +365,12 @@ const localidadNombre = (c) => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in cuentas" :key="c.id">
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.empresa?.razon_social || '-' }}</td>
+                                <td v-if="mostrarCompartidos" class="px-6 py-4 text-sm text-gray-700">
+                                    <template v-if="c.shared_empresas?.length">
+                                        <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 me-1">{{ name }}</span>
+                                    </template>
+                                    <span v-else class="text-gray-400">-</span>
+                                </td>
                                 <td class="px-6 py-4 text-sm text-gray-900 font-mono">{{ c.numero_cliente }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ c.tercero?.cuit || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
@@ -383,7 +392,7 @@ const localidadNombre = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td colspan="13" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td :colspan="mostrarCompartidos ? 14 : 13" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
