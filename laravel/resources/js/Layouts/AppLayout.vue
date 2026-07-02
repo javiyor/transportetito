@@ -111,13 +111,26 @@ const switchEmpresa = (empresaId) => {
                                     Cierre
                                 </NavLink>
 
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).includes('admin')"
-                                    :href="route('compras.proveedores.comprobantes.index')"
-                                    :active="route().current('compras.*')"
-                                >
-                                    Compras
-                                </NavLink>
+                                <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="56">
+                                        <template #trigger>
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('compras.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                                Compras
+                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                        </template>
+
+                                        <template #content>
+                                            <DropdownLink :href="route('compras.proveedores.comprobantes.index')">Comprobantes</DropdownLink>
+                                            <DropdownLink :href="route('compras.proveedores.ctacte.index')">Cuenta Corriente</DropdownLink>
+                                            <DropdownLink :href="route('compras.combustibles.index')">Combustibles</DropdownLink>
+                                            <DropdownLink :href="route('compras.gastos.index')">Gastos</DropdownLink>
+                                            <DropdownLink :href="route('compras.importar.index')">Importar</DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
 
                                 <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center sm:ms-3">
                                     <Dropdown align="left" width="56">
@@ -298,12 +311,43 @@ const switchEmpresa = (empresaId) => {
                             Cierre
                         </ResponsiveNavLink>
 
+                        <div v-if="($page.props.tt?.roles || []).includes('admin')" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">
+                            Compras
+                        </div>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
                             :href="route('compras.proveedores.comprobantes.index')"
-                            :active="route().current('compras.*')"
+                            :active="route().current('compras.proveedores.comprobantes.*')"
                         >
-                            Compras
+                            Comprobantes
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.proveedores.ctacte.index')"
+                            :active="route().current('compras.proveedores.ctacte.*')"
+                        >
+                            Cuenta Corriente
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.combustibles.index')"
+                            :active="route().current('compras.combustibles.*')"
+                        >
+                            Combustibles
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.gastos.index')"
+                            :active="route().current('compras.gastos.*')"
+                        >
+                            Gastos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.importar.index')"
+                            :active="route().current('compras.importar.*')"
+                        >
+                            Importar
                         </ResponsiveNavLink>
 
                         <div v-if="($page.props.tt?.roles || []).includes('admin')" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">

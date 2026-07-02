@@ -262,6 +262,8 @@ Route::middleware([
         Route::get('/gastos', [GastoOperativoIndexController::class, 'index'])->name('gastos.index');
         Route::post('/gastos', [GastoOperativoIndexController::class, 'store'])->name('gastos.store');
         Route::get('/gastos/export', GastoOperativoExportController::class)->name('gastos.export');
+        Route::get('/importar', \App\Http\Controllers\Compras\ImportarComprasIndexController::class)->name('importar.index');
+        Route::post('/importar/csv', \App\Http\Controllers\Compras\ImportarComprasCsvStoreController::class)->name('importar.csv');
     });
 
     Route::middleware(['role:cobranzas|cobranzas_admin|cobrador'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
