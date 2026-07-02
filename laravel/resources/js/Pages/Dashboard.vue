@@ -33,7 +33,7 @@ const formatCuit = (value) => {
                                 </div>
                                 <div class="mt-1 text-sm text-gray-600">
                                     CUIT {{ formatCuit(empresa?.cuit) }}
-                                    <span v-if="empresa?.condicion_iva">· {{ empresa.condicion_iva }}</span>
+                                    <span v-if="empresa?.condicion_iva?.nombre">· {{ empresa.condicion_iva.nombre }}</span><span v-else-if="empresa?.condicion_iva">· {{ empresa.condicion_iva }}</span>
                                     <span v-if="empresa?.arca_pv_default">· PV {{ empresa.arca_pv_default }}</span>
                                     <span v-if="empresa?.arca_env">· ARCA {{ empresa.arca_env }}</span>
                                 </div>

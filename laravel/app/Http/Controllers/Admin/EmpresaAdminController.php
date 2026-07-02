@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CondicionIva;
 use App\Models\Empresa;
 use App\Services\Arca\ArcaCertificateResolver;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +16,8 @@ class EmpresaAdminController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Empresas/Index', [
-            'empresas' => Empresa::query()->orderBy('razon_social')->get(),
+            'empresas' => Empresa::query()->with('condicionIva:id,nombre')->orderBy('razon_social')->get(),
+            'condicionesIva' => CondicionIva::query()->orderBy('codigo_afip')->get(['id', 'codigo_afip', 'nombre']),
         ]);
     }
 
@@ -25,6 +27,7 @@ class EmpresaAdminController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'cuit' => ['required', 'string', 'max:32', 'unique:empresas,cuit'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
+            'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'moneda_base' => ['required', 'in:ARS,USD,EUR,BRL'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
@@ -50,6 +53,7 @@ class EmpresaAdminController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'cuit' => ['required', 'string', 'max:32', 'unique:empresas,cuit,'.$empresa->id],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
+            'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'moneda_base' => ['required', 'in:ARS,USD,EUR,BRL'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],

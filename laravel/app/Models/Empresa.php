@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\CondicionIva;
 use App\Models\Deposito;
 use App\Models\ManifiestoIngreso;
 
@@ -16,6 +18,7 @@ class Empresa extends Model
         'razon_social',
         'cuit',
         'condicion_iva',
+        'condicion_iva_id',
         'arca_pv_default',
         'arca_env',
         'telefono',
@@ -51,5 +54,10 @@ class Empresa extends Model
     public function usuarios(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
+    }
+
+    public function condicionIva(): BelongsTo
+    {
+        return $this->belongsTo(CondicionIva::class);
     }
 }

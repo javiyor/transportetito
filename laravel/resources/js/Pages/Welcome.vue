@@ -27,7 +27,7 @@ defineProps({
                     </div>
                     <div>
                         <div class="text-sm font-semibold tracking-wide">{{ empresa?.razon_social || 'Transporte' }}</div>
-                        <div class="text-xs text-gray-600" v-if="empresa?.cuit">CUIT {{ empresa.cuit }} <span v-if="empresa.condicion_iva">· {{ empresa.condicion_iva }}</span></div>
+                        <div class="text-xs text-gray-600" v-if="empresa?.cuit">CUIT {{ empresa.cuit }} <span v-if="empresa.condicion_iva?.nombre">· {{ empresa.condicion_iva.nombre }}</span><span v-else-if="empresa.condicion_iva">· {{ empresa.condicion_iva }}</span></div>
                     </div>
                 </div>
 

@@ -12,12 +12,13 @@ import { ref } from 'vue';
 
 const props = defineProps({
     empresas: Array,
+    condicionesIva: Array,
 });
 
 const createForm = useForm({
     razon_social: '',
     cuit: '',
-    condicion_iva: '',
+    condicion_iva_id: '',
     moneda_base: 'ARS',
     arca_pv_default: 2,
     arca_env: 'homologacion',
@@ -35,7 +36,7 @@ const createForm = useForm({
 const submitCreate = () => {
     createForm.post(route('admin.empresas.store'), {
         preserveScroll: true,
-        onSuccess: () => createForm.reset('razon_social', 'cuit', 'condicion_iva'),
+        onSuccess: () => createForm.reset('razon_social', 'cuit', 'condicion_iva_id'),
     });
 };
 
@@ -44,7 +45,7 @@ const editId = ref(null);
 const editForm = useForm({
     razon_social: '',
     cuit: '',
-    condicion_iva: '',
+    condicion_iva_id: '',
     moneda_base: 'ARS',
     arca_pv_default: 2,
     arca_env: 'homologacion',
@@ -63,7 +64,7 @@ const openEdit = (e) => {
     editId.value = e.id;
     editForm.razon_social = e.razon_social;
     editForm.cuit = e.cuit;
-    editForm.condicion_iva = e.condicion_iva || '';
+    editForm.condicion_iva_id = e.condicion_iva_id || '';
     editForm.moneda_base = e.moneda_base || 'ARS';
     editForm.arca_pv_default = e.arca_pv_default;
     editForm.arca_env = e.arca_env;
@@ -112,8 +113,11 @@ const submitEdit = () => {
 
                     <div>
                         <InputLabel value="Condicion IVA" />
-                        <TextInput v-model="createForm.condicion_iva" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="createForm.errors.condicion_iva" />
+                        <select v-model="createForm.condicion_iva_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.condicion_iva_id" />
                     </div>
                     <div>
                         <InputLabel value="Moneda base" />
@@ -246,8 +250,11 @@ const submitEdit = () => {
                     </div>
                     <div>
                         <InputLabel value="Condicion IVA" />
-                        <TextInput v-model="editForm.condicion_iva" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="editForm.errors.condicion_iva" />
+                        <select v-model="editForm.condicion_iva_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="editForm.errors.condicion_iva_id" />
                     </div>
                     <div>
                         <InputLabel value="Moneda base" />
