@@ -102,10 +102,11 @@ const parseCsv = () => {
 };
 
 const submitCsv = () => {
-    if (!csvForm.rows.length) return;
+    if (!csvForm.rows.length) { alert('No hay filas en csvForm.rows (length=' + csvForm.rows.length + ')'); return; }
     csvForm.post(route('facturacion.importar.csv'), {
         preserveScroll: true,
         onSuccess: () => { csvText.value = ''; csvPreview.value = []; csvForm.rows = []; },
+        onError: (e) => { alert('Error: ' + JSON.stringify(e)); },
     });
 };
 
