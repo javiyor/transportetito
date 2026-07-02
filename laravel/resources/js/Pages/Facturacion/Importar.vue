@@ -28,36 +28,79 @@ const arcaForm = useForm({
 const csvText = ref('');
 const csvPreview = ref([]);
 
+const arcaHeaderMap = {
+    'fecha de emisión': 'fecha_emision', 'tipo de comprobante': 'tipo',
+    'punto de venta': 'pv', 'número desde': 'numero',
+    'cód. autorización': 'arca_cae', 'código de autorización': 'arca_cae',
+    'nro. doc. receptor': 'cuit_cliente', 'denominación receptor': 'razon_social',
+    'moneda': 'moneda', 'imp. total': 'total', 'tipo cambio': 'tipo_cambio',
+};
+
+const oldHeaderMap = {
+    'tipo': 'tipo', 'pv': 'pv', 'numero': 'numero',
+    'cuit_cliente': 'cuit_cliente', 'razon_social': 'razon_social',
+    'fecha_emision': 'fecha_emision', 'total': 'total', 'moneda': 'moneda',
+};
+
+const tipoArcaMap = {
+    '1': 'FA', '2': 'FB', '3': 'FC', '4': 'FCA', '5': 'FCB', '6': 'FCC',
+    'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC',
+    'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
+    'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de credito a': 'NCA', 'nota de credito b': 'NCB',
+    'nota de débito a': 'NDA', 'nota de débito b': 'NDB', 'nota de crédito a': 'NCA', 'nota de crédito b': 'NCB',
+};
+
+const monedaArcaMap = { 'pes': 'ARS', 'dol': 'USD', 'eur': 'EUR', 'brl': 'BRL' };
+
 const parseCsv = () => {
     const lines = csvText.value.trim().split('\n').filter(Boolean);
     if (lines.length < 2) {
         alert('CSV debe tener encabezado + al menos 1 fila.');
         return;
     }
-    const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
-    const expected = ['tipo', 'pv', 'numero', 'cuit_cliente', 'razon_social', 'fecha_emision', 'total', 'moneda'];
-    const missing = expected.filter((h) => !headers.includes(h));
+    const raw = lines[0].trim();
+    const delim = raw.includes(';') ? ';' : ',';
+    const cleanHeader = (h) => h.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').trim();
+    const rawHeaders = raw.split(delim).map(cleanHeader);
+    const headerMap = { ...arcaHeaderMap, ...oldHeaderMap };
+    const mapped = rawHeaders.map((h, i) => {
+        const key = h.toLowerCase().replace(/['"]/g, '').trim();
+        return headerMap[key] || null;
+    });
+    const required = ['tipo', 'pv', 'numero', 'cuit_cliente', 'razon_social', 'fecha_emision', 'total'];
+    const missing = required.filter((r) => !mapped.includes(r));
     if (missing.length) {
-        alert('Columnas esperadas: ' + expected.join(', ') + '. Faltan: ' + missing.join(', '));
+        alert('No se encontraron estas columnas: ' + missing.join(', ') + '. Columnas detectadas: ' + rawHeaders.join(', '));
         return;
     }
     const rows = lines.slice(1).map((line) => {
-        const vals = line.split(',').map((v) => v.trim());
+        const vals = line.split(delim).map((v) => v.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').trim());
         const row = {};
-        headers.forEach((h, i) => { row[h] = vals[i] || ''; });
+        mapped.forEach((field, i) => { if (field) row[field] = vals[i] || ''; });
         return row;
     });
     csvPreview.value = rows;
-    csvForm.rows = rows.map((r) => ({
-        tipo: r.tipo,
-        pv: parseInt(r.pv, 10),
-        numero: parseInt(r.numero, 10),
-        cuit_cliente: r.cuit_cliente,
-        razon_social: r.razon_social,
-        fecha_emision: r.fecha_emision,
-        total: parseFloat(r.total),
-        moneda: r.moneda || 'ARS',
-    }));
+    csvForm.rows = rows.map((r) => {
+        let tipo = (r.tipo || '').trim();
+        const tipoLower = tipo.toLowerCase();
+        if (tipoArcaMap[tipo]) tipo = tipoArcaMap[tipo];
+        else if (tipoArcaMap[tipoLower]) tipo = tipoArcaMap[tipoLower];
+
+        let moneda = (r.moneda || 'ARS').trim().toLowerCase();
+        moneda = monedaArcaMap[moneda] || moneda.toUpperCase();
+
+        return {
+            tipo: tipo || 'FA',
+            pv: parseInt(r.pv, 10),
+            numero: parseInt(r.numero, 10),
+            cuit_cliente: r.cuit_cliente || '',
+            razon_social: r.razon_social || '',
+            fecha_emision: r.fecha_emision || '',
+            total: parseFloat(r.total) || 0,
+            moneda: moneda,
+            arca_cae: r.arca_cae || null,
+        };
+    });
 };
 
 const submitCsv = () => {
@@ -98,11 +141,11 @@ const submitArca = () => {
             <!-- CSV mode -->
             <div v-if="modo === 'csv'" class="bg-white shadow sm:rounded-lg p-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde CSV</h3>
-                <p class="text-sm text-gray-500 mb-4">Columnas: tipo, pv, numero, cuit_cliente, razon_social, fecha_emision, total, moneda</p>
+                <p class="text-sm text-gray-500 mb-4">Pegue el CSV descargado de ARCA (formato separado por punto y coma) o el formato simple. Detecta columnas automaticamente.</p>
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Pegar CSV</label>
-                    <textarea v-model="csvText" rows="8" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-mono" placeholder="tipo,pv,numero,cuit_cliente,razon_social,fecha_emision,total,moneda&#10;FA,1,5,20333999911,CLIENTE SA,2026-06-01,15000.00,ARS"></textarea>
+                    <textarea v-model="csvText" rows="8" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-mono" placeholder="Pegue aqui el CSV de ARCA o formato simple&#10;Ej: &quot;Fecha de Emisión&quot;;&quot;Tipo de Comprobante&quot;;&quot;Punto de Venta&quot;;&quot;Número Desde&quot;;&quot;Cód. Autorización&quot;;&quot;Nro. Doc. Receptor&quot;;&quot;Denominación Receptor&quot;;&quot;Moneda&quot;;&quot;Imp. Total&quot;"></textarea>
                 </div>
 
                 <SecondaryButton :disabled="!csvText.trim()" @click="parseCsv">Previsualizar</SecondaryButton>

@@ -26,6 +26,7 @@ class ImportarFacturasCsvStoreController extends Controller
             'rows.*.fecha_emision' => ['required', 'date'],
             'rows.*.total' => ['required', 'numeric', 'min:0'],
             'rows.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'rows.*.arca_cae' => ['nullable', 'string', 'max:32'],
         ]);
 
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
@@ -74,7 +75,8 @@ class ImportarFacturasCsvStoreController extends Controller
                     'arca_punto_venta' => (int) $row['pv'],
                     'arca_tipo_cbte' => $row['tipo'],
                     'arca_numero' => (int) $row['numero'],
-                    'arca_resultado' => 'importado',
+                    'arca_cae' => $row['arca_cae'] ?? null,
+                    'arca_resultado' => $row['arca_cae'] ? 'A' : 'importado',
                 ]);
 
                 if ($cuenta) {
