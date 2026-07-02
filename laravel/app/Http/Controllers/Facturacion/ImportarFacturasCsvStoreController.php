@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Facturacion;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
+use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
@@ -59,7 +60,7 @@ class ImportarFacturasCsvStoreController extends Controller
 
                 $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
 
-                Comprobante::create([
+                $comprobante = Comprobante::create([
                     'empresa_id' => $empresa->id,
                     'deposito_id' => null,
                     'facturar_cuenta_id' => $cuenta?->id,
@@ -75,6 +76,21 @@ class ImportarFacturasCsvStoreController extends Controller
                     'arca_numero' => (int) $row['numero'],
                     'arca_resultado' => 'importado',
                 ]);
+
+                if ($cuenta) {
+                    CtaCteMovimiento::query()->create([
+                        'empresa_id' => $empresa->id,
+                        'tercero_cuenta_id' => $cuenta->id,
+                        'fecha' => $row['fecha_emision'],
+                        'tipo' => 'factura',
+                        'moneda' => $row['moneda'],
+                        'cotizacion_ars' => 1,
+                        'importe_signed' => (float) $row['total'],
+                        'referencia_tipo' => 'comprobante',
+                        'referencia_id' => $comprobante->id,
+                        'observacion' => 'Importacion CSV factura #'.$comprobante->id,
+                    ]);
+                }
 
                 $importados++;
             }

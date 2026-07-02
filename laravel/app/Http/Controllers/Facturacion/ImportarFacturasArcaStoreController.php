@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Facturacion;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
+use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\WsfeClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ImportarFacturasArcaStoreController extends Controller
 {
@@ -76,7 +76,7 @@ class ImportarFacturasArcaStoreController extends Controller
 
             $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
 
-            Comprobante::create([
+            $comprobante = Comprobante::create([
                 'empresa_id' => $empresa->id,
                 'deposito_id' => null,
                 'facturar_cuenta_id' => $cuenta?->id,
@@ -94,6 +94,21 @@ class ImportarFacturasArcaStoreController extends Controller
                 'arca_cae_vto' => ! empty($resultado['cae_vto']) ? $resultado['cae_vto'] : null,
                 'arca_resultado' => 'importado',
             ]);
+
+            if ($cuenta) {
+                CtaCteMovimiento::query()->create([
+                    'empresa_id' => $empresa->id,
+                    'tercero_cuenta_id' => $cuenta->id,
+                    'fecha' => $resultado['fecha_emision'] ?? now()->toDateString(),
+                    'tipo' => 'factura',
+                    'moneda' => $resultado['moneda'] ?? 'ARS',
+                    'cotizacion_ars' => 1,
+                    'importe_signed' => (float) ($resultado['total'] ?? 0),
+                    'referencia_tipo' => 'comprobante',
+                    'referencia_id' => $comprobante->id,
+                    'observacion' => 'Importacion ARCA factura #'.$comprobante->id,
+                ]);
+            }
 
             $importados++;
         }
