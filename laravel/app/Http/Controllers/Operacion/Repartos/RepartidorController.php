@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion\Repartos;
 
 use App\Http\Controllers\Controller;
+use App\Models\CtaCteMovimiento;
 use App\Models\HojaRuta;
 use App\Models\HojaRutaItem;
 use Illuminate\Http\RedirectResponse;
@@ -31,6 +32,18 @@ class RepartidorController extends Controller
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->get();
+
+        $ctacteIds = $hojas->flatMap->items->pluck('entrega_cuenta_id')->filter()->unique()->values()->toArray();
+        $saldos = CtaCteMovimiento::whereIn('tercero_cuenta_id', $ctacteIds)
+            ->selectRaw('tercero_cuenta_id, SUM(importe_signed) as saldo')
+            ->groupBy('tercero_cuenta_id')
+            ->pluck('saldo', 'tercero_cuenta_id');
+
+        foreach ($hojas as $hoja) {
+            foreach ($hoja->items as $item) {
+                $item->saldo_pendiente = (float) ($saldos[$item->entrega_cuenta_id] ?? 0);
+            }
+        }
 
         return Inertia::render('Operacion/Repartos/Repartidor/Delivery', [
             'hojas' => $hojas,

@@ -176,6 +176,7 @@ Route::middleware([
         Route::post('/reportes/seguro/actualizar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'update'])->name('reportes.seguro.update');
         Route::post('/reportes/seguro/eliminar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'destroy'])->name('reportes.seguro.destroy');
         Route::get('/reportes/seguro/csv', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'exportCsv'])->name('reportes.seguro.csv');
+        Route::get('/reportes/estadisticas', [\App\Http\Controllers\Admin\EstadisticasController::class, 'index'])->name('reportes.estadisticas');
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {

@@ -180,6 +180,9 @@ const statusClass = (estado) => {
                                 <div v-if="item.comprobante" class="text-xs text-gray-500 mt-0.5">
                                     Factura: {{ item.comprobante.moneda }} {{ item.comprobante.total }}
                                 </div>
+                                <div v-if="item.saldo_pendiente" class="text-xs mt-0.5" :class="item.saldo_pendiente > 0 ? 'text-red-600 font-medium' : 'text-green-600'">
+                                    Saldo pendiente: ${{ Number(item.saldo_pendiente).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
+                                </div>
                                 <div v-if="(item.estado_entrega === 'entregado' || item.estado_entrega === 'entregado_con_diferencia') && item.recibe_nombre" class="text-xs text-green-700 mt-1">
                                     Recibio: {{ item.recibe_nombre }} (DNI: {{ item.recibe_dni || '-' }})
                                 </div>

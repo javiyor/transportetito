@@ -44,13 +44,45 @@ const switchEmpresa = (empresaId) => {
 
                             <!-- Navigation Links -->
                             <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                                    Inicio
-                                </NavLink>
+                                <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="56">
+                                        <template #trigger>
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('dashboard') || route().current('admin.terceros.*') || route().current('admin.depositos.*') || route().current('admin.vehiculos.*') || route().current('admin.tarifas.*') || route().current('admin.cotizaciones.*') || route().current('admin.choferes.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                                Inicio
+                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                        </template>
 
-                                <NavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
-                                    Control pedidos
-                                </NavLink>
+                                        <template #content>
+                                            <DropdownLink :href="route('dashboard')">Dashboard</DropdownLink>
+                                            <DropdownLink :href="route('admin.terceros.index')">Clientes/Proveedores</DropdownLink>
+                                            <DropdownLink :href="route('admin.depositos.index')">Depositos</DropdownLink>
+                                            <DropdownLink :href="route('admin.vehiculos.index')">Vehiculos</DropdownLink>
+                                            <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
+                                            <DropdownLink :href="route('admin.cotizaciones.index')">Cotizaciones</DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
+
+                                <div v-if="($page.props.tt?.roles || []).some((r) => ['operaciones', 'admin', 'facturacion'].includes(r))" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="56">
+                                        <template #trigger>
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('operacion.manifiestos.*') || route().current('admin.reportes.seguro') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                                Control pedidos
+                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                        </template>
+
+                                        <template #content>
+                                            <DropdownLink :href="route('operacion.manifiestos.index')">Manifiestos</DropdownLink>
+                                            <DropdownLink :href="route('admin.reportes.seguro')">Informe seguro</DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
 
                                 <div v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))" class="hidden sm:flex sm:items-center">
                                     <Dropdown align="left" width="56">
@@ -72,21 +104,23 @@ const switchEmpresa = (empresaId) => {
                                     </Dropdown>
                                 </div>
 
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).includes('operaciones')"
-                                    :href="route('operacion.repartos.hojas.index')"
-                                    :active="route().current('operacion.repartos.*')"
-                                >
-                                    Repartos
-                                </NavLink>
+                                <div v-if="($page.props.tt?.roles || []).some((r) => ['operaciones', 'facturacion', 'admin'].includes(r))" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="40">
+                                        <template #trigger>
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('operacion.repartos.*') || route().current('operacion.fletes.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                                Repartos
+                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                        </template>
 
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).some((r) => ['operaciones', 'facturacion', 'admin'].includes(r))"
-                                    :href="route('operacion.fletes.index')"
-                                    :active="route().current('operacion.fletes.*')"
-                                >
-                                    Fletes
-                                </NavLink>
+                                        <template #content>
+                                            <DropdownLink :href="route('operacion.repartos.hojas.index')">Repartos</DropdownLink>
+                                            <DropdownLink :href="route('operacion.fletes.index')">Fletes</DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
 
                                 <NavLink
                                     v-if="($page.props.tt?.roles || []).includes('chofer')"
@@ -96,21 +130,25 @@ const switchEmpresa = (empresaId) => {
                                     Repartidor
                                 </NavLink>
 
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
-                                    :href="route('cobranzas.pre-recibos.index')"
-                                    :active="route().current('cobranzas.*') && !route().current('cobranzas.cierre.*')"
-                                >
-                                    Cobranzas
-                                </NavLink>
+                                <div v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador', 'admin'].includes(r))" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="48">
+                                        <template #trigger>
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('cobranzas.*') || route().current('admin.cheques.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                                Finanzas
+                                                <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                        </template>
 
-                                <NavLink
-                                    v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
-                                    :href="route('cobranzas.cierre.index')"
-                                    :active="route().current('cobranzas.cierre.*')"
-                                >
-                                    Cierre
-                                </NavLink>
+                                        <template #content>
+                                            <DropdownLink :href="route('cobranzas.pre-recibos.index')">Cobranzas</DropdownLink>
+                                            <DropdownLink :href="route('cobranzas.cierre.index')">Cierre</DropdownLink>
+                                            <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.cheques.index')">Cheques</DropdownLink>
+                                            <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.reportes.estadisticas')">Estadisticas</DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
 
                                 <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center">
                                     <Dropdown align="left" width="56">
@@ -133,10 +171,10 @@ const switchEmpresa = (empresaId) => {
                                     </Dropdown>
                                 </div>
 
-                                <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center sm:ms-3">
-                                    <Dropdown align="left" width="56">
+                                <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center">
+                                    <Dropdown align="left" width="40">
                                         <template #trigger>
-                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('admin.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('admin.users.*') || route().current('admin.empresas.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
                                                 Configuracion
                                                 <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -147,13 +185,6 @@ const switchEmpresa = (empresaId) => {
                                         <template #content>
                                             <DropdownLink :href="route('admin.users.index')">Usuarios</DropdownLink>
                                             <DropdownLink :href="route('admin.empresas.index')">Empresas</DropdownLink>
-                                            <DropdownLink :href="route('admin.depositos.index')">Depositos</DropdownLink>
-                                            <DropdownLink :href="route('admin.terceros.index')">Clientes/Proveedores</DropdownLink>
-                                            <DropdownLink :href="route('admin.cheques.index')">Cheques</DropdownLink>
-                                            <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
-                                            <DropdownLink :href="route('admin.cotizaciones.index')">Cotizaciones</DropdownLink>
-                                            <DropdownLink :href="route('admin.vehiculos.index')">Vehiculos</DropdownLink>
-                                            <DropdownLink :href="route('admin.reportes.seguro')">Informe seguro</DropdownLink>
                                         </template>
                                     </Dropdown>
                                 </div>
@@ -239,11 +270,57 @@ const switchEmpresa = (empresaId) => {
                 <!-- Responsive Navigation Menu -->
                 <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="sm:hidden">
                     <div class="pt-2 pb-3 space-y-1">
-                        <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
+                        <div v-if="($page.props.tt?.roles || []).includes('admin')" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">
                             Inicio
+                        </div>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('dashboard')"
+                            :active="route().current('dashboard')"
+                        >
+                            Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.terceros.index')"
+                            :active="route().current('admin.terceros.*')"
+                        >
+                            Clientes/Proveedores
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.depositos.index')"
+                            :active="route().current('admin.depositos.*')"
+                        >
+                            Depositos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.vehiculos.index')"
+                            :active="route().current('admin.vehiculos.*')"
+                        >
+                            Vehiculos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.tarifas.index')"
+                            :active="route().current('admin.tarifas.*')"
+                        >
+                            Tarifas
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.cotizaciones.index')"
+                            :active="route().current('admin.cotizaciones.*')"
+                        >
+                            Cotizaciones
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['operaciones', 'admin', 'facturacion'].includes(r))"
+                            :href="route('operacion.manifiestos.index')"
+                            :active="route().current('operacion.manifiestos.*') || route().current('admin.reportes.seguro')"
+                        >
                             Control pedidos
                         </ResponsiveNavLink>
 
@@ -303,6 +380,9 @@ const switchEmpresa = (empresaId) => {
                             Repartidor
                         </ResponsiveNavLink>
 
+                        <div v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador', 'admin'].includes(r))" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">
+                            Finanzas
+                        </div>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
                             :href="route('cobranzas.pre-recibos.index')"
@@ -310,13 +390,26 @@ const switchEmpresa = (empresaId) => {
                         >
                             Cobranzas
                         </ResponsiveNavLink>
-
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
                             :href="route('cobranzas.cierre.index')"
                             :active="route().current('cobranzas.cierre.*')"
                         >
                             Cierre
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.cheques.index')"
+                            :active="route().current('admin.cheques.*')"
+                        >
+                            Cheques
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.reportes.estadisticas')"
+                            :active="route().current('admin.reportes.estadisticas')"
+                        >
+                            Estadisticas
                         </ResponsiveNavLink>
 
                         <div v-if="($page.props.tt?.roles || []).includes('admin')" class="px-4 pt-3 text-xs uppercase tracking-wider text-gray-400">
@@ -374,55 +467,6 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('admin.empresas.*')"
                         >
                             Empresas
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.depositos.index')"
-                            :active="route().current('admin.depositos.*')"
-                        >
-                            Depositos
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.terceros.index')"
-                            :active="route().current('admin.terceros.*')"
-                        >
-                            Clientes/Proveedores
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.cheques.index')"
-                            :active="route().current('admin.cheques.*')"
-                        >
-                            Cheques
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.tarifas.index')"
-                            :active="route().current('admin.tarifas.*')"
-                        >
-                            Tarifas
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.cotizaciones.index')"
-                            :active="route().current('admin.cotizaciones.*')"
-                        >
-                            Cotizaciones
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.vehiculos.index')"
-                            :active="route().current('admin.vehiculos.*')"
-                        >
-                            Vehiculos
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('admin.reportes.seguro')"
-                            :active="route().current('admin.reportes.seguro')"
-                        >
-                            Informe seguro
                         </ResponsiveNavLink>
                     </div>
 
