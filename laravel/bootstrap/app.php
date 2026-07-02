@@ -26,7 +26,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EnsurePasswordChanged::class,
             \App\Http\Middleware\CheckUserSchedule::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \App\Http\Middleware\TwoFactorReminder::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 

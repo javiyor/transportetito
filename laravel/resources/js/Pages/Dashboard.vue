@@ -93,7 +93,6 @@ const formatCuit = (value) => {
                                         <div class="mt-2 flex flex-wrap gap-2">
                                             <span v-for="r in (c.roles || [])" :key="r" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{{ r }}</span>
                                             <span v-if="c.blocked_at" class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Bloqueado</span>
-                                            <span v-if="c.has_2fa" class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">2FA</span>
                                         </div>
                                     </div>
                                 </div>

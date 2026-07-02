@@ -17,7 +17,7 @@ class DashboardController extends Controller
             ->first();
 
         $contacts = User::query()
-            ->select(['id', 'name', 'email', 'email_verified_at', 'blocked_at', 'two_factor_secret'])
+            ->select(['id', 'name', 'email', 'email_verified_at', 'blocked_at'])
             ->orderBy('id')
             ->get()
             ->map(function (User $user) {
@@ -27,7 +27,6 @@ class DashboardController extends Controller
                     'email' => $user->email,
                     'email_verified_at' => $user->email_verified_at,
                     'blocked_at' => $user->blocked_at,
-                    'has_2fa' => ! empty($user->two_factor_secret),
                     'roles' => $user->getRoleNames()->values()->all(),
                 ];
             })

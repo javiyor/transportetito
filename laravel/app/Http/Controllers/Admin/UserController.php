@@ -17,7 +17,7 @@ class UserController extends Controller
         $roles = config('roles.available', []);
 
         $users = User::query()
-            ->select(['id', 'name', 'email', 'email_verified_at', 'blocked_at', 'two_factor_secret'])
+            ->select(['id', 'name', 'email', 'email_verified_at', 'blocked_at'])
             ->with(['empresas:id', 'horarios'])
             ->orderBy('id')
             ->paginate($perPage)
@@ -28,7 +28,6 @@ class UserController extends Controller
                     'email' => $user->email,
                     'email_verified_at' => $user->email_verified_at,
                     'blocked_at' => $user->blocked_at,
-                    'has_2fa' => ! empty($user->two_factor_secret),
                     'roles' => $user->getRoleNames()->values()->all(),
                     'empresa_ids' => $user->empresas->pluck('id')->toArray(),
                     'horarios' => $user->horarios->map(fn ($h) => [

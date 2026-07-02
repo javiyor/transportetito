@@ -88,17 +88,6 @@ const resetPassword = (user) => {
     );
 };
 
-const reset2fa = (user) => {
-    openConfirm(
-        'Resetear 2FA',
-        `Se desactiva 2FA para ${user.email}.`,
-        () => {
-            closeConfirm();
-            useForm({}).post(route('admin.users.2fa.reset', user.id), { preserveScroll: true });
-        },
-    );
-};
-
 const blockUser = (user) => {
     openConfirm(
         'Bloquear usuario',
@@ -242,7 +231,7 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                 <div class="p-6 border-b border-gray-200">
                     <h3 class="text-base font-semibold text-gray-900">Usuarios</h3>
                     <p class="mt-1 text-sm text-gray-600">
-                        Roles multiples, bloqueo, reset password y reset 2FA.
+                        Roles multiples, bloqueo y reset password.
                     </p>
                 </div>
 
@@ -271,8 +260,7 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                                     <div class="mt-2 flex gap-2">
                                         <span v-if="user.email_verified_at" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Verificado</span>
                                         <span v-else class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">No verificado</span>
-                                        <span v-if="user.has_2fa" class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">2FA</span>
-                                        <span v-else class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Sin 2FA</span>
+
                                     </div>
                                 </td>
 
@@ -304,9 +292,6 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                                         </SecondaryButton>
                                         <SecondaryButton class="text-xs" @click.prevent="resetPassword(user)">
                                             Reset password
-                                        </SecondaryButton>
-                                        <SecondaryButton class="text-xs" @click.prevent="reset2fa(user)">
-                                            Reset 2FA
                                         </SecondaryButton>
                                         <DangerButton v-if="!user.blocked_at" class="text-xs" @click.prevent="blockUser(user)">
                                             Bloquear
