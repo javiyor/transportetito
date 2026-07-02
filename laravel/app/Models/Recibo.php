@@ -26,6 +26,7 @@ class Recibo extends Model
         'total',
         'fecha',
         'confirmado_por_user_id',
+        'retenciones',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class Recibo extends Model
         'cotizacion_ars' => 'decimal:6',
         'total' => 'decimal:2',
         'fecha' => 'date',
+        'retenciones' => 'array',
     ];
 
     public function cuenta(): BelongsTo

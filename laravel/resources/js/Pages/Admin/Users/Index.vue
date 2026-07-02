@@ -15,6 +15,7 @@ import Checkbox from '@/Components/Checkbox.vue';
 const props = defineProps({
     roles: Array,
     users: Object,
+    empresas: Array,
 });
 
 const page = usePage();
@@ -113,6 +114,85 @@ const unblockUser = (user) => {
     useForm({}).post(route('admin.users.unblock', user.id), { preserveScroll: true });
 };
 
+const editNameForm = useForm({ name: '' });
+const editandoUsuario = ref(null);
+
+const abrirEditarNombre = (user) => {
+    editNameForm.name = user.name;
+    editandoUsuario.value = user.id;
+};
+
+const cerrarEditarNombre = () => {
+    editandoUsuario.value = null;
+    editNameForm.reset();
+};
+
+const guardarNombre = () => {
+    editNameForm.put(route('admin.users.update', editandoUsuario.value), {
+        preserveScroll: true,
+        onSuccess: () => cerrarEditarNombre(),
+    });
+};
+
+const editEmpresasForm = useForm({ empresa_ids: [] });
+const editandoEmpresas = ref(null);
+
+const abrirEditarEmpresas = (user) => {
+    editEmpresasForm.empresa_ids = [...(user.empresa_ids || [])];
+    editandoEmpresas.value = user.id;
+};
+
+const cerrarEditarEmpresas = () => {
+    editandoEmpresas.value = null;
+    editEmpresasForm.reset();
+};
+
+const guardarEmpresas = () => {
+    editEmpresasForm.put(route('admin.users.empresas.update', editandoEmpresas.value), {
+        preserveScroll: true,
+        onSuccess: () => cerrarEditarEmpresas(),
+    });
+};
+
+const toggleEmpresaId = (id) => {
+    const idx = editEmpresasForm.empresa_ids.indexOf(id);
+    if (idx >= 0) {
+        editEmpresasForm.empresa_ids.splice(idx, 1);
+    } else {
+        editEmpresasForm.empresa_ids.push(id);
+    }
+};
+
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+const editHorariosForm = useForm({ horarios: [] });
+const editandoHorarios = ref(null);
+
+const abrirEditarHorarios = (user) => {
+    const horarios = user.horarios || [];
+    editHorariosForm.horarios = DIAS.map((_, i) => {
+        const existente = horarios.find((h) => h.dia_semana === i);
+        return {
+            dia_semana: i,
+            hora_desde: existente?.hora_desde || null,
+            hora_hasta: existente?.hora_hasta || null,
+        };
+    });
+    editandoHorarios.value = user.id;
+};
+
+const cerrarEditarHorarios = () => {
+    editandoHorarios.value = null;
+    editHorariosForm.reset();
+};
+
+const guardarHorarios = () => {
+    editHorariosForm.put(route('admin.users.horarios.update', editandoHorarios.value), {
+        preserveScroll: true,
+        onSuccess: () => cerrarEditarHorarios(),
+    });
+};
+
 const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('admin'));
 </script>
 
@@ -130,6 +210,10 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                 </div>
             </div>
         </template>
+
+        <div v-if="page.props.tt?.flash?.success" class="max-w-7xl mx-auto mt-4 px-4 sm:px-6 lg:px-8">
+            <div class="bg-green-100 border border-green-200 text-green-800 px-4 py-2 rounded text-sm">{{ page.props.tt.flash.success }}</div>
+        </div>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg p-6">
@@ -209,6 +293,15 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
 
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                                     <div class="flex justify-end gap-2">
+                                        <SecondaryButton class="text-xs" @click.prevent="abrirEditarNombre(user)">
+                                            Editar
+                                        </SecondaryButton>
+                                        <SecondaryButton class="text-xs" @click.prevent="abrirEditarEmpresas(user)">
+                                            Empresas
+                                        </SecondaryButton>
+                                        <SecondaryButton class="text-xs" @click.prevent="abrirEditarHorarios(user)">
+                                            Horarios
+                                        </SecondaryButton>
                                         <SecondaryButton class="text-xs" @click.prevent="resetPassword(user)">
                                             Reset password
                                         </SecondaryButton>
@@ -242,6 +335,74 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                 <DangerButton class="ms-3" @click="confirmAction.action">Confirmar</DangerButton>
             </template>
         </ConfirmationModal>
+
+        <DialogModal :show="!!editandoHorarios" @close="cerrarEditarHorarios" max-width="2xl">
+            <template #title>
+                Horarios de acceso para usuario
+            </template>
+            <template #content>
+                <p class="text-sm text-gray-500 mb-4">Dejar ambos campos vacíos para deshabilitar el acceso ese día.</p>
+                <div class="space-y-3">
+                    <div v-for="(h, i) in editHorariosForm.horarios" :key="i" class="flex items-center gap-4">
+                        <span class="w-24 text-sm font-medium text-gray-700">{{ DIAS[i] }}</span>
+                        <label class="text-xs text-gray-500">Desde</label>
+                        <input v-model="h.hora_desde" type="time" class="block w-32 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <label class="text-xs text-gray-500">Hasta</label>
+                        <input v-model="h.hora_hasta" type="time" class="block w-32 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                    </div>
+                </div>
+                <InputError class="mt-2" :message="editHorariosForm.errors.horarios" />
+            </template>
+            <template #footer>
+                <div class="flex items-center justify-end gap-2">
+                    <SecondaryButton @click="cerrarEditarHorarios">Cancelar</SecondaryButton>
+                    <PrimaryButton :disabled="editHorariosForm.processing" @click="guardarHorarios">Guardar</PrimaryButton>
+                </div>
+            </template>
+        </DialogModal>
+
+        <DialogModal :show="!!editandoEmpresas" @close="cerrarEditarEmpresas">
+            <template #title>
+                Asignar empresas a usuario
+            </template>
+            <template #content>
+                <div class="space-y-2 max-h-80 overflow-y-auto">
+                    <div v-for="e in empresas" :key="e.id" class="flex items-center gap-2">
+                        <Checkbox :checked="editEmpresasForm.empresa_ids.includes(e.id)" @click="toggleEmpresaId(e.id)" />
+                        <span class="text-sm text-gray-700">{{ e.razon_social }}</span>
+                    </div>
+                    <div v-if="!empresas.length" class="text-sm text-gray-500">No hay empresas disponibles.</div>
+                </div>
+                <InputError class="mt-2" :message="editEmpresasForm.errors.empresa_ids" />
+            </template>
+            <template #footer>
+                <div class="flex items-center justify-end gap-2">
+                    <SecondaryButton @click="cerrarEditarEmpresas">Cancelar</SecondaryButton>
+                    <PrimaryButton :disabled="editEmpresasForm.processing" @click="guardarEmpresas">Guardar</PrimaryButton>
+                </div>
+            </template>
+        </DialogModal>
+
+        <DialogModal :show="!!editandoUsuario" @close="cerrarEditarNombre">
+            <template #title>
+                Editar nombre de usuario
+            </template>
+            <template #content>
+                <div class="space-y-4">
+                    <div>
+                        <InputLabel value="Nombre" />
+                        <TextInput v-model="editNameForm.name" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="editNameForm.errors.name" />
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <div class="flex items-center justify-end gap-2">
+                    <SecondaryButton @click="cerrarEditarNombre">Cancelar</SecondaryButton>
+                    <PrimaryButton :disabled="editNameForm.processing" @click="guardarNombre">Guardar</PrimaryButton>
+                </div>
+            </template>
+        </DialogModal>
 
         <DialogModal :show="showingTempPassword" @close="showingTempPassword = false">
             <template #title>

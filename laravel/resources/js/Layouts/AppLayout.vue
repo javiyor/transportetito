@@ -49,7 +49,7 @@ const switchEmpresa = (empresaId) => {
                                 </NavLink>
 
                                 <NavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
-                                    Ctrl pedidos
+                                    Control pedidos
                                 </NavLink>
 
                                 <NavLink
@@ -58,6 +58,13 @@ const switchEmpresa = (empresaId) => {
                                     :active="route().current('facturacion.*') || route().current('operacion.comprobantes.*')"
                                 >
                                     Facturacion
+                                </NavLink>
+                                <NavLink
+                                    v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
+                                    :href="route('facturacion.importar.index')"
+                                    :active="route().current('facturacion.importar.*')"
+                                >
+                                    Importar
                                 </NavLink>
 
                                 <NavLink
@@ -256,7 +263,7 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink :href="route('operacion.manifiestos.index')" :active="route().current('operacion.manifiestos.*')">
-                            Ctrl pedidos
+                            Control pedidos
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink
@@ -265,6 +272,13 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('facturacion.*') || route().current('operacion.comprobantes.*')"
                         >
                             Facturacion
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
+                            :href="route('facturacion.importar.index')"
+                            :active="route().current('facturacion.importar.*')"
+                        >
+                            Importar
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

@@ -12,9 +12,11 @@ use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Empresa;
 use App\Models\TerceroCuenta;
+use App\Models\UserHorario;
 
 class User extends Authenticatable
 {
@@ -79,6 +81,16 @@ class User extends Authenticatable
     public function currentEmpresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class, 'current_empresa_id');
+    }
+
+    public function empresas(): BelongsToMany
+    {
+        return $this->belongsToMany(Empresa::class);
+    }
+
+    public function horarios(): HasMany
+    {
+        return $this->hasMany(UserHorario::class);
     }
 
     public function cuentasAsignadas(): HasMany

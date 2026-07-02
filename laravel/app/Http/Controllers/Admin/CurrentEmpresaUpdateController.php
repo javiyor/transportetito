@@ -18,7 +18,14 @@ class CurrentEmpresaUpdateController extends Controller
         $empresaId = (int) $data['empresa_id'];
         $empresa = Empresa::query()->findOrFail($empresaId);
 
-        $request->user()->forceFill(['current_empresa_id' => $empresa->id])->save();
+        $user = $request->user();
+
+        if (! $user->hasRole('admin')) {
+            $allowed = $user->empresas()->pluck('empresas.id')->toArray();
+            abort_unless(in_array($empresa->id, $allowed), 403, 'No tienes acceso a esta empresa.');
+        }
+
+        $user->forceFill(['current_empresa_id' => $empresa->id])->save();
 
         return back();
     }

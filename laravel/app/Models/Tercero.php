@@ -14,6 +14,7 @@ class Tercero extends Model
         'cuit',
         'razon_social',
         'condicion_iva',
+        'condicion_iva_id',
         'domicilio_fiscal',
     ];
 

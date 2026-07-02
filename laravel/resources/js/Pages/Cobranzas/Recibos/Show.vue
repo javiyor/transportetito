@@ -1,16 +1,48 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     recibo: Object,
 });
 
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success);
+
+const retencionesForm = useForm({
+    retenciones: {
+        iibb: props.recibo.retenciones?.iibb ?? null,
+        iva: props.recibo.retenciones?.iva ?? null,
+        ganancias: props.recibo.retenciones?.ganancias ?? null,
+    },
+});
+
+const guardarRetenciones = () => {
+    retencionesForm.put(route('cobranzas.recibos.retenciones.update', props.recibo.id), {
+        preserveScroll: true,
+    });
+};
+
 const formatFecha = (value) => {
     if (!value) return '-';
     return String(value).slice(0, 10);
 };
+
+const formatNum = (n) => {
+    const val = Number(n || 0);
+    return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const totalRetenciones = computed(() => {
+    const r = props.recibo.retenciones || {};
+    return (Number(r.iibb || 0) + Number(r.iva || 0) + Number(r.ganancias || 0));
+});
 </script>
 
 <template>
@@ -31,21 +63,29 @@ const formatFecha = (value) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
+                {{ flashSuccess }}
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <div class="text-xs text-gray-500">Cuenta</div>
                         <div class="text-sm font-medium text-gray-900">{{ recibo.cuenta?.tercero?.razon_social || '-' }}</div>
                         <div class="text-xs text-gray-500">CUIT {{ recibo.cuenta?.tercero?.cuit || '-' }}</div>
                     </div>
                     <div>
-                        <div class="text-xs text-gray-500">Total</div>
-                        <div class="text-sm font-medium text-gray-900">{{ recibo.moneda }} {{ recibo.total }}</div>
+                        <div class="text-xs text-gray-500">Total cobrado</div>
+                        <div class="text-sm font-medium text-gray-900">{{ recibo.moneda }} {{ formatNum(recibo.total) }}</div>
                         <div v-if="recibo.moneda !== 'ARS'" class="text-xs text-gray-500">Cotizacion {{ recibo.cotizacion_ars }}</div>
                     </div>
                     <div>
                         <div class="text-xs text-gray-500">Pre-recibo origen</div>
                         <div class="text-sm font-medium text-gray-900">{{ recibo.pre_recibo_id ? ('#' + recibo.pre_recibo_id) : '-' }}</div>
+                    </div>
+                    <div v-if="totalRetenciones > 0">
+                        <div class="text-xs text-gray-500">Retenciones</div>
+                        <div class="text-sm font-medium text-amber-700">{{ recibo.moneda }} {{ formatNum(totalRetenciones) }}</div>
                     </div>
                 </div>
             </div>
@@ -120,6 +160,28 @@ const formatFecha = (value) => {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Retenciones de impuestos</h3>
+                <form @submit.prevent="guardarRetenciones" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div>
+                        <InputLabel value="IIBB" />
+                        <TextInput v-model="retencionesForm.retenciones.iibb" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                    </div>
+                    <div>
+                        <InputLabel value="IVA" />
+                        <TextInput v-model="retencionesForm.retenciones.iva" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                    </div>
+                    <div>
+                        <InputLabel value="Ganancias" />
+                        <TextInput v-model="retencionesForm.retenciones.ganancias" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                    </div>
+                    <div class="flex items-end">
+                        <PrimaryButton :disabled="retencionesForm.processing">Guardar retenciones</PrimaryButton>
+                    </div>
+                </form>
+                <InputError class="mt-2" :message="retencionesForm.errors.retenciones" />
             </div>
         </div>
     </AppLayout>

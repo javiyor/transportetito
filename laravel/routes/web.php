@@ -12,6 +12,9 @@ use App\Http\Controllers\Admin\UserRolesUpdateController;
 use App\Http\Controllers\Admin\UserStoreController;
 use App\Http\Controllers\Admin\UserTwoFactorResetController;
 use App\Http\Controllers\Admin\UserUnblockController;
+use App\Http\Controllers\Admin\UserUpdateController;
+use App\Http\Controllers\Admin\UserEmpresasUpdateController;
+use App\Http\Controllers\Admin\UserHorariosUpdateController;
 use App\Http\Controllers\Admin\CurrentEmpresaUpdateController;
 use App\Http\Controllers\Admin\EmpresaAdminController;
 use App\Http\Controllers\Admin\DepositoAdminController;
@@ -76,12 +79,16 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteNotaStoreController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteReciboStoreController;
 use App\Http\Controllers\Cobranzas\CierreCajaController;
 use App\Http\Controllers\Cobranzas\CierreCajaPrintController;
+use App\Http\Controllers\Cobranzas\ReciboRetencionesUpdateController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteExportController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 
 use App\Http\Controllers\Facturacion\ManifiestoIndexController;
 use App\Http\Controllers\Facturacion\ManifiestoShowController;
+use App\Http\Controllers\Facturacion\ImportarFacturasIndexController;
+use App\Http\Controllers\Facturacion\ImportarFacturasCsvStoreController;
+use App\Http\Controllers\Facturacion\ImportarFacturasArcaStoreController;
 
 Route::get('/', function () {
     $empresa = Empresa::query()
@@ -129,6 +136,9 @@ Route::middleware([
         Route::post('/users/{user}/2fa/reset', UserTwoFactorResetController::class)->name('users.2fa.reset');
         Route::post('/users/{user}/block', UserBlockController::class)->name('users.block');
         Route::post('/users/{user}/unblock', UserUnblockController::class)->name('users.unblock');
+        Route::put('/users/{user}', UserUpdateController::class)->name('users.update');
+        Route::put('/users/{user}/empresas', UserEmpresasUpdateController::class)->name('users.empresas.update');
+        Route::put('/users/{user}/horarios', UserHorariosUpdateController::class)->name('users.horarios.update');
 
         Route::post('/current-empresa', CurrentEmpresaUpdateController::class)->name('current-empresa.update');
 
@@ -144,6 +154,7 @@ Route::middleware([
         Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
         Route::put('/terceros/{cuenta}', [TerceroAdminController::class, 'update'])->name('terceros.update');
         Route::get('/terceros/lookup-cuit', [TerceroAdminController::class, 'lookupByCuit'])->name('terceros.lookup-cuit');
+        Route::get('/terceros/lookup-arca-cuit', [TerceroAdminController::class, 'lookupArcaCuit'])->name('terceros.lookup-arca-cuit');
         Route::get('/terceros/localidades-por-provincia/{provincia}', [TerceroAdminController::class, 'localidadesPorProvincia'])->name('terceros.localidades-por-provincia');
 
         Route::get('/tarifas', [TarifaRelacionAdminController::class, 'index'])->name('tarifas.index');
@@ -217,6 +228,9 @@ Route::middleware([
         Route::get('/manifiestos/{manifiesto}', ManifiestoShowController::class)->name('manifiestos.show');
         Route::get('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceCreateController::class)->name('manual.create');
         Route::post('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceStoreController::class)->name('manual.store');
+        Route::get('/importar', ImportarFacturasIndexController::class)->name('importar.index');
+        Route::post('/importar/csv', ImportarFacturasCsvStoreController::class)->name('importar.csv');
+        Route::post('/importar/arca', ImportarFacturasArcaStoreController::class)->name('importar.arca');
     });
 
     Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
@@ -262,6 +276,7 @@ Route::middleware([
         Route::get('/recibos/export', ReciboExportController::class)->name('recibos.export');
         Route::get('/recibos/{recibo}/print', ReciboPrintController::class)->name('recibos.print');
         Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
+        Route::put('/recibos/{recibo}/retenciones', ReciboRetencionesUpdateController::class)->name('recibos.retenciones.update');
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
         Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');
         Route::get('/cuentas-corrientes/listado-print', CuentaCorrienteListadoPrintController::class)->name('ctacte.listado-print');

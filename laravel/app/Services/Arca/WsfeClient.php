@@ -206,6 +206,43 @@ class WsfeClient
         return $comprobante->refresh();
     }
 
+    public function consultarComprobante(Empresa $empresa, array $params): array
+    {
+        $client = $this->soapClient($empresa);
+        $auth = $this->auth($empresa);
+
+        try {
+            $res = $client->FECompConsultar([
+                'Auth' => $auth,
+                'FeCompConsReq' => [
+                    'CbteTipo' => $params['tipo_comprobante'],
+                    'CbteNro' => (int) $params['numero'],
+                    'PtoVta' => (int) $params['punto_venta'],
+                ],
+            ]);
+        } catch (SoapFault $e) {
+            throw new RuntimeException('WSFE FECompConsultar fallo: '.$e->getMessage(), 0, $e);
+        }
+
+        $result = $res->FECompConsultarResult ?? null;
+        $resultGet = $result->ResultGet ?? null;
+
+        if (! $resultGet) {
+            return ['resultado' => 'R'];
+        }
+
+        return [
+            'resultado' => (string) ($resultGet->Resultado ?? ''),
+            'cuit_cliente' => (string) ($resultGet->DocNro ?? ''),
+            'razon_social_cliente' => (string) ($resultGet->Cliente ?? ''),
+            'total' => (float) ($resultGet->ImpTotal ?? 0),
+            'moneda' => (string) ($resultGet->MonId ?? 'ARS'),
+            'fecha_emision' => (string) ($resultGet->CbteFch ?? ''),
+            'cae' => (string) ($resultGet->CAE ?? ''),
+            'cae_vto' => (string) ($resultGet->CAEFchVto ?? ''),
+        ];
+    }
+
     private function auth(Empresa $empresa): array
     {
         $creds = $this->wsaa->loginWsfe($empresa);

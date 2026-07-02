@@ -36,6 +36,10 @@ class CuentaCorrienteReciboStoreController extends Controller
             'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],
             'items.*.cheque_fecha_vencimiento' => ['nullable', 'date'],
             'items.*.cheque_titular' => ['nullable', 'string', 'max:255'],
+            'retenciones' => ['nullable', 'array'],
+            'retenciones.iibb' => ['nullable', 'numeric', 'min:0'],
+            'retenciones.iva' => ['nullable', 'numeric', 'min:0'],
+            'retenciones.ganancias' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $empresa = $cuenta->empresa()->firstOrFail();
@@ -58,6 +62,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             'total' => $total,
             'fecha' => $data['fecha'],
             'confirmado_por_user_id' => $request->user()->id,
+            'retenciones' => $data['retenciones'] ?? null,
         ]);
 
         foreach ($data['items'] as $item) {

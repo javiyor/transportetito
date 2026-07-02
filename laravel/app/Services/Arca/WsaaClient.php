@@ -20,7 +20,17 @@ class WsaaClient
      */
     public function loginWsfe(Empresa $empresa): array
     {
-        $cacheKey = 'arca.wsaa.wsfe.'.(int) $empresa->id.'.'.(string) ($empresa->arca_env ?: 'homologacion');
+        return $this->login($empresa, 'wsfe');
+    }
+
+    public function loginPadronA5(Empresa $empresa): array
+    {
+        return $this->login($empresa, 'ws_sr_padron_a5');
+    }
+
+    private function login(Empresa $empresa, string $service): array
+    {
+        $cacheKey = 'arca.wsaa.'.$service.'.'.(int) $empresa->id.'.'.(string) ($empresa->arca_env ?: 'homologacion');
 
         $cached = Cache::get($cacheKey);
         if (is_array($cached) && isset($cached['token'], $cached['sign'], $cached['expiresAt'])) {
@@ -50,7 +60,7 @@ class WsaaClient
             throw new RuntimeException('WSDL WSAA no configurado para '.$env);
         }
 
-        $traXml = $this->buildTra('wsfe');
+        $traXml = $this->buildTra($service);
         $cms = $this->signTra($traXml, $paths['certPath'], $paths['keyPath']);
 
         try {

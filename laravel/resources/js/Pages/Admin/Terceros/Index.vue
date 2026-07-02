@@ -19,6 +19,7 @@ const props = defineProps({
     tipoInicial: String,
     proximoNumeroCliente: Number,
     cobradores: Array,
+    condicionesIva: Array,
 });
 
 const localidades = ref([]);
@@ -39,6 +40,30 @@ const buscarTercero = async (cuit, formObj) => {
     if (data.found) {
         formObj.razon_social = data.tercero.razon_social || '';
         formObj.condicion_iva = data.tercero.condicion_iva || '';
+        formObj.condicion_iva_id = data.tercero.condicion_iva_id || '';
+    }
+};
+
+const buscandoArca = ref(false);
+const buscarEnArca = async (cuit, formObj) => {
+    if (!cuit) return;
+    buscandoArca.value = true;
+    try {
+        const url = route('admin.terceros.lookup-arca-cuit', { cuit });
+        const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.found) {
+            formObj.razon_social = data.razon_social || '';
+            const match = (props.condicionesIva || []).find((c) => c.nombre === data.condicion_iva);
+            formObj.condicion_iva = data.condicion_iva || '';
+            formObj.condicion_iva_id = match?.id || '';
+        } else {
+            alert(data.error || 'No encontrado en ARCA.');
+        }
+    } catch (e) {
+        alert('Error al buscar en ARCA.');
+    } finally {
+        buscandoArca.value = false;
     }
 };
 
@@ -48,6 +73,7 @@ const form = useForm({
     cuit: props.cuitInicial || '',
     razon_social: '',
     condicion_iva: '',
+    condicion_iva_id: '',
     nombre_cuenta: '',
     localidad: '',
     barrio: '',
@@ -68,7 +94,7 @@ watch(() => form.provincia_id, (val) => {
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id'),
     });
 };
 
@@ -82,6 +108,7 @@ const editForm = useForm({
     cuit: '',
     razon_social: '',
     condicion_iva: '',
+    condicion_iva_id: '',
     nombre_cuenta: '',
     localidad: '',
     barrio: '',
@@ -99,6 +126,7 @@ const openEdit = (c) => {
     editForm.cuit = c.tercero?.cuit || '';
     editForm.razon_social = c.tercero?.razon_social || '';
     editForm.condicion_iva = c.tercero?.condicion_iva || '';
+    editForm.condicion_iva_id = c.tercero?.condicion_iva_id || '';
     editForm.nombre_cuenta = c.nombre_cuenta || '';
     editForm.localidad = c.localidad || '';
     editForm.barrio = c.barrio || '';
@@ -181,6 +209,7 @@ const localidadNombre = (c) => {
                         <div class="flex gap-2">
                             <TextInput v-model="form.cuit" type="text" class="mt-1 block w-full" @blur="buscarTercero(form.cuit, form)" />
                             <SecondaryButton type="button" class="mt-1 shrink-0" @click="buscarTercero(form.cuit, form)">Buscar</SecondaryButton>
+                            <SecondaryButton type="button" class="mt-1 shrink-0" :disabled="buscandoArca" @click="buscarEnArca(form.cuit, form)">{{ buscandoArca ? 'Buscando...' : 'ARCA' }}</SecondaryButton>
                         </div>
                         <InputError class="mt-2" :message="form.errors.cuit" />
                     </div>
@@ -193,8 +222,11 @@ const localidadNombre = (c) => {
 
                     <div>
                         <InputLabel value="Condicion IVA" />
-                        <TextInput v-model="form.condicion_iva" type="text" class="mt-1 block w-full" placeholder="RI / Monotributo / Exento / CF" />
-                        <InputError class="mt-2" :message="form.errors.condicion_iva" />
+                        <select v-model="form.condicion_iva_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">(seleccionar)</option>
+                            <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.condicion_iva_id" />
                     </div>
 
                     <div class="sm:col-span-3">
@@ -367,6 +399,7 @@ const localidadNombre = (c) => {
                             <div class="flex gap-2">
                                 <TextInput v-model="editForm.cuit" type="text" class="mt-1 block w-full" @blur="buscarTercero(editForm.cuit, editForm)" />
                                 <SecondaryButton type="button" class="mt-1 shrink-0" @click="buscarTercero(editForm.cuit, editForm)">Buscar</SecondaryButton>
+                                <SecondaryButton type="button" class="mt-1 shrink-0" :disabled="buscandoArca" @click="buscarEnArca(editForm.cuit, editForm)">{{ buscandoArca ? 'Buscando...' : 'ARCA' }}</SecondaryButton>
                             </div>
                             <InputError class="mt-2" :message="editForm.errors.cuit" />
                         </div>
@@ -377,8 +410,11 @@ const localidadNombre = (c) => {
                         </div>
                         <div>
                             <InputLabel value="Condicion IVA" />
-                            <TextInput v-model="editForm.condicion_iva" type="text" class="mt-1 block w-full" placeholder="RI / Monotributo / Exento / CF" />
-                            <InputError class="mt-2" :message="editForm.errors.condicion_iva" />
+                            <select v-model="editForm.condicion_iva_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">(seleccionar)</option>
+                                <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="editForm.errors.condicion_iva_id" />
                         </div>
                         <div>
                             <InputLabel value="Nombre cuenta" />

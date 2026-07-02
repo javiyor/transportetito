@@ -17,6 +17,14 @@ return [
             'wsdl' => 'https://servicios1.afip.gov.ar/wsfev1/service.asmx?WSDL',
         ],
     ],
+    'ws_sr_padron_a5' => [
+        'homologacion' => [
+            'wsdl' => 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA5?WSDL',
+        ],
+        'produccion' => [
+            'wsdl' => 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA5?WSDL',
+        ],
+    ],
     // Base directory inside the Laravel app for certificates.
     // Expected layout:
     // certificados/<cuit_digits>/<env>/cert.pem

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Deposito;
 use App\Models\ManifiestoIngreso;
@@ -45,5 +46,10 @@ class Empresa extends Model
     public function monedaOverrides(): HasMany
     {
         return $this->hasMany(EmpresaMonedaOverride::class);
+    }
+
+    public function usuarios(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class);
     }
 }

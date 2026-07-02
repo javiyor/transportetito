@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CondicionIva;
 use App\Models\Empresa;
 use App\Models\Localidad;
 use App\Models\Provincia;
@@ -10,6 +11,7 @@ use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Models\TerceroEmpresa;
 use App\Models\User;
+use App\Services\Arca\ArcaPersonaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +71,7 @@ class TerceroAdminController extends Controller
             'tipoInicial' => $request->query('tipo') ?: null,
             'proximoNumeroCliente' => ($proximoNumero ?? 0) + 1,
             'cobradores' => User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']),
+            'condicionesIva' => CondicionIva::query()->orderBy('codigo_afip')->get(['id', 'codigo_afip', 'nombre']),
         ]);
     }
 
@@ -80,6 +83,7 @@ class TerceroAdminController extends Controller
             'cuit' => ['required', 'string', 'max:32'],
             'razon_social' => ['required', 'string', 'max:255'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
+            'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
@@ -94,17 +98,25 @@ class TerceroAdminController extends Controller
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
 
+        $condicionIvaNombre = $data['condicion_iva'];
+        if ($data['condicion_iva_id'] ?? null) {
+            $condicionIva = CondicionIva::find($data['condicion_iva_id']);
+            $condicionIvaNombre = $condicionIva?->nombre;
+        }
+
         $tercero = Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             [
                 'razon_social' => $data['razon_social'],
-                'condicion_iva' => $data['condicion_iva'] ?: null,
+                'condicion_iva' => $condicionIvaNombre,
+                'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
             ]
         );
 
         $tercero->update([
             'razon_social' => $data['razon_social'],
-            'condicion_iva' => $data['condicion_iva'] ?: null,
+            'condicion_iva' => $condicionIvaNombre,
+            'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
 
         $cuenta = TerceroCuenta::query()->firstOrCreate(
@@ -149,6 +161,7 @@ class TerceroAdminController extends Controller
             'cuit' => ['required', 'string', 'max:32'],
             'razon_social' => ['required', 'string', 'max:255'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
+            'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
@@ -163,17 +176,25 @@ class TerceroAdminController extends Controller
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
 
+        $condicionIvaNombre = $data['condicion_iva'];
+        if ($data['condicion_iva_id'] ?? null) {
+            $condicionIva = CondicionIva::find($data['condicion_iva_id']);
+            $condicionIvaNombre = $condicionIva?->nombre;
+        }
+
         $tercero = Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             [
                 'razon_social' => $data['razon_social'],
-                'condicion_iva' => $data['condicion_iva'] ?: null,
+                'condicion_iva' => $condicionIvaNombre,
+                'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
             ]
         );
 
         $tercero->update([
             'razon_social' => $data['razon_social'],
-            'condicion_iva' => $data['condicion_iva'] ?: null,
+            'condicion_iva' => $condicionIvaNombre,
+            'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
 
         $cuenta->update([
@@ -194,6 +215,34 @@ class TerceroAdminController extends Controller
         );
 
         return back();
+    }
+
+    public function lookupArcaCuit(Request $request, ArcaPersonaService $arca): JsonResponse
+    {
+        $data = $request->validate([
+            'cuit' => ['required', 'string', 'max:32'],
+        ]);
+
+        $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
+
+        if (! in_array(strlen($cleanCuit), [11], true)) {
+            return response()->json(['found' => false, 'error' => 'CUIT debe tener 11 dígitos.']);
+        }
+
+        $user = $request->user();
+        $empresa = Empresa::query()->find($user->current_empresa_id);
+
+        if (! $empresa) {
+            return response()->json(['found' => false, 'error' => 'No hay empresa activa.']);
+        }
+
+        try {
+            $result = $arca->getPersona($empresa, $cleanCuit);
+        } catch (\Throwable $e) {
+            return response()->json(['found' => false, 'error' => 'Error ARCA: '.$e->getMessage()]);
+        }
+
+        return response()->json($result);
     }
 
     public function localidadesPorProvincia(Request $request, Provincia $provincia): JsonResponse
@@ -221,7 +270,7 @@ class TerceroAdminController extends Controller
 
         return response()->json([
             'found' => true,
-            'tercero' => $tercero->only(['id', 'cuit', 'razon_social', 'condicion_iva']),
+            'tercero' => $tercero->only(['id', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id']),
         ]);
     }
 }

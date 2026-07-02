@@ -27,6 +27,7 @@ class PreRecibo extends Model
         'total',
         'fecha',
         'creado_por_user_id',
+        'retenciones',
     ];
 
     protected $casts = [
@@ -34,6 +35,7 @@ class PreRecibo extends Model
         'cotizacion_ars' => 'decimal:6',
         'total' => 'decimal:2',
         'fecha' => 'date',
+        'retenciones' => 'array',
     ];
 
     public function hojaRuta(): BelongsTo

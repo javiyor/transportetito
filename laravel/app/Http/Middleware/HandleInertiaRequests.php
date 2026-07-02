@@ -54,6 +54,8 @@ class HandleInertiaRequests extends Middleware
 
             if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
                 $empresasDisponibles = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social', 'cuit']);
+            } else {
+                $empresasDisponibles = $user->empresas()->orderBy('razon_social')->get(['id', 'razon_social', 'cuit']);
             }
         }
 

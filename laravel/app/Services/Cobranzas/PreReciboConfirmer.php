@@ -38,6 +38,7 @@ class PreReciboConfirmer
                 'total' => $preRecibo->total,
                 'fecha' => $preRecibo->fecha,
                 'confirmado_por_user_id' => $userId,
+                'retenciones' => $preRecibo->retenciones,
             ]);
 
             foreach ($preRecibo->items as $item) {
