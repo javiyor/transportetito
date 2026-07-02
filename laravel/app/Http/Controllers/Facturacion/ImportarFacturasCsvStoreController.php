@@ -35,7 +35,9 @@ class ImportarFacturasCsvStoreController extends Controller
         $omitidos = 0;
         $errores = [];
 
-        DB::transaction(function () use ($data, $empresa, &$importados, &$omitidos, &$errores) {
+        DB::transaction(function () use ($data, $empresa, $request, &$importados, &$omitidos, &$errores) {
+            $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
+
             foreach ($data['rows'] as $row) {
                 $cuit = preg_replace('/\D+/', '', $row['cuit_cliente']) ?? '';
 
@@ -59,17 +61,18 @@ class ImportarFacturasCsvStoreController extends Controller
                     ->where('tercero_id', $tercero->id)
                     ->first();
 
-                $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
+                $maxInterno++;
 
                 $comprobante = Comprobante::create([
                     'empresa_id' => $empresa->id,
                     'deposito_id' => null,
                     'facturar_cuenta_id' => $cuenta?->id,
+                    'entrega_cuenta_id' => $cuenta?->id,
                     'tipo' => 'factura_interna',
                     'estado' => 'emitida',
                     'moneda' => $row['moneda'],
                     'total' => $row['total'],
-                    'numero_interno' => $maxInterno + 1,
+                    'numero_interno' => $maxInterno,
                     'fecha_emision' => $row['fecha_emision'],
                     'requiere_autorizacion_arca' => false,
                     'arca_punto_venta' => (int) $row['pv'],
@@ -103,6 +106,6 @@ class ImportarFacturasCsvStoreController extends Controller
             $msg .= ' Errores: '.implode(', ', $errores);
         }
 
-        return back()->with('flash.importResult', $msg);
+        return back()->with('tt.import_result', $msg);
     }
 }

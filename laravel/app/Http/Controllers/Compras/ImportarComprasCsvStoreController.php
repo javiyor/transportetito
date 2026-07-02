@@ -106,6 +106,6 @@ class ImportarComprasCsvStoreController extends Controller
             $msg .= ' Errores: '.implode(', ', $errores);
         }
 
-        return back()->with('flash.importResult', $msg);
+        return back()->with('tt.import_result', $msg);
     }
 }
