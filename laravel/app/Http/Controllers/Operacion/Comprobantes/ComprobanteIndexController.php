@@ -15,10 +15,11 @@ class ComprobanteIndexController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $tipo = (string) ($request->query('tipo') ?: 'todos');
         $estado = (string) ($request->query('estado') ?: 'todos');
+        $compartidos = $request->query('compartidos', '1');
 
         $empresaIds = [$empresaId];
 
-        if ($empresaId > 0) {
+        if ($empresaId > 0 && $compartidos !== '0') {
             $shared = TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresaId) {
                 $q->select('tercero_id')
                     ->from('tercero_cuentas')
@@ -70,6 +71,7 @@ class ComprobanteIndexController extends Controller
             'filters' => [
                 'tipo' => $tipo,
                 'estado' => $estado,
+                'compartidos' => $compartidos,
             ],
             'comprobantes' => $comprobantes,
         ]);

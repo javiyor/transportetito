@@ -22,10 +22,11 @@ class ManifiestoIngresoController extends Controller
     public function index(Request $request)
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        $compartidos = $request->query('compartidos', '1');
 
         $empresaIds = [$empresaId];
 
-        if ($empresaId > 0) {
+        if ($empresaId > 0 && $compartidos !== '0') {
             $shared = TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresaId) {
                 $q->select('tercero_id')
                     ->from('tercero_cuentas')
@@ -50,6 +51,7 @@ class ManifiestoIngresoController extends Controller
 
         return Inertia::render('Operacion/Manifiestos/Index', [
             'manifiestos' => $manifiestos,
+            'compartidos' => $compartidos,
         ]);
     }
 

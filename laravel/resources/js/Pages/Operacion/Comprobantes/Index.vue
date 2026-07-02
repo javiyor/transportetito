@@ -11,12 +11,14 @@ const props = defineProps({
 const form = useForm({
     tipo: props.filters?.tipo || 'todos',
     estado: props.filters?.estado || 'todos',
+    compartidos: props.filters?.compartidos || '1',
 });
 
 const applyFilters = () => {
     router.get(route('operacion.comprobantes.index'), {
         tipo: form.tipo || 'todos',
         estado: form.estado || 'todos',
+        compartidos: form.compartidos || '1',
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
@@ -46,7 +48,7 @@ const tipoLabel = (tipo) => {
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Tipo</div>
                         <select v-model="form.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" @change="applyFilters">
@@ -63,6 +65,13 @@ const tipoLabel = (tipo) => {
                             <option value="emitida">Emitidas</option>
                             <option value="anulada">Anuladas</option>
                         </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button @click="form.compartidos = form.compartidos === '1' ? '0' : '1'; applyFilters()"
+                            class="text-xs px-3 py-2 rounded border font-medium transition-colors"
+                            :class="form.compartidos === '1' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
+                            {{ form.compartidos === '1' ? 'Compartidos' : 'Solo esta empresa' }}
+                        </button>
                     </div>
                 </div>
             </div>

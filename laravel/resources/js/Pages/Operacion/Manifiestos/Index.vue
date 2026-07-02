@@ -1,12 +1,19 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
-defineProps({
+const props = defineProps({
     manifiestos: Object,
+    compartidos: { type: String, default: '1' },
 });
+
+const toggleCompartidos = () => {
+    router.get(route('operacion.manifiestos.index'), {
+        compartidos: props.compartidos === '1' ? '0' : '1',
+    }, { preserveState: true, preserveScroll: true, replace: true });
+};
 
 const formatFecha = (value) => {
     if (!value) return '-';
@@ -32,7 +39,15 @@ const formatFecha = (value) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-4">
+            <div class="flex items-center gap-2">
+                <button @click="toggleCompartidos"
+                    class="text-xs px-3 py-1.5 rounded border font-medium transition-colors"
+                    :class="compartidos === '1' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
+                    {{ compartidos === '1' ? 'Mostrando datos compartidos' : 'Solo esta empresa' }}
+                </button>
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-4 border-b border-gray-200">
                     <p class="text-xs text-gray-600">Ingreso de camion completo + pedidos por destinatario.</p>
