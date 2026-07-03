@@ -18,7 +18,6 @@ const csvForm = useForm({
 });
 
 const headerMap = {
-    'nro. doc. receptor': 'proveedor_cuit', 'denominación receptor': 'proveedor_razon_social',
     'nro. doc. emisor': 'proveedor_cuit', 'denominación emisor': 'proveedor_razon_social',
     'tipo de comprobante': 'tipo', 'número desde': 'numero',
     'punto de venta': 'pv', 'fecha de emisión': 'fecha_emision',

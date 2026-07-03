@@ -62,6 +62,7 @@ class TerceroAdminController extends Controller
             'tercero_cuentas.localidad_id',
             'tercero_cuentas.email',
             'tercero_cuentas.enviar_comprobantes_por_email',
+            'tercero_cuentas.cobrador_user_id',
             'tercero_cuentas.activo',
             'te.es_cliente',
             'te.es_proveedor',

@@ -165,7 +165,10 @@ Route::middleware([
 
         Route::get('/cheques', [ChequeController::class, 'index'])->name('cheques.index');
         Route::put('/cheques/{cheque}', [ChequeController::class, 'update'])->name('cheques.update');
-        Route::get('/bancos', [ChequeController::class, 'bancos'])->name('bancos.index');
+        Route::get('/bancos/json', [\App\Http\Controllers\Admin\ChequeController::class, 'bancos'])->name('bancos.json');
+        Route::get('/bancos', [\App\Http\Controllers\Admin\BancoAdminController::class, 'index'])->name('bancos.index');
+        Route::post('/bancos', [\App\Http\Controllers\Admin\BancoAdminController::class, 'store'])->name('bancos.store');
+        Route::put('/bancos/{banco}', [\App\Http\Controllers\Admin\BancoAdminController::class, 'update'])->name('bancos.update');
 
         Route::get('/vehiculos', [VehiculoAdminController::class, 'index'])->name('vehiculos.index');
         Route::post('/vehiculos', [VehiculoAdminController::class, 'store'])->name('vehiculos.store');
