@@ -188,6 +188,7 @@ const switchEmpresa = (empresaId) => {
                                             <hr class="my-1 border-gray-200" />
                                             <DropdownLink :href="route('admin.blanqueo.ventas')" class="!text-red-600">Blanqueo Ventas</DropdownLink>
                                             <DropdownLink :href="route('admin.blanqueo.compras')" class="!text-red-600">Blanqueo Compras</DropdownLink>
+                                            <DropdownLink :href="route('admin.blanqueo.manifiestos')" class="!text-red-600">Blanqueo Manifiestos</DropdownLink>
                                         </template>
                                     </Dropdown>
                                 </div>
@@ -486,6 +487,14 @@ const switchEmpresa = (empresaId) => {
                             class="!text-red-600"
                         >
                             Blanqueo Compras
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.blanqueo.manifiestos')"
+                            :active="route().current('admin.blanqueo.manifiestos')"
+                            class="!text-red-600"
+                        >
+                            Blanqueo Manifiestos
                         </ResponsiveNavLink>
                     </div>
 

@@ -3,52 +3,81 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class BlanqueoController extends Controller
 {
+    private function baseProps()
+    {
+        return [
+            'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
+        ];
+    }
+
     public function ventas()
     {
-        return Inertia::render('Admin/Blanqueo/Index', [
+        return Inertia::render('Admin/Blanqueo/Index', array_merge($this->baseProps(), [
             'tipo' => 'ventas',
             'titulo' => 'Blanqueo de Ventas',
-            'descripcion' => 'Elimina todos los comprobantes, movimientos de cuenta corriente, recibos, pre-recibos y cierres de caja.',
-            'tablas' => ['Comprobantes', 'Cta. Cte. Movimientos', 'Recibos', 'Pre-recibos', 'Cierres de caja'],
-        ]);
+            'descripcion' => 'Elimina todos los comprobantes, movimientos de cuenta corriente, recibos y pre-recibos.',
+            'tablas' => ['Comprobantes', 'Cta. Cte. Movimientos', 'Recibos', 'Pre-recibos'],
+        ]));
     }
 
     public function compras()
     {
-        return Inertia::render('Admin/Blanqueo/Index', [
+        return Inertia::render('Admin/Blanqueo/Index', array_merge($this->baseProps(), [
             'tipo' => 'compras',
             'titulo' => 'Blanqueo de Compras',
             'descripcion' => 'Elimina todos los comprobantes de proveedores, ordenes de pago, gastos operativos y pagos a cuenta de combustible.',
-            'tablas' => ['Proveedor Comprobantes', 'Cta. Cte. Movimientos (proveedores)', 'Ordenes de Pago', 'Gastos Operativos', 'Pagos a cuenta combustible'],
-        ]);
+            'tablas' => ['Proveedor Comprobantes', 'Ordenes de Pago', 'Gastos Operativos', 'Pagos a cuenta combustible'],
+        ]));
+    }
+
+    public function manifiestos()
+    {
+        return Inertia::render('Admin/Blanqueo/Index', array_merge($this->baseProps(), [
+            'tipo' => 'manifiestos',
+            'titulo' => 'Blanqueo de Manifiestos',
+            'descripcion' => 'Elimina todos los manifiestos, pedidos, envios consolidados y envíos relacionados.',
+            'tablas' => ['Manifiestos', 'Pedidos', 'Envios consolidados', 'Comprobante-Pedido'],
+        ]));
     }
 
     public function ejecutar(Request $request)
     {
         $tipo = $request->input('tipo');
+        $empresaId = $request->input('empresa_id');
 
-        if (!in_array($tipo, ['ventas', 'compras'])) {
+        if (!in_array($tipo, ['ventas', 'compras', 'manifiestos'])) {
             return back()->with('tt.import_result', ['type' => 'error', 'message' => 'Tipo invalido.']);
         }
 
+        if (!$empresaId) {
+            return back()->with('tt.import_result', ['type' => 'error', 'message' => 'Debe seleccionar una empresa.']);
+        }
+
         try {
-            DB::transaction(function () use ($tipo) {
+            DB::transaction(function () use ($tipo, $empresaId) {
                 if ($tipo === 'ventas') {
-                    DB::statement('TRUNCATE TABLE cta_cte_movimientos CASCADE');
-                    DB::statement('TRUNCATE TABLE pre_recibos CASCADE');
-                    DB::statement('TRUNCATE TABLE recibos CASCADE');
-                    DB::statement('TRUNCATE TABLE comprobantes CASCADE');
+                    DB::table('cta_cte_movimientos')->where('empresa_id', $empresaId)->delete();
+                    DB::table('pre_recibos')->where('empresa_id', $empresaId)->delete();
+                    DB::table('recibos')->where('empresa_id', $empresaId)->delete();
+                    DB::table('comprobante_pedido')->whereIn('comprobante_id', fn($q) => $q->select('id')->from('comprobantes')->where('empresa_id', $empresaId))->delete();
+                    DB::table('comprobantes')->where('empresa_id', $empresaId)->delete();
+                } elseif ($tipo === 'compras') {
+                    DB::table('ordenes_pago')->where('empresa_id', $empresaId)->delete();
+                    DB::table('gastos_operativos')->where('empresa_id', $empresaId)->delete();
+                    DB::table('pago_cuenta_combustibles')->where('empresa_id', $empresaId)->delete();
+                    DB::table('proveedor_comprobantes')->where('empresa_id', $empresaId)->delete();
                 } else {
-                    DB::statement('TRUNCATE TABLE ordenes_pago CASCADE');
-                    DB::statement('TRUNCATE TABLE gastos_operativos CASCADE');
-                    DB::statement('TRUNCATE TABLE pago_cuenta_combustibles CASCADE');
-                    DB::statement('TRUNCATE TABLE proveedor_comprobantes CASCADE');
+                    DB::table('comprobante_pedido')->whereIn('pedido_id', fn($q) => $q->select('id')->from('pedidos')->where('empresa_id', $empresaId))->delete();
+                    DB::table('pedidos')->where('empresa_id', $empresaId)->delete();
+                    DB::table('envios_consolidados')->where('empresa_id', $empresaId)->delete();
+                    DB::table('manifiestos_ingreso')->where('empresa_id', $empresaId)->delete();
                 }
             });
 

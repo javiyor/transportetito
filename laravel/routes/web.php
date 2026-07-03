@@ -180,6 +180,7 @@ Route::middleware([
 
         Route::get('/blanqueo/ventas', [\App\Http\Controllers\Admin\BlanqueoController::class, 'ventas'])->name('blanqueo.ventas');
         Route::get('/blanqueo/compras', [\App\Http\Controllers\Admin\BlanqueoController::class, 'compras'])->name('blanqueo.compras');
+        Route::get('/blanqueo/manifiestos', [\App\Http\Controllers\Admin\BlanqueoController::class, 'manifiestos'])->name('blanqueo.manifiestos');
         Route::post('/blanqueo/ejecutar', [\App\Http\Controllers\Admin\BlanqueoController::class, 'ejecutar'])->name('blanqueo.ejecutar');
     });
 
