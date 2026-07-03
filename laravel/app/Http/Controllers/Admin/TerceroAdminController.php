@@ -21,7 +21,7 @@ class TerceroAdminController extends Controller
 {
     public function index(Request $request)
     {
-        $empresaId = $request->user()->current_empresa_id ?: 0;
+        $empresaId = (int) ($request->query('empresa_id') ?: $request->user()->current_empresa_id ?: 0);
 
         $query = TerceroCuenta::query()
             ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name'])

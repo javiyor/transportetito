@@ -100,9 +100,14 @@ const submit = () => {
 };
 
 const mostrarCompartidos = ref(props.compartidos);
+const empresaFiltroId = ref(props.empresaId || '');
 
 const toggleCompartidos = () => {
-    router.get(route('admin.terceros.index'), { compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
+    router.get(route('admin.terceros.index'), { compartidos: mostrarCompartidos.value ? '1' : null, empresa_id: empresaFiltroId.value || null }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const filtrarEmpresa = () => {
+    router.get(route('admin.terceros.index'), { empresa_id: empresaFiltroId.value || null, compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
 const editing = ref(false);
@@ -173,42 +178,42 @@ const localidadNombre = (c) => {
         <Head title="Admin / Terceros" />
 
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Terceros</h2>
+            <h2 class="font-semibold text-lg text-gray-800 leading-tight">Admin / Terceros</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
-                <h3 class="text-base font-semibold text-gray-900">Nueva cuenta (Numero de cliente)</h3>
+        <div class="max-w-7xl mx-auto py-6 sm:px-4 lg:px-6 space-y-4">
+            <div class="bg-white shadow sm:rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-900">Nueva cuenta</h3>
 
-                <form class="mt-4 grid grid-cols-1 sm:grid-cols-6 gap-4" @submit.prevent="submit">
+                <form class="mt-3 grid grid-cols-1 sm:grid-cols-6 gap-3" @submit.prevent="submit">
                     <div class="sm:col-span-2">
                         <InputLabel value="Empresa" />
                         <select v-model="form.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
                             <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
                         </select>
-                        <InputError class="mt-2" :message="form.errors.empresa_id" />
+                        <InputError class="mt-1" :message="form.errors.empresa_id" />
                     </div>
 
                     <div>
                         <InputLabel value="Numero de cliente" />
                         <TextInput :value="form.numero_cliente" type="number" class="mt-1 block w-full bg-gray-100" readonly />
-                        <InputError class="mt-2" :message="form.errors.numero_cliente" />
+                        <InputError class="mt-1" :message="form.errors.numero_cliente" />
                     </div>
 
-                    <div>
+                    <div class="sm:col-span-2">
                         <InputLabel value="CUIT" />
-                        <div class="flex gap-2">
+                        <div class="flex gap-1">
                             <TextInput v-model="form.cuit" type="text" class="mt-1 block w-full" @blur="buscarTercero(form.cuit, form)" />
-                            <SecondaryButton type="button" class="mt-1 shrink-0" @click="buscarTercero(form.cuit, form)">Buscar</SecondaryButton>
-                            <SecondaryButton type="button" class="mt-1 shrink-0" :disabled="buscandoArca" @click="buscarEnArca(form.cuit, form)">{{ buscandoArca ? 'Buscando...' : 'ARCA' }}</SecondaryButton>
+                            <SecondaryButton type="button" class="mt-1 shrink-0 text-xs" @click="buscarTercero(form.cuit, form)">Buscar</SecondaryButton>
+                            <SecondaryButton type="button" class="mt-1 shrink-0 text-xs" :disabled="buscandoArca" @click="buscarEnArca(form.cuit, form)">{{ buscandoArca ? '...' : 'ARCA' }}</SecondaryButton>
                         </div>
-                        <InputError class="mt-2" :message="form.errors.cuit" />
+                        <InputError class="mt-1" :message="form.errors.cuit" />
                     </div>
 
                     <div class="sm:col-span-2">
                         <InputLabel value="Razon social" />
                         <TextInput v-model="form.razon_social" type="text" class="mt-1 block w-full" required />
-                        <InputError class="mt-2" :message="form.errors.razon_social" />
+                        <InputError class="mt-1" :message="form.errors.razon_social" />
                     </div>
 
                     <div>
@@ -217,13 +222,13 @@ const localidadNombre = (c) => {
                             <option value="">(seleccionar)</option>
                             <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                         </select>
-                        <InputError class="mt-2" :message="form.errors.condicion_iva_id" />
+                        <InputError class="mt-1" :message="form.errors.condicion_iva_id" />
                     </div>
 
                     <div class="sm:col-span-3">
                         <InputLabel value="Nombre cuenta (opcional)" />
                         <TextInput v-model="form.nombre_cuenta" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="form.errors.nombre_cuenta" />
+                        <InputError class="mt-1" :message="form.errors.nombre_cuenta" />
                     </div>
 
                     <div>
@@ -232,7 +237,7 @@ const localidadNombre = (c) => {
                             <option value="">(seleccionar)</option>
                             <option v-for="p in provincias" :key="p.id" :value="p.id">{{ p.nombre }}</option>
                         </select>
-                        <InputError class="mt-2" :message="form.errors.provincia_id" />
+                        <InputError class="mt-1" :message="form.errors.provincia_id" />
                     </div>
 
                     <div>
@@ -241,13 +246,13 @@ const localidadNombre = (c) => {
                             <option value="">(seleccionar)</option>
                             <option v-for="l in localidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
                         </select>
-                        <InputError class="mt-2" :message="form.errors.localidad_id" />
+                        <InputError class="mt-1" :message="form.errors.localidad_id" />
                     </div>
 
                     <div>
                         <InputLabel value="Email comprobantes" />
                         <TextInput v-model="form.email" type="email" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="form.errors.email" />
+                        <InputError class="mt-1" :message="form.errors.email" />
                     </div>
 
                     <div v-if="cobradores?.length">
@@ -256,143 +261,143 @@ const localidadNombre = (c) => {
                             <option value="">(sin asignar)</option>
                             <option v-for="c in cobradores" :key="c.id" :value="c.id">{{ c.name }}</option>
                         </select>
-                        <InputError class="mt-2" :message="form.errors.cobrador_user_id" />
+                        <InputError class="mt-1" :message="form.errors.cobrador_user_id" />
                     </div>
 
-                    <div class="sm:col-span-3 flex items-center gap-6 pt-6">
-                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <div class="sm:col-span-6 flex items-center gap-4 pt-2">
+                        <label class="flex items-center gap-1 text-xs text-gray-700">
                             <Checkbox v-model:checked="form.es_cliente" />
                             Cliente
                         </label>
-                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <label class="flex items-center gap-1 text-xs text-gray-700">
                             <Checkbox v-model:checked="form.es_proveedor" />
                             Proveedor
                         </label>
-                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <label class="flex items-center gap-1 text-xs text-gray-700">
                             <Checkbox v-model:checked="form.enviar_comprobantes_por_email" />
-                            Enviar comprobantes por email
+                            Enviar email
                         </label>
-                    </div>
-
-                    <div class="sm:col-span-6 flex justify-end">
-                        <PrimaryButton :disabled="form.processing">Crear</PrimaryButton>
+                        <PrimaryButton class="ms-auto" :disabled="form.processing">Crear</PrimaryButton>
                     </div>
                 </form>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200">
+                <div class="p-4 border-b border-gray-200">
                     <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <h3 class="text-base font-semibold text-gray-900">Cuentas</h3>
-                            <p class="mt-1 text-sm text-gray-600">Cada cuenta es un Numero de cliente dentro de una empresa.</p>
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-sm font-semibold text-gray-900">Cuentas</h3>
+                            <select v-model="empresaFiltroId" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1" @change="filtrarEmpresa">
+                                <option value="">Todas las empresas</option>
+                                <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
+                            </select>
                         </div>
-                        <label class="flex items-center gap-2 text-sm text-gray-700 shrink-0">
+                        <label class="flex items-center gap-2 text-xs text-gray-700 shrink-0">
                             <Checkbox :checked="mostrarCompartidos" @click="mostrarCompartidos = !mostrarCompartidos; toggleCompartidos()" />
                             Comparten clientes
                         </label>
                     </div>
                 </div>
 
-                <div class="space-y-4 p-4 sm:hidden">
-                    <div v-for="c in cuentas" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-4">
-                        <div class="flex items-start justify-between gap-3">
+                <div class="space-y-2 p-3 sm:hidden">
+                    <div v-for="c in cuentas" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-3">
+                        <div class="flex items-start justify-between gap-2">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">{{ c.tercero?.razon_social || '-' }}</div>
+                                <div class="text-xs font-semibold text-gray-900">{{ c.tercero?.razon_social || '-' }}</div>
                                 <div class="text-xs text-gray-500">{{ c.empresa?.razon_social || '-' }} · Nro {{ c.numero_cliente }}</div>
                                 <div v-if="mostrarCompartidos && c.shared_empresas?.length" class="mt-1 flex flex-wrap gap-1">
-                                    <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">{{ name }}</span>
+                                    <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-800">{{ name }}</span>
                                 </div>
                             </div>
                             <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
                         </div>
-                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                        <div class="mt-2 grid grid-cols-1 gap-2 text-xs">
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">CUIT / IVA</div>
-                                <div class="font-medium text-gray-900">{{ c.tercero?.cuit || '-' }} · {{ c.tercero?.condicion_iva || '-' }}</div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">CUIT / IVA: </span>
+                                <span class="font-medium text-gray-900">{{ c.tercero?.cuit || '-' }} · {{ c.tercero?.condicion_iva || '-' }}</span>
                             </div>
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Cuenta</div>
-                                <div class="font-medium text-gray-900">{{ c.nombre_cuenta || '-' }}</div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Cuenta: </span>
+                                <span class="font-medium text-gray-900">{{ c.nombre_cuenta || '-' }}</span>
                             </div>
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Provincia / Ciudad</div>
-                                <div class="font-medium text-gray-900">{{ provinciaNombre(c.provincia_id) || '-' }} / {{ localidadNombre(c) }}</div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Prov/Ciudad: </span>
+                                <span class="font-medium text-gray-900">{{ provinciaNombre(c.provincia_id) || '-' }} / {{ localidadNombre(c) }}</span>
                             </div>
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Barrio</div>
-                                <div class="font-medium text-gray-900">{{ c.barrio || '-' }}</div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Barrio: </span>
+                                <span class="font-medium text-gray-900">{{ c.barrio || '-' }}</span>
                             </div>
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Email</div>
-                                <div class="font-medium text-gray-900">{{ c.email || '-' }}</div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Email: </span>
+                                <span class="font-medium text-gray-900">{{ c.email || '-' }}</span>
                             </div>
                             <div v-if="c.cobrador_user">
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Cobrador</div>
-                                <div class="font-medium text-gray-900">{{ c.cobrador_user.name }}</div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Cobrador: </span>
+                                <span class="font-medium text-gray-900">{{ c.cobrador_user.name }}</span>
                             </div>
-                            <div class="flex flex-wrap gap-2 text-xs">
-                                <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 font-medium text-green-800">Cliente</span>
-                                <span v-if="c.es_proveedor" class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 font-medium text-blue-800">Proveedor</span>
-                                <span v-if="c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800">Mail comprobantes</span>
-                                <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800">Sin categoria</span>
+                            <div class="flex flex-wrap gap-1 text-xs">
+                                <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 font-medium text-green-800">Cliente</span>
+                                <span v-if="c.es_proveedor" class="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 font-medium text-blue-800">Prov</span>
+                                <span v-if="c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800">Mail</span>
+                                <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-800">-</span>
                             </div>
                         </div>
                     </div>
-                    <div v-if="!cuentas.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</div>
+                    <div v-if="!cuentas.length" class="rounded-lg border border-gray-200 bg-white px-4 py-8 text-center text-xs text-gray-500">Sin cuentas.</div>
                 </div>
 
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-[1400px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                                <th v-if="mostrarCompartidos" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compartida con</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro cliente</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provincia</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrador</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flags</th>
-                                <th class="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                                <th v-if="mostrarCompartidos" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compartida con</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prov</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrador</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flags</th>
+                                <th class="sticky right-0 bg-gray-50 px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in cuentas" :key="c.id">
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.empresa?.razon_social || '-' }}</td>
-                                <td v-if="mostrarCompartidos" class="px-6 py-4 text-sm text-gray-700">
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.empresa?.razon_social || '-' }}</td>
+                                <td v-if="mostrarCompartidos" class="px-3 py-2 text-xs text-gray-700">
                                     <template v-if="c.shared_empresas?.length">
-                                        <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 me-1">{{ name }}</span>
+                                        <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-800 me-1">{{ name }}</span>
                                     </template>
                                     <span v-else class="text-gray-400">-</span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-900 font-mono">{{ c.numero_cliente }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ c.tercero?.cuit || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ provinciaNombre(c.provincia_id) || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ localidadNombre(c) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.email || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.cobrador_user?.name || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Cliente</span>
-                                    <span v-if="c.es_proveedor" class="ms-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Proveedor</span>
-                                    <span v-if="c.enviar_comprobantes_por_email" class="ms-2 inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Mail comprobantes</span>
-                                    <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Sin categoria</span>
+                                <td class="px-3 py-2 text-xs text-gray-900 font-mono">{{ c.numero_cliente }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700 font-mono">{{ c.tercero?.cuit || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ provinciaNombre(c.provincia_id) || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ localidadNombre(c) }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.barrio || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.email || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.cobrador_user?.name || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">
+                                    <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">Cliente</span>
+                                    <span v-if="c.es_proveedor" class="ms-1 inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">Prov</span>
+                                    <span v-if="c.enviar_comprobantes_por_email" class="ms-1 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">Mail</span>
+                                    <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-800">-</span>
                                 </td>
-                                <td class="sticky right-0 bg-white px-6 py-4 text-right text-sm">
+                                <td class="sticky right-0 bg-white px-3 py-2 text-right text-xs">
                                     <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td :colspan="mostrarCompartidos ? 14 : 13" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td :colspan="mostrarCompartidos ? 14 : 13" class="px-3 py-6 text-center text-xs text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -402,20 +407,20 @@ const localidadNombre = (c) => {
             <DialogModal :show="editing" @close="editing = false">
                 <template #title>Editar cuenta</template>
                 <template #content>
-                    <form class="grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="submitEdit">
-                        <div>
+                    <form class="grid grid-cols-1 sm:grid-cols-2 gap-3" @submit.prevent="submitEdit">
+                        <div class="sm:col-span-2">
                             <InputLabel value="CUIT" />
-                            <div class="flex gap-2">
+                            <div class="flex gap-1">
                                 <TextInput v-model="editForm.cuit" type="text" class="mt-1 block w-full" @blur="buscarTercero(editForm.cuit, editForm)" />
-                                <SecondaryButton type="button" class="mt-1 shrink-0" @click="buscarTercero(editForm.cuit, editForm)">Buscar</SecondaryButton>
-                                <SecondaryButton type="button" class="mt-1 shrink-0" :disabled="buscandoArca" @click="buscarEnArca(editForm.cuit, editForm)">{{ buscandoArca ? 'Buscando...' : 'ARCA' }}</SecondaryButton>
+                                <SecondaryButton type="button" class="mt-1 shrink-0 text-xs" @click="buscarTercero(editForm.cuit, editForm)">Buscar</SecondaryButton>
+                                <SecondaryButton type="button" class="mt-1 shrink-0 text-xs" :disabled="buscandoArca" @click="buscarEnArca(editForm.cuit, editForm)">{{ buscandoArca ? '...' : 'ARCA' }}</SecondaryButton>
                             </div>
-                            <InputError class="mt-2" :message="editForm.errors.cuit" />
+                            <InputError class="mt-1" :message="editForm.errors.cuit" />
                         </div>
                         <div>
                             <InputLabel value="Razon social" />
                             <TextInput v-model="editForm.razon_social" type="text" class="mt-1 block w-full" required />
-                            <InputError class="mt-2" :message="editForm.errors.razon_social" />
+                            <InputError class="mt-1" :message="editForm.errors.razon_social" />
                         </div>
                         <div>
                             <InputLabel value="Condicion IVA" />
@@ -423,12 +428,12 @@ const localidadNombre = (c) => {
                                 <option value="">(seleccionar)</option>
                                 <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                             </select>
-                            <InputError class="mt-2" :message="editForm.errors.condicion_iva_id" />
+                            <InputError class="mt-1" :message="editForm.errors.condicion_iva_id" />
                         </div>
                         <div>
                             <InputLabel value="Nombre cuenta" />
                             <TextInput v-model="editForm.nombre_cuenta" type="text" class="mt-1 block w-full" />
-                            <InputError class="mt-2" :message="editForm.errors.nombre_cuenta" />
+                            <InputError class="mt-1" :message="editForm.errors.nombre_cuenta" />
                         </div>
                         <div>
                             <InputLabel value="Provincia" />
@@ -436,7 +441,7 @@ const localidadNombre = (c) => {
                                 <option value="">(seleccionar)</option>
                                 <option v-for="p in provincias" :key="p.id" :value="p.id">{{ p.nombre }}</option>
                             </select>
-                            <InputError class="mt-2" :message="editForm.errors.provincia_id" />
+                            <InputError class="mt-1" :message="editForm.errors.provincia_id" />
                         </div>
                         <div>
                             <InputLabel value="Ciudad" />
@@ -444,17 +449,17 @@ const localidadNombre = (c) => {
                                 <option value="">(seleccionar)</option>
                                 <option v-for="l in editLocalidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
                             </select>
-                            <InputError class="mt-2" :message="editForm.errors.localidad_id" />
+                            <InputError class="mt-1" :message="editForm.errors.localidad_id" />
                         </div>
                         <div>
                             <InputLabel value="Barrio" />
                             <TextInput v-model="editForm.barrio" type="text" class="mt-1 block w-full" />
-                            <InputError class="mt-2" :message="editForm.errors.barrio" />
+                            <InputError class="mt-1" :message="editForm.errors.barrio" />
                         </div>
                         <div>
                             <InputLabel value="Email comprobantes" />
                             <TextInput v-model="editForm.email" type="email" class="mt-1 block w-full" />
-                            <InputError class="mt-2" :message="editForm.errors.email" />
+                            <InputError class="mt-1" :message="editForm.errors.email" />
                         </div>
                         <div v-if="cobradores?.length">
                             <InputLabel value="Cobrador" />
@@ -462,20 +467,20 @@ const localidadNombre = (c) => {
                                 <option value="">(sin asignar)</option>
                                 <option v-for="c in cobradores" :key="c.id" :value="c.id">{{ c.name }}</option>
                             </select>
-                            <InputError class="mt-2" :message="editForm.errors.cobrador_user_id" />
+                            <InputError class="mt-1" :message="editForm.errors.cobrador_user_id" />
                         </div>
-                        <div class="sm:col-span-2 flex flex-wrap items-center gap-6 pt-2">
-                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <div class="sm:col-span-2 flex flex-wrap items-center gap-4 pt-2">
+                            <label class="flex items-center gap-1 text-xs text-gray-700">
                                 <Checkbox v-model:checked="editForm.es_cliente" />
                                 Cliente
                             </label>
-                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <label class="flex items-center gap-1 text-xs text-gray-700">
                                 <Checkbox v-model:checked="editForm.es_proveedor" />
                                 Proveedor
                             </label>
-                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <label class="flex items-center gap-1 text-xs text-gray-700">
                                 <Checkbox v-model:checked="editForm.enviar_comprobantes_por_email" />
-                                Enviar comprobantes por email
+                                Enviar email
                             </label>
                         </div>
                     </form>
