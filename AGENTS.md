@@ -148,7 +148,67 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - HTTP flow: Caddy (TLS) -> Nginx -> PHP-FPM (`app:9000`).
 - Storage is S3-compatible via MinIO; env vars are in `.env.example`.
 
-## Cursor / Copilot rules
+## Session log (Jul 2026)
 
-No Cursor rules found in `.cursor/rules/` or `.cursorrules`.
-No Copilot instructions found in `.github/copilot-instructions.md`.
+### Bugs found and fixed
+
+- **Facturar/entrega cuenta nullable**: `facturar_cuenta_id` y `entrega_cuenta_id` eran NOT NULL pero los importers los mandaban como null.
+- **Flash key mismatch**: Controllers usaban `flash.importResult`, HandleInertiaRequests leía `tt.import_result`. Unificado a `tt.import_result`.
+- **Race condition `numero_interno`**: `max('numero_interno')` dentro del loop sin incrementar en memoria. Movido fuera del loop.
+- **ARCA controller sin transaction**: Faltaba `DB::transaction()` y `entrega_cuenta_id`.
+- **Moneda inválida en CSV**: Validación `in:ARS,USD,EUR,BRL` rechazaba "PES", "$". Se agregó mapeo frontend+backend.
+- **Compras CSV no reconocía columnas Emisor**: HeaderMap solo tenía "Receptor".
+- **Orden de variables en `<script setup>`** causaba white screen en terceros (empresaFiltroId usada antes de definir).
+- **Pantalla blanca**: `empresaFiltroId` definido después de su uso en `useForm()`.
+
+### Features / changes
+
+| Commit | Descripción |
+|--------|-------------|
+| `5b46694` | Migración FKs nullables, ARCA/CSV controllers fixes |
+| `327a9ec` | Normalización de moneda, error display en Importar |
+| `90d9a40` | Compras import: columna Emisor, moneda, errores |
+| `da23e46` | Toggle compartidos en manifiestos y comprobantes |
+| `f122a7b` | Artisan command `empresa:trasladar-clientes` |
+| `b0be8e7` | Condición IVA en Empresas (select desde ARCA) |
+| `198fbb8` | Saldo pendiente en repartidor, menú dropdowns, estadísticas placeholder |
+| `c69a9b7` | Clientes: filtro empresa, tabla compacta, CUIT más ancho |
+| `a8bfd14` | Clientes: combo empresa en editar, buscador por nombre |
+| `f02f741` | Fix white screen terceros (orden variables script setup) |
+| `af37cbd` | Blanqueo Ventas/Compras en Configuración |
+
+### Relevant files
+
+**Backend:**
+- `laravel/app/Http/Controllers/Facturacion/ImportarFacturasCsvStoreController.php`
+- `laravel/app/Http/Controllers/Facturacion/ImportarFacturasArcaStoreController.php`
+- `laravel/app/Http/Controllers/Compras/ImportarComprasCsvStoreController.php`
+- `laravel/app/Http/Controllers/Operacion/ManifiestoIngresoController.php`
+- `laravel/app/Http/Controllers/Operacion/Comprobantes/ComprobanteIndexController.php`
+- `laravel/app/Http/Controllers/Admin/EmpresaAdminController.php`
+- `laravel/app/Http/Controllers/Admin/EstadisticasController.php`
+- `laravel/app/Http/Controllers/Admin/TerceroAdminController.php`
+- `laravel/app/Http/Controllers/Admin/BlanqueoController.php`
+- `laravel/app/Http/Controllers/Operacion/Repartos/RepartidorController.php`
+- `laravel/app/Console/Commands/TrasladarClientesEmpresa.php`
+- `laravel/app/Http/Middleware/HandleInertiaRequests.php`
+
+**Frontend:**
+- `laravel/resources/js/Layouts/AppLayout.vue` — menú reorganizado en dropdowns
+- `laravel/resources/js/Pages/Facturacion/Importar.vue`
+- `laravel/resources/js/Pages/Compras/Importar.vue`
+- `laravel/resources/js/Pages/Operacion/Manifiestos/Index.vue`
+- `laravel/resources/js/Pages/Operacion/Comprobantes/Index.vue`
+- `laravel/resources/js/Pages/Admin/Empresas/Index.vue`
+- `laravel/resources/js/Pages/Admin/Terceros/Index.vue`
+- `laravel/resources/js/Pages/Admin/Reportes/Estadisticas.vue`
+- `laravel/resources/js/Pages/Admin/Blanqueo/Index.vue`
+- `laravel/resources/js/Pages/Operacion/Repartos/Repartidor/Delivery.vue`
+
+**Routes:**
+- `laravel/routes/web.php`
+
+### Pending / Known issues
+
+- Delivery.vue muestra `saldo_pendiente` pero falta verificar con datos reales.
+- Al editar un tercero y cambiar empresa, el `numero_cliente` podría colisionar en la empresa destino.
