@@ -46,6 +46,10 @@ class TerceroAdminController extends Controller
             });
         }
 
+        if ($search = $request->query('search')) {
+            $query->whereHas('tercero', fn($q) => $q->where('razon_social', 'ilike', "%{$search}%"));
+        }
+
         $cuentas = $query->get([
             'tercero_cuentas.id',
             'tercero_cuentas.empresa_id',
@@ -103,6 +107,7 @@ class TerceroAdminController extends Controller
             'cobradores' => User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']),
             'condicionesIva' => CondicionIva::query()->orderBy('codigo_afip')->get(['id', 'codigo_afip', 'nombre']),
             'compartidos' => $compartidos,
+            'search' => $request->query('search') ?: null,
         ]);
     }
 
@@ -193,6 +198,7 @@ class TerceroAdminController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
+            'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
@@ -230,6 +236,7 @@ class TerceroAdminController extends Controller
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
+            'empresa_id' => $data['empresa_id'],
             'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
             'localidad' => $data['localidad'] ?: null,
             'barrio' => $data['barrio'] ?: null,
@@ -241,7 +248,7 @@ class TerceroAdminController extends Controller
         ]);
 
         TerceroEmpresa::query()->updateOrCreate(
-            ['empresa_id' => $cuenta->empresa_id, 'tercero_cuenta_id' => $cuenta->id],
+            ['empresa_id' => $data['empresa_id'], 'tercero_cuenta_id' => $cuenta->id],
             ['es_cliente' => (bool) $data['es_cliente'], 'es_proveedor' => (bool) $data['es_proveedor']]
         );
 

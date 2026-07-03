@@ -21,6 +21,7 @@ const props = defineProps({
     cobradores: Array,
     condicionesIva: Array,
     compartidos: Boolean,
+    search: String,
 });
 
 const localidades = ref([]);
@@ -69,7 +70,7 @@ const buscarEnArca = async (cuit, formObj) => {
 };
 
 const form = useForm({
-    empresa_id: props.empresaId || props.empresas?.[0]?.id || null,
+    empresa_id: empresaFiltroId.value || props.empresaId || props.empresas?.[0]?.id || null,
     numero_cliente: props.proximoNumeroCliente,
     cuit: props.cuitInicial || '',
     razon_social: '',
@@ -92,6 +93,10 @@ watch(() => form.provincia_id, (val) => {
     cargarLocalidades(val, localidades);
 });
 
+watch(empresaFiltroId, (val) => {
+    form.empresa_id = val || props.empresaId || props.empresas?.[0]?.id || null;
+});
+
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
@@ -101,18 +106,27 @@ const submit = () => {
 
 const mostrarCompartidos = ref(props.compartidos);
 const empresaFiltroId = ref(props.empresaId || '');
+const searchQuery = ref(props.search || '');
+let searchTimeout = null;
 
-const toggleCompartidos = () => {
-    router.get(route('admin.terceros.index'), { compartidos: mostrarCompartidos.value ? '1' : null, empresa_id: empresaFiltroId.value || null }, { preserveState: true, preserveScroll: true, replace: true });
+const filtrar = () => {
+    router.get(route('admin.terceros.index'), { empresa_id: empresaFiltroId.value || null, search: searchQuery.value || null, compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
-const filtrarEmpresa = () => {
-    router.get(route('admin.terceros.index'), { empresa_id: empresaFiltroId.value || null, compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
+const onSearchInput = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(filtrar, 300);
+};
+
+const toggleCompartidos = () => {
+    mostrarCompartidos.value = !mostrarCompartidos.value;
+    filtrar();
 };
 
 const editing = ref(false);
 const editId = ref(null);
 const editForm = useForm({
+    empresa_id: '',
     cuit: '',
     razon_social: '',
     condicion_iva: '',
@@ -131,6 +145,7 @@ const editForm = useForm({
 
 const openEdit = (c) => {
     editId.value = c.id;
+    editForm.empresa_id = c.empresa_id || '';
     editForm.cuit = c.tercero?.cuit || '';
     editForm.razon_social = c.tercero?.razon_social || '';
     editForm.condicion_iva = c.tercero?.condicion_iva || '';
@@ -186,14 +201,6 @@ const localidadNombre = (c) => {
                 <h3 class="text-sm font-semibold text-gray-900">Nueva cuenta</h3>
 
                 <form class="mt-3 grid grid-cols-1 sm:grid-cols-6 gap-3" @submit.prevent="submit">
-                    <div class="sm:col-span-2">
-                        <InputLabel value="Empresa" />
-                        <select v-model="form.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
-                        </select>
-                        <InputError class="mt-1" :message="form.errors.empresa_id" />
-                    </div>
-
                     <div>
                         <InputLabel value="Numero de cliente" />
                         <TextInput :value="form.numero_cliente" type="number" class="mt-1 block w-full bg-gray-100" readonly />
@@ -285,15 +292,16 @@ const localidadNombre = (c) => {
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-4 border-b border-gray-200">
                     <div class="flex items-center justify-between gap-4">
-                        <div class="flex items-center gap-4">
-                            <h3 class="text-sm font-semibold text-gray-900">Cuentas</h3>
-                            <select v-model="empresaFiltroId" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1" @change="filtrarEmpresa">
-                                <option value="">Todas las empresas</option>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-semibold text-gray-900 shrink-0">Cuentas</h3>
+                            <select v-model="empresaFiltroId" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1" @change="filtrar">
+                                <option value="">Todas</option>
                                 <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
                             </select>
+                            <input v-model="searchQuery" type="text" class="block w-48 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1" placeholder="Buscar por nombre..." @input="onSearchInput" />
                         </div>
                         <label class="flex items-center gap-2 text-xs text-gray-700 shrink-0">
-                            <Checkbox :checked="mostrarCompartidos" @click="mostrarCompartidos = !mostrarCompartidos; toggleCompartidos()" />
+                            <Checkbox :checked="mostrarCompartidos" @click="toggleCompartidos" />
                             Comparten clientes
                         </label>
                     </div>
@@ -416,6 +424,13 @@ const localidadNombre = (c) => {
                                 <SecondaryButton type="button" class="mt-1 shrink-0 text-xs" :disabled="buscandoArca" @click="buscarEnArca(editForm.cuit, editForm)">{{ buscandoArca ? '...' : 'ARCA' }}</SecondaryButton>
                             </div>
                             <InputError class="mt-1" :message="editForm.errors.cuit" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <InputLabel value="Empresa" />
+                            <select v-model="editForm.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" required>
+                                <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
+                            </select>
+                            <InputError class="mt-1" :message="editForm.errors.empresa_id" />
                         </div>
                         <div>
                             <InputLabel value="Razon social" />
