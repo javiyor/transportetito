@@ -69,6 +69,25 @@ const buscarEnArca = async (cuit, formObj) => {
     }
 };
 
+const mostrarCompartidos = ref(props.compartidos);
+const empresaFiltroId = ref(props.empresaId || '');
+const searchQuery = ref(props.search || '');
+let searchTimeout = null;
+
+const filtrar = () => {
+    router.get(route('admin.terceros.index'), { empresa_id: empresaFiltroId.value || null, search: searchQuery.value || null, compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const onSearchInput = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(filtrar, 300);
+};
+
+const toggleCompartidos = () => {
+    mostrarCompartidos.value = !mostrarCompartidos.value;
+    filtrar();
+};
+
 const form = useForm({
     empresa_id: empresaFiltroId.value || props.empresaId || props.empresas?.[0]?.id || null,
     numero_cliente: props.proximoNumeroCliente,
@@ -102,25 +121,6 @@ const submit = () => {
         preserveScroll: true,
         onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id'),
     });
-};
-
-const mostrarCompartidos = ref(props.compartidos);
-const empresaFiltroId = ref(props.empresaId || '');
-const searchQuery = ref(props.search || '');
-let searchTimeout = null;
-
-const filtrar = () => {
-    router.get(route('admin.terceros.index'), { empresa_id: empresaFiltroId.value || null, search: searchQuery.value || null, compartidos: mostrarCompartidos.value ? '1' : null }, { preserveState: true, preserveScroll: true, replace: true });
-};
-
-const onSearchInput = () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(filtrar, 300);
-};
-
-const toggleCompartidos = () => {
-    mostrarCompartidos.value = !mostrarCompartidos.value;
-    filtrar();
 };
 
 const editing = ref(false);
