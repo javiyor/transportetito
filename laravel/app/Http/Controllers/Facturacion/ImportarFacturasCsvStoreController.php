@@ -27,6 +27,9 @@ class ImportarFacturasCsvStoreController extends Controller
             'rows.*.total' => ['required', 'numeric', 'min:0'],
             'rows.*.moneda' => ['required', 'string', 'max:16'],
             'rows.*.arca_cae' => ['nullable', 'string', 'max:32'],
+            'rows.*.subtotal' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.iva_total' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.tributos_total' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
@@ -81,6 +84,9 @@ class ImportarFacturasCsvStoreController extends Controller
                     'estado' => 'emitida',
                     'moneda' => $row['moneda'],
                     'total' => $row['total'],
+                    'subtotal' => $row['subtotal'] ?? 0,
+                    'iva_total' => $row['iva_total'] ?? 0,
+                    'tributos_total' => $row['tributos_total'] ?? 0,
                     'numero_interno' => $maxInterno,
                     'fecha_emision' => $row['fecha_emision'],
                     'requiere_autorizacion_arca' => false,

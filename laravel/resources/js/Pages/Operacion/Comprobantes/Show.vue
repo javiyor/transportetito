@@ -97,6 +97,13 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                     <div class="text-xs uppercase tracking-wider text-gray-500">Cotizacion usada</div>
                     <div class="mt-1 text-sm text-gray-900">1 {{ comprobante.moneda }} = {{ cotizacion.tasa_ars }} ARS</div>
                 </div>
+                <div v-if="comprobante.iva_total > 0 || comprobante.subtotal > 0" class="border-t border-gray-200 pt-3 mt-1 col-span-2">
+                    <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Desglose</div>
+                    <div class="text-sm text-gray-900">Subtotal: {{ comprobante.moneda }} {{ comprobante.subtotal }}</div>
+                    <div class="text-sm text-gray-900">IVA: {{ comprobante.moneda }} {{ comprobante.iva_total }}</div>
+                    <div v-if="comprobante.tributos_total > 0" class="text-sm text-gray-900">Tributos: {{ comprobante.moneda }} {{ comprobante.tributos_total }}</div>
+                    <div class="text-sm font-semibold text-gray-900">Total: {{ comprobante.moneda }} {{ comprobante.total }}</div>
+                </div>
                 <div v-if="comprobante.comprobante_origen">
                     <div class="text-xs uppercase tracking-wider text-gray-500">Comprobante origen</div>
                     <div class="mt-1 text-sm text-gray-900">

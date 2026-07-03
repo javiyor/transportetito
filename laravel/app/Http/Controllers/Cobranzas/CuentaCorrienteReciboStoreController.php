@@ -15,6 +15,7 @@ use App\Mail\ReciboConfirmadoMail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 
 class CuentaCorrienteReciboStoreController extends Controller
 {
@@ -25,10 +26,11 @@ class CuentaCorrienteReciboStoreController extends Controller
         $data = $request->validate([
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
-            'comprobante_id' => ['nullable', 'integer', 'exists:comprobantes,id'],
+            'comprobante_ids' => ['nullable', 'array'],
+            'comprobante_ids.*' => ['integer', 'exists:comprobantes,id'],
             'send_email' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.medio' => ['required', 'string', 'max:64'],
+            'items.*.medio' => ['required', 'string', 'max:64', Rule::notIn(['cheque_propio'])],
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'items.*.importe' => ['required', 'numeric', 'gt:0'],
             'items.*.detalle' => ['nullable', 'string', 'max:500'],
@@ -72,7 +74,7 @@ class CuentaCorrienteReciboStoreController extends Controller
                 $detalle['detalle'] = $item['detalle'];
             }
 
-            if (in_array($item['medio'], ['cheque_propio', 'cheque_tercero'])) {
+            if ($item['medio'] === 'cheque_tercero') {
                 $detalle['numero'] = $item['cheque_numero'] ?? null;
                 $detalle['banco'] = $item['cheque_banco'] ?? null;
                 $detalle['fecha_vencimiento'] = $item['cheque_fecha_vencimiento'] ?? null;
@@ -88,11 +90,11 @@ class CuentaCorrienteReciboStoreController extends Controller
                 'detalle' => ! empty($detalle) ? $detalle : null,
             ]);
 
-            if (in_array($item['medio'], ['cheque_propio', 'cheque_tercero'])) {
+            if ($item['medio'] === 'cheque_tercero') {
                 Cheque::query()->create([
                     'empresa_id' => $cuenta->empresa_id,
                     'tipo' => $item['cheque_numero'] && str_starts_with($item['cheque_numero'], 'E') ? 'echeq' : 'fisico',
-                    'origen' => $item['medio'] === 'cheque_propio' ? 'propio' : 'tercero',
+                    'origen' => 'tercero',
                     'numero' => $item['cheque_numero'] ?? null,
                     'banco' => $item['cheque_banco'] ?? null,
                     'importe' => $item['importe'],
@@ -101,24 +103,48 @@ class CuentaCorrienteReciboStoreController extends Controller
                     'fecha_emision' => $data['fecha'],
                     'fecha_vencimiento' => $item['cheque_fecha_vencimiento'] ?? null,
                     'estado' => 'en_cartera',
-                    'librado_por' => $item['medio'] === 'cheque_tercero' ? ($cuenta->tercero->razon_social ?? null) : null,
+                    'librado_por' => $cuenta->tercero->razon_social ?? null,
                     'recibo_id' => $recibo->id,
                     'recibo_item_id' => $reciboItem->id,
                 ]);
             }
         }
 
-        if (! empty($data['comprobante_id'])) {
-            $comprobante = Comprobante::query()->findOrFail($data['comprobante_id']);
-            abort_unless((int) $comprobante->facturar_cuenta_id === $cuenta->id, 422);
+        $aplicadoTotal = 0;
 
+        if (! empty($data['comprobante_ids'])) {
+            $comprobantes = Comprobante::query()->whereIn('id', $data['comprobante_ids'])->get();
+
+            foreach ($comprobantes as $comprobante) {
+                abort_unless((int) $comprobante->facturar_cuenta_id === $cuenta->id, 422, "Comprobante #{$comprobante->id} no pertenece a esta cuenta.");
+            }
+
+            foreach ($comprobantes as $comprobante) {
+                $aplicar = min((float) $comprobante->total, $total - $aplicadoTotal);
+                if ($aplicar <= 0) break;
+
+                ReciboAplicacion::query()->create([
+                    'recibo_id' => $recibo->id,
+                    'comprobante_id' => $comprobante->id,
+                    'modo' => 'a_factura',
+                    'moneda' => $data['moneda'],
+                    'cotizacion_ars' => $cotizacion['tasa_ars'],
+                    'importe' => $aplicar,
+                ]);
+
+                $aplicadoTotal += $aplicar;
+            }
+        }
+
+        $sobrante = $total - $aplicadoTotal;
+        if ($sobrante > 0) {
             ReciboAplicacion::query()->create([
                 'recibo_id' => $recibo->id,
-                'comprobante_id' => $comprobante->id,
-                'modo' => 'a_factura',
+                'comprobante_id' => null,
+                'modo' => 'a_cuenta',
                 'moneda' => $data['moneda'],
                 'cotizacion_ars' => $cotizacion['tasa_ars'],
-                'importe' => $total,
+                'importe' => $sobrante,
             ]);
         }
 

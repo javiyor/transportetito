@@ -144,6 +144,7 @@ const switchEmpresa = (empresaId) => {
                                         <template #content>
                                             <DropdownLink :href="route('cobranzas.pre-recibos.index')">Cobranzas</DropdownLink>
                                             <DropdownLink :href="route('cobranzas.cierre.index')">Cierre</DropdownLink>
+                                            <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('cobranzas.resumen-arca')">Resumen ARCA</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.cheques.index')">Cheques</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.reportes.estadisticas')">Estadisticas</DropdownLink>
                                         </template>
@@ -401,6 +402,13 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('cobranzas.cierre.*')"
                         >
                             Cierre
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('cobranzas.resumen-arca')"
+                            :active="route().current('cobranzas.resumen-arca')"
+                        >
+                            Resumen ARCA
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

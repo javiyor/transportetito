@@ -32,12 +32,16 @@ const arcaHeaderMap = {
     'cód. autorización': 'arca_cae', 'código de autorización': 'arca_cae',
     'nro. doc. receptor': 'cuit_cliente', 'denominación receptor': 'razon_social',
     'moneda': 'moneda', 'imp. total': 'total', 'tipo cambio': 'tipo_cambio',
+    'importe neto gravado': 'subtotal', 'neto gravado': 'subtotal',
+    'iva total': 'iva_total',
+    'imp. tributos': 'tributos_total', 'tributos total': 'tributos_total',
 };
 
 const oldHeaderMap = {
     'tipo': 'tipo', 'pv': 'pv', 'numero': 'numero',
     'cuit_cliente': 'cuit_cliente', 'razon_social': 'razon_social',
     'fecha_emision': 'fecha_emision', 'total': 'total', 'moneda': 'moneda',
+    'subtotal': 'subtotal', 'iva_total': 'iva_total', 'tributos_total': 'tributos_total',
 };
 
 const tipoArcaMap = {
@@ -102,6 +106,9 @@ const parseCsv = () => {
             total: parseFloat(r.total) || 0,
             moneda: moneda,
             arca_cae: r.arca_cae || null,
+            subtotal: r.subtotal ? parseFloat(r.subtotal) : 0,
+            iva_total: r.iva_total ? parseFloat(r.iva_total) : 0,
+            tributos_total: r.tributos_total ? parseFloat(r.tributos_total) : 0,
         };
     });
 };
@@ -163,20 +170,22 @@ const submitArca = () => {
                 <div v-if="csvForm.rows.length" class="mt-4">
                     <p class="text-sm font-medium text-gray-700 mb-2">{{ csvForm.rows.length }} fila(s) detectada(s)</p>
                     <div class="overflow-x-auto max-h-60 overflow-y-auto border border-gray-200 rounded">
-                        <table class="min-w-full divide-y divide-gray-200 text-xs">
-                            <thead class="bg-gray-50"><tr>
-                                <th class="px-2 py-1 text-left">Tipo</th><th class="px-2 py-1 text-left">PV</th><th class="px-2 py-1 text-left">Nro</th>
-                                <th class="px-2 py-1 text-left">CUIT</th><th class="px-2 py-1 text-left">Cliente</th><th class="px-2 py-1 text-left">Fecha</th>
-                                <th class="px-2 py-1 text-right">Total</th><th class="px-2 py-1 text-left">Mon</th>
-                            </tr></thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="(r, i) in csvForm.rows" :key="i">
-                                    <td class="px-2 py-1">{{ r.tipo }}</td><td class="px-2 py-1">{{ r.pv }}</td><td class="px-2 py-1">{{ r.numero }}</td>
-                                    <td class="px-2 py-1 font-mono">{{ r.cuit_cliente }}</td><td class="px-2 py-1">{{ r.razon_social }}</td><td class="px-2 py-1">{{ r.fecha_emision }}</td>
-                                    <td class="px-2 py-1 text-right">{{ r.total }}</td><td class="px-2 py-1 font-bold">{{ r.moneda }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                            <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                <thead class="bg-gray-50"><tr>
+                                    <th class="px-2 py-1 text-left">Tipo</th><th class="px-2 py-1 text-left">PV</th><th class="px-2 py-1 text-left">Nro</th>
+                                    <th class="px-2 py-1 text-left">CUIT</th><th class="px-2 py-1 text-left">Cliente</th><th class="px-2 py-1 text-left">Fecha</th>
+                                    <th class="px-2 py-1 text-right">Subtotal</th><th class="px-2 py-1 text-right">IVA</th>
+                                    <th class="px-2 py-1 text-right">Total</th><th class="px-2 py-1 text-left">Mon</th>
+                                </tr></thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="(r, i) in csvForm.rows" :key="i">
+                                        <td class="px-2 py-1">{{ r.tipo }}</td><td class="px-2 py-1">{{ r.pv }}</td><td class="px-2 py-1">{{ r.numero }}</td>
+                                        <td class="px-2 py-1 font-mono">{{ r.cuit_cliente }}</td><td class="px-2 py-1">{{ r.razon_social }}</td><td class="px-2 py-1">{{ r.fecha_emision }}</td>
+                                        <td class="px-2 py-1 text-right">{{ r.subtotal || '-' }}</td><td class="px-2 py-1 text-right">{{ r.iva_total || '-' }}</td>
+                                        <td class="px-2 py-1 text-right">{{ r.total }}</td><td class="px-2 py-1 font-bold">{{ r.moneda }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                     </div>
                     <div class="mt-4">
                         <PrimaryButton :disabled="csvForm.processing" @click="submitCsv">Importar {{ csvForm.rows.length }} factura(s)</PrimaryButton>

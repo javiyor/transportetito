@@ -27,10 +27,11 @@ const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOSt
 const reciboForm = useForm({
     fecha: new Date().toISOString().slice(0, 10),
     moneda: 'ARS',
-    comprobante_id: null,
+    comprobante_ids: [],
     send_email: !!(props.cuenta?.email),
+    retenciones: { iibb: '', iva: '', ganancias: '' },
     items: [
-        { medio: 'efectivo', importe: '', detalle: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
+        { medio: 'efectivo', importe: '', detalle: '', moneda: 'ARS', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
     ],
 });
 
@@ -39,7 +40,7 @@ const reciboTotal = computed(() => {
 });
 
 const agregarItem = () => {
-    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
+    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
 };
 
 const quitarItem = (idx) => {
@@ -48,7 +49,7 @@ const quitarItem = (idx) => {
     }
 };
 
-const esCheque = (medio) => medio === 'cheque_propio' || medio === 'cheque_tercero';
+const esCheque = (medio) => medio === 'cheque_tercero';
 
 const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
@@ -124,11 +125,15 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                         <InputError :message="reciboForm.errors.fecha" />
                         <select v-model="reciboForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
                         <InputError :message="reciboForm.errors.moneda" />
-                        <select v-model="reciboForm.comprobante_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                            <option :value="null">A cuenta</option>
-                            <option v-for="c in comprobantes" :key="c.id" :value="c.id">#{{ c.id }} · {{ c.tipo }} · {{ c.moneda }} {{ c.total }}</option>
-                        </select>
-                        <InputError :message="reciboForm.errors.comprobante_id" />
+                        <fieldset class="border border-gray-200 rounded-md p-2 max-h-48 overflow-y-auto">
+                            <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
+                            <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-2 py-1">
+                                <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                <span class="text-sm text-gray-700">#{{ c.id }} · {{ c.tipo }} · {{ c.moneda }} {{ c.total }}</span>
+                            </div>
+                            <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
+                        </fieldset>
+                        <InputError :message="reciboForm.errors.comprobante_ids" />
 
                         <div class="border border-gray-200 rounded-md p-3 space-y-3">
                             <div class="text-sm font-medium text-gray-700">Medios de pago</div>
@@ -137,7 +142,6 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                                     <select v-model="item.medio" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                                         <option value="efectivo">Efectivo</option>
                                         <option value="transferencia">Transferencia</option>
-                                        <option value="cheque_propio">Cheque propio</option>
                                         <option value="cheque_tercero">Cheque tercero</option>
                                     </select>
                                     <TextInput v-model="item.importe" type="number" min="0.01" step="0.01" class="block w-32" placeholder="Importe" />
@@ -155,6 +159,24 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                                 <TextInput v-model="item.detalle" type="text" class="block w-full" placeholder="Detalle (opcional)" />
                             </div>
                             <SecondaryButton type="button" @click="agregarItem">+ Agregar medio</SecondaryButton>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-md p-3 space-y-2">
+                            <div class="text-sm font-medium text-gray-700">Retenciones (opcional)</div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500">IIBB</label>
+                                    <input v-model="reciboForm.retenciones.iibb" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="0.00" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">IVA</label>
+                                    <input v-model="reciboForm.retenciones.iva" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="0.00" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">Ganancias</label>
+                                    <input v-model="reciboForm.retenciones.ganancias" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="0.00" />
+                                </div>
+                            </div>
                         </div>
 
                         <div class="text-sm font-semibold text-gray-900 text-right">Total: {{ reciboTotal.toFixed(2) }}</div>

@@ -231,11 +231,40 @@ class WsfeClient
             return ['resultado' => 'R'];
         }
 
+        $ivaTotal = 0;
+        $tributosTotal = 0;
+        $subtotal = (float) ($resultGet->ImpNeto ?? 0);
+
+        if (isset($resultGet->Iva->AlicIva)) {
+            $alics = $resultGet->Iva->AlicIva;
+            if (is_array($alics)) {
+                foreach ($alics as $alic) {
+                    $ivaTotal += (float) ($alic->Importe ?? 0);
+                }
+            } else {
+                $ivaTotal += (float) ($alics->Importe ?? 0);
+            }
+        }
+
+        if (isset($resultGet->Tributos->Tributo)) {
+            $tribs = $resultGet->Tributos->Tributo;
+            if (is_array($tribs)) {
+                foreach ($tribs as $trib) {
+                    $tributosTotal += (float) ($trib->Importe ?? 0);
+                }
+            } else {
+                $tributosTotal += (float) ($tribs->Importe ?? 0);
+            }
+        }
+
         return [
             'resultado' => (string) ($resultGet->Resultado ?? ''),
             'cuit_cliente' => (string) ($resultGet->DocNro ?? ''),
             'razon_social_cliente' => (string) ($resultGet->Cliente ?? ''),
             'total' => (float) ($resultGet->ImpTotal ?? 0),
+            'subtotal' => $subtotal,
+            'iva_total' => $ivaTotal,
+            'tributos_total' => $tributosTotal,
             'moneda' => (string) ($resultGet->MonId ?? 'ARS'),
             'fecha_emision' => (string) ($resultGet->CbteFch ?? ''),
             'cae' => (string) ($resultGet->CAE ?? ''),

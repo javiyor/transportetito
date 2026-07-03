@@ -83,6 +83,7 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteExportController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 
+use App\Http\Controllers\Finanzas\ResumenArcaController;
 use App\Http\Controllers\Facturacion\ManifiestoIndexController;
 use App\Http\Controllers\Facturacion\ManifiestoShowController;
 use App\Http\Controllers\Facturacion\ImportarFacturasIndexController;
@@ -297,5 +298,6 @@ Route::middleware([
 
         Route::get('/cierre', CierreCajaController::class)->name('cierre.index');
         Route::get('/cierre/print', CierreCajaPrintController::class)->name('cierre.print');
+        Route::get('/resumen-arca', ResumenArcaController::class)->name('resumen-arca');
     });
 });

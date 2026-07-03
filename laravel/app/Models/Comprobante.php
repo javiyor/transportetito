@@ -24,6 +24,9 @@ class Comprobante extends Model
         'estado',
         'moneda',
         'total',
+        'subtotal',
+        'iva_total',
+        'tributos_total',
         'numero_interno',
         'fecha_emision',
         'comprobante_origen_id',
@@ -46,6 +49,9 @@ class Comprobante extends Model
 
     protected $casts = [
         'total' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'iva_total' => 'decimal:2',
+        'tributos_total' => 'decimal:2',
         'numero_interno' => 'int',
         'comprobante_origen_id' => 'int',
         'fecha_emision' => 'date',
