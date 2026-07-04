@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\OrdenPago;
@@ -38,7 +39,10 @@ class ProveedorCuentaCorrienteShowController extends Controller
             ->map(function (ProveedorComprobante $comprobante) use ($empresaId) {
                 $pagado = (float) OrdenPago::query()
                     ->where('empresa_id', $empresaId)
-                    ->whereJsonContains('detalle->proveedor_comprobante_id', $comprobante->id)
+                    ->where(function ($q) use ($comprobante) {
+                        $q->whereJsonContains('detalle->proveedor_comprobante_id', $comprobante->id)
+                            ->orWhereJsonContains('detalle->comprobante_ids', $comprobante->id);
+                    })
                     ->sum('total');
 
                 $comprobante->setAttribute('pagado_total', round($pagado, 2));
@@ -69,6 +73,7 @@ class ProveedorCuentaCorrienteShowController extends Controller
             'ordenesPago' => $ordenesPago,
             'chequesDisponibles' => $chequesDisponibles,
             'saldoTotal' => round((float) $movimientos->sum('importe_signed'), 2),
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }
