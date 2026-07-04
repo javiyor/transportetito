@@ -27,6 +27,9 @@ class ImportarComprasCsvStoreController extends Controller
             'rows.*.fecha_emision' => ['required', 'date'],
             'rows.*.total' => ['required', 'numeric', 'min:0'],
             'rows.*.moneda' => ['required', 'string', 'max:16'],
+            'rows.*.subtotal' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.iva_total' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.tributos_total' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
@@ -91,9 +94,9 @@ class ImportarComprasCsvStoreController extends Controller
                     'estado' => 'emitida',
                     'moneda' => $row['moneda'],
                     'cotizacion_ars' => 1,
-                    'subtotal' => 0,
-                    'iva_total' => 0,
-                    'tributos_total' => 0,
+                    'subtotal' => $row['subtotal'] ?? 0,
+                    'iva_total' => $row['iva_total'] ?? 0,
+                    'tributos_total' => $row['tributos_total'] ?? 0,
                     'total' => $row['total'],
                     'fecha_emision' => $row['fecha_emision'],
                     'creado_por_user_id' => $request->user()->id,

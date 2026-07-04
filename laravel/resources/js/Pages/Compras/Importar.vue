@@ -25,7 +25,10 @@ const headerMap = {
     'cód. autorización': 'arca_cae', 'código de autorización': 'arca_cae',
     'proveedor_cuit': 'proveedor_cuit', 'proveedor_razon_social': 'proveedor_razon_social',
     'tipo': 'tipo', 'numero': 'numero', 'pv': 'pv',
-    'fecha_emision': 'fecha_emision', 'total': 'total', 'moneda': 'moneda',
+    'fecha_emision': 'fecha_emision',     'total': 'total', 'moneda': 'moneda',
+    'subtotal': 'subtotal', 'importe sujeto a impuesto': 'subtotal',
+    'iva': 'iva_total', 'importe iva': 'iva_total', 'iva total': 'iva_total',
+    'impuestos nacionales': 'tributos_total', 'tributos': 'tributos_total', 'impuestos': 'tributos_total',
 };
 
 const tipoArcaMap = {
@@ -88,6 +91,9 @@ const parseCsv = () => {
             fecha_emision: r.fecha_emision || '',
             total: parseFloat(r.total) || 0,
             moneda: moneda,
+            subtotal: r.subtotal ? parseFloat(r.subtotal) : null,
+            iva_total: r.iva_total ? parseFloat(r.iva_total) : null,
+            tributos_total: r.tributos_total ? parseFloat(r.tributos_total) : null,
         };
     });
 };
@@ -142,6 +148,9 @@ const submitCsv = () => {
                                 <th class="px-2 py-1 text-left">Tipo</th>
                                 <th class="px-2 py-1 text-left">Nro</th>
                                 <th class="px-2 py-1 text-left">Fecha</th>
+                                <th class="px-2 py-1 text-right">Subtotal</th>
+                                <th class="px-2 py-1 text-right">IVA</th>
+                                <th class="px-2 py-1 text-right">Tributos</th>
                                 <th class="px-2 py-1 text-right">Total</th>
                                 <th class="px-2 py-1 text-left">Mon</th>
                             </tr></thead>
@@ -152,6 +161,9 @@ const submitCsv = () => {
                                     <td class="px-2 py-1">{{ r.tipo }}</td>
                                     <td class="px-2 py-1">{{ r.numero }}</td>
                                     <td class="px-2 py-1">{{ r.fecha_emision }}</td>
+                                    <td class="px-2 py-1 text-right">{{ r.subtotal ?? '-' }}</td>
+                                    <td class="px-2 py-1 text-right">{{ r.iva_total ?? '-' }}</td>
+                                    <td class="px-2 py-1 text-right">{{ r.tributos_total ?? '-' }}</td>
                                     <td class="px-2 py-1 text-right">{{ r.total }}</td>
                                     <td class="px-2 py-1 font-bold">{{ r.moneda }}</td>
                                 </tr>
