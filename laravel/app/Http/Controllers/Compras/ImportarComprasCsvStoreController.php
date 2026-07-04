@@ -8,6 +8,7 @@ use App\Models\Empresa;
 use App\Models\ProveedorComprobante;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
+use App\Models\TerceroEmpresa;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,11 @@ class ImportarComprasCsvStoreController extends Controller
                         'numero_cliente' => TerceroCuenta::where('empresa_id', $empresa->id)->max('numero_cliente') + 1,
                         'activo' => true,
                     ]
+                );
+
+                TerceroEmpresa::query()->updateOrCreate(
+                    ['empresa_id' => $empresa->id, 'tercero_cuenta_id' => $cuenta->id],
+                    ['es_cliente' => false, 'es_proveedor' => true]
                 );
 
                 $numero = $row['numero'] ?? '';
