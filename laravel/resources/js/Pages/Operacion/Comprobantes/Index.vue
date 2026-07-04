@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { formatNum } from '@/Utils/format.js';
 
 const props = defineProps({
     filters: Object,
@@ -101,11 +102,11 @@ const tipoLabel = (tipo) => {
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Subtotal</div>
-                                    <div class="font-medium text-gray-900">{{ c.moneda }} {{ Number(c.subtotal || 0).toFixed(2) }}</div>
+                                    <div class="font-medium text-gray-900">{{ formatNum(c.subtotal) }}</div>
                                 </div>
                                 <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">IVA</div>
-                                    <div class="font-medium text-blue-700">{{ c.moneda }} {{ Number(c.iva_total || 0).toFixed(2) }}</div>
+                                    <div class="font-medium text-blue-700">{{ formatNum(c.iva_total) }}</div>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
@@ -153,8 +154,8 @@ const tipoLabel = (tipo) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.estado }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700 text-right">{{ Number(c.subtotal || 0).toFixed(2) }}</td>
-                                <td class="px-6 py-4 text-sm text-blue-700 text-right">{{ Number(c.iva_total || 0).toFixed(2) }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700 text-right">{{ formatNum(c.subtotal) }}</td>
+                                <td class="px-6 py-4 text-sm text-blue-700 text-right">{{ formatNum(c.iva_total) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">{{ c.moneda }} {{ c.total }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda === 'ARS' ? '-' : (c.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || c.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 text-right">

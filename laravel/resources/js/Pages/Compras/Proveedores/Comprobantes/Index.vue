@@ -9,6 +9,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
 import PdfImportDialog from '@/Components/PdfImportDialog.vue';
 import { computed, ref, watch } from 'vue';
+import { formatNum } from '@/Utils/format.js';
 
 const tasaActualCombustible = ref(0);
 
@@ -302,11 +303,11 @@ const submitEditComprobante = () => {
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-5 gap-4">
-                <div><div class="text-xs text-gray-500">Subtotal</div><div class="text-sm font-medium text-gray-900">{{ resumen?.subtotal || 0 }}</div></div>
-                <div><div class="text-xs text-gray-500">IVA</div><div class="text-sm font-medium text-gray-900">{{ resumen?.iva_total || 0 }}</div></div>
-                <div><div class="text-xs text-gray-500">Tributos</div><div class="text-sm font-medium text-gray-900">{{ resumen?.tributos_total || 0 }}</div></div>
-                <div><div class="text-xs text-gray-500">Retenciones</div><div class="text-sm font-medium text-gray-900">{{ resumen?.retenciones_total || 0 }}</div></div>
-                <div><div class="text-xs text-gray-500">Total</div><div class="text-sm font-medium text-gray-900">{{ resumen?.total || 0 }}</div></div>
+                <div><div class="text-xs text-gray-500">Subtotal</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(resumen?.subtotal || 0) }}</div></div>
+                <div><div class="text-xs text-gray-500">IVA</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(resumen?.iva_total || 0) }}</div></div>
+                <div><div class="text-xs text-gray-500">Tributos</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(resumen?.tributos_total || 0) }}</div></div>
+                <div><div class="text-xs text-gray-500">Retenciones</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(resumen?.retenciones_total || 0) }}</div></div>
+                <div><div class="text-xs text-gray-500">Total</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(resumen?.total || 0) }}</div></div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg p-6">
@@ -421,15 +422,15 @@ const submitEditComprobante = () => {
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Subtotal</div>
-                                <div class="font-medium text-gray-900">{{ Number(c.subtotal || 0).toFixed(2) }}</div>
+                                <div class="font-medium text-gray-900">$ {{ formatNum(c.subtotal) }}</div>
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">IVA</div>
-                                <div class="font-medium text-green-700">{{ Number(c.iva_total || 0).toFixed(2) }}</div>
+                                <div class="font-medium text-green-700">$ {{ formatNum(c.iva_total) }}</div>
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Tributos</div>
-                                <div class="font-medium text-gray-900">{{ Number(c.tributos_total || 0).toFixed(2) }}</div>
+                                <div class="font-medium text-gray-900">$ {{ formatNum(c.tributos_total) }}</div>
                             </div>
                         </div>
                         <div class="mt-3 flex gap-3">
@@ -441,7 +442,7 @@ const submitEditComprobante = () => {
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tributos</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.numero || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">{{ Number(c.subtotal || 0).toFixed(2) }}</td><td class="px-6 py-4 text-sm text-green-700 text-right">{{ Number(c.iva_total || 0).toFixed(2) }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">{{ Number(c.tributos_total || 0).toFixed(2) }}</td><td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">{{ c.moneda }} {{ c.total }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-3 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button></td></tr></tbody>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.numero || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">$ {{ formatNum(c.subtotal) }}</td><td class="px-6 py-4 text-sm text-green-700 text-right">$ {{ formatNum(c.iva_total) }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">$ {{ formatNum(c.tributos_total) }}</td><td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">$ {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-3 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button></td></tr></tbody>
                     </table>
                 </div>
             </div>

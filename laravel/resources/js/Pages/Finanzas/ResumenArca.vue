@@ -16,11 +16,21 @@ const props = defineProps({
 const page = usePage();
 const roles = computed(() => page.props.tt?.roles || []);
 
-const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
-const formatNum = (n) => (parseFloat(n) || 0).toFixed(2);
+const formatFecha = (v) => {
+    if (!v) return '-';
+    const d = new Date(String(v).slice(0, 10));
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
+const formatNum = (n) => (parseFloat(n) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatMoneda = (m, n) => `${m} ${formatNum(n)}`;
+
+const tipoLabel = (t) => {
+    const map = { 'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C', 'FCA': 'Factura A (CA)', 'FCB': 'Factura B (CA)', 'FCC': 'Factura C (CA)', 'factura_interna': 'Factura', 'guia_envio': 'Guía', 'nota_credito_interna': 'NC', 'nota_debito_manual': 'ND', 'nota_credito_manual': 'NC manual' };
+    return map[t] || t;
+};
 
 const aplicarFiltro = (anio, mes) => {
-    router.get(route('finanzas.resumen-arca'), { anio, mes }, { preserveState: true, preserveScroll: true });
+    router.get(route('cobranzas.resumen-arca'), { anio, mes }, { preserveState: true, preserveScroll: true });
 };
 </script>
 
@@ -55,23 +65,23 @@ const aplicarFiltro = (anio, mes) => {
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Ventas (con CAE)</h3>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between"><span class="text-gray-500">Comprobantes:</span><span class="font-medium">{{ resumenVentas.cantidad }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-500">Subtotal:</span><span class="font-medium">{{ formatNum(resumenVentas.subtotal) }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-500">IVA total:</span><span class="font-medium text-blue-700">{{ formatNum(resumenVentas.iva_total) }}</span></div>
-                        <div v-if="resumenVentas.tributos_total > 0" class="flex justify-between"><span class="text-gray-500">Tributos:</span><span class="font-medium">{{ formatNum(resumenVentas.tributos_total) }}</span></div>
-                        <div class="flex justify-between border-t border-gray-200 pt-2"><span class="text-gray-700 font-semibold">Total:</span><span class="font-semibold">{{ formatNum(resumenVentas.total) }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Subtotal:</span><span class="font-medium">$ {{ formatNum(resumenVentas.subtotal) }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">IVA total:</span><span class="font-medium text-blue-700">$ {{ formatNum(resumenVentas.iva_total) }}</span></div>
+                        <div v-if="resumenVentas.tributos_total > 0" class="flex justify-between"><span class="text-gray-500">Tributos:</span><span class="font-medium">$ {{ formatNum(resumenVentas.tributos_total) }}</span></div>
+                        <div class="flex justify-between border-t border-gray-200 pt-2"><span class="text-gray-700 font-semibold">Total:</span><span class="font-semibold">$ {{ formatNum(resumenVentas.total) }}</span></div>
                     </div>
                 </div>
                 <div class="bg-white shadow sm:rounded-lg p-6">
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Compras</h3>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between"><span class="text-gray-500">Comprobantes:</span><span class="font-medium">{{ resumenCompras.cantidad }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-500">Subtotal:</span><span class="font-medium">{{ formatNum(resumenCompras.subtotal) }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-500">IVA total:</span><span class="font-medium text-green-700">{{ formatNum(resumenCompras.iva_total) }}</span></div>
-                        <div v-if="resumenCompras.tributos_total > 0" class="flex justify-between"><span class="text-gray-500">Tributos:</span><span class="font-medium">{{ formatNum(resumenCompras.tributos_total) }}</span></div>
-                        <div class="flex justify-between border-t border-gray-200 pt-2"><span class="text-gray-700 font-semibold">Total:</span><span class="font-semibold">{{ formatNum(resumenCompras.total) }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Subtotal:</span><span class="font-medium">$ {{ formatNum(resumenCompras.subtotal) }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">IVA total:</span><span class="font-medium text-green-700">$ {{ formatNum(resumenCompras.iva_total) }}</span></div>
+                        <div v-if="resumenCompras.tributos_total > 0" class="flex justify-between"><span class="text-gray-500">Tributos:</span><span class="font-medium">$ {{ formatNum(resumenCompras.tributos_total) }}</span></div>
+                        <div class="flex justify-between border-t border-gray-200 pt-2"><span class="text-gray-700 font-semibold">Total:</span><span class="font-semibold">$ {{ formatNum(resumenCompras.total) }}</span></div>
                     </div>
                     <div class="mt-4 border-t border-gray-200 pt-3 text-sm">
-                        <div class="flex justify-between text-gray-700"><span>IVA a pagar (Ventas - Compras):</span><span class="font-bold" :class="(resumenVentas.iva_total - resumenCompras.iva_total) > 0 ? 'text-red-700' : 'text-green-700'">{{ formatNum(resumenVentas.iva_total - resumenCompras.iva_total) }}</span></div>
+                        <div class="flex justify-between text-gray-700"><span>IVA a pagar (Ventas - Compras):</span><span class="font-bold" :class="(resumenVentas.iva_total - resumenCompras.iva_total) > 0 ? 'text-red-700' : 'text-green-700'">$ {{ formatNum(resumenVentas.iva_total - resumenCompras.iva_total) }}</span></div>
                     </div>
                 </div>
             </div>
@@ -94,12 +104,12 @@ const aplicarFiltro = (anio, mes) => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="v in ventas" :key="v.id">
-                                <td class="px-4 py-2 text-gray-700">{{ formatFecha(v.fecha_emision) }}</td>
-                                <td class="px-4 py-2 text-gray-900 font-medium">{{ v.arca_tipo_cbte || v.tipo }}</td>
-                                <td class="px-4 py-2 text-gray-700 font-mono">{{ v.arca_punto_venta ? String(v.arca_punto_venta).padStart(4,'0') + '-' + String(v.arca_numero).padStart(8,'0') : '-' }}</td>
-                                <td class="px-4 py-2 text-right text-gray-700">{{ formatNum(v.subtotal) }}</td>
-                                <td class="px-4 py-2 text-right text-blue-700">{{ formatNum(v.iva_total) }}</td>
-                                <td class="px-4 py-2 text-right text-gray-900 font-semibold">{{ v.moneda }} {{ formatNum(v.total) }}</td>
+                                <td class="px-4 py-2 text-gray-700 whitespace-nowrap">{{ formatFecha(v.fecha_emision) }}</td>
+                                <td class="px-4 py-2 text-gray-900 font-medium">{{ tipoLabel(v.arca_tipo_cbte || v.tipo) }}</td>
+                                <td class="px-4 py-2 text-gray-700 font-mono">{{ v.arca_punto_venta ? String(v.arca_punto_venta).padStart(4,'0') + '-' + String(v.arca_numero).padStart(8,'0') : (v.tipo === 'factura_interna' ? '#' + v.id : '-') }}</td>
+                                <td class="px-4 py-2 text-right text-gray-700">$ {{ formatNum(v.subtotal) }}</td>
+                                <td class="px-4 py-2 text-right text-blue-700">$ {{ formatNum(v.iva_total) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-900 font-semibold">$ {{ formatNum(v.total) }}</td>
                                 <td class="px-4 py-2 text-center">
                                     <span class="text-xs font-mono" :class="v.arca_cae ? 'text-green-700' : 'text-gray-400'">{{ v.arca_cae || '-' }}</span>
                                 </td>
@@ -129,12 +139,12 @@ const aplicarFiltro = (anio, mes) => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in compras" :key="c.id">
-                                <td class="px-4 py-2 text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
-                                <td class="px-4 py-2 text-gray-900 font-medium">{{ c.tipo }}</td>
+                                <td class="px-4 py-2 text-gray-700 whitespace-nowrap">{{ formatFecha(c.fecha_emision) }}</td>
+                                <td class="px-4 py-2 text-gray-900 font-medium">{{ tipoLabel(c.tipo) }}</td>
                                 <td class="px-4 py-2 text-gray-700 font-mono">{{ c.numero || '-' }}</td>
-                                <td class="px-4 py-2 text-right text-gray-700">{{ formatNum(c.subtotal) }}</td>
-                                <td class="px-4 py-2 text-right text-green-700">{{ formatNum(c.iva_total) }}</td>
-                                <td class="px-4 py-2 text-right text-gray-900 font-semibold">{{ c.moneda }} {{ formatNum(c.total) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-700">$ {{ formatNum(c.subtotal) }}</td>
+                                <td class="px-4 py-2 text-right text-green-700">$ {{ formatNum(c.iva_total) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-900 font-semibold">$ {{ formatNum(c.total) }}</td>
                             </tr>
                             <tr v-if="!compras.length">
                                 <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400">Sin comprobantes de compra en este periodo.</td>
