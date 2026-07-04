@@ -11,6 +11,21 @@ import PdfImportDialog from '@/Components/PdfImportDialog.vue';
 import { computed, ref, watch } from 'vue';
 import { formatNum } from '@/Utils/format.js';
 
+const tipoLabel = (t) => {
+    if (!t) return '-';
+    const map = {
+        '1': 'Factura A', '2': 'ND A', '3': 'NC A',
+        '6': 'Factura B', '7': 'ND B', '8': 'NC B',
+        '11': 'Factura C', '12': 'ND C', '13': 'NC C',
+        '51': 'Factura M', '52': 'ND M', '53': 'NC M',
+        'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C',
+        'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',
+        'NDA': 'ND A', 'NDB': 'ND B', 'NDC': 'ND C',
+        'NCA': 'NC A', 'NCB': 'NC B', 'NCC': 'NC C',
+    };
+    return map[String(t).trim().toUpperCase()] || t;
+};
+
 const parsePv = (num) => {
     if (!num) return '-';
     const parts = String(num).split('-');
@@ -422,7 +437,7 @@ const submitEditComprobante = () => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ c.cuenta?.tercero?.razon_social || '-' }}</div>
-                                <div class="text-xs text-gray-500">{{ String(c.fecha_emision || '').slice(0,10) }} · {{ c.tipo }}</div>
+                                <div class="text-xs text-gray-500">{{ String(c.fecha_emision || '').slice(0,10) }} · {{ tipoLabel(c.tipo) }}</div>
                             </div>
                             <div class="text-sm font-medium text-gray-900">{{ c.moneda }} {{ c.total }}</div>
                         </div>
@@ -457,7 +472,7 @@ const submitEditComprobante = () => {
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tributos</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ parsePv(c.numero) }}</td><td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ parseNro(c.numero) }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">$ {{ formatNum(c.subtotal) }}</td><td class="px-6 py-4 text-sm text-green-700 text-right">$ {{ formatNum(c.iva_total) }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">$ {{ formatNum(c.tributos_total) }}</td><td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">$ {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-3 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button></td></tr></tbody>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ tipoLabel(c.tipo) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ parsePv(c.numero) }}</td><td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ parseNro(c.numero) }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">$ {{ formatNum(c.subtotal) }}</td><td class="px-6 py-4 text-sm text-green-700 text-right">$ {{ formatNum(c.iva_total) }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right">$ {{ formatNum(c.tributos_total) }}</td><td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">$ {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-3 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button></td></tr></tbody>
                     </table>
                 </div>
             </div>

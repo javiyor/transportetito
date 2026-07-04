@@ -176,12 +176,15 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `a8bfd14` | Clientes: combo empresa en editar, buscador por nombre |
 | `f02f741` | Fix white screen terceros (orden variables script setup) |
 | `af37cbd` | Blanqueo Ventas/Compras en Configuración |
+| `5869029` | Retenciones+multi factura en recibos, impuestos en ventas, resumen ARCA |
 
 ### Relevant files
 
 **Backend:**
-- `laravel/app/Http/Controllers/Facturacion/ImportarFacturasCsvStoreController.php`
-- `laravel/app/Http/Controllers/Facturacion/ImportarFacturasArcaStoreController.php`
+- `laravel/app/Http/Controllers/Cobranzas/CuentaCorrienteReciboStoreController.php` — multi factura, retenciones, saldo a cuenta
+- `laravel/app/Http/Controllers/Facturacion/ImportarFacturasCsvStoreController.php` — +impuestos
+- `laravel/app/Http/Controllers/Facturacion/ImportarFacturasArcaStoreController.php` — +impuestos WSFE
+- `laravel/app/Http/Controllers/Finanzas/ResumenArcaController.php` — libro IVA + dashboard
 - `laravel/app/Http/Controllers/Compras/ImportarComprasCsvStoreController.php`
 - `laravel/app/Http/Controllers/Operacion/ManifiestoIngresoController.php`
 - `laravel/app/Http/Controllers/Operacion/Comprobantes/ComprobanteIndexController.php`
@@ -192,10 +195,14 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/app/Http/Controllers/Operacion/Repartos/RepartidorController.php`
 - `laravel/app/Console/Commands/TrasladarClientesEmpresa.php`
 - `laravel/app/Http/Middleware/HandleInertiaRequests.php`
+- `laravel/app/Services/Arca/WsfeClient.php` — +IVA/tributos en consultarComprobante
 
 **Frontend:**
 - `laravel/resources/js/Layouts/AppLayout.vue` — menú reorganizado en dropdowns
-- `laravel/resources/js/Pages/Facturacion/Importar.vue`
+- `laravel/resources/js/Pages/Cobranzas/CuentaCorriente/Show.vue` — recibo con retenciones + checkboxes
+- `laravel/resources/js/Pages/Facturacion/Importar.vue` — +columnas impuestos en preview
+- `laravel/resources/js/Pages/Operacion/Comprobantes/Show.vue` — desglose subtotal/IVA
+- `laravel/resources/js/Pages/Finanzas/ResumenArca.vue` — libro IVA + dashboard
 - `laravel/resources/js/Pages/Compras/Importar.vue`
 - `laravel/resources/js/Pages/Operacion/Manifiestos/Index.vue`
 - `laravel/resources/js/Pages/Operacion/Comprobantes/Index.vue`

@@ -3,6 +3,21 @@ import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
+const tipoLabel = (t) => {
+    if (!t) return '-';
+    const map = {
+        '1': 'Factura A', '2': 'ND A', '3': 'NC A',
+        '6': 'Factura B', '7': 'ND B', '8': 'NC B',
+        '11': 'Factura C', '12': 'ND C', '13': 'NC C',
+        '51': 'Factura M', '52': 'ND M', '53': 'NC M',
+        'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C',
+        'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',
+        'NDA': 'ND A', 'NDB': 'ND B', 'NDC': 'ND C',
+        'NCA': 'NC A', 'NCB': 'NC B', 'NCC': 'NC C',
+    };
+    return map[String(t).trim().toUpperCase()] || t;
+};
+
 defineProps({
     comprobante: Object,
     ordenesPago: Array,
@@ -32,7 +47,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
 
         <div class="max-w-5xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div><div class="text-xs text-gray-500">Tipo / Numero</div><div class="text-sm font-medium text-gray-900">{{ comprobante.tipo }} · {{ comprobante.numero || '-' }}</div></div>
+                <div><div class="text-xs text-gray-500">Tipo / Numero</div><div class="text-sm font-medium text-gray-900">{{ tipoLabel(comprobante.tipo) }} · {{ comprobante.numero || '-' }}</div></div>
                 <div><div class="text-xs text-gray-500">Fecha / Vto</div><div class="text-sm font-medium text-gray-900">{{ formatFecha(comprobante.fecha_emision) }} · {{ formatFecha(comprobante.fecha_vencimiento) }}</div></div>
                 <div><div class="text-xs text-gray-500">Total</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ comprobante.total }}</div></div>
                 <div><div class="text-xs text-gray-500">Pagado</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ pagado }}</div></div>
