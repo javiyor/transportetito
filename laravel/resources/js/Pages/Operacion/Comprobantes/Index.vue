@@ -100,6 +100,16 @@ const tipoLabel = (tipo) => {
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">Subtotal</div>
+                                    <div class="font-medium text-gray-900">{{ c.moneda }} {{ Number(c.subtotal || 0).toFixed(2) }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs uppercase tracking-wider text-gray-500">IVA</div>
+                                    <div class="font-medium text-blue-700">{{ c.moneda }} {{ Number(c.iva_total || 0).toFixed(2) }}</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Total</div>
                                     <div class="font-medium text-gray-900">{{ c.moneda }} {{ c.total }}</div>
                                 </div>
@@ -128,9 +138,11 @@ const tipoLabel = (tipo) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo acreditable</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo acred.</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -141,9 +153,11 @@ const tipoLabel = (tipo) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.estado }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700 text-right">{{ Number(c.subtotal || 0).toFixed(2) }}</td>
+                                <td class="px-6 py-4 text-sm text-blue-700 text-right">{{ Number(c.iva_total || 0).toFixed(2) }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">{{ c.moneda }} {{ c.total }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda === 'ARS' ? '-' : (c.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || c.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
+                                <td class="px-6 py-4 text-sm text-gray-700 text-right">
                                     <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ c.credit_summary?.saldo_acreditable }}</span>
                                     <span v-else>-</span>
                                 </td>
@@ -152,7 +166,7 @@ const tipoLabel = (tipo) => {
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
-                                <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</td>
+                                <td colspan="11" class="px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</td>
                             </tr>
                         </tbody>
                     </table>
