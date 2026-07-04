@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { formatFecha } from '@/Utils/format.js';
 
 const props = defineProps({
     comprobante: Object,
@@ -87,7 +88,11 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Fecha</div>
-                    <div class="mt-1 text-sm text-gray-900">{{ String(comprobante.fecha_emision || '').slice(0, 10) }}</div>
+                    <div class="mt-1 text-sm text-gray-900">{{ formatFecha(comprobante.fecha_emision) }}</div>
+                </div>
+                <div v-if="comprobante.arca_cae">
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Comprobante ARCA</div>
+                    <div class="mt-1 text-sm font-mono text-gray-900">{{ comprobante.arca_tipo_cbte || comprobante.tipo }} · {{ String(parseInt(comprobante.arca_punto_venta || 0)) + '-' + String(comprobante.arca_numero || 0).padStart(8,'0') }} · CAE: {{ comprobante.arca_cae }}</div>
                 </div>
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Total</div>

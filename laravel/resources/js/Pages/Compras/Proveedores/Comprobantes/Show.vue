@@ -2,6 +2,18 @@
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { formatFecha, formatNum } from '@/Utils/format.js';
+
+const parsePv = (num) => {
+    if (!num) return '-';
+    const parts = String(num).split('-');
+    return parts[0] ? String(parseInt(parts[0], 10)) : '-';
+};
+const parseNro = (num) => {
+    if (!num) return '-';
+    const parts = String(num).split('-');
+    return parts[1] ? parts[1] : num;
+};
 
 const tipoLabel = (t) => {
     if (!t) return '-';
@@ -25,7 +37,6 @@ defineProps({
     saldo: Number,
 });
 
-const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
 </script>
 
 <template>
@@ -46,12 +57,16 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
         </template>
 
         <div class="max-w-5xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div><div class="text-xs text-gray-500">Tipo / Numero</div><div class="text-sm font-medium text-gray-900">{{ tipoLabel(comprobante.tipo) }} · {{ comprobante.numero || '-' }}</div></div>
+            <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div><div class="text-xs text-gray-500">Tipo</div><div class="text-sm font-medium text-gray-900">{{ tipoLabel(comprobante.tipo) }}</div></div>
+                <div><div class="text-xs text-gray-500">PV / Nro</div><div class="text-sm font-medium text-gray-900 font-mono">{{ parsePv(comprobante.numero) }} · {{ parseNro(comprobante.numero) }}</div></div>
                 <div><div class="text-xs text-gray-500">Fecha / Vto</div><div class="text-sm font-medium text-gray-900">{{ formatFecha(comprobante.fecha_emision) }} · {{ formatFecha(comprobante.fecha_vencimiento) }}</div></div>
-                <div><div class="text-xs text-gray-500">Total</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ comprobante.total }}</div></div>
-                <div><div class="text-xs text-gray-500">Pagado</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ pagado }}</div></div>
-                <div><div class="text-xs text-gray-500">Saldo</div><div class="text-sm font-medium text-gray-900">{{ comprobante.moneda }} {{ saldo }}</div></div>
+                <div><div class="text-xs text-gray-500">Subtotal</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.subtotal) }}</div></div>
+                <div><div class="text-xs text-gray-500">IVA</div><div class="text-sm font-medium text-green-700">$ {{ formatNum(comprobante.iva_total) }}</div></div>
+                <div><div class="text-xs text-gray-500">Tributos</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.tributos_total) }}</div></div>
+                <div><div class="text-xs text-gray-500">Total</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.total) }}</div></div>
+                <div><div class="text-xs text-gray-500">Pagado</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(pagado) }}</div></div>
+                <div><div class="text-xs text-gray-500">Saldo</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(saldo) }}</div></div>
                 <div><div class="text-xs text-gray-500">Obs.</div><div class="text-sm font-medium text-gray-900">{{ comprobante.observacion || '-' }}</div></div>
             </div>
 
@@ -93,7 +108,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Ordenes de pago aplicadas</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="o in ordenesPago" :key="o.id"><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(o.fecha) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ o.medio || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ o.moneda }} {{ o.total }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ o.observacion || '-' }}</td></tr></tbody></table></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="o in ordenesPago" :key="o.id"><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(o.fecha) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ o.medio || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">$ {{ formatNum(o.total) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ o.observacion || '-' }}</td></tr></tbody></table></div>
             </div>
         </div>
     </AppLayout>
