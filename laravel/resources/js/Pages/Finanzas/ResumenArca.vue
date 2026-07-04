@@ -25,8 +25,20 @@ const formatNum = (n) => (parseFloat(n) || 0).toLocaleString('es-AR', { minimumF
 const formatMoneda = (m, n) => `${m} ${formatNum(n)}`;
 
 const tipoLabel = (t) => {
-    const map = { 'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C', 'FCA': 'Factura A (CA)', 'FCB': 'Factura B (CA)', 'FCC': 'Factura C (CA)', 'factura_interna': 'Factura', 'guia_envio': 'Guía', 'nota_credito_interna': 'NC', 'nota_debito_manual': 'ND', 'nota_credito_manual': 'NC manual' };
-    return map[t] || t;
+    if (!t) return '-';
+    const map = {
+        '1': 'Factura A', '2': 'ND A', '3': 'NC A',
+        '6': 'Factura B', '7': 'ND B', '8': 'NC B',
+        '11': 'Factura C', '12': 'ND C', '13': 'NC C',
+        '51': 'Factura M', '52': 'ND M', '53': 'NC M',
+        'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C',
+        'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',
+        'NDA': 'ND A', 'NDB': 'ND B', 'NDC': 'ND C',
+        'NCA': 'NC A', 'NCB': 'NC B', 'NCC': 'NC C',
+        'factura_interna': 'Factura', 'guia_envio': 'Guía', 'nota_credito_interna': 'NC',
+        'nota_debito_manual': 'ND', 'nota_credito_manual': 'NC manual',
+    };
+    return map[String(t).trim().toUpperCase()] || t;
 };
 
 const aplicarFiltro = (anio, mes) => {
@@ -41,7 +53,11 @@ const aplicarFiltro = (anio, mes) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Resumen ARCA &mdash; Libro IVA</h2>
-                <Link :href="route('cobranzas.ctacte.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                <div class="flex items-center gap-2">
+                    <a :href="route('cobranzas.resumen-arca.export', { tipo: 'ventas', anio: filtros.anio, mes: filtros.mes })"><SecondaryButton>Exportar Ventas CSV</SecondaryButton></a>
+                    <a :href="route('cobranzas.resumen-arca.export', { tipo: 'compras', anio: filtros.anio, mes: filtros.mes })"><SecondaryButton>Exportar Compras CSV</SecondaryButton></a>
+                    <Link :href="route('cobranzas.ctacte.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                </div>
             </div>
         </template>
 

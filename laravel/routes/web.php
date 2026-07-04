@@ -300,5 +300,6 @@ Route::middleware([
         Route::get('/cierre', CierreCajaController::class)->name('cierre.index');
         Route::get('/cierre/print', CierreCajaPrintController::class)->name('cierre.print');
         Route::get('/resumen-arca', [ResumenArcaController::class, 'index'])->name('resumen-arca');
+        Route::get('/resumen-arca/export', [ResumenArcaController::class, 'exportCsv'])->name('resumen-arca.export');
     });
 });
