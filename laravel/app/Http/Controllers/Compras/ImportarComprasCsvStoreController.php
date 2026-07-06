@@ -79,6 +79,7 @@ class ImportarComprasCsvStoreController extends Controller
                 $existe = ProveedorComprobante::where('empresa_id', $empresa->id)
                     ->where('tercero_cuenta_id', $cuenta->id)
                     ->where('numero', $numero)
+                    ->where('tipo', $row['tipo'] ?? 'FA')
                     ->exists();
 
                 if ($existe) {
