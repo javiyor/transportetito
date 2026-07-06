@@ -19,13 +19,15 @@ const tipoLabel = (t) => {
     if (!t) return '-';
     const map = {
         '1': 'Factura A', '2': 'ND A', '3': 'NC A',
-        '6': 'Factura B', '7': 'ND B', '8': 'NC B',
-        '11': 'Factura C', '12': 'ND C', '13': 'NC C',
+        '4': 'Factura B', '5': 'ND B', '6': 'NC B',
+        '7': 'Factura C', '8': 'ND C', '9': 'NC C',
+        '11': 'Factura M', '12': 'ND M', '13': 'NC M',
         '51': 'Factura M', '52': 'ND M', '53': 'NC M',
         'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C',
         'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',
         'NDA': 'ND A', 'NDB': 'ND B', 'NDC': 'ND C',
         'NCA': 'NC A', 'NCB': 'NC B', 'NCC': 'NC C',
+        'FM': 'Factura M', 'NDM': 'ND M', 'NCM': 'NC M',
     };
     return map[String(t).trim().toUpperCase()] || t;
 };

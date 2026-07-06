@@ -32,11 +32,13 @@ const headerMap = {
 };
 
 const tipoArcaMap = {
-    '1': 'FA', '2': 'FB', '3': 'FC', '4': 'FCA', '5': 'FCB', '6': 'FCC',
+    '1': 'FA', '2': 'NDA', '3': 'NCA', '4': 'FB', '5': 'NDB', '6': 'NCB',
+    '7': 'FC', '8': 'NDC', '9': 'NCC',
+    '11': 'FM', '12': 'NDM', '13': 'NCM', '51': 'FM',
     'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC',
     'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
-    'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de credito a': 'NCA', 'nota de credito b': 'NCB',
-    'nota de débito a': 'NDA', 'nota de débito b': 'NDB', 'nota de crédito a': 'NCA', 'nota de crédito b': 'NCB',
+    'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de debito c': 'NDC',
+    'nota de credito a': 'NCA', 'nota de credito b': 'NCB', 'nota de credito c': 'NCC',
 };
 
 const monedaArcaMap = {
