@@ -15,9 +15,8 @@ const tipoLabel = (t) => {
     if (!t) return '-';
     const map = {
         '1': 'Factura A', '2': 'ND A', '3': 'NC A',
-        '4': 'Factura B', '5': 'ND B', '6': 'NC B',
-        '7': 'Factura C', '8': 'ND C', '9': 'NC C',
-        '11': 'Factura M', '12': 'ND M', '13': 'NC M',
+        '6': 'Factura B', '7': 'ND B', '8': 'NC B',
+        '11': 'Factura C', '12': 'ND C', '13': 'NC C',
         '51': 'Factura M', '52': 'ND M', '53': 'NC M',
         'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C',
         'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',

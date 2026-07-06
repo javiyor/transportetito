@@ -32,9 +32,9 @@ const headerMap = {
 };
 
 const tipoArcaMap = {
-    '1': 'FA', '2': 'NDA', '3': 'NCA', '4': 'FB', '5': 'NDB', '6': 'NCB',
-    '7': 'FC', '8': 'NDC', '9': 'NCC',
-    '11': 'FM', '12': 'NDM', '13': 'NCM', '51': 'FM',
+    '1': 'FA', '2': 'NDA', '3': 'NCA',
+    '6': 'FB', '7': 'NDB', '8': 'NCB',
+    '11': 'FC', '12': 'NDC', '13': 'NCC', '51': 'FM',
     'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC',
     'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
     'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de debito c': 'NDC',
