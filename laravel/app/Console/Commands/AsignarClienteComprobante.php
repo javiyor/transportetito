@@ -69,9 +69,10 @@ class AsignarClienteComprobante extends Command
         $this->line("Tercero: {$tercero->id} - {$tercero->razon_social} ({$tercero->cuit})");
 
         try {
+            $maxNro = (int) (TerceroCuenta::where('empresa_id', $empresaId)->max('numero_cliente') ?? 0);
             $cuenta = TerceroCuenta::firstOrCreate(
                 ['empresa_id' => $empresaId, 'tercero_id' => $tercero->id],
-                []
+                ['numero_cliente' => $maxNro + 1]
             );
         } catch (\Throwable $e) {
             $this->error("Error al crear/buscar TerceroCuenta: " . $e->getMessage());
