@@ -73,9 +73,10 @@ class ImportarFacturasArcaStoreController extends Controller
                 }
 
                 $cuenta = $tercero
-                    ? TerceroCuenta::where('empresa_id', $empresa->id)
-                        ->where('tercero_id', $tercero->id)
-                        ->first()
+                    ? TerceroCuenta::firstOrCreate(
+                        ['empresa_id' => $empresa->id, 'tercero_id' => $tercero->id],
+                        []
+                    )
                     : null;
 
                 $maxInterno++;

@@ -69,9 +69,10 @@ class ImportarFacturasCsvStoreController extends Controller
                     ['razon_social' => $row['razon_social']]
                 );
 
-                $cuenta = TerceroCuenta::where('empresa_id', $empresa->id)
-                    ->where('tercero_id', $tercero->id)
-                    ->first();
+                $cuenta = TerceroCuenta::firstOrCreate(
+                    ['empresa_id' => $empresa->id, 'tercero_id' => $tercero->id],
+                    []
+                );
 
                 $maxInterno++;
 
