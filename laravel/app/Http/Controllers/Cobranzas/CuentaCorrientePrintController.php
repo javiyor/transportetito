@@ -28,7 +28,7 @@ class CuentaCorrientePrintController extends Controller
             ->where('empresa_id', $empresaId)
             ->where('facturar_cuenta_id', $cuenta->id)
             ->orderByDesc('fecha_emision')
-            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision']);
+            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
 
         return response()->view('cobranzas.ctacte.print', [
             'cuenta' => $cuenta,

@@ -29,10 +29,15 @@
 
     <h3>Comprobantes</h3>
     <table>
-        <thead><tr><th>ID</th><th>Tipo</th><th>Fecha</th><th>Total</th></tr></thead>
+        <thead><tr><th>Comprobante</th><th>Fecha</th><th>Total</th></tr></thead>
         <tbody>
             @foreach($comprobantes as $c)
-                <tr><td>#{{ $c->id }}</td><td>{{ $c->tipo }}</td><td>{{ optional($c->fecha_emision)->format('Y-m-d') }}</td><td>{{ $c->moneda }} {{ number_format((float) $c->total, 2, ',', '.') }}</td></tr>
+                @php
+                    $tipoLabels = ['factura_interna' => 'Factura', 'nota_debito_manual' => 'Nota debito', 'nota_credito_manual' => 'Nota credito', 'ajuste_debito' => 'Ajuste debito', 'ajuste_credito' => 'Ajuste credito'];
+                    $label = $tipoLabels[$c->tipo] ?? $c->tipo;
+                    $numero = ($c->arca_punto_venta && $c->arca_numero) ? ((int) $c->arca_punto_venta) . '-' . str_pad((string) $c->arca_numero, 8, '0', STR_PAD_LEFT) : ($c->numero_interno ? '#' . $c->numero_interno : '-');
+                @endphp
+                <tr><td>{{ $label }} {{ $numero }}</td><td>{{ optional($c->fecha_emision)->format('d-m-Y') }}</td><td>{{ $c->moneda }} {{ number_format((float) $c->total, 2, ',', '.') }}</td></tr>
             @endforeach
         </tbody>
     </table>
@@ -42,7 +47,11 @@
         <thead><tr><th>Fecha</th><th>Tipo</th><th>Moneda</th><th>Importe</th><th>Obs.</th></tr></thead>
         <tbody>
             @foreach($movimientos as $m)
-                <tr><td>{{ optional($m->fecha)->format('Y-m-d') }}</td><td>{{ $m->tipo }}</td><td>{{ $m->moneda }}@if($m->moneda !== 'ARS' && $m->cotizacion_ars) ({{ number_format((float) $m->cotizacion_ars, 6, ',', '.') }})@endif</td><td>{{ number_format((float) $m->importe_signed, 2, ',', '.') }}</td><td>{{ $m->observacion }}</td></tr>
+                @php
+                    $tipoLabels = ['factura_interna' => 'Factura', 'nota_debito_manual' => 'Nota debito', 'nota_credito_manual' => 'Nota credito', 'ajuste_debito' => 'Ajuste debito', 'ajuste_credito' => 'Ajuste credito', 'anulacion_recibo' => 'Anulacion recibo'];
+                    $mlabel = $tipoLabels[$m->tipo] ?? $m->tipo;
+                @endphp
+                <tr><td>{{ optional($m->fecha)->format('d-m-Y') }}</td><td>{{ $mlabel }}</td><td>{{ $m->moneda }}@if($m->moneda !== 'ARS' && $m->cotizacion_ars) ({{ number_format((float) $m->cotizacion_ars, 6, ',', '.') }})@endif</td><td>{{ number_format((float) $m->importe_signed, 2, ',', '.') }}</td><td>{{ $m->observacion }}</td></tr>
             @endforeach
         </tbody>
     </table>
