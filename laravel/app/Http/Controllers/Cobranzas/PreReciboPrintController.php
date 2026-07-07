@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\PreRecibo;
 use Illuminate\Http\Request;
 
@@ -23,6 +24,7 @@ class PreReciboPrintController extends Controller
 
         return response()->view('cobranzas.pre_recibos.print', [
             'preRecibo' => $preRecibo,
+            'empresa' => Empresa::query()->find($empresaId),
         ]);
     }
 }

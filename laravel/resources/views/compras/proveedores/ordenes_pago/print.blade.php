@@ -13,6 +13,7 @@
     </style>
 </head>
 <body>
+    @include('partials.print-header')
     <div class="actions"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
     <h1>Orden de pago #{{ $ordenPago->id }}</h1>
     <div class="grid">

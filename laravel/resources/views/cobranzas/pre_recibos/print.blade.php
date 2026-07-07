@@ -16,6 +16,7 @@
     </style>
 </head>
 <body>
+    @include('partials.print-header')
     <div class="actions"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
     <h1>Pre-recibo #{{ $preRecibo->id }}</h1>
     <div class="grid">

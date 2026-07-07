@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cobranzas;
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Empresa;
 use App\Models\TerceroCuenta;
 use Illuminate\Http\Request;
 
@@ -34,6 +35,7 @@ class CuentaCorrientePrintController extends Controller
             'cuenta' => $cuenta,
             'movimientos' => $movimientos,
             'comprobantes' => $comprobantes,
+            'empresa' => Empresa::query()->find($empresaId),
             'saldos' => [
                 'saldo_total' => round((float) $movimientos->sum('importe_signed'), 2),
                 'vencido_30' => round(max(0, (float) $movimientos->where('fecha', '<=', now()->subDays(30)->toDateString())->sum('importe_signed')), 2),

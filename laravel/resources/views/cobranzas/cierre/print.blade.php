@@ -25,6 +25,7 @@
     </style>
 </head>
 <body>
+    @include('partials.print-header')
     <div class="actions"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 
     <h1>Cierre de caja</h1>

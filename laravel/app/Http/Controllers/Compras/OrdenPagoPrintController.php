@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class OrdenPagoPrintController extends Controller
         return response()->view('compras.proveedores.ordenes_pago.print', [
             'ordenPago' => $ordenPago,
             'comprobante' => $comprobante,
+            'empresa' => Empresa::query()->find($empresaId),
         ]);
     }
 }

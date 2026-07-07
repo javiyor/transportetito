@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\Recibo;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,7 @@ class ReciboPrintController extends Controller
 
         return response()->view('cobranzas.recibos.print', [
             'recibo' => $recibo,
+            'empresa' => Empresa::query()->find($empresaId),
         ]);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class ProveedorComprobantePrintController extends Controller
         return response()->view('compras.proveedores.comprobantes.print', [
             'comprobante' => $comprobante,
             'ordenesPago' => $ordenesPago,
+            'empresa' => Empresa::query()->find($empresaId),
             'pagado' => round((float) $ordenesPago->sum('total'), 2),
             'saldo' => round((float) $comprobante->total - (float) $ordenesPago->sum('total'), 2),
         ]);
