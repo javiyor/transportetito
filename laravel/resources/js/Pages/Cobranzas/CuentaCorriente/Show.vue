@@ -99,118 +99,115 @@ const formatNum = (n) => {
                 <div><div class="text-xs text-gray-500">Vencido +30</div><div class="text-sm font-medium" :class="saldos.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ formatNum(saldos.vencido_30) }}</div></div>
             </div>
 
-            <div class="grid grid-cols-1 gap-6" :class="esSoloCobrador ? '' : 'lg:grid-cols-3'">
-                <!-- Ajuste panel (solo cobranzas_admin/admin, no cobrador) -->
-                <div v-if="!esSoloCobrador" class="bg-white shadow sm:rounded-lg p-6">
-                    <h3 class="text-base font-semibold text-gray-900">Generar ajuste</h3>
-                    <div class="mt-4 space-y-3">
-                        <select v-model="ajusteForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="ajuste_debito">Ajuste debito</option><option value="ajuste_credito">Ajuste credito</option></select>
-                        <TextInput v-model="ajusteForm.fecha" type="date" class="block w-full" />
-                        <InputError :message="ajusteForm.errors.fecha" />
-                        <select v-model="ajusteForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
-                        <InputError :message="ajusteForm.errors.moneda" />
-                        <TextInput v-model="ajusteForm.importe" type="number" min="0.01" step="0.01" class="block w-full" placeholder="Importe" />
-                        <InputError :message="ajusteForm.errors.importe" />
-                        <TextInput v-model="ajusteForm.observacion" type="text" class="block w-full" placeholder="Observacion" />
-                        <InputError :message="ajusteForm.errors.observacion" />
-                        <PrimaryButton :disabled="ajusteForm.processing" @click="submitAjuste">Guardar ajuste</PrimaryButton>
-                    </div>
-                </div>
-
-                <!-- Nota panel (solo cobranzas_admin/admin, no cobrador) -->
-                <div v-if="!esSoloCobrador" class="bg-white shadow sm:rounded-lg p-6">
-                    <h3 class="text-base font-semibold text-gray-900">Nota de debito / credito</h3>
-                    <div class="mt-4 space-y-3">
-                        <select v-model="notaForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="nota_debito_manual">Nota de debito</option><option value="nota_credito_manual">Nota de credito</option></select>
-                        <TextInput v-model="notaForm.fecha" type="date" class="block w-full" />
-                        <InputError :message="notaForm.errors.fecha" />
-                        <select v-model="notaForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
-                        <InputError :message="notaForm.errors.moneda" />
-                        <TextInput v-model="notaForm.importe" type="number" min="0.01" step="0.01" class="block w-full" placeholder="Importe" />
-                        <InputError :message="notaForm.errors.importe" />
-                        <TextInput v-model="notaForm.motivo" type="text" class="block w-full" placeholder="Motivo" />
-                        <InputError :message="notaForm.errors.motivo" />
-                        <PrimaryButton :disabled="notaForm.processing" @click="submitNota">Generar nota</PrimaryButton>
-                    </div>
-                </div>
-
-                <div class="bg-white shadow sm:rounded-lg p-6">
-                    <h3 class="text-base font-semibold text-gray-900">Emitir recibo</h3>
-                    <div class="mt-4 space-y-3">
-                        <TextInput v-model="reciboForm.fecha" type="date" class="block w-full" />
+            <div class="space-y-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-gray-900">Emitir recibo</h3>
+                    <div class="mt-2 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <TextInput v-model="reciboForm.fecha" type="date" class="block w-full text-xs" />
+                            <select v-model="reciboForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                        </div>
                         <InputError :message="reciboForm.errors.fecha" />
-                        <select v-model="reciboForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
                         <InputError :message="reciboForm.errors.moneda" />
-                        <fieldset class="border border-gray-200 rounded-md p-2 max-h-48 overflow-y-auto">
+                        <fieldset class="border border-gray-200 rounded p-1 max-h-36 overflow-y-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
-                            <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-2 py-1">
-                                <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
-                                <span class="text-sm text-gray-700">{{ c.tipo }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
+                            <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-1 py-0.5">
+                                <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
+                                <span class="text-xs text-gray-700">{{ c.tipo }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
-                            <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
+                            <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                         </fieldset>
                         <InputError :message="reciboForm.errors.comprobante_ids" />
 
-                        <div class="border border-gray-200 rounded-md p-3 space-y-3">
-                            <div class="text-sm font-medium text-gray-700">Medios de pago</div>
-                            <div v-for="(item, idx) in reciboForm.items" :key="idx" class="border border-gray-100 rounded p-2 space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <select v-model="item.medio" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <div class="border border-gray-200 rounded p-2 space-y-2">
+                            <div class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Medios de pago</div>
+                            <div v-for="(item, idx) in reciboForm.items" :key="idx" class="border border-gray-100 rounded p-1.5 space-y-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <select v-model="item.medio" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
                                         <option value="efectivo">Efectivo</option>
                                         <option value="transferencia">Transferencia</option>
                                         <option value="cheque_tercero">Cheque tercero</option>
                                     </select>
-                                    <TextInput v-model="item.importe" type="number" min="0.01" step="0.01" class="block w-32" placeholder="Importe" />
-                                    <button type="button" class="text-red-500 text-lg leading-none font-bold" @click="quitarItem(idx)" :disabled="reciboForm.items.length <= 1">&times;</button>
+                                    <TextInput v-model="item.importe" type="number" min="0.01" step="0.01" class="block w-28 text-xs" placeholder="Importe" />
+                                    <button type="button" class="text-red-500 text-base leading-none font-bold" @click="quitarItem(idx)" :disabled="reciboForm.items.length <= 1">&times;</button>
                                 </div>
-                                <div v-if="esCheque(item.medio)" class="grid grid-cols-2 gap-2">
-                                    <TextInput v-model="item.cheque_numero" type="text" class="block w-full" placeholder="Nro cheque" />
-                                    <select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                <div v-if="esCheque(item.medio)" class="grid grid-cols-2 gap-1.5">
+                                    <TextInput v-model="item.cheque_numero" type="text" class="block w-full text-xs" placeholder="Nro cheque" />
+                                    <select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
                                         <option value="">Banco</option>
                                         <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
                                     </select>
-                                    <TextInput v-model="item.cheque_fecha_vencimiento" type="date" class="block w-full" />
-                                    <TextInput v-model="item.cheque_titular" type="text" class="block w-full" placeholder="Titular" />
+                                    <TextInput v-model="item.cheque_fecha_vencimiento" type="date" class="block w-full text-xs" />
+                                    <TextInput v-model="item.cheque_titular" type="text" class="block w-full text-xs" placeholder="Titular" />
                                 </div>
-                                <TextInput v-model="item.detalle" type="text" class="block w-full" placeholder="Detalle (opcional)" />
+                                <TextInput v-model="item.detalle" type="text" class="block w-full text-xs" placeholder="Detalle (opcional)" />
                             </div>
-                            <SecondaryButton type="button" @click="agregarItem">+ Agregar medio</SecondaryButton>
+                            <SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="agregarItem">+ Agregar medio</SecondaryButton>
                         </div>
 
-                        <div class="border border-gray-200 rounded-md p-3 space-y-2">
-                            <div class="text-sm font-medium text-gray-700">Retenciones (opcional)</div>
-                            <div class="space-y-2">
-                                <div class="grid grid-cols-3 gap-2 items-end">
-                                    <div><label class="block text-xs text-gray-500">IIBB</label></div>
-                                    <div><input v-model="reciboForm.retenciones.iibb.descripcion" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Descripcion" /></div>
-                                    <div><input v-model="reciboForm.retenciones.iibb.importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" /></div>
-                                </div>
-                                <div class="grid grid-cols-3 gap-2 items-end">
-                                    <div><label class="block text-xs text-gray-500">IVA</label></div>
-                                    <div><input v-model="reciboForm.retenciones.iva.descripcion" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Descripcion" /></div>
-                                    <div><input v-model="reciboForm.retenciones.iva.importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" /></div>
-                                </div>
-                                <div class="grid grid-cols-3 gap-2 items-end">
-                                    <div><label class="block text-xs text-gray-500">Ganancias</label></div>
-                                    <div><input v-model="reciboForm.retenciones.ganancias.descripcion" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Descripcion" /></div>
-                                    <div><input v-model="reciboForm.retenciones.ganancias.importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" /></div>
-                                </div>
+                        <div class="border border-gray-200 rounded p-2 space-y-1">
+                            <div class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Retenciones (opcional)</div>
+                            <div v-for="(label, key) in { iibb: 'IIBB', iva: 'IVA', ganancias: 'Ganancias' }" :key="key" class="grid grid-cols-3 gap-1 items-end">
+                                <div><label class="text-xs text-gray-500">{{ label }}</label></div>
+                                <div><input v-model="reciboForm.retenciones[key].descripcion" type="text" class="block w-full border-gray-300 rounded shadow-sm text-xs" placeholder="Descripcion" /></div>
+                                <div><input v-model="reciboForm.retenciones[key].importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded shadow-sm text-xs" placeholder="Importe" /></div>
                             </div>
                         </div>
 
-                        <div class="text-sm font-semibold text-gray-900 text-right">Total: {{ formatNum(reciboTotal) }}</div>
+                        <div class="flex items-center justify-between">
+                            <label v-if="cuenta.email" class="flex items-center gap-1.5 text-xs text-gray-700">
+                                <input type="checkbox" v-model="reciboForm.send_email" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
+                                Enviar email
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <div class="text-xs font-semibold text-gray-900">Total: {{ formatNum(reciboTotal) }}</div>
+                                <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="reciboForm.processing" @click="submitRecibo">Emitir recibo</PrimaryButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                        <label v-if="cuenta.email" class="flex items-center gap-2 text-sm text-gray-700">
-                            <input type="checkbox" v-model="reciboForm.send_email" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
-                            Enviar recibo por email
-                        </label>
-                        <PrimaryButton :disabled="reciboForm.processing" @click="submitRecibo">Emitir recibo</PrimaryButton>
+                <div v-if="!esSoloCobrador" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white shadow sm:rounded-lg p-3">
+                        <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Ajuste</h3>
+                        <div class="mt-2 space-y-2">
+                            <select v-model="ajusteForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="ajuste_debito">Ajuste debito</option><option value="ajuste_credito">Ajuste credito</option></select>
+                            <div class="grid grid-cols-3 gap-2">
+                                <TextInput v-model="ajusteForm.fecha" type="date" class="block w-full text-xs" />
+                                <select v-model="ajusteForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                                <TextInput v-model="ajusteForm.importe" type="number" min="0.01" step="0.01" class="block w-full text-xs" placeholder="Importe" />
+                            </div>
+                            <InputError :message="ajusteForm.errors.fecha" />
+                            <InputError :message="ajusteForm.errors.moneda" />
+                            <InputError :message="ajusteForm.errors.importe" />
+                            <TextInput v-model="ajusteForm.observacion" type="text" class="block w-full text-xs" placeholder="Observacion" />
+                            <InputError :message="ajusteForm.errors.observacion" />
+                            <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="ajusteForm.processing" @click="submitAjuste">Guardar</PrimaryButton>
+                        </div>
+                    </div>
+
+                    <div class="bg-white shadow sm:rounded-lg p-3">
+                        <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Nota debito / credito</h3>
+                        <div class="mt-2 space-y-2">
+                            <select v-model="notaForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="nota_debito_manual">Nota debito</option><option value="nota_credito_manual">Nota credito</option></select>
+                            <div class="grid grid-cols-3 gap-2">
+                                <TextInput v-model="notaForm.fecha" type="date" class="block w-full text-xs" />
+                                <select v-model="notaForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                                <TextInput v-model="notaForm.importe" type="number" min="0.01" step="0.01" class="block w-full text-xs" placeholder="Importe" />
+                            </div>
+                            <InputError :message="notaForm.errors.fecha" />
+                            <InputError :message="notaForm.errors.moneda" />
+                            <InputError :message="notaForm.errors.importe" />
+                            <TextInput v-model="notaForm.motivo" type="text" class="block w-full text-xs" placeholder="Motivo" />
+                            <InputError :message="notaForm.errors.motivo" />
+                            <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="notaForm.processing" @click="submitNota">Generar</PrimaryButton>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Comprobantes</h3></div>
+                <div class="p-4 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Comprobantes</h3></div>
                 <div class="space-y-3 p-4 sm:hidden">
                     <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
