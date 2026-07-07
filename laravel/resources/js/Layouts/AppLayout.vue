@@ -133,7 +133,7 @@ const switchEmpresa = (empresaId) => {
                                 <div v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador', 'admin'].includes(r))" class="hidden sm:flex sm:items-center">
                                     <Dropdown align="left" width="48">
                                         <template #trigger>
-                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('cobranzas.*') || route().current('admin.cheques.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                             <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('cobranzas.*') || route().current('compras.ingresos.*') || route().current('admin.cheques.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
                                                 Finanzas
                                                 <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -145,6 +145,7 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('cobranzas.pre-recibos.index')">Cobranzas</DropdownLink>
                                             <DropdownLink :href="route('cobranzas.cierre.index')">Cierre</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('cobranzas.resumen-arca')">Resumen ARCA</DropdownLink>
+                                            <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('compras.ingresos.index')">Ingresos varios</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.cheques.index')">Cheques</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.reportes.estadisticas')">Estadisticas</DropdownLink>
                                         </template>
@@ -166,7 +167,6 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('compras.proveedores.comprobantes.index')">Comprobantes</DropdownLink>
                                             <DropdownLink :href="route('compras.proveedores.ctacte.index')">Cuenta Corriente</DropdownLink>
                                             <DropdownLink :href="route('compras.gastos.index')">Gastos</DropdownLink>
-                                            <DropdownLink :href="route('compras.ingresos.index')">Ingresos varios</DropdownLink>
                                             <DropdownLink :href="route('compras.importar.index')">Importar</DropdownLink>
                                         </template>
                                     </Dropdown>
@@ -413,6 +413,13 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.ingresos.index')"
+                            :active="route().current('compras.ingresos.*')"
+                        >
+                            Ingresos varios
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
                             :href="route('admin.cheques.index')"
                             :active="route().current('admin.cheques.*')"
                         >
@@ -449,13 +456,6 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('compras.gastos.*')"
                         >
                             Gastos
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('compras.ingresos.index')"
-                            :active="route().current('compras.ingresos.*')"
-                        >
-                            Ingresos varios
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

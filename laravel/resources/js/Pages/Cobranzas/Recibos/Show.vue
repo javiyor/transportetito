@@ -15,11 +15,16 @@ const props = defineProps({
 const page = usePage();
 const flashSuccess = computed(() => page.props.tt?.flash?.success);
 
+const normalizarRet = (v) => {
+    if (!v || typeof v === 'number' || typeof v === 'string') return { descripcion: '', importe: Number(v || 0) || '' };
+    return { descripcion: v.descripcion || '', importe: v.importe ?? '' };
+};
+
 const retencionesForm = useForm({
     retenciones: {
-        iibb: props.recibo.retenciones?.iibb ?? null,
-        iva: props.recibo.retenciones?.iva ?? null,
-        ganancias: props.recibo.retenciones?.ganancias ?? null,
+        iibb: normalizarRet(props.recibo.retenciones?.iibb),
+        iva: normalizarRet(props.recibo.retenciones?.iva),
+        ganancias: normalizarRet(props.recibo.retenciones?.ganancias),
     },
 });
 
@@ -39,9 +44,14 @@ const formatNum = (n) => {
     return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const importeRet = (v) => {
+    if (!v) return 0;
+    return typeof v === 'object' ? Number(v.importe || 0) : Number(v || 0);
+};
+
 const totalRetenciones = computed(() => {
     const r = props.recibo.retenciones || {};
-    return (Number(r.iibb || 0) + Number(r.iva || 0) + Number(r.ganancias || 0));
+    return importeRet(r.iibb) + importeRet(r.iva) + importeRet(r.ganancias);
 });
 </script>
 
@@ -164,21 +174,19 @@ const totalRetenciones = computed(() => {
 
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Retenciones de impuestos</h3>
-                <form @submit.prevent="guardarRetenciones" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div>
-                        <InputLabel value="IIBB" />
-                        <TextInput v-model="retencionesForm.retenciones.iibb" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                <form @submit.prevent="guardarRetenciones" class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div><InputLabel value="IIBB Descripcion" /><TextInput v-model="retencionesForm.retenciones.iibb.descripcion" type="text" class="mt-1 block w-full" placeholder="Descripcion" /></div>
+                        <div><InputLabel value="IIBB Importe" /><TextInput v-model="retencionesForm.retenciones.iibb.importe" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" /></div>
+                        <div class="flex items-end"><PrimaryButton :disabled="retencionesForm.processing">Guardar retenciones</PrimaryButton></div>
                     </div>
-                    <div>
-                        <InputLabel value="IVA" />
-                        <TextInput v-model="retencionesForm.retenciones.iva" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div><InputLabel value="IVA Descripcion" /><TextInput v-model="retencionesForm.retenciones.iva.descripcion" type="text" class="mt-1 block w-full" placeholder="Descripcion" /></div>
+                        <div><InputLabel value="IVA Importe" /><TextInput v-model="retencionesForm.retenciones.iva.importe" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" /></div>
                     </div>
-                    <div>
-                        <InputLabel value="Ganancias" />
-                        <TextInput v-model="retencionesForm.retenciones.ganancias" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
-                    </div>
-                    <div class="flex items-end">
-                        <PrimaryButton :disabled="retencionesForm.processing">Guardar retenciones</PrimaryButton>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div><InputLabel value="Ganancias Descripcion" /><TextInput v-model="retencionesForm.retenciones.ganancias.descripcion" type="text" class="mt-1 block w-full" placeholder="Descripcion" /></div>
+                        <div><InputLabel value="Ganancias Importe" /><TextInput v-model="retencionesForm.retenciones.ganancias.importe" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" /></div>
                     </div>
                 </form>
                 <InputError class="mt-2" :message="retencionesForm.errors.retenciones" />

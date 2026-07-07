@@ -39,9 +39,15 @@ class CuentaCorrienteReciboStoreController extends Controller
             'items.*.cheque_fecha_vencimiento' => ['nullable', 'date'],
             'items.*.cheque_titular' => ['nullable', 'string', 'max:255'],
             'retenciones' => ['nullable', 'array'],
-            'retenciones.iibb' => ['nullable', 'numeric', 'min:0'],
-            'retenciones.iva' => ['nullable', 'numeric', 'min:0'],
-            'retenciones.ganancias' => ['nullable', 'numeric', 'min:0'],
+            'retenciones.iibb' => ['nullable', 'array'],
+            'retenciones.iibb.descripcion' => ['nullable', 'string', 'max:255'],
+            'retenciones.iibb.importe' => ['nullable', 'numeric', 'min:0'],
+            'retenciones.iva' => ['nullable', 'array'],
+            'retenciones.iva.descripcion' => ['nullable', 'string', 'max:255'],
+            'retenciones.iva.importe' => ['nullable', 'numeric', 'min:0'],
+            'retenciones.ganancias' => ['nullable', 'array'],
+            'retenciones.ganancias.descripcion' => ['nullable', 'string', 'max:255'],
+            'retenciones.ganancias.importe' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $empresa = $cuenta->empresa()->firstOrFail();

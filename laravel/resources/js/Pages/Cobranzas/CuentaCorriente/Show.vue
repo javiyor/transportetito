@@ -29,7 +29,11 @@ const reciboForm = useForm({
     moneda: 'ARS',
     comprobante_ids: [],
     send_email: !!(props.cuenta?.email),
-    retenciones: { iibb: '', iva: '', ganancias: '' },
+    retenciones: {
+        iibb: { descripcion: '', importe: '' },
+        iva: { descripcion: '', importe: '' },
+        ganancias: { descripcion: '', importe: '' },
+    },
     items: [
         { medio: 'efectivo', importe: '', detalle: '', moneda: 'ARS', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
     ],
@@ -129,7 +133,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
                             <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-2 py-1">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
-                                <span class="text-sm text-gray-700">#{{ c.id }} · {{ c.tipo }} · {{ c.moneda }} {{ c.total }}</span>
+                                <span class="text-sm text-gray-700">{{ c.numero || c.tipo }} · {{ c.moneda }} {{ c.total }}</span>
                             </div>
                             <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
                         </fieldset>
@@ -163,18 +167,21 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
 
                         <div class="border border-gray-200 rounded-md p-3 space-y-2">
                             <div class="text-sm font-medium text-gray-700">Retenciones (opcional)</div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="block text-xs text-gray-500">IIBB</label>
-                                    <input v-model="reciboForm.retenciones.iibb" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="0.00" />
+                            <div class="space-y-2">
+                                <div class="grid grid-cols-3 gap-2 items-end">
+                                    <div><label class="block text-xs text-gray-500">IIBB</label></div>
+                                    <div><input v-model="reciboForm.retenciones.iibb.descripcion" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Descripcion" /></div>
+                                    <div><input v-model="reciboForm.retenciones.iibb.importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" /></div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500">IVA</label>
-                                    <input v-model="reciboForm.retenciones.iva" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="0.00" />
+                                <div class="grid grid-cols-3 gap-2 items-end">
+                                    <div><label class="block text-xs text-gray-500">IVA</label></div>
+                                    <div><input v-model="reciboForm.retenciones.iva.descripcion" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Descripcion" /></div>
+                                    <div><input v-model="reciboForm.retenciones.iva.importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" /></div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500">Ganancias</label>
-                                    <input v-model="reciboForm.retenciones.ganancias" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="0.00" />
+                                <div class="grid grid-cols-3 gap-2 items-end">
+                                    <div><label class="block text-xs text-gray-500">Ganancias</label></div>
+                                    <div><input v-model="reciboForm.retenciones.ganancias.descripcion" type="text" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Descripcion" /></div>
+                                    <div><input v-model="reciboForm.retenciones.ganancias.importe" type="number" min="0" step="0.01" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Importe" /></div>
                                 </div>
                             </div>
                         </div>
@@ -196,7 +203,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                     <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">#{{ c.id }}</div>
+                                <div class="text-sm font-semibold text-gray-900">{{ c.numero || '#'+c.id }}</div>
                                 <div class="text-xs text-gray-500">{{ c.tipo }} · {{ formatFecha(c.fecha_emision) }}</div>
                             </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
@@ -206,8 +213,8 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm font-mono text-gray-900">#{{ c.id }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
+                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
+                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm text-gray-900">{{ c.numero || '#'+c.id }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
                     </table>
                 </div>
             </div>

@@ -97,7 +97,7 @@ const chequesFiltrados = computed(() => {
                         <legend class="text-xs text-gray-500 px-1">Comprobantes a pagar (opcional)</legend>
                         <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-2 py-0.5">
                             <input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
-                            <span class="text-sm text-gray-700">#{{ c.id }} · {{ c.tipo }} · {{ c.moneda }} {{ formatNum(c.total) }} · Saldo {{ formatNum(c.saldo_pendiente) }}</span>
+                            <span class="text-sm text-gray-700">{{ c.numero || c.tipo }} · {{ c.moneda }} {{ formatNum(c.total) }} · Saldo {{ formatNum(c.saldo_pendiente) }}</span>
                         </div>
                         <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
                     </fieldset>
