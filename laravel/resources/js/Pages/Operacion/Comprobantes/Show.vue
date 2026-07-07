@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -8,6 +9,7 @@ import { formatFecha } from '@/Utils/format.js';
 const props = defineProps({
     comprobante: Object,
     auditLogs: Array,
+    cuentas: Array,
     creditSummary: Object,
     motivoOptions: Array,
 });
@@ -15,6 +17,12 @@ const props = defineProps({
 const notaCreditoForm = useForm({ motivo_tipo: 'devolucion_parcial', motivo_detalle: '', importe: '' });
 const notaDebitoForm = useForm({ motivo: '', importe: '' });
 const autorizarForm = useForm({ tipo: '' });
+const cuentaForm = useForm({ facturar_cuenta_id: '', motivo: '' });
+const editandoCliente = ref(false);
+
+const submitCuenta = () => {
+    cuentaForm.put(route('operacion.comprobantes.update', props.comprobante.id), { preserveScroll: true, onSuccess: () => { editandoCliente.value = false; } });
+};
 
 const imprimir = () => window.open(route('operacion.comprobantes.print', props.comprobante.id), '_blank');
 const anular = () => {
@@ -80,7 +88,19 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Facturar a</div>
-                    <div class="mt-1 text-sm text-gray-900">{{ comprobante.facturar_cuenta?.tercero?.razon_social || '-' }}</div>
+                    <div class="mt-1 text-sm text-gray-900">{{ comprobante.facturar_cuenta?.tercero?.razon_social || '-' }}
+                        <button v-if="!editandoCliente" class="ml-2 text-xs text-indigo-600 hover:text-indigo-800" @click="editandoCliente = true; cuentaForm.facturar_cuenta_id = String(comprobante.facturar_cuenta_id || '')">[Cambiar]</button>
+                    </div>
+                    <div v-if="editandoCliente" class="mt-2 space-y-2">
+                        <select v-model="cuentaForm.facturar_cuenta_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                            <option value="">Seleccionar cliente...</option>
+                            <option v-for="c in cuentas" :key="c.id" :value="String(c.id)">{{ c.tercero?.razon_social || '?' }} ({{ c.tercero?.cuit || '?' }})</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <PrimaryButton class="!text-xs" :disabled="cuentaForm.processing || !cuentaForm.facturar_cuenta_id" @click="submitCuenta">Guardar</PrimaryButton>
+                            <SecondaryButton class="!text-xs" @click="editandoCliente = false">Cancelar</SecondaryButton>
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Entrega</div>

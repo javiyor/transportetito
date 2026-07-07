@@ -63,6 +63,12 @@ const totalRetenciones = computed(() => {
     const r = props.recibo.retenciones || {};
     return importeRet(r.iibb) + importeRet(r.iva) + importeRet(r.ganancias);
 });
+
+const anularForm = useForm({ motivo: '' });
+const submitAnular = () => {
+    if (!confirm('¿Estas seguro de anular este recibo? Se revertiran los movimientos de cuenta corriente.')) return;
+    anularForm.post(route('cobranzas.recibos.anular', props.recibo.id), { preserveScroll: true });
+};
 </script>
 
 <template>
@@ -73,11 +79,18 @@ const totalRetenciones = computed(() => {
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Recibo #{{ recibo.id }}</h2>
-                    <div class="mt-1 text-sm text-gray-600">{{ formatFecha(recibo.fecha) }} · Estado: {{ recibo.estado }}</div>
+                    <div class="mt-1 text-sm text-gray-600">{{ formatFecha(recibo.fecha) }}
+                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="recibo.estado === 'anulada' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'">{{ recibo.estado }}</span>
+                    </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <a :href="route('cobranzas.recibos.print', recibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
                     <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <template v-if="recibo.estado !== 'anulada'">
+                        <TextInput v-model="anularForm.motivo" type="text" class="!w-48 text-xs" placeholder="Motivo de anulacion" />
+                        <PrimaryButton class="!bg-red-600 hover:!bg-red-700 !text-xs" :disabled="anularForm.processing || !anularForm.motivo" @click="submitAnular">Anular recibo</PrimaryButton>
+                        <InputError :message="anularForm.errors.motivo" />
+                    </template>
                 </div>
             </div>
         </template>

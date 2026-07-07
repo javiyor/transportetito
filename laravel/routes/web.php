@@ -34,6 +34,8 @@ use App\Http\Controllers\Operacion\Comprobantes\ComprobanteAnularController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobantePrintController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaCreditoStoreController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaDebitoStoreController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteUpdateController;
+use App\Http\Controllers\Cobranzas\ReciboAnularController;
 use App\Http\Controllers\Operacion\Manifiestos\ManifiestoBackfillCuentasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Operacion\Repartos\FacturasListController;
@@ -223,6 +225,7 @@ Route::middleware([
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/backfill-cuentas', ManifiestoBackfillCuentasController::class)->name('manifiestos.backfill-cuentas');
 
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/autorizar-arca', ComprobanteAutorizarArcaController::class)->name('comprobantes.autorizar-arca');
+        Route::middleware(['role:facturacion|admin'])->put('/comprobantes/{comprobante}', ComprobanteUpdateController::class)->name('comprobantes.update');
 
         Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');
         Route::post('/import/carga', [ImportCargaController::class, 'store'])->name('import.carga.store');
@@ -304,6 +307,7 @@ Route::middleware([
         Route::get('/recibos/{recibo}/print', ReciboPrintController::class)->name('recibos.print');
         Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
         Route::put('/recibos/{recibo}/retenciones', ReciboRetencionesUpdateController::class)->name('recibos.retenciones.update');
+        Route::post('/recibos/{recibo}/anular', ReciboAnularController::class)->name('recibos.anular');
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
         Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');
         Route::get('/cuentas-corrientes/listado-print', CuentaCorrienteListadoPrintController::class)->name('ctacte.listado-print');

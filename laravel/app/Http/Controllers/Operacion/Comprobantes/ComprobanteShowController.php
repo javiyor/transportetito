@@ -55,9 +55,21 @@ class ComprobanteShowController extends Controller
             ->latest('id')
             ->get();
 
+        $cuentas = TerceroCuenta::query()
+            ->where('empresa_id', $currentEmpresaId)
+            ->with('tercero:id,cuit,razon_social')
+            ->orderBy(
+                TerceroCuenta::query()
+                    ->select('razon_social')
+                    ->from('terceros')
+                    ->whereColumn('terceros.id', 'tercero_cuentas.tercero_id')
+            )
+            ->get(['id', 'tercero_id']);
+
         return Inertia::render('Operacion/Comprobantes/Show', [
             'comprobante' => $comprobante,
             'auditLogs' => $auditLogs,
+            'cuentas' => $cuentas,
             'creditSummary' => [
                 'total_origen' => round(abs((float) $comprobante->total), 2),
                 'credito_emitido' => $creditoEmitido,
