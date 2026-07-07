@@ -15,12 +15,12 @@ class ComprobantePrintController extends Controller
         }
 
         $comprobante->load([
-            'empresa:id,razon_social,cuit,condicion_iva,telefono,email,whatsapp,sitio_web,arca_pv_default',
+            'empresa:id,razon_social,cuit,condicion_iva,telefono,email,whatsapp,sitio_web,arca_pv_default,instagram_url,facebook_url',
             'deposito:id,nombre',
-            'entregaCuenta.tercero:id,cuit,razon_social',
-            'facturarCuenta.tercero:id,cuit,razon_social',
-            'pedidos.remitente:id,razon_social,cuit',
-            'pedidos.destinatario:id,razon_social,cuit',
+            'entregaCuenta.tercero:id,cuit,razon_social,domicilio_fiscal',
+            'facturarCuenta.tercero:id,cuit,razon_social,domicilio_fiscal',
+            'pedidos.remitente:id,razon_social,cuit,domicilio_fiscal',
+            'pedidos.destinatario:id,razon_social,cuit,domicilio_fiscal',
             'comprobanteOrigen:id,tipo,arca_tipo_cbte,arca_numero,arca_cae,fecha_emision,moneda,total',
         ]);
 
