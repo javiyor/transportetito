@@ -64,6 +64,7 @@ use App\Http\Controllers\Compras\IngresoOperativoIndexController;
 use App\Http\Controllers\Compras\IngresoOperativoExportController;
 use App\Http\Controllers\Compras\ProveedorComprobanteExportController;
 use App\Http\Controllers\Compras\ProveedorComprobantePdfImportController;
+use App\Http\Controllers\Compras\ProveedorComprobanteDestroyController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -261,6 +262,7 @@ Route::middleware([
         Route::get('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteShowController::class)->name('proveedores.comprobantes.show');
         Route::get('/proveedores/comprobantes/{comprobante}/print', ProveedorComprobantePrintController::class)->name('proveedores.comprobantes.print');
         Route::put('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteUpdateController::class)->name('proveedores.comprobantes.update');
+        Route::delete('/proveedores/comprobantes/{comprobante}', ProveedorComprobanteDestroyController::class)->name('proveedores.comprobantes.destroy');
         Route::get('/proveedores/tipos-arca', [ProveedorComprobanteIndexController::class, 'tiposArca'])->name('proveedores.tipos-arca');
         Route::get('/proveedores/lookup-cuit', [ProveedorComprobanteIndexController::class, 'lookupByCuit'])->name('proveedores.lookup-cuit');
         Route::post('/proveedores', [ProveedorComprobanteIndexController::class, 'storeProveedor'])->name('proveedores.store');

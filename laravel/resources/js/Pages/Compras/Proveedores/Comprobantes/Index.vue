@@ -310,6 +310,23 @@ const submitEditComprobante = () => {
         onSuccess: () => { editComprobanteDialog.value = false; },
     });
 };
+
+const confirmDeleteId = ref(null);
+const deleteForm = useForm({ password: '' });
+
+const openDeleteConfirm = (id) => {
+    confirmDeleteId.value = id;
+    deleteForm.password = '';
+    deleteForm.clearErrors();
+};
+
+const submitDelete = () => {
+    deleteForm.delete(route('compras.proveedores.comprobantes.destroy', confirmDeleteId.value), {
+        preserveScroll: true,
+        onSuccess: () => { confirmDeleteId.value = null; },
+        onError: () => { /* keep modal open */ },
+    });
+};
 </script>
 
 <template>
@@ -467,13 +484,14 @@ const submitEditComprobante = () => {
                         <div class="mt-2 flex gap-3">
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link>
                             <button type="button" class="text-sm text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button>
+                            <button type="button" class="text-sm text-red-600 hover:text-red-800" @click.prevent="openDeleteConfirm(c.id)">Eliminar</button>
                         </div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tributos</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ tipoLabel(c.tipo) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ parsePv(c.numero) }}</td><td class="px-4 py-2 text-sm text-gray-700 font-mono">{{ parseNro(c.numero) }}</td><td class="px-4 py-2 text-sm text-gray-700 text-right">$ {{ formatNum(c.subtotal) }}</td><td class="px-4 py-2 text-sm text-green-700 text-right">$ {{ formatNum(c.iva_total) }}</td><td class="px-4 py-2 text-sm text-gray-700 text-right">$ {{ formatNum(c.tributos_total) }}</td><td class="px-4 py-2 text-sm text-gray-900 font-semibold text-right">$ {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-2 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button></td></tr></tbody>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes.data" :key="c.id"><td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap">{{ String(c.fecha_emision || '').slice(0,10) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ c.cuenta?.tercero?.razon_social || '-' }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ tipoLabel(c.tipo) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ parsePv(c.numero) }}</td><td class="px-4 py-2 text-sm text-gray-700 font-mono">{{ parseNro(c.numero) }}</td><td class="px-4 py-2 text-sm text-gray-700 text-right">$ {{ formatNum(c.subtotal) }}</td><td class="px-4 py-2 text-sm text-green-700 text-right">$ {{ formatNum(c.iva_total) }}</td><td class="px-4 py-2 text-sm text-gray-700 text-right">$ {{ formatNum(c.tributos_total) }}</td><td class="px-4 py-2 text-sm text-gray-900 font-semibold text-right">$ {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><button type="button" class="ms-2 text-gray-700 hover:text-gray-900" @click.prevent="openEditComprobante(c)">Editar</button><button type="button" class="ms-2 text-red-600 hover:text-red-800" @click.prevent="openDeleteConfirm(c.id)">Eliminar</button></td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -543,6 +561,20 @@ const submitEditComprobante = () => {
                 </template>
             </DialogModal>
             <PdfImportDialog v-model:show="pdfImportDialog" @imported="onPdfImported" />
+
+            <DialogModal :show="!!confirmDeleteId" @close="confirmDeleteId = null">
+                <template #title>Eliminar comprobante</template>
+                <template #content>
+                    <p class="text-sm text-gray-700 mb-4">Ingrese su clave de administrador para confirmar la eliminacion.</p>
+                    <InputLabel value="Clave" />
+                    <TextInput v-model="deleteForm.password" type="password" class="mt-1 block w-full text-sm" />
+                    <InputError class="mt-2" :message="deleteForm.errors.password" />
+                </template>
+                <template #footer>
+                    <SecondaryButton class="!text-xs !px-3 !py-1.5" @click="confirmDeleteId = null">Cancelar</SecondaryButton>
+                    <button type="button" class="ms-3 inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" :disabled="deleteForm.processing" @click="submitDelete">Eliminar</button>
+                </template>
+            </DialogModal>
         </div>
     </AppLayout>
 </template>
