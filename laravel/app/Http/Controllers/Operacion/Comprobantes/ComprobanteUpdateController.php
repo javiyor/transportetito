@@ -17,6 +17,10 @@ class ComprobanteUpdateController extends Controller
     {
         abort_unless((int) $comprobante->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
 
+        if ($comprobante->arca_resultado !== 'importado') {
+            return back()->with('error', 'Solo se puede editar el cliente de comprobantes importados, no los emitidos por el sistema.');
+        }
+
         $data = $request->validate([
             'facturar_cuenta_id' => ['nullable', 'integer', 'exists:tercero_cuentas,id'],
         ]);

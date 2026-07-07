@@ -89,7 +89,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Facturar a</div>
                     <div class="mt-1 text-sm text-gray-900">{{ comprobante.facturar_cuenta?.tercero?.razon_social || '-' }}
-                        <button v-if="!editandoCliente" class="ml-2 text-xs text-indigo-600 hover:text-indigo-800" @click="editandoCliente = true; cuentaForm.facturar_cuenta_id = String(comprobante.facturar_cuenta_id || '')">[Cambiar]</button>
+                        <button v-if="!editandoCliente && comprobante.arca_resultado === 'importado'" class="ml-2 text-xs text-indigo-600 hover:text-indigo-800" @click="editandoCliente = true; cuentaForm.facturar_cuenta_id = String(comprobante.facturar_cuenta_id || '')">[Cambiar]</button>
                     </div>
                     <div v-if="editandoCliente" class="mt-2 space-y-2">
                         <select v-model="cuentaForm.facturar_cuenta_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
