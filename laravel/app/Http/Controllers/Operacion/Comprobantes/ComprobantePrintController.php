@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Operacion\Comprobantes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
+use App\Services\Arca\ArcaQrService;
 use Illuminate\Http\Request;
 
 class ComprobantePrintController extends Controller
 {
-    public function __invoke(Request $request, Comprobante $comprobante)
+    public function __invoke(Request $request, Comprobante $comprobante, ArcaQrService $qrService)
     {
         if (! $request->hasValidSignature()) {
             abort_unless((int) $comprobante->empresa_id === (int) ($request->user()?->current_empresa_id ?: 0), 404);
@@ -26,6 +27,7 @@ class ComprobantePrintController extends Controller
 
         return response()->view('comprobantes.print', [
             'comprobante' => $comprobante,
+            'qrDataUri' => $qrService->generar($comprobante),
         ]);
     }
 }

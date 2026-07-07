@@ -533,12 +533,24 @@
                 @endif
             </div>
 
-            {{-- CENTER: Document type + letter --}}
+            {{-- CENTER: Document type + letter + ARCA code --}}
+            @php
+                $codigoArca = $comprobante->arca_tipo_cbte
+                    ? str_pad((string) $comprobante->arca_tipo_cbte, 2, '0', STR_PAD_LEFT)
+                    : null;
+            @endphp
             <div class="header-center">
                 <div style="font-size:8pt;font-weight:bold;letter-spacing:3pt;">ORIGINAL</div>
                 <div class="doc-type">{{ $tipoLabel }}</div>
-                @if($letter)
-                    <div class="doc-letter">{{ $letter }}</div>
+                @if($letter || $codigoArca)
+                    <div style="margin:3pt 0;">
+                        @if($letter)<span class="doc-letter">{{ $letter }}</span>@endif
+                        @if($codigoArca)
+                            <span style="font-size:10pt;font-weight:bold;margin-left:{{ $letter ? '6pt' : '0' }};">
+                                - Cód. {{ $codigoArca }}
+                            </span>
+                        @endif
+                    </div>
                 @endif
                 <div class="fiscal-legend">COMPROBANTE FISCAL</div>
             </div>
@@ -733,11 +745,15 @@
         <div class="footer-row">
             {{-- LEFT: QR + CAE --}}
             <div class="footer-left">
-                <div class="qr-box">
-                    <div class="qr-icon">◈◈◈</div>
-                    <div style="font-size:5.5pt;margin-top:2pt;">QR</div>
-                    <div style="font-size:5pt;">AFIP</div>
-                </div>
+                @if($qrDataUri)
+                    <img src="{{ $qrDataUri }}" alt="QR AFIP" style="width:70pt;height:70pt;border:1px solid #000;flex-shrink:0;">
+                @else
+                    <div class="qr-box">
+                        <div class="qr-icon">◈◈◈</div>
+                        <div style="font-size:5.5pt;margin-top:2pt;">QR</div>
+                        <div style="font-size:5pt;">AFIP</div>
+                    </div>
+                @endif
                 <div class="cae-data">
                     @if($comprobante->arca_cae)
                         <strong>CAE N°:</strong> {{ $comprobante->arca_cae }}<br>
