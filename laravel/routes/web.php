@@ -92,6 +92,7 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 
 use App\Http\Controllers\Finanzas\ResumenArcaController;
+use App\Http\Controllers\Admin\ArcaCertificateController;
 use App\Http\Controllers\Facturacion\ManifiestoIndexController;
 use App\Http\Controllers\Facturacion\ManifiestoShowController;
 use App\Http\Controllers\Facturacion\ImportarFacturasIndexController;
@@ -188,6 +189,12 @@ Route::middleware([
         Route::put('/cuentas-contables/{cuentaContable}', [CuentaContableAdminController::class, 'update'])->name('cuentas-contables.update');
 
         Route::get('/arca-diagnostic', [EmpresaAdminController::class, 'arcaDiagnostic'])->name('arca-diagnostic');
+        Route::get('/arca', [ArcaCertificateController::class, 'index'])->name('arca.index');
+        Route::post('/arca/generate-key', [ArcaCertificateController::class, 'generate'])->name('arca.generate-key');
+        Route::post('/arca/upload-cert', [ArcaCertificateController::class, 'upload'])->name('arca.upload-cert');
+        Route::get('/arca/download-csr', [ArcaCertificateController::class, 'downloadCsr'])->name('arca.download-csr');
+        Route::get('/arca/download-key', [ArcaCertificateController::class, 'downloadKey'])->name('arca.download-key');
+        Route::post('/arca/set-env', [ArcaCertificateController::class, 'setEnv'])->name('arca.set-env');
         Route::get('/reportes/seguro', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'index'])->name('reportes.seguro');
         Route::post('/reportes/seguro/actualizar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'update'])->name('reportes.seguro.update');
         Route::post('/reportes/seguro/eliminar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'destroy'])->name('reportes.seguro.destroy');
