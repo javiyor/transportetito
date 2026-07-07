@@ -65,6 +65,8 @@ use App\Http\Controllers\Compras\IngresoOperativoExportController;
 use App\Http\Controllers\Compras\ProveedorComprobanteExportController;
 use App\Http\Controllers\Compras\ProveedorComprobantePdfImportController;
 use App\Http\Controllers\Compras\ProveedorComprobanteDestroyController;
+use App\Http\Controllers\Compras\ProveedorCuentaCorrienteAjusteStoreController;
+use App\Http\Controllers\Compras\ProveedorCuentaCorrienteNotaStoreController;
 
 use App\Http\Controllers\Cobranzas\PreReciboIndexController;
 use App\Http\Controllers\Cobranzas\PreReciboShowController;
@@ -271,6 +273,8 @@ Route::middleware([
         Route::get('/proveedores/cuentas-corrientes/export', ProveedorCuentaCorrienteExportController::class)->name('proveedores.ctacte.export');
         Route::get('/proveedores/cuentas-corrientes/{cuenta}', ProveedorCuentaCorrienteShowController::class)->name('proveedores.ctacte.show');
         Route::post('/proveedores/cuentas-corrientes/{cuenta}/ordenes-pago', ProveedorOrdenPagoStoreController::class)->name('proveedores.ctacte.ordenes-pago.store');
+        Route::post('/proveedores/cuentas-corrientes/{cuenta}/ajustes', ProveedorCuentaCorrienteAjusteStoreController::class)->name('proveedores.ctacte.ajustes.store');
+        Route::post('/proveedores/cuentas-corrientes/{cuenta}/notas', ProveedorCuentaCorrienteNotaStoreController::class)->name('proveedores.ctacte.notas.store');
         Route::get('/proveedores/ordenes-pago/{ordenPago}/print', OrdenPagoPrintController::class)->name('proveedores.ordenes-pago.print');
         Route::get('/combustibles/pagos-a-cuenta', [PagoCuentaCombustibleIndexController::class, 'index'])->name('combustibles.index');
         Route::post('/combustibles/pagos-a-cuenta', [PagoCuentaCombustibleIndexController::class, 'store'])->name('combustibles.store');

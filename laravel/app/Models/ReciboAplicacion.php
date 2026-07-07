@@ -29,4 +29,9 @@ class ReciboAplicacion extends Model
     {
         return $this->belongsTo(Recibo::class, 'recibo_id');
     }
+
+    public function comprobante(): BelongsTo
+    {
+        return $this->belongsTo(Comprobante::class, 'comprobante_id');
+    }
 }

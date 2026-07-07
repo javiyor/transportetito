@@ -5,6 +5,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import InputError from '@/Components/InputError.vue';
 import { formatNum } from '@/Utils/format.js';
 
 const BANCOS = [
@@ -51,7 +53,17 @@ const esChequePropio = (medio) => medio === 'cheque_propio';
 
 const submit = () => form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), { preserveScroll: true });
 
-const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
+const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
+const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
+
+const submitAjuste = () => ajusteForm.post(route('compras.proveedores.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
+const submitNota = () => notaForm.post(route('compras.proveedores.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
+
+const formatFecha = (value) => {
+    if (!value) return '-';
+    const d = new Date(String(value).slice(0, 10));
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
 
 const chequesFiltrados = computed(() => {
     const usadoIds = form.items
@@ -136,6 +148,44 @@ const chequesFiltrados = computed(() => {
                     <div class="flex items-center justify-between">
                         <div class="text-sm font-semibold text-gray-900">Total: {{ formatNum(totalPago) }}</div>
                         <PrimaryButton :disabled="form.processing" @click="submit">Guardar orden de pago</PrimaryButton>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="bg-white shadow sm:rounded-lg p-3">
+                    <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Ajuste</h3>
+                    <div class="mt-2 space-y-2">
+                        <select v-model="ajusteForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="ajuste_debito">Ajuste debito</option><option value="ajuste_credito">Ajuste credito</option></select>
+                        <div class="grid grid-cols-3 gap-2">
+                            <TextInput v-model="ajusteForm.fecha" type="date" class="block w-full text-xs" />
+                            <select v-model="ajusteForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                            <TextInput v-model="ajusteForm.importe" type="number" min="0.01" step="0.01" class="block w-full text-xs" placeholder="Importe" />
+                        </div>
+                        <InputError :message="ajusteForm.errors.fecha" />
+                        <InputError :message="ajusteForm.errors.moneda" />
+                        <InputError :message="ajusteForm.errors.importe" />
+                        <TextInput v-model="ajusteForm.observacion" type="text" class="block w-full text-xs" placeholder="Observacion" />
+                        <InputError :message="ajusteForm.errors.observacion" />
+                        <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="ajusteForm.processing" @click="submitAjuste">Guardar</PrimaryButton>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow sm:rounded-lg p-3">
+                    <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Nota debito / credito</h3>
+                    <div class="mt-2 space-y-2">
+                        <select v-model="notaForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="nota_debito_manual">Nota debito</option><option value="nota_credito_manual">Nota credito</option></select>
+                        <div class="grid grid-cols-3 gap-2">
+                            <TextInput v-model="notaForm.fecha" type="date" class="block w-full text-xs" />
+                            <select v-model="notaForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select>
+                            <TextInput v-model="notaForm.importe" type="number" min="0.01" step="0.01" class="block w-full text-xs" placeholder="Importe" />
+                        </div>
+                        <InputError :message="notaForm.errors.fecha" />
+                        <InputError :message="notaForm.errors.moneda" />
+                        <InputError :message="notaForm.errors.importe" />
+                        <TextInput v-model="notaForm.motivo" type="text" class="block w-full text-xs" placeholder="Motivo" />
+                        <InputError :message="notaForm.errors.motivo" />
+                        <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="notaForm.processing" @click="submitNota">Generar</PrimaryButton>
                     </div>
                 </div>
             </div>

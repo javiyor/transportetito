@@ -181,6 +181,6 @@ class CuentaCorrienteReciboStoreController extends Controller
             }
         }
 
-        return back()->with('success', 'Recibo emitido.');
+        return redirect()->route('cobranzas.recibos.show', $recibo->id)->with('success', 'Recibo emitido.');
     }
 }

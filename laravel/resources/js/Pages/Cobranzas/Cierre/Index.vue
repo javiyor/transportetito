@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { formatNum } from '@/Utils/format.js';
 
 const props = defineProps({
     desde: String,
@@ -77,7 +78,7 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                     <div v-if="Object.keys(ingresosPorMedio).length" class="space-y-2">
                         <div v-for="(total, medio) in ingresosPorMedio" :key="medio" class="flex items-center justify-between text-sm">
                             <span class="text-gray-700 capitalize">{{ medio }}</span>
-                            <span class="font-mono font-medium text-gray-900">${{ Number(total).toFixed(2) }}</span>
+                            <span class="font-mono font-medium text-gray-900">${{ formatNum(total) }}</span>
                         </div>
                         <div class="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-bold">
                             <span>Total ingresos</span>
@@ -91,7 +92,7 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                     <div v-if="Object.keys(preIngresosPorMedio).length" class="space-y-2">
                         <div v-for="(total, medio) in preIngresosPorMedio" :key="medio" class="flex items-center justify-between text-sm">
                             <span class="text-gray-700 capitalize">{{ medio }}</span>
-                            <span class="font-mono font-medium text-gray-900">${{ Number(total).toFixed(2) }}</span>
+                            <span class="font-mono font-medium text-gray-900">${{ formatNum(total) }}</span>
                         </div>
                         <div class="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-bold">
                             <span>Total pre-ingresos</span>
@@ -107,7 +108,7 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                     <div v-if="Object.keys(egresosPorMedio).length" class="space-y-2">
                         <div v-for="(total, medio) in egresosPorMedio" :key="medio" class="flex items-center justify-between text-sm">
                             <span class="text-gray-700 capitalize">{{ medio || 'Sin medio' }}</span>
-                            <span class="font-mono font-medium text-gray-900">${{ Number(total).toFixed(2) }}</span>
+                            <span class="font-mono font-medium text-gray-900">${{ formatNum(total) }}</span>
                         </div>
                         <div class="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-bold">
                             <span>Total egresos</span>

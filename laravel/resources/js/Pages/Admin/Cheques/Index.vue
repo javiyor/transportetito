@@ -95,7 +95,11 @@ const tipoLabel = (t) => {
     return map[t] || t;
 };
 
-const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
+const formatFecha = (v) => {
+    if (!v) return '-';
+    const d = new Date(String(v).slice(0, 10));
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
 </script>
 
 <template>

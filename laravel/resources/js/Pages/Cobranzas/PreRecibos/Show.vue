@@ -21,7 +21,8 @@ const confirmar = () => {
 
 const formatFecha = (value) => {
     if (!value) return '-';
-    return String(value).slice(0, 10);
+    const d = new Date(String(value).slice(0, 10));
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 };
 </script>
 

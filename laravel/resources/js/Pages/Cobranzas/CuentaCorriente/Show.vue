@@ -59,14 +59,27 @@ const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
 const submitRecibo = () => reciboForm.post(route('cobranzas.ctacte.recibos.store', props.cuenta.id), { preserveScroll: true });
 
-const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
+const tipoLabel = (tipo) => {
+    const map = {
+        factura_interna: 'Factura',
+        nota_debito_manual: 'Nota debito',
+        nota_credito_manual: 'Nota credito',
+        ajuste_debito: 'Ajuste debito',
+        ajuste_credito: 'Ajuste credito',
+    };
+    return map[tipo] || tipo;
+};
+const formatFecha = (value) => {
+    if (!value) return '-';
+    const d = new Date(String(value).slice(0, 10));
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
 const comprobanteNumero = (c) => {
     if (c.arca_punto_venta && c.arca_numero) {
         return String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8, '0');
     }
-    if (c.numero) return c.numero;
     if (c.numero_interno) return '#' + c.numero_interno;
-    return c.tipo;
+    return '-';
 };
 const formatNum = (n) => {
     const val = Number(n || 0);
@@ -212,7 +225,7 @@ const formatNum = (n) => {
                     <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">{{ c.tipo }} {{ comprobanteNumero(c) }}</div>
+                                <div class="text-sm font-semibold text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</div>
                                 <div class="text-xs text-gray-500">{{ formatFecha(c.fecha_emision) }}</div>
                             </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
@@ -222,8 +235,8 @@ const formatNum = (n) => {
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm text-gray-900">{{ c.tipo }} {{ comprobanteNumero(c) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
+                        <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
+                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-4 py-2 text-sm text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -234,15 +247,19 @@ const formatNum = (n) => {
                     <div v-for="m in movimientos" :key="m.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">{{ m.tipo }}</div>
+                                <div class="text-sm font-semibold text-gray-900">{{ tipoLabel(m.tipo) }}</div>
                                 <div class="text-xs text-gray-500">{{ formatFecha(m.fecha) }}</div>
                             </div>
                             <div class="text-sm font-medium text-gray-900">{{ formatNum(m.importe_signed) }}</div>
                         </div>
-                        <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
+                        <div class="mt-2 grid grid-cols-1 gap-2 text-sm">
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Moneda</div>
                                 <div class="font-medium text-gray-900">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Comprobante</div>
+                                <div class="font-medium text-gray-900"><template v-if="m.comprobante_tipo && m.comprobante_numero">{{ tipoLabel(m.comprobante_tipo) }} {{ m.comprobante_numero }}</template><span v-else class="text-gray-400">-</span></div>
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Observacion</div>
@@ -261,8 +278,8 @@ const formatNum = (n) => {
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ref.</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></td><td class="px-6 py-4 text-sm text-gray-700">{{ formatNum(m.importe_signed) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-6 py-4 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><Link v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo</Link><span v-else>-</span></td></tr></tbody>
+                        <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ref.</th></tr></thead>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ tipoLabel(m.tipo) }}</td><td class="px-4 py-2 text-sm text-gray-700"><template v-if="m.comprobante_tipo && m.comprobante_numero">{{ tipoLabel(m.comprobante_tipo) }} {{ m.comprobante_numero }}</template><span v-else class="text-gray-400">-</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ formatNum(m.importe_signed) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><Link v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo</Link><span v-else>-</span></td></tr></tbody>
                     </table>
                 </div>
             </div>

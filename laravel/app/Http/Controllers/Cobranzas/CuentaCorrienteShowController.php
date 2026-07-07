@@ -25,12 +25,31 @@ class CuentaCorrienteShowController extends Controller
             ->where('tercero_cuenta_id', $cuenta->id)
             ->orderByDesc('fecha')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->map(function (CtaCteMovimiento $m) {
+                if ($m->referencia_tipo === 'comprobante' && $m->referencia_id) {
+                    $comp = Comprobante::query()->find($m->referencia_id, ['id', 'tipo', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
+                    if ($comp) {
+                        $numero = $comp->arca_punto_venta && $comp->arca_numero
+                            ? ((int) $comp->arca_punto_venta) . '-' . str_pad((string) $comp->arca_numero, 8, '0', STR_PAD_LEFT)
+                            : ($comp->numero_interno ? '#' . $comp->numero_interno : '-');
+                        $m->setAttribute('comprobante_numero', $numero);
+                        $m->setAttribute('comprobante_tipo', $comp->tipo);
+                    } else {
+                        $m->setAttribute('comprobante_numero', null);
+                        $m->setAttribute('comprobante_tipo', null);
+                    }
+                } else {
+                    $m->setAttribute('comprobante_numero', null);
+                    $m->setAttribute('comprobante_tipo', null);
+                }
+                return $m;
+            });
 
         $comprobantes = Comprobante::query()
             ->where('empresa_id', $empresaId)
             ->where('facturar_cuenta_id', $cuenta->id)
-            ->orderByDesc('fecha_emision')
+            ->orderByDesc('numero_interno')
             ->orderByDesc('id')
             ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
 
