@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             ProvinciaSeeder::class,
             LocalidadSeeder::class,
             BancoSeeder::class,
+            CategoriasPredeterminadasSeeder::class,
         ]);
     }
 }

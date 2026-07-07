@@ -37,6 +37,31 @@ const applyFilters = () => {
 };
 
 const expandedRows = ref({});
+const selectedIds = ref(new Set());
+
+const toggleSelect = (id) => {
+    const s = new Set(selectedIds.value);
+    if (s.has(id)) {
+        s.delete(id);
+    } else {
+        s.add(id);
+    }
+    selectedIds.value = s;
+};
+
+const selectAll = () => {
+    if (selectedIds.value.size === props.cuentas.length) {
+        selectedIds.value = new Set();
+    } else {
+        selectedIds.value = new Set(props.cuentas.map((c) => c.id));
+    }
+};
+
+const printSelected = () => {
+    const ids = Array.from(selectedIds.value);
+    if (!ids.length) return;
+    window.open(route('cobranzas.ctacte.print-selected', { ids: ids.join(',') }), '_blank');
+};
 
 const toggleExpand = (id) => {
     expandedRows.value[id] = !expandedRows.value[id];
@@ -55,6 +80,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                 <div class="flex items-center gap-3 flex-wrap">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos', desde: form.desde || null, hasta: form.hasta || null, zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null })">Exportar CSV</a>
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.listado-print', { zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null })" target="_blank">Imprimir listado</a>
+                    <button type="button" class="text-sm text-indigo-600 hover:text-indigo-800" :disabled="!selectedIds.size" @click="printSelected">Imprimir seleccionados ({{ selectedIds.size }})</button>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.pre-recibos.index')">Pre-recibos</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.index')">Recibos</Link>
                 </div>
@@ -125,6 +151,9 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                 <div class="space-y-4 p-4 sm:hidden">
                     <div v-for="c in cuentas" :key="c.id" class="rounded-lg border p-4" :class="c.resaltar ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'">
                         <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" :checked="selectedIds.has(c.id)" @change="toggleSelect(c.id)" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                            </div>
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ c.razon_social || '-' }}</div>
                                 <div class="text-xs text-gray-500">CUIT {{ c.cuit || '-' }} · Nro {{ c.numero_cliente || '-' }}</div>
@@ -165,9 +194,12 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
-                    <table class="min-w-[1400px] w-full divide-y divide-gray-200">
+                    <table class="min-w-[1450px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <input type="checkbox" :checked="selectedIds.size === cuentas.length && cuentas.length > 0" :indeterminate="selectedIds.size > 0 && selectedIds.size < cuentas.length" @change="selectAll" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zona</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
@@ -182,6 +214,9 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                         <tbody class="bg-white divide-y divide-gray-200">
                             <template v-for="c in cuentas" :key="c.id">
                                 <tr :class="c.resaltar ? 'bg-red-50' : ''">
+                                    <td class="px-4 py-4 text-sm text-gray-700">
+                                        <input type="checkbox" :checked="selectedIds.has(c.id)" @change="toggleSelect(c.id)" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                    </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="font-medium text-gray-900">{{ c.razon_social || '-' }}</div>
                                         <div class="text-xs text-gray-500">CUIT {{ c.cuit || '-' }} · Nro {{ c.numero_cliente || '-' }}</div>
@@ -204,7 +239,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                     </td>
                                 </tr>
                                 <tr v-if="expandedRows[c.id] && c.docs_pendientes?.length" :class="c.resaltar ? 'bg-red-50/50' : 'bg-gray-50'">
-                                    <td colspan="9" class="px-6 py-3">
+                                    <td colspan="10" class="px-6 py-3">
                                         <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Documentos pendientes</div>
                                         <table class="w-full text-xs">
                                             <thead>
@@ -232,7 +267,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                 </tr>
                             </template>
                             <tr v-if="!cuentas.length">
-                                <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td colspan="10" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>

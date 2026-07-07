@@ -23,6 +23,9 @@ use App\Http\Controllers\Admin\CotizacionAdminController;
 use App\Http\Controllers\Admin\ChequeController;
 use App\Http\Controllers\Admin\VehiculoAdminController;
 use App\Http\Controllers\Admin\CuentaContableAdminController;
+use App\Http\Controllers\Admin\EmpleadoAdminController;
+use App\Http\Controllers\Finanzas\EgresoIndexController;
+use App\Http\Controllers\Finanzas\EgresoExportController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
@@ -90,6 +93,7 @@ use App\Http\Controllers\Cobranzas\ReciboRetencionesUpdateController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteExportController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
+use App\Http\Controllers\Cobranzas\CuentaCorrientePrintSelectedController;
 
 use App\Http\Controllers\Finanzas\ResumenArcaController;
 use App\Http\Controllers\Admin\ArcaCertificateController;
@@ -183,6 +187,11 @@ Route::middleware([
         Route::get('/vehiculos', [VehiculoAdminController::class, 'index'])->name('vehiculos.index');
         Route::post('/vehiculos', [VehiculoAdminController::class, 'store'])->name('vehiculos.store');
         Route::put('/vehiculos/{vehiculo}', [VehiculoAdminController::class, 'update'])->name('vehiculos.update');
+
+        Route::get('/empleados', [EmpleadoAdminController::class, 'index'])->name('empleados.index');
+        Route::post('/empleados', [EmpleadoAdminController::class, 'store'])->name('empleados.store');
+        Route::put('/empleados/{empleado}', [EmpleadoAdminController::class, 'update'])->name('empleados.update');
+        Route::delete('/empleados/{empleado}', [EmpleadoAdminController::class, 'destroy'])->name('empleados.destroy');
 
         Route::get('/cuentas-contables', [CuentaContableAdminController::class, 'index'])->name('cuentas-contables.index');
         Route::post('/cuentas-contables', [CuentaContableAdminController::class, 'store'])->name('cuentas-contables.store');
@@ -303,6 +312,12 @@ Route::middleware([
         Route::post('/importar/csv', \App\Http\Controllers\Compras\ImportarComprasCsvStoreController::class)->name('importar.csv');
     });
 
+    Route::middleware(['role:admin'])->prefix('finanzas')->name('finanzas.')->group(function () {
+        Route::get('/egresos', [EgresoIndexController::class, 'index'])->name('egresos.index');
+        Route::post('/egresos', [EgresoIndexController::class, 'store'])->name('egresos.store');
+        Route::get('/egresos/export', EgresoExportController::class)->name('egresos.export');
+    });
+
     Route::middleware(['role:cobranzas|cobranzas_admin|cobrador'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
         Route::get('/pre-recibos', PreReciboIndexController::class)->name('pre-recibos.index');
         Route::get('/pre-recibos/export', PreReciboExportController::class)->name('pre-recibos.export');
@@ -318,6 +333,7 @@ Route::middleware([
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
         Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');
         Route::get('/cuentas-corrientes/listado-print', CuentaCorrienteListadoPrintController::class)->name('ctacte.listado-print');
+        Route::get('/cuentas-corrientes/print-selected', CuentaCorrientePrintSelectedController::class)->name('ctacte.print-selected');
         Route::get('/cuentas-corrientes/{cuenta}', CuentaCorrienteShowController::class)->name('ctacte.show');
         Route::get('/cuentas-corrientes/{cuenta}/print', CuentaCorrientePrintController::class)->name('ctacte.print');
         Route::post('/cuentas-corrientes/{cuenta}/ajustes', CuentaCorrienteAjusteStoreController::class)->name('ctacte.ajustes.store');

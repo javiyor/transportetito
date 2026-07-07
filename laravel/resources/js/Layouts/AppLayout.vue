@@ -58,6 +58,7 @@ const switchEmpresa = (empresaId) => {
                                         <template #content>
                                             <DropdownLink :href="route('dashboard')">Dashboard</DropdownLink>
                                             <DropdownLink :href="route('admin.terceros.index')">Clientes/Proveedores</DropdownLink>
+                                            <DropdownLink :href="route('admin.empleados.index')">Empleados</DropdownLink>
                                             <DropdownLink :href="route('admin.depositos.index')">Depositos</DropdownLink>
                                             <DropdownLink :href="route('admin.vehiculos.index')">Vehiculos</DropdownLink>
                                             <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
@@ -146,6 +147,7 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('cobranzas.cierre.index')">Cierre</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('cobranzas.resumen-arca')">Resumen ARCA</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('compras.ingresos.index')">Ingresos varios</DropdownLink>
+                                            <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('finanzas.egresos.index')">Egresos varios</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.cheques.index')">Cheques</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('cobranzas.ctacte.index')">Cta. Cte. clientes</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('admin.reportes.estadisticas')">Estadisticas</DropdownLink>
@@ -298,6 +300,13 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.empleados.index')"
+                            :active="route().current('admin.empleados.*')"
+                        >
+                            Empleados
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
                             :href="route('admin.depositos.index')"
                             :active="route().current('admin.depositos.*')"
                         >
@@ -419,6 +428,13 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('compras.ingresos.*')"
                         >
                             Ingresos varios
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('finanzas.egresos.index')"
+                            :active="route().current('finanzas.egresos.*')"
+                        >
+                            Egresos varios
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
