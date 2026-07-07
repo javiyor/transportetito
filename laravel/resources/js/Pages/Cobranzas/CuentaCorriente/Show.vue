@@ -60,6 +60,14 @@ const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', pro
 const submitRecibo = () => reciboForm.post(route('cobranzas.ctacte.recibos.store', props.cuenta.id), { preserveScroll: true });
 
 const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
+const comprobanteNumero = (c) => {
+    if (c.arca_punto_venta && c.arca_numero) {
+        return String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8, '0');
+    }
+    if (c.numero) return c.numero;
+    if (c.numero_interno) return '#' + c.numero_interno;
+    return c.tipo;
+};
 const formatNum = (n) => {
     const val = Number(n || 0);
     return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -137,7 +145,7 @@ const formatNum = (n) => {
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
                             <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-2 py-1">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
-                                <span class="text-sm text-gray-700">{{ c.numero || c.tipo }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
+                                <span class="text-sm text-gray-700">{{ c.tipo }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
                             <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
                         </fieldset>
@@ -207,8 +215,8 @@ const formatNum = (n) => {
                     <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">{{ c.numero || '#'+c.id }}</div>
-                                <div class="text-xs text-gray-500">{{ c.tipo }} · {{ formatFecha(c.fecha_emision) }}</div>
+                                <div class="text-sm font-semibold text-gray-900">{{ c.tipo }} {{ comprobanteNumero(c) }}</div>
+                                <div class="text-xs text-gray-500">{{ formatFecha(c.fecha_emision) }}</div>
                             </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
                         </div>
@@ -217,8 +225,8 @@ const formatNum = (n) => {
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm text-gray-900">{{ c.numero || '#'+c.id }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
+                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
+                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm text-gray-900">{{ c.tipo }} {{ comprobanteNumero(c) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
                     </table>
                 </div>
             </div>
