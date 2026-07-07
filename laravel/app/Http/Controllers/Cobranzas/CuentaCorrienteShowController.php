@@ -32,7 +32,7 @@ class CuentaCorrienteShowController extends Controller
             ->where('facturar_cuenta_id', $cuenta->id)
             ->orderByDesc('fecha_emision')
             ->orderByDesc('id')
-            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'numero', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
+            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
 
         return Inertia::render('Cobranzas/CuentaCorriente/Show', [
             'cuenta' => $cuenta,
