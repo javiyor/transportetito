@@ -190,7 +190,7 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('admin.users.index')">Usuarios</DropdownLink>
                                             <DropdownLink :href="route('admin.empresas.index')">Empresas</DropdownLink>
                                             <DropdownLink :href="route('admin.bancos.index')">Bancos</DropdownLink>
-                                            <DropdownLink :href="route('admin.cuentas-contables.index')">Cuentas Contables</DropdownLink>
+                                            <DropdownLink :href="route('admin.cuentas-contables.index')">Categorias de ing/egr</DropdownLink>
                                             <DropdownLink :href="route('admin.arca.index')">ARCA</DropdownLink>
                                             <hr class="my-1 border-gray-200" />
                                             <DropdownLink :href="route('admin.blanqueo.ventas')" class="!text-red-600">Blanqueo Ventas</DropdownLink>
@@ -519,7 +519,7 @@ const switchEmpresa = (empresaId) => {
                             :href="route('admin.cuentas-contables.index')"
                             :active="route().current('admin.cuentas-contables.*')"
                         >
-                            Cuentas Contables
+                            Categorias de ing/egr
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

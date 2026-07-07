@@ -56,16 +56,16 @@ const submitEdit = () => {
 </script>
 
 <template>
-    <AppLayout title="Admin / Cuentas Contables">
-        <Head title="Admin / Cuentas Contables" />
+    <AppLayout title="Admin / Categorias">
+        <Head title="Admin / Categorias" />
 
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Cuentas Contables</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Categorias de ing/egr</h2>
         </template>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white shadow sm:rounded-lg p-6">
-                <h3 class="text-base font-semibold text-gray-900">Nueva cuenta contable</h3>
+                <h3 class="text-base font-semibold text-gray-900">Nueva categoria</h3>
 
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitCreate">
                     <div>
@@ -80,7 +80,11 @@ const submitEdit = () => {
                     </div>
                     <div>
                         <InputLabel value="Tipo" />
-                        <TextInput v-model="createForm.tipo" type="text" class="mt-1 block w-full" placeholder="ej: operativo, administrativo" required />
+                        <select v-model="createForm.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="ingreso">Ingreso</option>
+                            <option value="egreso">Egreso</option>
+                        </select>
                         <InputError class="mt-2" :message="createForm.errors.tipo" />
                     </div>
                     <div>
@@ -108,7 +112,7 @@ const submitEdit = () => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-base font-semibold text-gray-900">Cuentas Contables</h3>
+                    <h3 class="text-base font-semibold text-gray-900">Categorias</h3>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -135,7 +139,7 @@ const submitEdit = () => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas contables.</td>
+                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin categorias.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -144,7 +148,7 @@ const submitEdit = () => {
         </div>
 
         <DialogModal :show="editing" @close="editing = false">
-            <template #title>Editar cuenta contable</template>
+            <template #title>Editar categoria</template>
             <template #content>
                 <form class="grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="submitEdit">
                     <div>
@@ -159,7 +163,11 @@ const submitEdit = () => {
                     </div>
                     <div>
                         <InputLabel value="Tipo" />
-                        <TextInput v-model="editForm.tipo" type="text" class="mt-1 block w-full" required />
+                        <select v-model="editForm.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="ingreso">Ingreso</option>
+                            <option value="egreso">Egreso</option>
+                        </select>
                         <InputError class="mt-2" :message="editForm.errors.tipo" />
                     </div>
                     <div>

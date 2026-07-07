@@ -33,7 +33,6 @@ const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: 
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Compras / Gastos sin proveedor</h2>
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.gastos.export')">Exportar CSV</a>
-                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.ingresos.index')">Ingresos varios</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.index')">Combustibles</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.index')">Volver a compras</Link>
                 </div>
