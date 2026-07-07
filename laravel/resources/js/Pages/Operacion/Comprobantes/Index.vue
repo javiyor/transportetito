@@ -23,13 +23,29 @@ const applyFilters = () => {
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
-const tipoLabel = (tipo) => {
-    if (tipo === 'guia_envio') return 'Guia no fiscal';
-    if (tipo === 'factura_interna') return 'Factura';
-    if (tipo === 'nota_credito_interna') return 'Nota de credito';
-    if (tipo === 'nota_debito_manual') return 'Nota de debito';
-    if (tipo === 'nota_credito_manual') return 'Nota de credito manual';
-    return tipo || '-';
+const arcaTipoLabel = (arca_tipo_cbte) => {
+    const map = {
+        '01': 'Factura A', '02': 'Nota debito A', '03': 'Nota credito A',
+        '06': 'Factura B', '07': 'Nota debito B', '08': 'Nota credito B',
+        '11': 'Factura C', '12': 'Nota debito C', '13': 'Nota credito C',
+        '15': 'Factura E', '16': 'Nota debito E', '17': 'Nota credito E',
+        '51': 'Factura M', '52': 'Nota debito M', '53': 'Nota credito M',
+    };
+    return map[String(arca_tipo_cbte)] || null;
+};
+const tipoLabel = (c) => {
+    if (c.arca_tipo_cbte) {
+        const arc = arcaTipoLabel(c.arca_tipo_cbte);
+        if (arc) return arc;
+    }
+    const map = {
+        guia_envio: 'Guia no fiscal',
+        factura_interna: 'Factura',
+        nota_credito_interna: 'Nota de credito',
+        nota_debito_manual: 'Nota de debito',
+        nota_credito_manual: 'Nota de credito manual',
+    };
+    return map[c.tipo] || c.tipo || '-';
 };
 </script>
 
@@ -86,7 +102,7 @@ const tipoLabel = (tipo) => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">#{{ c.id }}</div>
-                                <div class="text-xs text-gray-500">{{ tipoLabel(c.tipo) }} · {{ c.estado }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
+                                <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.estado }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
                             </div>
                             <Link :href="route('operacion.comprobantes.show', c.id)" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</Link>
                         </div>
@@ -150,7 +166,7 @@ const tipoLabel = (tipo) => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in comprobantes.data" :key="c.id">
                                 <td class="px-6 py-4 text-sm font-mono text-gray-900">#{{ c.id }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ tipoLabel(c.tipo) }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ tipoLabel(c) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>

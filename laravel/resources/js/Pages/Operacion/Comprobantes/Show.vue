@@ -44,14 +44,31 @@ const autorizarArca = () => {
     autorizarForm.post(route('operacion.comprobantes.autorizar-arca', props.comprobante.id), { preserveScroll: true });
 };
 
-const tipoLabel = (tipo) => {
-    if (tipo === 'guia_envio') return 'Guia no fiscal';
-    if (tipo === 'factura_interna') return 'Factura';
-    if (tipo === 'nota_credito_interna') return 'Nota de credito';
-    if (tipo === 'nota_debito_interna') return 'Nota de debito';
-    if (tipo === 'nota_debito_manual') return 'Nota de debito';
-    if (tipo === 'nota_credito_manual') return 'Nota de credito manual';
-    return tipo || '-';
+const arcaTipoLabel = (arca_tipo_cbte) => {
+    const map = {
+        '01': 'Factura A', '02': 'Nota debito A', '03': 'Nota credito A',
+        '06': 'Factura B', '07': 'Nota debito B', '08': 'Nota credito B',
+        '11': 'Factura C', '12': 'Nota debito C', '13': 'Nota credito C',
+        '15': 'Factura E', '16': 'Nota debito E', '17': 'Nota credito E',
+        '51': 'Factura M', '52': 'Nota debito M', '53': 'Nota credito M',
+    };
+    return map[String(arca_tipo_cbte)] || null;
+};
+const tipoLabel = (tipo, comprobante) => {
+    const c = comprobante || props.comprobante;
+    if (c?.arca_tipo_cbte) {
+        const arc = arcaTipoLabel(c.arca_tipo_cbte);
+        if (arc) return arc;
+    }
+    const map = {
+        guia_envio: 'Guia no fiscal',
+        factura_interna: 'Factura',
+        nota_credito_interna: 'Nota de credito',
+        nota_debito_interna: 'Nota de debito',
+        nota_debito_manual: 'Nota de debito',
+        nota_credito_manual: 'Nota de credito manual',
+    };
+    return map[tipo] || tipo || '-';
 };
 
 const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion || props.comprobante?.detalle_facturacion?.cotizacion || null;
@@ -65,7 +82,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Comprobante #{{ comprobante.id }}</h2>
-                    <div class="mt-1 text-sm text-gray-600">{{ tipoLabel(comprobante.tipo) }} · {{ comprobante.estado }}</div>
+                    <div class="mt-1 text-sm text-gray-600">{{ tipoLabel(comprobante.tipo, comprobante) }} · {{ comprobante.estado }}</div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <SecondaryButton @click="imprimir">Imprimir / PDF</SecondaryButton>
@@ -195,7 +212,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                     <div v-for="nc in comprobante.notas_credito" :key="nc.id" class="flex items-center justify-between rounded border border-gray-200 px-4 py-3">
                         <div class="text-sm text-gray-700">
                             <Link :href="route('operacion.comprobantes.show', nc.id)" class="text-indigo-600 hover:text-indigo-800">#{{ nc.id }}</Link>
-                            · {{ tipoLabel(nc.tipo) }} · {{ nc.estado }} · {{ nc.moneda }} {{ nc.total }}
+                            · {{ tipoLabel(nc.tipo, nc) }} · {{ nc.estado }} · {{ nc.moneda }} {{ nc.total }}
                         </div>
                         <div class="text-xs text-gray-500 text-right">
                             <div>{{ nc.arca_cae ? 'CAE ' + nc.arca_cae : 'Pendiente ARCA' }}</div>

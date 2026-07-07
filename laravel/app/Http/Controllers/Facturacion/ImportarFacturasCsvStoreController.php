@@ -76,12 +76,21 @@ class ImportarFacturasCsvStoreController extends Controller
 
                 $maxInterno++;
 
+                $arcaTipoMap = [
+                    '01' => 'factura_a', '02' => 'nota_debito_a', '03' => 'nota_credito_a',
+                    '06' => 'factura_b', '07' => 'nota_debito_b', '08' => 'nota_credito_b',
+                    '11' => 'factura_c', '12' => 'nota_debito_c', '13' => 'nota_credito_c',
+                    '15' => 'factura_e', '16' => 'nota_debito_e', '17' => 'nota_credito_e',
+                    '51' => 'factura_m', '52' => 'nota_debito_m', '53' => 'nota_credito_m',
+                ];
+                $tipo = $arcaTipoMap[$row['tipo']] ?? 'factura_interna';
+
                 $comprobante = Comprobante::create([
                     'empresa_id' => $empresa->id,
                     'deposito_id' => null,
                     'facturar_cuenta_id' => $cuenta?->id,
                     'entrega_cuenta_id' => $cuenta?->id,
-                    'tipo' => 'factura_interna',
+                    'tipo' => $tipo,
                     'estado' => 'emitida',
                     'moneda' => $row['moneda'],
                     'total' => $row['total'],
