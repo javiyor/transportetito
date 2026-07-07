@@ -165,8 +165,8 @@ const switchEmpresa = (empresaId) => {
                                         <template #content>
                                             <DropdownLink :href="route('compras.proveedores.comprobantes.index')">Comprobantes</DropdownLink>
                                             <DropdownLink :href="route('compras.proveedores.ctacte.index')">Cuenta Corriente</DropdownLink>
-                                            <DropdownLink :href="route('compras.combustibles.index')">Combustibles</DropdownLink>
                                             <DropdownLink :href="route('compras.gastos.index')">Gastos</DropdownLink>
+                                            <DropdownLink :href="route('compras.ingresos.index')">Ingresos varios</DropdownLink>
                                             <DropdownLink :href="route('compras.importar.index')">Importar</DropdownLink>
                                         </template>
                                     </Dropdown>
@@ -175,7 +175,7 @@ const switchEmpresa = (empresaId) => {
                                 <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center">
                                     <Dropdown align="left" width="40">
                                         <template #trigger>
-                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('admin.users.*') || route().current('admin.empresas.*') || route().current('admin.bancos.*') || route().current('admin.blanqueo.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('admin.users.*') || route().current('admin.empresas.*') || route().current('admin.bancos.*') || route().current('admin.cuentas-contables.*') || route().current('admin.blanqueo.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
                                                 Configuracion
                                                 <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -187,6 +187,7 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('admin.users.index')">Usuarios</DropdownLink>
                                             <DropdownLink :href="route('admin.empresas.index')">Empresas</DropdownLink>
                                             <DropdownLink :href="route('admin.bancos.index')">Bancos</DropdownLink>
+                                            <DropdownLink :href="route('admin.cuentas-contables.index')">Cuentas Contables</DropdownLink>
                                             <hr class="my-1 border-gray-200" />
                                             <DropdownLink :href="route('admin.blanqueo.ventas')" class="!text-red-600">Blanqueo Ventas</DropdownLink>
                                             <DropdownLink :href="route('admin.blanqueo.compras')" class="!text-red-600">Blanqueo Compras</DropdownLink>
@@ -444,17 +445,17 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('compras.combustibles.index')"
-                            :active="route().current('compras.combustibles.*')"
-                        >
-                            Combustibles
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
                             :href="route('compras.gastos.index')"
                             :active="route().current('compras.gastos.*')"
                         >
                             Gastos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('compras.ingresos.index')"
+                            :active="route().current('compras.ingresos.*')"
+                        >
+                            Ingresos varios
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
@@ -487,6 +488,13 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('admin.bancos.*')"
                         >
                             Bancos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.cuentas-contables.index')"
+                            :active="route().current('admin.cuentas-contables.*')"
+                        >
+                            Cuentas Contables
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

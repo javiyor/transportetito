@@ -133,10 +133,10 @@ const removeAt = (arr, index) => arr.splice(index, 1);
 const tiposArca = ref([]);
 const catalogosImpuestos = ref(null);
 
-const fetchTiposArca = async (terceroCuentaId) => {
+const fetchTiposArca = async (terceroCuentaId, todos = false) => {
     if (!terceroCuentaId) { tiposArca.value = []; catalogosImpuestos.value = null; return; }
     try {
-        const url = route('compras.proveedores.tipos-arca', { tercero_cuenta_id: terceroCuentaId });
+        const url = route('compras.proveedores.tipos-arca', { tercero_cuenta_id: terceroCuentaId, ...(todos ? { todos: 1 } : {}) });
         const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const data = await res.json();
         tiposArca.value = data.tipos || [];
@@ -285,7 +285,7 @@ const buscarProveedorPorCuit = async () => {
 
 const openEditComprobante = (c) => {
     editComprobanteId.value = c.id;
-    fetchTiposArca(c.tercero_cuenta_id);
+    fetchTiposArca(c.tercero_cuenta_id, true);
     editComprobanteForm.tipo = c.tipo || '';
     editComprobanteForm.numero = c.numero || '';
     editComprobanteForm.moneda = c.moneda || 'ARS';

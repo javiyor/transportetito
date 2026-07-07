@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\TarifaRelacionAdminController;
 use App\Http\Controllers\Admin\CotizacionAdminController;
 use App\Http\Controllers\Admin\ChequeController;
 use App\Http\Controllers\Admin\VehiculoAdminController;
+use App\Http\Controllers\Admin\CuentaContableAdminController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
@@ -59,6 +60,8 @@ use App\Http\Controllers\Compras\PagoCuentaCombustibleIndexController;
 use App\Http\Controllers\Compras\PagoCuentaCombustibleExportController;
 use App\Http\Controllers\Compras\GastoOperativoIndexController;
 use App\Http\Controllers\Compras\GastoOperativoExportController;
+use App\Http\Controllers\Compras\IngresoOperativoIndexController;
+use App\Http\Controllers\Compras\IngresoOperativoExportController;
 use App\Http\Controllers\Compras\ProveedorComprobanteExportController;
 use App\Http\Controllers\Compras\ProveedorComprobantePdfImportController;
 
@@ -175,6 +178,10 @@ Route::middleware([
         Route::post('/vehiculos', [VehiculoAdminController::class, 'store'])->name('vehiculos.store');
         Route::put('/vehiculos/{vehiculo}', [VehiculoAdminController::class, 'update'])->name('vehiculos.update');
 
+        Route::get('/cuentas-contables', [CuentaContableAdminController::class, 'index'])->name('cuentas-contables.index');
+        Route::post('/cuentas-contables', [CuentaContableAdminController::class, 'store'])->name('cuentas-contables.store');
+        Route::put('/cuentas-contables/{cuentaContable}', [CuentaContableAdminController::class, 'update'])->name('cuentas-contables.update');
+
         Route::get('/arca-diagnostic', [EmpresaAdminController::class, 'arcaDiagnostic'])->name('arca-diagnostic');
         Route::get('/reportes/seguro', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'index'])->name('reportes.seguro');
         Route::post('/reportes/seguro/actualizar', [\App\Http\Controllers\Admin\InformeSeguroController::class, 'update'])->name('reportes.seguro.update');
@@ -273,6 +280,9 @@ Route::middleware([
         Route::get('/gastos', [GastoOperativoIndexController::class, 'index'])->name('gastos.index');
         Route::post('/gastos', [GastoOperativoIndexController::class, 'store'])->name('gastos.store');
         Route::get('/gastos/export', GastoOperativoExportController::class)->name('gastos.export');
+        Route::get('/ingresos', [IngresoOperativoIndexController::class, 'index'])->name('ingresos.index');
+        Route::post('/ingresos', [IngresoOperativoIndexController::class, 'store'])->name('ingresos.store');
+        Route::get('/ingresos/export', IngresoOperativoExportController::class)->name('ingresos.export');
         Route::get('/importar', \App\Http\Controllers\Compras\ImportarComprasIndexController::class)->name('importar.index');
         Route::post('/importar/csv', \App\Http\Controllers\Compras\ImportarComprasCsvStoreController::class)->name('importar.csv');
     });

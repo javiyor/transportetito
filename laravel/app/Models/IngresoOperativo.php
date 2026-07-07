@@ -5,15 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class GastoOperativo extends Model
+class IngresoOperativo extends Model
 {
-    protected $table = 'gastos_operativos';
+    protected $table = 'ingresos_operativos';
 
     protected $fillable = [
         'empresa_id',
         'fecha',
-        'categoria',
         'cuenta_contable_id',
+        'categoria',
+        'medio',
+        'detalle',
         'moneda',
         'cotizacion_ars',
         'importe',
@@ -24,6 +26,7 @@ class GastoOperativo extends Model
 
     protected $casts = [
         'fecha' => 'date',
+        'detalle' => 'array',
         'cotizacion_ars' => 'decimal:6',
         'importe' => 'decimal:2',
     ];

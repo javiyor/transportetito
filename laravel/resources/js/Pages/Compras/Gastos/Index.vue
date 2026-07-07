@@ -8,12 +8,13 @@ import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     gastos: Object,
+    cuentasContables: Array,
     totales: Object,
 });
 
 const form = useForm({
     fecha: new Date().toISOString().slice(0, 10),
-    categoria: '',
+    cuenta_contable_id: '',
     moneda: 'ARS',
     importe: '',
     referencia: '',
@@ -32,6 +33,7 @@ const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: 
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Compras / Gastos sin proveedor</h2>
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.gastos.export')">Exportar CSV</a>
+                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.ingresos.index')">Ingresos varios</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.index')">Combustibles</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.index')">Volver a compras</Link>
                 </div>
@@ -48,7 +50,14 @@ const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: 
                 <h3 class="text-base font-semibold text-gray-900">Nuevo gasto</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4" @submit.prevent="submit">
                     <div><InputLabel value="Fecha" /><TextInput v-model="form.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha" /></div>
-                    <div><InputLabel value="Categoria" /><TextInput v-model="form.categoria" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.categoria" /></div>
+                    <div>
+                        <InputLabel value="Categoria" />
+                        <select v-model="form.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.cuenta_contable_id" />
+                    </div>
                     <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="form.errors.moneda" /></div>
                     <div><InputLabel value="Importe" /><TextInput v-model="form.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.importe" /></div>
                     <div><InputLabel value="Referencia" /><TextInput v-model="form.referencia" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.referencia" /></div>
@@ -59,7 +68,7 @@ const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: 
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Gastos registrados</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="g in gastos.data" :key="g.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(g.fecha || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.categoria }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.referencia || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.moneda }} {{ g.importe }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.observacion || '-' }}</td></tr></tbody></table></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="g in gastos.data" :key="g.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(g.fecha || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.cuenta_contable?.nombre || g.categoria }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.referencia || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.moneda }} {{ g.importe }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.observacion || '-' }}</td></tr></tbody></table></div>
             </div>
         </div>
     </AppLayout>

@@ -181,6 +181,7 @@ class ProveedorComprobanteIndexController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $data = $request->validate([
             'tercero_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+            'todos' => ['nullable', 'boolean'],
         ]);
 
         $cuenta = TerceroCuenta::query()
@@ -190,21 +191,38 @@ class ProveedorComprobanteIndexController extends Controller
 
         $empresa = $cuenta->empresa()->firstOrFail();
 
-        $opciones = $arcaTipos->opcionesFactura(
-            $cuenta->tercero?->condicion_iva,
-            $empresa->condicion_iva,
-        );
+        if (! empty($data['todos'])) {
+            $tipos = [
+                ['code' => 'FA', 'label' => 'Factura A'],
+                ['code' => 'FB', 'label' => 'Factura B'],
+                ['code' => 'FC', 'label' => 'Factura C'],
+                ['code' => 'FCA', 'label' => 'Factura de Credito A'],
+                ['code' => 'FCB', 'label' => 'Factura de Credito B'],
+                ['code' => 'FCC', 'label' => 'Factura de Credito C'],
+                ['code' => 'NDA', 'label' => 'Nota de Debito A'],
+                ['code' => 'NDB', 'label' => 'Nota de Debito B'],
+                ['code' => 'NDC', 'label' => 'Nota de Debito C'],
+                ['code' => 'NCA', 'label' => 'Nota de Credito A'],
+                ['code' => 'NCB', 'label' => 'Nota de Credito B'],
+                ['code' => 'NCC', 'label' => 'Nota de Credito C'],
+            ];
+        } else {
+            $opciones = $arcaTipos->opcionesFactura(
+                $cuenta->tercero?->condicion_iva,
+                $empresa->condicion_iva,
+            );
 
-        $tipos = [];
-        $letras = [];
-        foreach ($opciones as $opt) {
-            $tipos[] = $opt;
-            $letras[substr($opt['code'], -1)] = true;
-        }
+            $tipos = [];
+            $letras = [];
+            foreach ($opciones as $opt) {
+                $tipos[] = $opt;
+                $letras[substr($opt['code'], -1)] = true;
+            }
 
-        foreach (array_keys($letras) as $letra) {
-            $tipos[] = ['code' => 'NC'.$letra, 'label' => 'Nota de Credito '.$letra];
-            $tipos[] = ['code' => 'ND'.$letra, 'label' => 'Nota de Debito '.$letra];
+            foreach (array_keys($letras) as $letra) {
+                $tipos[] = ['code' => 'NC'.$letra, 'label' => 'Nota de Credito '.$letra];
+                $tipos[] = ['code' => 'ND'.$letra, 'label' => 'Nota de Debito '.$letra];
+            }
         }
 
         $condicionProveedor = $arcaTipos->normalizarCondicionIva($cuenta->tercero?->condicion_iva);

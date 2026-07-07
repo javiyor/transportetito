@@ -5,20 +5,20 @@ namespace App\Http\Controllers\Compras;
 use App\Http\Controllers\Controller;
 use App\Models\CuentaContable;
 use App\Models\Empresa;
-use App\Models\GastoOperativo;
+use App\Models\IngresoOperativo;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class GastoOperativoIndexController extends Controller
+class IngresoOperativoIndexController extends Controller
 {
     public function index(Request $request): Response
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
-        $gastos = GastoOperativo::query()
+        $ingresos = IngresoOperativo::query()
             ->with('cuentaContable')
             ->where('empresa_id', $empresaId)
             ->orderByDesc('fecha')
@@ -26,16 +26,16 @@ class GastoOperativoIndexController extends Controller
             ->paginate(30)
             ->withQueryString();
 
-        return Inertia::render('Compras/Gastos/Index', [
-            'gastos' => $gastos,
+        return Inertia::render('Compras/Ingresos/Index', [
+            'ingresos' => $ingresos,
             'cuentasContables' => CuentaContable::query()
                 ->where('empresa_id', $empresaId)
                 ->where('activo', true)
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
             'totales' => [
-                'cantidad' => GastoOperativo::query()->where('empresa_id', $empresaId)->count(),
-                'importe_total_ars' => round((float) GastoOperativo::query()->where('empresa_id', $empresaId)->get()->sum(function (GastoOperativo $g) {
+                'cantidad' => IngresoOperativo::query()->where('empresa_id', $empresaId)->count(),
+                'importe_total_ars' => round((float) IngresoOperativo::query()->where('empresa_id', $empresaId)->get()->sum(function (IngresoOperativo $g) {
                     $cot = (float) ($g->cotizacion_ars ?: 1);
                     return strtoupper((string) $g->moneda) === 'ARS' ? (float) $g->importe : ((float) $g->importe * $cot);
                 }), 2),
@@ -49,6 +49,12 @@ class GastoOperativoIndexController extends Controller
         $data = $request->validate([
             'fecha' => ['required', 'date'],
             'cuenta_contable_id' => ['required', 'exists:cuentas_contables,id'],
+            'medio' => ['required', 'in:efectivo,cheque,transferencia'],
+            'detalle' => ['nullable', 'array'],
+            'detalle.banco' => ['nullable', 'string', 'max:255'],
+            'detalle.numero' => ['nullable', 'string', 'max:50'],
+            'detalle.fecha_emision' => ['nullable', 'date'],
+            'detalle.fecha_cobro' => ['nullable', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'importe' => ['required', 'numeric', 'gt:0'],
             'referencia' => ['nullable', 'string', 'max:255'],
@@ -60,11 +66,13 @@ class GastoOperativoIndexController extends Controller
 
         $cuentaContable = CuentaContable::query()->findOrFail($data['cuenta_contable_id']);
 
-        GastoOperativo::query()->create([
+        IngresoOperativo::query()->create([
             'empresa_id' => $empresaId,
             'fecha' => $data['fecha'],
             'cuenta_contable_id' => $data['cuenta_contable_id'],
             'categoria' => $cuentaContable->nombre,
+            'medio' => $data['medio'],
+            'detalle' => $data['detalle'] ?: null,
             'moneda' => $data['moneda'],
             'cotizacion_ars' => $cotizacion['tasa_ars'],
             'importe' => $data['importe'],
@@ -73,6 +81,6 @@ class GastoOperativoIndexController extends Controller
             'creado_por_user_id' => $request->user()->id,
         ]);
 
-        return back()->with('success', 'Gasto sin proveedor registrado.');
+        return back()->with('success', 'Ingreso registrado.');
     }
 }
