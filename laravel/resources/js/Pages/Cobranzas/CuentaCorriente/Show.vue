@@ -60,6 +60,10 @@ const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', pro
 const submitRecibo = () => reciboForm.post(route('cobranzas.ctacte.recibos.store', props.cuenta.id), { preserveScroll: true });
 
 const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
+const formatNum = (n) => {
+    const val = Number(n || 0);
+    return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 </script>
 
 <template>
@@ -83,8 +87,8 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
             <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><div class="text-xs text-gray-500">Zona</div><div class="text-sm font-medium text-gray-900">{{ cuenta.zona?.nombre || 'Sin zona' }}</div></div>
                 <div><div class="text-xs text-gray-500">Ciudad</div><div class="text-sm font-medium text-gray-900">{{ cuenta.localidad || 'Sin ciudad' }}</div></div>
-                <div><div class="text-xs text-gray-500">Saldo total</div><div class="text-sm font-medium text-gray-900">{{ saldos.saldo_total }}</div></div>
-                <div><div class="text-xs text-gray-500">Vencido +30</div><div class="text-sm font-medium" :class="saldos.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ saldos.vencido_30 }}</div></div>
+                <div><div class="text-xs text-gray-500">Saldo total</div><div class="text-sm font-medium text-gray-900">{{ formatNum(saldos.saldo_total) }}</div></div>
+                <div><div class="text-xs text-gray-500">Vencido +30</div><div class="text-sm font-medium" :class="saldos.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ formatNum(saldos.vencido_30) }}</div></div>
             </div>
 
             <div class="grid grid-cols-1 gap-6" :class="esSoloCobrador ? '' : 'lg:grid-cols-3'">
@@ -133,7 +137,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
                             <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-2 py-1">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
-                                <span class="text-sm text-gray-700">{{ c.numero || c.tipo }} · {{ c.moneda }} {{ c.total }}</span>
+                                <span class="text-sm text-gray-700">{{ c.numero || c.tipo }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
                             <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
                         </fieldset>
@@ -186,7 +190,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                             </div>
                         </div>
 
-                        <div class="text-sm font-semibold text-gray-900 text-right">Total: {{ reciboTotal.toFixed(2) }}</div>
+                        <div class="text-sm font-semibold text-gray-900 text-right">Total: {{ formatNum(reciboTotal) }}</div>
 
                         <label v-if="cuenta.email" class="flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" v-model="reciboForm.send_email" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
@@ -208,13 +212,13 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                             </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
                         </div>
-                        <div class="mt-3 text-sm font-medium text-gray-900">{{ c.moneda }} {{ c.total }}</div>
+                        <div class="mt-3 text-sm font-medium text-gray-900">{{ c.moneda }} {{ formatNum(c.total) }}</div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm text-gray-900">{{ c.numero || '#'+c.id }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ c.total }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
+                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-6 py-4 text-sm text-gray-900">{{ c.numero || '#'+c.id }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link></td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -228,12 +232,12 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                                 <div class="text-sm font-semibold text-gray-900">{{ m.tipo }}</div>
                                 <div class="text-xs text-gray-500">{{ formatFecha(m.fecha) }}</div>
                             </div>
-                            <div class="text-sm font-medium text-gray-900">{{ m.importe_signed }}</div>
+                            <div class="text-sm font-medium text-gray-900">{{ formatNum(m.importe_signed) }}</div>
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Moneda</div>
-                                <div class="font-medium text-gray-900">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ m.cotizacion_ars }})</span></div>
+                                <div class="font-medium text-gray-900">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></div>
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Observacion</div>
@@ -253,7 +257,7 @@ const formatFecha = (value) => value ? String(value).slice(0, 10) : '-';
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ref.</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ m.cotizacion_ars }})</span></td><td class="px-6 py-4 text-sm text-gray-700">{{ m.importe_signed }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-6 py-4 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><Link v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo</Link><span v-else>-</span></td></tr></tbody>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.tipo }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></td><td class="px-6 py-4 text-sm text-gray-700">{{ formatNum(m.importe_signed) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-6 py-4 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><Link v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo</Link><span v-else>-</span></td></tr></tbody>
                     </table>
                 </div>
             </div>
