@@ -32,8 +32,8 @@ class BlanqueoController extends Controller
         return Inertia::render('Admin/Blanqueo/Index', array_merge($this->baseProps(), [
             'tipo' => 'compras',
             'titulo' => 'Blanqueo de Compras',
-            'descripcion' => 'Elimina todos los comprobantes de proveedores, ordenes de pago, gastos operativos y pagos a cuenta de combustible.',
-            'tablas' => ['Proveedor Comprobantes', 'Ordenes de Pago', 'Gastos Operativos', 'Pagos a cuenta combustible'],
+            'descripcion' => 'Elimina todos los comprobantes de proveedores, ordenes de pago, gastos operativos, pagos a cuenta de combustible y movimientos de cta. cte.',
+            'tablas' => ['Proveedor Comprobantes', 'Ordenes de Pago', 'Gastos Operativos', 'Pagos a cuenta combustible', 'Cta. Cte. Movimientos'],
         ]));
     }
 
@@ -69,6 +69,7 @@ class BlanqueoController extends Controller
                     DB::table('comprobante_pedido')->whereIn('comprobante_id', fn($q) => $q->select('id')->from('comprobantes')->where('empresa_id', $empresaId))->delete();
                     DB::table('comprobantes')->where('empresa_id', $empresaId)->delete();
                 } elseif ($tipo === 'compras') {
+                    DB::table('cta_cte_movimientos')->where('empresa_id', $empresaId)->whereIn('tipo', ['factura_proveedor', 'pago_proveedor'])->delete();
                     DB::table('ordenes_pago')->where('empresa_id', $empresaId)->delete();
                     DB::table('gastos_operativos')->where('empresa_id', $empresaId)->delete();
                     DB::table('pago_cuenta_combustibles')->where('empresa_id', $empresaId)->delete();

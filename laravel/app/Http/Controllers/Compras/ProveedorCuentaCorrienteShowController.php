@@ -25,10 +25,20 @@ class ProveedorCuentaCorrienteShowController extends Controller
         $movimientos = CtaCteMovimiento::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)
-            ->whereIn('tipo', ['factura_proveedor', 'pago_proveedor'])
             ->orderByDesc('fecha')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->map(function (CtaCteMovimiento $m) {
+                if ($m->referencia_tipo === 'proveedor_comprobante' && $m->referencia_id) {
+                    $comp = ProveedorComprobante::query()->find($m->referencia_id);
+                    $m->setAttribute('comprobante_numero', $comp?->numero);
+                    $m->setAttribute('comprobante_tipo', $comp?->tipo);
+                } else {
+                    $m->setAttribute('comprobante_numero', null);
+                    $m->setAttribute('comprobante_tipo', null);
+                }
+                return $m;
+            });
 
         $comprobantes = ProveedorComprobante::query()
             ->where('empresa_id', $empresaId)

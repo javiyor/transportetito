@@ -37,8 +37,8 @@ class ProveedorCuentaCorrienteIndexController extends Controller
         }
 
         $cuentas = $cuentas
-            ->orderBy('numero_cliente')
-            ->get();
+            ->get()
+            ->sortBy(fn ($c) => $c->tercero?->razon_social ?? '');
 
         $movs = CtaCteMovimiento::query()
             ->where('empresa_id', $empresaId)
