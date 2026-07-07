@@ -18,7 +18,7 @@ class ReciboShowController extends Controller
         $recibo->load([
             'cuenta.tercero:id,razon_social,cuit',
             'items',
-            'aplicaciones.comprobante:id,moneda,total',
+            'aplicaciones.comprobante:id,tipo,moneda,total,arca_punto_venta,arca_numero,numero_interno',
         ]);
 
         return Inertia::render('Cobranzas/Recibos/Show', [

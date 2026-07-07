@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Recibo;
 use App\Models\TerceroCuenta;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -42,6 +43,12 @@ class CuentaCorrienteShowController extends Controller
                 } else {
                     $m->setAttribute('comprobante_numero', null);
                     $m->setAttribute('comprobante_tipo', null);
+                }
+                if ($m->referencia_tipo === 'recibo' && $m->referencia_id) {
+                    $rec = Recibo::query()->find($m->referencia_id, ['id', 'numero_interno']);
+                    $m->setAttribute('recibo_numero', $rec?->numero_interno ? '#' . $rec->numero_interno : null);
+                } else {
+                    $m->setAttribute('recibo_numero', null);
                 }
                 return $m;
             });

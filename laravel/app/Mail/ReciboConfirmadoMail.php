@@ -22,7 +22,7 @@ class ReciboConfirmadoMail extends Mailable
         $this->recibo->loadMissing([
             'cuenta.tercero:id,razon_social,cuit',
             'items',
-            'aplicaciones.comprobante:id,moneda,total',
+            'aplicaciones.comprobante:id,tipo,moneda,total,arca_punto_venta,arca_numero,numero_interno',
         ]);
 
         $printHtml = View::make('cobranzas.recibos.print', [

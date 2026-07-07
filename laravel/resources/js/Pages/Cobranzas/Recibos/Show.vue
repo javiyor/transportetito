@@ -45,6 +45,15 @@ const formatNum = (n) => {
     return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const comprobanteNumero = (c) => {
+    if (!c) return '-';
+    if (c.arca_punto_venta && c.arca_numero) {
+        return String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8, '0');
+    }
+    if (c.numero_interno) return '#' + c.numero_interno;
+    return c.tipo || '-';
+};
+
 const importeRet = (v) => {
     if (!v) return 0;
     return typeof v === 'object' ? Number(v.importe || 0) : Number(v || 0);
@@ -144,7 +153,7 @@ const totalRetenciones = computed(() => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ ap.modo }}</div>
-                                <div class="text-xs text-gray-500">{{ ap.comprobante_id ? ('#' + ap.comprobante_id) : '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ ap.comprobante ? comprobanteNumero(ap.comprobante) : '-' }}</div>
                             </div>
                             <div class="text-sm font-medium text-gray-900">{{ ap.moneda }} {{ ap.importe }}</div>
                         </div>
@@ -164,7 +173,7 @@ const totalRetenciones = computed(() => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="ap in (recibo.aplicaciones || [])" :key="ap.id">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ ap.modo }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ ap.comprobante_id ? ('#' + ap.comprobante_id) : '-' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ ap.comprobante ? comprobanteNumero(ap.comprobante) : '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ ap.moneda }} {{ ap.importe }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ ap.moneda === 'ARS' ? '-' : ap.cotizacion_ars }}</td>
                             </tr>

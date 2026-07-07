@@ -49,7 +49,7 @@
             @foreach($recibo->aplicaciones as $ap)
                 <tr>
                     <td>{{ $ap->modo }}</td>
-                    <td>{{ $ap->comprobante_id ? '#'.$ap->comprobante_id : '-' }}</td>
+                    <td>{{ $ap->comprobante ? ($ap->comprobante->arca_punto_venta && $ap->comprobante->arca_numero ? ((int) $ap->comprobante->arca_punto_venta).'-'.str_pad((string) $ap->comprobante->arca_numero, 8, '0', STR_PAD_LEFT) : ($ap->comprobante->numero_interno ? '#'.$ap->comprobante->numero_interno : $ap->comprobante->tipo)) : '-' }}</td>
                     <td>{{ $ap->moneda }} {{ number_format((float) $ap->importe, 2, ',', '.') }}</td>
                     <td>{{ $ap->moneda === 'ARS' ? '-' : number_format((float) $ap->cotizacion_ars, 6, ',', '.') }}</td>
                 </tr>

@@ -17,7 +17,7 @@ class ReciboPrintController extends Controller
             'cuenta.tercero:id,razon_social,cuit',
             'cuenta.zona:id,nombre',
             'items',
-            'aplicaciones.comprobante:id,moneda,total',
+            'aplicaciones.comprobante:id,tipo,moneda,total,arca_punto_venta,arca_numero,numero_interno',
         ]);
 
         return response()->view('cobranzas.recibos.print', [
