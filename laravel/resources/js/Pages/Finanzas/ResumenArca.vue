@@ -83,7 +83,7 @@ const aplicarFiltro = (anio, mes) => {
                         <div class="flex justify-between"><span class="text-gray-500">Comprobantes:</span><span class="font-medium">{{ resumenVentas.cantidad }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">Subtotal:</span><span class="font-medium">$ {{ formatNum(resumenVentas.subtotal) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">IVA total:</span><span class="font-medium text-blue-700">$ {{ formatNum(resumenVentas.iva_total) }}</span></div>
-                        <div v-if="resumenVentas.tributos_total > 0" class="flex justify-between"><span class="text-gray-500">Tributos:</span><span class="font-medium">$ {{ formatNum(resumenVentas.tributos_total) }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Tributos:</span><span class="font-medium">$ {{ formatNum(resumenVentas.tributos_total) }}</span></div>
                         <div class="flex justify-between border-t border-gray-200 pt-2"><span class="text-gray-700 font-semibold">Total:</span><span class="font-semibold">$ {{ formatNum(resumenVentas.total) }}</span></div>
                     </div>
                 </div>
@@ -114,6 +114,7 @@ const aplicarFiltro = (anio, mes) => {
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nro ARCA</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Tributos</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">CAE</th>
                             </tr>
@@ -125,13 +126,14 @@ const aplicarFiltro = (anio, mes) => {
                                 <td class="px-4 py-2 text-gray-700 font-mono">{{ v.arca_punto_venta ? String(v.arca_punto_venta).padStart(4,'0') + '-' + String(v.arca_numero).padStart(8,'0') : (v.tipo === 'factura_interna' ? '#' + v.id : '-') }}</td>
                                 <td class="px-4 py-2 text-right text-gray-700">$ {{ formatNum(v.subtotal) }}</td>
                                 <td class="px-4 py-2 text-right text-blue-700">$ {{ formatNum(v.iva_total) }}</td>
+                                <td class="px-4 py-2 text-right text-orange-700">$ {{ formatNum(v.tributos_total) }}</td>
                                 <td class="px-4 py-2 text-right text-gray-900 font-semibold">$ {{ formatNum(v.total) }}</td>
                                 <td class="px-4 py-2 text-center">
                                     <span class="text-xs font-mono" :class="v.arca_cae ? 'text-green-700' : 'text-gray-400'">{{ v.arca_cae || '-' }}</span>
                                 </td>
                             </tr>
                             <tr v-if="!ventas.length">
-                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400">Sin comprobantes de venta en este periodo.</td>
+                                <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-400">Sin comprobantes de venta en este periodo.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -150,6 +152,7 @@ const aplicarFiltro = (anio, mes) => {
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Tributos</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                             </tr>
                         </thead>
@@ -160,10 +163,11 @@ const aplicarFiltro = (anio, mes) => {
                                 <td class="px-4 py-2 text-gray-700 font-mono">{{ c.numero || '-' }}</td>
                                 <td class="px-4 py-2 text-right text-gray-700">$ {{ formatNum(c.subtotal) }}</td>
                                 <td class="px-4 py-2 text-right text-green-700">$ {{ formatNum(c.iva_total) }}</td>
+                                <td class="px-4 py-2 text-right text-orange-700">$ {{ formatNum(c.tributos_total) }}</td>
                                 <td class="px-4 py-2 text-right text-gray-900 font-semibold">$ {{ formatNum(c.total) }}</td>
                             </tr>
                             <tr v-if="!compras.length">
-                                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400">Sin comprobantes de compra en este periodo.</td>
+                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400">Sin comprobantes de compra en este periodo.</td>
                             </tr>
                         </tbody>
                     </table>
