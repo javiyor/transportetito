@@ -398,10 +398,17 @@
         $tipoLabel = 'COMPROBANTE';
     }
 
-    // Letter from tipo suffix
+    // Letter from tipo suffix or arca_tipo_cbte
     $letter = '';
     if (preg_match('/_(a|b|c|e|m)$/', $comprobante->tipo, $m)) {
         $letter = strtoupper($m[1]);
+    } elseif ($comprobante->arca_tipo_cbte) {
+        $cod = (int) $comprobante->arca_tipo_cbte;
+        if ($cod >= 1 && $cod <= 5) $letter = 'A';
+        elseif ($cod >= 6 && $cod <= 10) $letter = 'B';
+        elseif ($cod >= 11 && $cod <= 15) $letter = 'C';
+        elseif ($cod >= 19 && $cod <= 23) $letter = 'E';
+        else $letter = 'M';
     }
 
     // Format helpers
