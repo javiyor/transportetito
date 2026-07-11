@@ -378,6 +378,18 @@
     $empresa = $comprobante->empresa;
     $detalle = $comprobante->detalle_facturacion ?? [];
     $calculo = $detalle['calculo'] ?? [];
+
+    // Fallback for imported comprobantes without detalle_facturacion.calculo
+    if (empty($calculo) && $comprobante->total) {
+        $calculo = [
+            'subtotal_gravado' => (float) ($comprobante->subtotal ?: $comprobante->total),
+            'iva' => (float) ($comprobante->iva_total ?? 0),
+            'tributos_total' => (float) ($comprobante->tributos_total ?? 0),
+            'total' => (float) $comprobante->total,
+            'bultos' => 0,
+            'palets' => 0,
+        ];
+    }
     $esGuia = $comprobante->tipo === 'guia_envio';
     $esFactura = (bool) preg_match('/^factura/', $comprobante->tipo);
     $esNotaCredito = (bool) preg_match('/^nota_credito/', $comprobante->tipo);
@@ -683,7 +695,10 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" style="text-align:center;color:#999;">Sin pedidos asociados</td>
+                        <td style="text-align:center;">1</td>
+                        <td>Servicio de flete segun factura</td>
+                        <td style="text-align:right;">{{ $fmtNum($comprobante->total ?? 0) }}</td>
+                        <td style="text-align:right;">{{ $fmtNum($comprobante->total ?? 0) }}</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -742,9 +757,11 @@
         {{-- ===== VALOR DECLARADO ===== --}}
         <div class="valor-declarado-line">
             <span><strong>Valor declarado total:</strong> {{ $fmtMoneda($totalValorDeclarado) }}</span>
+            @if($comprobante->pedidos->isNotEmpty())
             <span><strong>Total bultos:</strong> {{ $calculo['bultos'] ?? $comprobante->pedidos->sum('bultos') }}
                 @if(($calculo['palets'] ?? 0) > 0) &nbsp;|&nbsp; <strong>Palets:</strong> {{ $calculo['palets'] }} @endif
             </span>
+            @endif
         </div>
 
         {{-- ===== LEGAL LEGENDS ===== --}}
