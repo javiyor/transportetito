@@ -1,6 +1,8 @@
 <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #374151;">
     <div style="flex-shrink: 0;">
-        <img src="{{ public_path('brand/logo.png') }}" alt="Logo" style="height: 50px; width: auto;" onerror="this.style.display='none'">
+        @if(file_exists(public_path('images/logo.png')))
+            <img src="{{ asset('images/logo.png') }}" alt="Logo" style="height: 50px; width: auto;">
+        @endif
     </div>
     <div>
         <div style="font-size: 16px; font-weight: bold; color: #111827;">{{ $empresa->razon_social ?? 'Transporte Tito' }}</div>
