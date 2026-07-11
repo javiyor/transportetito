@@ -695,9 +695,9 @@
                     </tr>
                 @empty
                     <tr>
-                        <td style="text-align:center;">1</td>
+                        <td style="text-align:center;">-</td>
                         <td>Servicio de flete segun factura</td>
-                        <td style="text-align:right;">{{ $fmtNum($comprobante->total ?? 0) }}</td>
+                        <td style="text-align:right;">$ 0,00</td>
                         <td style="text-align:right;">{{ $fmtNum($comprobante->total ?? 0) }}</td>
                     </tr>
                 @endforelse
