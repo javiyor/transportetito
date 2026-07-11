@@ -22,8 +22,8 @@ class ArcaQrService
         if (!$json) return null;
 
         $options = new QROptions([
-            'outputType' => QRCode::OUTPUT_IMAGE_PNG,
-            'eccLevel' => QRCode::ECC_M,
+            'outputType' => 'png',
+            'eccLevel' => 'M',
             'scale' => 4,
             'imageBase64' => true,
         ]);
