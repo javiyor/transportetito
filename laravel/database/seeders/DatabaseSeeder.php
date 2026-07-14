@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             BancoSeeder::class,
             CategoriasPredeterminadasSeeder::class,
             PlanDeCuentasSeeder::class,
+            ConfiguracionContableSeeder::class,
         ]);
     }
 }

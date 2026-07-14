@@ -10,15 +10,21 @@ use App\Models\Recibo;
 use App\Models\ReciboAplicacion;
 use App\Models\ReciboItem;
 use App\Models\TerceroCuenta;
+use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use App\Mail\ReciboConfirmadoMail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class CuentaCorrienteReciboStoreController extends Controller
 {
+    public function __construct(
+        private ContabilizadorService $contabilizador
+    ) {}
+
     public function __invoke(Request $request, TerceroCuenta $cuenta, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         abort_unless((int) $cuenta->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
@@ -166,6 +172,15 @@ class CuentaCorrienteReciboStoreController extends Controller
             'referencia_id' => $recibo->id,
             'observacion' => 'Recibo manual',
         ]);
+
+        try {
+            $this->contabilizador->contabilizarCobro($recibo);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo contabilizar recibo', [
+                'recibo_id' => $recibo->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         if (! empty($data['send_email'])) {
             try {

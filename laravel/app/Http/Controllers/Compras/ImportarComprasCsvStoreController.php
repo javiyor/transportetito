@@ -9,12 +9,18 @@ use App\Models\ProveedorComprobante;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Models\TerceroEmpresa;
+use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ImportarComprasCsvStoreController extends Controller
 {
+    public function __construct(
+        private ContabilizadorService $contabilizador
+    ) {}
+
     public function __invoke(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -115,6 +121,16 @@ class ImportarComprasCsvStoreController extends Controller
                     'referencia_id' => $comprobante->id,
                     'observacion' => 'Importacion CSV comprobante #'.$comprobante->id,
                 ]);
+
+                try {
+                    $comprobante->load('empresa');
+                    $this->contabilizador->contabilizarCompra($comprobante);
+                } catch (\Throwable $e) {
+                    Log::warning('No se pudo contabilizar compra CSV', [
+                        'comprobante_id' => $comprobante->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 $importados++;
             }

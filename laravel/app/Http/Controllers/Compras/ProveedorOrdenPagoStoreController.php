@@ -8,13 +8,19 @@ use App\Models\CtaCteMovimiento;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use App\Models\TerceroCuenta;
+use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProveedorOrdenPagoStoreController extends Controller
 {
+    public function __construct(
+        private ContabilizadorService $contabilizador
+    ) {}
+
     public function __invoke(Request $request, TerceroCuenta $cuenta, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
@@ -160,6 +166,15 @@ class ProveedorOrdenPagoStoreController extends Controller
                 'referencia_id' => $orden->id,
                 'observacion' => $data['observacion'] ?: 'Orden de pago '.$orden->id,
             ]);
+
+            try {
+                $this->contabilizador->contabilizarPagoProveedor($orden);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo contabilizar OP', [
+                    'orden_pago_id' => $orden->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         });
 
         return back()->with('success', 'Orden de pago registrada.');

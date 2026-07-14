@@ -9,12 +9,18 @@ use App\Models\Empresa;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\WsfeClient;
+use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ImportarFacturasArcaStoreController extends Controller
 {
+    public function __construct(
+        private ContabilizadorService $contabilizador
+    ) {}
+
     public function __invoke(Request $request, WsfeClient $wsfe): RedirectResponse
     {
         $data = $request->validate([
@@ -125,6 +131,20 @@ class ImportarFacturasArcaStoreController extends Controller
                         'referencia_tipo' => 'comprobante',
                         'referencia_id' => $comprobante->id,
                         'observacion' => 'Importacion ARCA factura #'.$comprobante->id,
+                    ]);
+                }
+
+                try {
+                    $comprobante->load('empresa');
+                    if (str_contains($tipo, 'nota_credito')) {
+                        $this->contabilizador->contabilizarNotaCredito($comprobante);
+                    } else {
+                        $this->contabilizador->contabilizarVenta($comprobante);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('No se pudo contabilizar comprobante ARCA', [
+                        'comprobante_id' => $comprobante->id,
+                        'error' => $e->getMessage(),
                     ]);
                 }
 

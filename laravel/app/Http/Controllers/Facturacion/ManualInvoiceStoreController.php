@@ -7,11 +7,17 @@ use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\TerceroCuenta;
+use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ManualInvoiceStoreController extends Controller
 {
+    public function __construct(
+        private ContabilizadorService $contabilizador
+    ) {}
+
     public function __invoke(Request $request): RedirectResponse
     {
         $empresaId = (int) $request->user()->current_empresa_id;
@@ -100,6 +106,15 @@ class ManualInvoiceStoreController extends Controller
                 'disponible_hoja_ruta' => (bool) ($data['disponible_para_hoja_ruta'] ?? true),
             ],
         ]);
+
+        try {
+            $this->contabilizador->contabilizarVenta($comprobante);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo contabilizar factura manual', [
+                'comprobante_id' => $comprobante->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()
             ->route('facturacion.manifiestos.index')

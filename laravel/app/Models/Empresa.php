@@ -60,4 +60,16 @@ class Empresa extends Model
     {
         return $this->belongsTo(CondicionIva::class);
     }
+
+    public function configuracionContable(): HasMany
+    {
+        return $this->hasMany(ConfiguracionContable::class, 'empresa_id');
+    }
+
+    public function getCuentaContable(string $clave): ?CuentaContable
+    {
+        return $this->configuracionContable()
+            ->where('clave', $clave)
+            ->first()?->cuentaContable;
+    }
 }
