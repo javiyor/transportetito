@@ -322,8 +322,8 @@ Route::middleware([
         Route::post('/egresos', [EgresoIndexController::class, 'store'])->name('egresos.store');
         Route::get('/egresos/export', EgresoExportController::class)->name('egresos.export');
 
-        Route::get('/libro-diario', \App\Http\Controllers\Finanzas\LibroDiarioController::class)->name('libro-diario');
-        Route::get('/libro-mayor', \App\Http\Controllers\Finanzas\LibroMayorController::class)->name('libro-mayor');
+        Route::get('/libro-diario', [\App\Http\Controllers\Finanzas\LibroDiarioController::class, 'index'])->name('libro-diario');
+        Route::get('/libro-mayor', [\App\Http\Controllers\Finanzas\LibroMayorController::class, 'index'])->name('libro-mayor');
         Route::get('/balance', [\App\Http\Controllers\Finanzas\BalanceController::class, 'index'])->name('balance');
         Route::get('/balance/export', [\App\Http\Controllers\Finanzas\BalanceController::class, 'export'])->name('balance.export');
     });
