@@ -85,16 +85,19 @@ const defaultForm = () => ({
     naturaleza: '',
     nivel: 'cuenta',
     contabilizable: true,
+    activo: true,
     orden: 0,
 });
 
 const createForm = useForm(defaultForm());
 const createParentLabel = ref('');
+const showCreateModal = ref(false);
 
 const openCreate = (parent) => {
     createForm.reset();
     createForm.parent_id = parent?.id || null;
     createForm.tipo = parent?.tipo || '';
+    createForm.activo = true;
     const parentNivel = parent?.nivel || null;
     const nivelOrder = { capitulo: 0, rubro: 1, cuenta_madre: 2, cuenta: 3, subcuenta: 4 };
     const nextNivel = parentNivel ? nivelOrder[parentNivel] + 1 : 0;
@@ -103,10 +106,11 @@ const openCreate = (parent) => {
     if (parent?.naturaleza) createForm.naturaleza = parent.naturaleza;
     createParentLabel.value = parent ? `${parent.codigo_completo || parent.codigo} - ${parent.nombre}` : '(Raíz - Capítulo nuevo)';
     createForm.clearErrors();
+    showCreateModal.value = true;
 };
 
 const submitCreate = () => {
-    createForm.post(route('admin.plan-cuentas.store'), { preserveScroll: true, onSuccess: () => createForm.reset() });
+    createForm.post(route('admin.plan-cuentas.store'), { preserveScroll: true, onSuccess: () => { createForm.reset(); showCreateModal.value = false; } });
 };
 
 const editing = ref(false);
@@ -230,7 +234,7 @@ const rowBg = (nivel) => ({
             </div>
         </div>
 
-        <DialogModal :show="createForm.recentlySuccessful || createForm.processing" @close="() => {}">
+        <DialogModal :show="showCreateModal" @close="showCreateModal = false">
             <template #title>Crear {{ nivelLabel(createForm.nivel) }}</template>
             <template #content>
                 <div class="text-sm text-gray-600 mb-3">Padre: <strong>{{ createParentLabel }}</strong></div>
@@ -286,7 +290,7 @@ const rowBg = (nivel) => ({
                 </form>
             </template>
             <template #footer>
-                <SecondaryButton @click="createForm.reset()">Cancelar</SecondaryButton>
+                <SecondaryButton @click="showCreateModal = false; createForm.reset()">Cancelar</SecondaryButton>
                 <PrimaryButton class="ms-3" :disabled="createForm.processing" @click="submitCreate">Crear</PrimaryButton>
             </template>
         </DialogModal>
