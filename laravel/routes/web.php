@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\ChequeController;
 use App\Http\Controllers\Admin\VehiculoAdminController;
 use App\Http\Controllers\Admin\CuentaContableAdminController;
 use App\Http\Controllers\Admin\EmpleadoAdminController;
+use App\Http\Controllers\Admin\PlanDeCuentasController;
 use App\Http\Controllers\Finanzas\EgresoIndexController;
 use App\Http\Controllers\Finanzas\EgresoExportController;
 
@@ -193,9 +194,13 @@ Route::middleware([
         Route::put('/empleados/{empleado}', [EmpleadoAdminController::class, 'update'])->name('empleados.update');
         Route::delete('/empleados/{empleado}', [EmpleadoAdminController::class, 'destroy'])->name('empleados.destroy');
 
-        Route::get('/cuentas-contables', [CuentaContableAdminController::class, 'index'])->name('cuentas-contables.index');
-        Route::post('/cuentas-contables', [CuentaContableAdminController::class, 'store'])->name('cuentas-contables.store');
-        Route::put('/cuentas-contables/{cuentaContable}', [CuentaContableAdminController::class, 'update'])->name('cuentas-contables.update');
+        Route::get('/plan-cuentas', [PlanDeCuentasController::class, 'index'])->name('plan-cuentas.index');
+        Route::post('/plan-cuentas', [PlanDeCuentasController::class, 'store'])->name('plan-cuentas.store');
+        Route::put('/plan-cuentas/{cuentaContable}', [PlanDeCuentasController::class, 'update'])->name('plan-cuentas.update');
+        Route::delete('/plan-cuentas/{cuentaContable}', [PlanDeCuentasController::class, 'destroy'])->name('plan-cuentas.destroy');
+        Route::get('/plan-cuentas/export', [PlanDeCuentasController::class, 'export'])->name('plan-cuentas.export');
+
+        Route::permanentRedirect('/cuentas-contables', '/admin/plan-cuentas');
 
         Route::get('/arca-diagnostic', [EmpresaAdminController::class, 'arcaDiagnostic'])->name('arca-diagnostic');
         Route::get('/arca', [ArcaCertificateController::class, 'index'])->name('arca.index');

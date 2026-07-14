@@ -190,3 +190,32 @@ WHATSAPP_FROM_NUMBER=
 | POST | `/operacion/manifiestos/{manifiesto}/pedidos/{pedido}/marcar-facturacion` | ManifiestoIngresoController::marcarFacturacion |
 | POST | `/operacion/manifiestos/{manifiesto}/pedidos/{pedido}/asignar` | ManifiestoIngresoController::asignarPedido |
 | GET | `/admin/arca-diagnostic` | EmpresaAdminController::arcaDiagnostic |
+| GET | `/admin/plan-cuentas` | PlanDeCuentasController::index |
+| POST | `/admin/plan-cuentas` | PlanDeCuentasController::store |
+| PUT | `/admin/plan-cuentas/{cuentaContable}` | PlanDeCuentasController::update |
+| DELETE | `/admin/plan-cuentas/{cuentaContable}` | PlanDeCuentasController::destroy |
+| GET | `/admin/plan-cuentas/export` | PlanDeCuentasController::export |
+
+---
+
+## 12. Plan de Cuentas Jerárquico
+
+**Archivos creados:**
+- `app/Http/Controllers/Admin/PlanDeCuentasController.php` — CRUD + export CSV + buildTree()
+- `database/migrations/2026_07_14_000001_add_jerarquia_to_cuentas_contables.php`
+- `database/seeders/PlanDeCuentasSeeder.php` — ~250 cuentas (Activo, Pasivo, PN, Resultados, Ord. 1/2/3)
+- `resources/js/Pages/Admin/PlanDeCuentas/Index.vue` — árbol colapsable, edición inline, CRUD
+
+**Archivos modificados:**
+- `app/Models/CuentaContable.php` — relaciones parent/children, scopes (contabilizable, nivel, tipo), nuevos fillable/casts
+- `app/Http/Controllers/Finanzas/EgresoIndexController.php` — filtro `->where('contabilizable', true)` en select
+- `app/Http/Controllers/Compras/IngresoOperativoIndexController.php` — filtro `->where('contabilizable', true)` en select
+- `app/Http/Controllers/Compras/GastoOperativoIndexController.php` — filtro `->where('contabilizable', true)` en select
+- `routes/web.php` — nuevas rutas plan-cuentas, redirect desde cuentas-contables
+- `resources/js/Layouts/AppLayout.vue` — menú "Categorias de ing/egr" → "Plan de Cuentas"
+- `database/seeders/DatabaseSeeder.php` — agrega PlanDeCuentasSeeder
+
+**Migración:**
+| Archivo | Tabla | Nuevas columnas |
+|---|---|---|
+| `2026_07_14_000001` | `cuentas_contables` | `parent_id`, `codigo_completo`, `codigo_corto`, `naturaleza`, `nivel`, `contabilizable`, `orden` |

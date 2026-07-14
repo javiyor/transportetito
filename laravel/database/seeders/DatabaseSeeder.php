@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             LocalidadSeeder::class,
             BancoSeeder::class,
             CategoriasPredeterminadasSeeder::class,
+            PlanDeCuentasSeeder::class,
         ]);
     }
 }

@@ -32,6 +32,7 @@ class EgresoIndexController extends Controller
                 ->where('empresa_id', $empresaId)
                 ->where('tipo', 'egreso')
                 ->where('activo', true)
+                ->where('contabilizable', true)
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
             'totales' => [

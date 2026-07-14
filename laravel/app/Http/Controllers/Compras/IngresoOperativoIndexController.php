@@ -32,6 +32,7 @@ class IngresoOperativoIndexController extends Controller
                 ->where('empresa_id', $empresaId)
                 ->where('tipo', 'ingreso')
                 ->where('activo', true)
+                ->where('contabilizable', true)
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
             'totales' => [

@@ -31,6 +31,7 @@ class GastoOperativoIndexController extends Controller
             'cuentasContables' => CuentaContable::query()
                 ->where('empresa_id', $empresaId)
                 ->where('activo', true)
+                ->where('contabilizable', true)
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
             'totales' => [
