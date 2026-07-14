@@ -28,4 +28,14 @@ class AsientoLinea extends Model
     {
         return $this->belongsTo(AsientoContable::class, 'asiento_id');
     }
+
+    public function cuentaContable(): BelongsTo
+    {
+        return $this->belongsTo(CuentaContable::class);
+    }
+
+    public function terceroCuenta(): BelongsTo
+    {
+        return $this->belongsTo(TerceroCuenta::class);
+    }
 }

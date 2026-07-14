@@ -34,6 +34,6 @@ class AsientoContable extends Model
 
     public function lineas(): HasMany
     {
-        return $this->hasMany(AsientoLinea::class, 'asiento_id');
+        return $this->hasMany(AsientoLinea::class, 'asiento_id')->orderBy('id');
     }
 }
