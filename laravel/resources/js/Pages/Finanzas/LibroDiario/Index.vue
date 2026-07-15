@@ -32,6 +32,18 @@ const refLabel = (tipo) => ({
     recibo: 'Recibo',
     orden_pago: 'OP',
 }[tipo] || tipo);
+
+const fmtFecha = (f) => {
+    if (!f) return '';
+    const parts = f.split(' ')[0].split('-');
+    if (parts.length !== 3) return f;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
+const fmtDesc = (d) => {
+    if (!d) return '';
+    return d.replace(/factura_interna/g, 'factura');
+};
 </script>
 
 <template>
@@ -99,8 +111,8 @@ const refLabel = (tipo) => ({
                         <tbody class="bg-white divide-y divide-gray-200">
                             <template v-for="asiento in asientos.data" :key="asiento.id">
                                 <tr class="hover:bg-gray-50 cursor-pointer" @click="toggle(asiento.id)">
-                                    <td class="px-4 py-2 text-sm whitespace-nowrap">{{ asiento.fecha }}</td>
-                                    <td class="px-4 py-2 text-sm">{{ asiento.descripcion }}</td>
+                                    <td class="px-4 py-2 text-sm whitespace-nowrap">{{ fmtFecha(asiento.fecha) }}</td>
+                                    <td class="px-4 py-2 text-sm">{{ fmtDesc(asiento.descripcion) }}</td>
                                     <td class="px-4 py-2 text-sm text-gray-500">
                                         <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">{{ refLabel(asiento.referencia_tipo) }} #{{ asiento.referencia_id }}</span>
                                     </td>
