@@ -35,9 +35,12 @@ const refLabel = (tipo) => ({
 
 const fmtFecha = (f) => {
     if (!f) return '';
-    const parts = f.split(' ')[0].split('-');
-    if (parts.length !== 3) return f;
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    const d = new Date(f);
+    if (isNaN(d.getTime())) return f;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
 };
 
 const fmtDesc = (d) => {
