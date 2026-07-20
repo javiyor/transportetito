@@ -8,6 +8,7 @@ use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ use Illuminate\Support\Facades\Log;
 class ImportarFacturasCsvStoreController extends Controller
 {
     public function __construct(
-        private ContabilizadorService $contabilizador
+        private ContabilizadorService $contabilizador,
+        private ArcaTipoComprobanteResolver $arcaTipoResolver,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
@@ -82,14 +84,29 @@ class ImportarFacturasCsvStoreController extends Controller
 
                 $maxInterno++;
 
+                $tipoFinal = $row['tipo'];
+                if (!$tercero->wasRecentlyCreated && $tercero->condicion_iva) {
+                    $tipoFinal = $this->arcaTipoResolver->corregirTipo(
+                        $empresa->condicion_iva,
+                        $tercero->condicion_iva,
+                        $row['tipo']
+                    );
+                }
+
                 $arcaTipoMap = [
+                    'FA' => 'factura_a', 'FB' => 'factura_b', 'FC' => 'factura_c',
+                    'FCA' => 'factura_credito_a', 'FCB' => 'factura_credito_b', 'FCC' => 'factura_credito_c',
+                    'NDA' => 'nota_debito_a', 'NDB' => 'nota_debito_b', 'NDC' => 'nota_debito_c',
+                    'NCA' => 'nota_credito_a', 'NCB' => 'nota_credito_b', 'NCC' => 'nota_credito_c',
+                    'FE' => 'factura_e', 'NDE' => 'nota_debito_e', 'NCE' => 'nota_credito_e',
+                    'FM' => 'factura_m', 'NDM' => 'nota_debito_m', 'NCM' => 'nota_credito_m',
                     '01' => 'factura_a', '02' => 'nota_debito_a', '03' => 'nota_credito_a',
                     '06' => 'factura_b', '07' => 'nota_debito_b', '08' => 'nota_credito_b',
                     '11' => 'factura_c', '12' => 'nota_debito_c', '13' => 'nota_credito_c',
                     '15' => 'factura_e', '16' => 'nota_debito_e', '17' => 'nota_credito_e',
                     '51' => 'factura_m', '52' => 'nota_debito_m', '53' => 'nota_credito_m',
                 ];
-                $tipo = $arcaTipoMap[$row['tipo']] ?? 'factura_interna';
+                $tipo = $arcaTipoMap[$tipoFinal] ?? 'factura_interna';
 
                 $comprobante = Comprobante::create([
                     'empresa_id' => $empresa->id,

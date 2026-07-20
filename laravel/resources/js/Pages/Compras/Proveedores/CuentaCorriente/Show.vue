@@ -40,6 +40,19 @@ const totalPago = computed(() => {
     return form.items.reduce((sum, item) => sum + (parseFloat(item.importe) || 0), 0);
 });
 
+const comprobantesPorId = computed(() => {
+    const map = {};
+    (props.comprobantes || []).forEach(c => { map[c.id] = c; });
+    return map;
+});
+
+const selectedComprobantesTotal = computed(() => {
+    return (form.comprobante_ids || []).reduce((sum, id) => {
+        const c = comprobantesPorId.value[id];
+        return sum + (c ? parseFloat(c.saldo_pendiente) : 0);
+    }, 0);
+});
+
 const agregarItem = () => {
     form.items.push({ medio: 'efectivo', importe: '', moneda: form.moneda, cheque_numero: '', cheque_banco: '', cheque_vencimiento: '', cheque_id: '' });
 };
@@ -51,7 +64,12 @@ const quitarItem = (idx) => {
 const esChequeTercero = (medio) => medio === 'cheque_tercero';
 const esChequePropio = (medio) => medio === 'cheque_propio';
 
-const submit = () => form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), { preserveScroll: true });
+const submit = () => {
+    if (selectedComprobantesTotal.value === 0 && form.comprobante_ids?.length > 0) {
+        if (!confirm('Los comprobantes seleccionados se cancelan entre si (total=0). ¿Confirmar compensación?')) return;
+    }
+    form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), { preserveScroll: true });
+};
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
 const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
@@ -112,6 +130,10 @@ const chequesFiltrados = computed(() => {
                             <tbody><tr v-for="c in comprobantes" :key="c.id" class="hover:bg-gray-50"><td class="pr-2 py-0.5 text-gray-700">{{ c.tipo }}</td><td class="pr-2 py-0.5 text-gray-700 font-mono">{{ c.numero || '-' }}</td><td class="pr-2 py-0.5 text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="pr-2 py-0.5 text-right text-gray-900 font-semibold">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td></tr></tbody>
                         </table>
                         <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
+                        <div v-if="form.comprobante_ids.length" class="mt-1 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-1">
+                            Total seleccionado: {{ formatNum(selectedComprobantesTotal) }}
+                            <span v-if="selectedComprobantesTotal === 0" class="text-amber-600">(compensación)</span>
+                        </div>
                     </fieldset>
 
                     <div class="border border-gray-200 rounded-md p-3 space-y-2">

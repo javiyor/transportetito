@@ -45,11 +45,21 @@ const oldHeaderMap = {
 };
 
 const tipoArcaMap = {
-    '1': 'FA', '2': 'FB', '3': 'FC', '4': 'FCA', '5': 'FCB', '6': 'FCC',
-    'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC',
+    '1': 'FA', '2': 'NDA', '3': 'NCA',
+    '6': 'FB', '7': 'NDB', '8': 'NCB',
+    '11': 'FC', '12': 'NDC', '13': 'NCC',
+    '15': 'FE', '16': 'NDE', '17': 'NCE',
+    '51': 'FM', '52': 'NDM', '53': 'NCM',
+    'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC', 'factura e': 'FE', 'factura m': 'FM',
     'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
-    'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de credito a': 'NCA', 'nota de credito b': 'NCB',
-    'nota de débito a': 'NDA', 'nota de débito b': 'NDB', 'nota de crédito a': 'NCA', 'nota de crédito b': 'NCB',
+    'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de debito c': 'NDC',
+    'nota de debito e': 'NDE', 'nota de debito m': 'NDM',
+    'nota de credito a': 'NCA', 'nota de credito b': 'NCB', 'nota de credito c': 'NCC',
+    'nota de credito e': 'NCE', 'nota de credito m': 'NCM',
+    'nota de débito a': 'NDA', 'nota de débito b': 'NDB', 'nota de débito c': 'NDC',
+    'nota de débito e': 'NDE', 'nota de débito m': 'NDM',
+    'nota de crédito a': 'NCA', 'nota de crédito b': 'NCB', 'nota de crédito c': 'NCC',
+    'nota de crédito e': 'NCE', 'nota de crédito m': 'NCM',
 };
 
 const monedaArcaMap = {
@@ -206,12 +216,32 @@ const submitArca = () => {
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tipo comprobante</label>
                         <select v-model="arcaForm.tipo_comprobante" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                            <option value="FA">Factura A</option>
-                            <option value="FB">Factura B</option>
-                            <option value="FC">Factura C</option>
-                            <option value="FCA">Factura Crédito A</option>
-                            <option value="FCB">Factura Crédito B</option>
-                            <option value="FCC">Factura Crédito C</option>
+                            <optgroup label="Factura">
+                                <option value="FA">Factura A</option>
+                                <option value="FB">Factura B</option>
+                                <option value="FC">Factura C</option>
+                                <option value="FE">Factura E</option>
+                                <option value="FM">Factura M</option>
+                            </optgroup>
+                            <optgroup label="Nota de Débito">
+                                <option value="NDA">Nota de Débito A</option>
+                                <option value="NDB">Nota de Débito B</option>
+                                <option value="NDC">Nota de Débito C</option>
+                                <option value="NDE">Nota de Débito E</option>
+                                <option value="NDM">Nota de Débito M</option>
+                            </optgroup>
+                            <optgroup label="Nota de Crédito">
+                                <option value="NCA">Nota de Crédito A</option>
+                                <option value="NCB">Nota de Crédito B</option>
+                                <option value="NCC">Nota de Crédito C</option>
+                                <option value="NCE">Nota de Crédito E</option>
+                                <option value="NCM">Nota de Crédito M</option>
+                            </optgroup>
+                            <optgroup label="Factura de Crédito">
+                                <option value="FCA">Factura Crédito A</option>
+                                <option value="FCB">Factura Crédito B</option>
+                                <option value="FCC">Factura Crédito C</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div>

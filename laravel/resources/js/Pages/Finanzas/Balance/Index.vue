@@ -61,7 +61,7 @@ const indent = (depth) => `${12 + depth * 20}px`;
                     <div class="text-xs text-gray-500">Diferencia</div>
                     <div class="text-lg font-bold" :class="totales.diferencia === 0 ? 'text-green-700' : 'text-red-700'">
                         $ {{ Math.abs(totales.diferencia).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
-                        <span v-if="totales.diferencia !== 0" class="text-xs font-normal">(desc cuadrado)</span>
+                        <span v-if="totales.diferencia !== 0" class="text-xs font-normal">(no cuadra)</span>
                     </div>
                 </div>
             </div>
@@ -116,10 +116,9 @@ const TreeNode = {
     props: ['node', 'depth', 'expanded', 'bgFn', 'indentFn'],
     emits: ['toggle'],
     setup(props, { emit }) {
-        const hasChildren = props.node.children?.length > 0;
-        const isExpanded = props.expanded.has(props.node.id);
-
         return () => {
+            const hasChildren = props.node.children?.length > 0;
+            const isExpanded = props.expanded.has(props.node.id);
             const children = hasChildren && isExpanded ? props.node.children.map(child =>
                 h(TreeNode, {
                     node: child,

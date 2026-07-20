@@ -33,7 +33,7 @@ class ProveedorOrdenPagoStoreController extends Controller
             'comprobante_ids.*' => ['integer', 'exists:proveedor_comprobantes,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.medio' => ['required', 'string', 'max:64'],
-            'items.*.importe' => ['required', 'numeric', 'gt:0'],
+            'items.*.importe' => ['required', 'numeric', 'gte:0'],
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'items.*.cheque_numero' => ['nullable', 'string', 'max:64'],
             'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],

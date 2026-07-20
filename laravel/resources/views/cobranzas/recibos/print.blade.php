@@ -43,6 +43,29 @@
         </tbody>
     </table>
 
+    @php
+        $retenciones = $recibo->retenciones ?? [];
+        $tieneRetenciones = collect($retenciones)->filter(fn($r) => !empty($r['importe']) && (float) $r['importe'] > 0)->isNotEmpty();
+    @endphp
+
+    @if($tieneRetenciones)
+        <h3>Retenciones</h3>
+        <table>
+            <thead><tr><th>Tipo</th><th>Descripcion</th><th>Importe</th></tr></thead>
+            <tbody>
+                @foreach(['iibb' => 'IIBB', 'iva' => 'IVA', 'ganancias' => 'Ganancias'] as $key => $label)
+                    @if(!empty($retenciones[$key]['importe']) && (float) $retenciones[$key]['importe'] > 0)
+                        <tr>
+                            <td>{{ $label }}</td>
+                            <td>{{ $retenciones[$key]['descripcion'] ?? '' }}</td>
+                            <td>$ {{ number_format((float) $retenciones[$key]['importe'], 2, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <h3>Aplicaciones</h3>
     <table>
         <thead><tr><th>Modo</th><th>Comprobante</th><th>Importe</th><th>Cotizacion</th></tr></thead>

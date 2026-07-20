@@ -43,6 +43,13 @@ const reciboTotal = computed(() => {
     return reciboForm.items.reduce((sum, item) => sum + (parseFloat(item.importe) || 0), 0);
 });
 
+const selectedComprobantesTotal = computed(() => {
+    return (reciboForm.comprobante_ids || []).reduce((sum, id) => {
+        const c = props.comprobantes.find(c => c.id === id);
+        return sum + (c ? parseFloat(c.total) : 0);
+    }, 0);
+});
+
 const agregarItem = () => {
     reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
 };
@@ -129,6 +136,9 @@ const formatNum = (n) => {
                                 <span class="text-xs text-gray-700">{{ c.tipo }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
                             <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
+                            <div v-if="reciboForm.comprobante_ids.length" class="mt-0.5 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-0.5">
+                                Total: {{ formatNum(selectedComprobantesTotal) }}
+                            </div>
                         </fieldset>
                         <InputError :message="reciboForm.errors.comprobante_ids" />
 

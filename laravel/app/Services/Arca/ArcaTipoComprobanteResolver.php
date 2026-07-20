@@ -45,6 +45,33 @@ class ArcaTipoComprobanteResolver
         return $out;
     }
 
+    public function resolverLetra(?string $emisorCondicionIva, ?string $clienteCondicionIva): string
+    {
+        $emisor = $this->normalizarCondicionIva($emisorCondicionIva);
+        $cliente = $this->normalizarCondicionIva($clienteCondicionIva);
+
+        if ($emisor === 'ri') {
+            return $cliente === 'ri' ? 'A' : 'B';
+        }
+
+        return 'C';
+    }
+
+    public function corregirTipo(?string $emisorCondicionIva, ?string $clienteCondicionIva, string $tipoActual): string
+    {
+        $letra = $this->resolverLetra($emisorCondicionIva, $clienteCondicionIva);
+
+        $base = match (true) {
+            in_array($tipoActual, ['FA', 'FB', 'FC', 'F']) => 'F',
+            in_array($tipoActual, ['NDA', 'NDB', 'NDC']) => 'ND',
+            in_array($tipoActual, ['NCA', 'NCB', 'NCC']) => 'NC',
+            in_array($tipoActual, ['FCA', 'FCB', 'FCC']) => 'FC',
+            default => null,
+        };
+
+        return $base ? $base . $letra : $tipoActual;
+    }
+
     public function permiteFacturaCredito(?string $emisorCondicionIva, ?string $clienteCondicionIva, ?float $importeTotal = null, ?string $clienteCuit = null): bool
     {
         $emisor = $this->normalizarCondicionIva($emisorCondicionIva);
