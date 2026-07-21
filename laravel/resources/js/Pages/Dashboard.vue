@@ -26,7 +26,7 @@ const formatCuit = (value) => {
                 <div class="bg-white overflow-hidden shadow sm:rounded-lg">
                     <div class="p-6 flex items-center justify-between gap-6">
                         <div class="flex items-center gap-4">
-                            <img src="/brand/logo.png" alt="TransporteTito" class="h-12 w-auto" />
+                            <img src="/brand/logo.jpeg" alt="TransporteTito" class="h-12 w-auto" />
                             <div>
                                 <div class="text-xl font-semibold text-gray-900">
                                     {{ empresa?.razon_social || 'Sin empresa configurada' }}

@@ -179,6 +179,7 @@ Route::middleware([
         Route::post('/cotizaciones/override', [CotizacionAdminController::class, 'storeOverride'])->name('cotizaciones.override.store');
 
         Route::get('/cheques', [ChequeController::class, 'index'])->name('cheques.index');
+        Route::post('/cheques', [ChequeController::class, 'store'])->name('cheques.store');
         Route::put('/cheques/{cheque}', [ChequeController::class, 'update'])->name('cheques.update');
         Route::get('/bancos/json', [\App\Http\Controllers\Admin\ChequeController::class, 'bancos'])->name('bancos.json');
         Route::get('/bancos', [\App\Http\Controllers\Admin\BancoAdminController::class, 'index'])->name('bancos.index');

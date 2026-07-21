@@ -60,6 +60,44 @@ class ChequeController extends Controller
         ]);
     }
 
+    public function store(Request $request): RedirectResponse
+    {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        abort_unless($empresaId, 403);
+
+        $data = $request->validate([
+            'tipo' => ['required', 'in:' . implode(',', Cheque::TIPOS)],
+            'origen' => ['required', 'in:' . implode(',', Cheque::ORIGENES)],
+            'numero' => ['nullable', 'string', 'max:64'],
+            'banco' => ['nullable', 'string', 'max:255'],
+            'importe' => ['required', 'numeric', 'gt:0'],
+            'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'fecha_emision' => ['required', 'date'],
+            'fecha_vencimiento' => ['nullable', 'date'],
+            'titular' => ['nullable', 'string', 'max:255'],
+            'librado_por' => ['nullable', 'string', 'max:255'],
+            'observacion' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        Cheque::query()->create([
+            'empresa_id' => $empresaId,
+            'tipo' => $data['tipo'],
+            'origen' => $data['origen'],
+            'numero' => $data['numero'],
+            'banco' => $data['banco'],
+            'importe' => $data['importe'],
+            'moneda' => $data['moneda'],
+            'fecha_emision' => $data['fecha_emision'],
+            'fecha_vencimiento' => $data['fecha_vencimiento'],
+            'titular' => $data['titular'],
+            'librado_por' => $data['librado_por'],
+            'estado' => 'en_cartera',
+            'observacion' => $data['observacion'],
+        ]);
+
+        return back()->with('success', 'Cheque creado.');
+    }
+
     public function update(Request $request, Cheque $cheque): RedirectResponse
     {
         $data = $request->validate([

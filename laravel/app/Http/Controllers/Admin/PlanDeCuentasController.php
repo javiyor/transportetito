@@ -7,6 +7,7 @@ use App\Models\CuentaContable;
 use App\Models\Empresa;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -44,7 +45,7 @@ class PlanDeCuentasController extends Controller
 
         $data = $request->validate([
             'parent_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
-            'codigo' => ['required', 'string', 'max:50'],
+            'codigo' => ['required', 'string', 'max:50', Rule::unique('cuentas_contables')->where('empresa_id', $empresaId)],
             'nombre' => ['required', 'string', 'max:255'],
             'tipo' => ['required', 'in:activo,pasivo,patrimonio_neto,ingreso,egreso'],
             'naturaleza' => ['nullable', 'in:deudor,acreedor'],
@@ -76,8 +77,10 @@ class PlanDeCuentasController extends Controller
 
     public function update(Request $request, CuentaContable $cuentaContable): RedirectResponse
     {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:50'],
+            'codigo' => ['required', 'string', 'max:50', Rule::unique('cuentas_contables')->where('empresa_id', $empresaId)->ignore($cuentaContable->id)],
             'nombre' => ['required', 'string', 'max:255'],
             'tipo' => ['required', 'in:activo,pasivo,patrimonio_neto,ingreso,egreso'],
             'naturaleza' => ['nullable', 'in:deudor,acreedor'],

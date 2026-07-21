@@ -15,6 +15,31 @@ const props = defineProps({
     bancos: Array,
 });
 
+const showForm = ref(false);
+const createForm = useForm({
+    tipo: 'fisico',
+    origen: 'tercero',
+    numero: '',
+    banco: '',
+    importe: '',
+    moneda: 'ARS',
+    fecha_emision: new Date().toISOString().slice(0, 10),
+    fecha_vencimiento: '',
+    titular: '',
+    librado_por: '',
+    observacion: '',
+});
+
+const submitCreate = () => {
+    createForm.post(route('admin.cheques.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            createForm.reset();
+            showForm.value = false;
+        },
+    });
+};
+
 const editId = ref(null);
 const editForm = useForm({
     estado: '',
@@ -155,6 +180,89 @@ const formatFecha = (v) => {
                         <PrimaryButton @click="applyFilters">Filtrar</PrimaryButton>
                     </div>
                 </div>
+            </div>
+
+            <div class="flex justify-end">
+                <PrimaryButton @click="showForm = !showForm">{{ showForm ? 'Cancelar' : '+ Nuevo cheque' }}</PrimaryButton>
+            </div>
+
+            <div v-if="showForm" class="bg-white shadow sm:rounded-lg p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Nuevo cheque</h3>
+                <form class="grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitCreate">
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Tipo</div>
+                        <select v-model="createForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="fisico">Físico</option>
+                            <option value="echeq">E-Cheq</option>
+                        </select>
+                        <InputError :message="createForm.errors.tipo" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Origen</div>
+                        <select v-model="createForm.origen" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="propio">Propio</option>
+                            <option value="tercero">Tercero</option>
+                        </select>
+                        <InputError :message="createForm.errors.origen" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Nro cheque</div>
+                        <TextInput v-model="createForm.numero" type="text" class="block w-full" placeholder="Número" />
+                        <InputError :message="createForm.errors.numero" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Banco</div>
+                        <select v-model="createForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">(seleccionar)</option>
+                            <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                        </select>
+                        <InputError :message="createForm.errors.banco" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Importe</div>
+                        <TextInput v-model="createForm.importe" type="number" min="0.01" step="0.01" class="block w-full" placeholder="0.00" />
+                        <InputError :message="createForm.errors.importe" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Moneda</div>
+                        <select v-model="createForm.moneda" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="BRL">BRL</option>
+                        </select>
+                        <InputError :message="createForm.errors.moneda" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Fecha emisión</div>
+                        <TextInput v-model="createForm.fecha_emision" type="date" class="block w-full" />
+                        <InputError :message="createForm.errors.fecha_emision" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Fecha vencimiento</div>
+                        <TextInput v-model="createForm.fecha_vencimiento" type="date" class="block w-full" />
+                        <InputError :message="createForm.errors.fecha_vencimiento" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Titular</div>
+                        <TextInput v-model="createForm.titular" type="text" class="block w-full" placeholder="Titular" />
+                        <InputError :message="createForm.errors.titular" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Librado por</div>
+                        <TextInput v-model="createForm.librado_por" type="text" class="block w-full" placeholder="Librado por" />
+                        <InputError :message="createForm.errors.librado_por" />
+                    </div>
+                    <div class="sm:col-span-4">
+                        <div class="text-xs font-medium text-gray-700 mb-1">Observación</div>
+                        <textarea v-model="createForm.observacion" class="block w-full border-gray-300 rounded-md shadow-sm text-sm" rows="2"></textarea>
+                        <InputError :message="createForm.errors.observacion" />
+                    </div>
+                    <div class="sm:col-span-4 flex justify-end gap-2">
+                        <SecondaryButton type="button" @click="showForm = false">Cancelar</SecondaryButton>
+                        <PrimaryButton :disabled="createForm.processing">Guardar cheque</PrimaryButton>
+                    </div>
+                </form>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">

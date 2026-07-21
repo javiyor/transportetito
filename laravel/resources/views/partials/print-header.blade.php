@@ -1,7 +1,7 @@
 <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #374151;">
     <div style="flex-shrink: 0;">
-        @if(file_exists(public_path('images/logo.png')))
-            <img src="{{ asset('images/logo.png') }}" alt="Logo" style="height: 50px; width: auto;">
+        @if(file_exists(public_path('images/logo.jpeg')))
+            <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" style="height: 50px; width: auto;">
         @endif
     </div>
     <div>

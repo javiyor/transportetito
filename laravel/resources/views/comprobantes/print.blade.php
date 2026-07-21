@@ -467,9 +467,9 @@
         <div class="content">
 
         <div class="guia-header-centered">
-            @if(file_exists(public_path('images/logo.png')))
+            @if(file_exists(public_path('images/logo.jpeg')))
                 <div style="margin-bottom:4pt;">
-                    <img src="{{ asset('images/logo.png') }}" alt="Logo" style="max-height:35pt;max-width:120pt;object-fit:contain;">
+                    <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" style="max-height:35pt;max-width:120pt;object-fit:contain;">
                 </div>
             @endif
             <h1>Guía no fiscal</h1>
@@ -543,13 +543,12 @@
         <div class="header-row">
             {{-- LEFT: Logo + Empresa info --}}
             <div class="header-left">
-                @if(file_exists(public_path('images/logo.png')))
+                @if(file_exists(public_path('images/logo.jpeg')))
                     <div style="margin-bottom:4pt;">
-                        <img src="{{ asset('images/logo.png') }}" alt="Logo" style="max-height:40pt;max-width:140pt;object-fit:contain;">
+                        <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" style="max-height:40pt;max-width:140pt;object-fit:contain;">
                     </div>
                 @endif
                 <div class="empresa-nombre">{{ $empresa->razon_social }}</div>
-                <div class="header-line"><span class="header-label">CUIT:</span> <span class="header-data">{{ $empresa->cuit }}</span></div>
                 <div class="header-line"><span class="header-label">Condición IVA:</span> <span class="header-data">{{ $empresa->condicion_iva ?? '-' }}</span></div>
                 @if($empresa->telefono)
                     <div class="header-line"><span class="header-label">Tel:</span> {{ $empresa->telefono }}</div>
