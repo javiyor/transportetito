@@ -9,6 +9,7 @@ use App\Services\Arca\ArcaCertificateResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class EmpresaAdminController extends Controller
@@ -40,7 +41,13 @@ class EmpresaAdminController extends Controller
             'instagram_url' => ['nullable', 'url', 'max:255'],
             'facebook_url' => ['nullable', 'url', 'max:255'],
             'linkedin_url' => ['nullable', 'url', 'max:255'],
+
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
         ]);
+
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        }
 
         Empresa::query()->create($data);
 
@@ -66,7 +73,16 @@ class EmpresaAdminController extends Controller
             'instagram_url' => ['nullable', 'url', 'max:255'],
             'facebook_url' => ['nullable', 'url', 'max:255'],
             'linkedin_url' => ['nullable', 'url', 'max:255'],
+
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
         ]);
+
+        if ($request->hasFile('logo')) {
+            if ($empresa->logo) {
+                Storage::disk('public')->delete($empresa->logo);
+            }
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        }
 
         $empresa->update($data);
 

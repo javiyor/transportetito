@@ -31,12 +31,28 @@ const createForm = useForm({
     instagram_url: '',
     facebook_url: '',
     linkedin_url: '',
+
+    logo: null,
 });
+
+const createLogoPreview = ref(null);
+
+const onCreateLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    createForm.logo = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => { createLogoPreview.value = ev.target.result; };
+    reader.readAsDataURL(file);
+};
 
 const submitCreate = () => {
     createForm.post(route('admin.empresas.store'), {
         preserveScroll: true,
-        onSuccess: () => createForm.reset('razon_social', 'cuit', 'condicion_iva_id'),
+        onSuccess: () => {
+            createForm.reset('razon_social', 'cuit', 'condicion_iva_id', 'logo');
+            createLogoPreview.value = null;
+        },
     });
 };
 
@@ -58,7 +74,12 @@ const editForm = useForm({
     instagram_url: '',
     facebook_url: '',
     linkedin_url: '',
+
+    logo: null,
 });
+
+const editLogoPreview = ref(null);
+const editLogoOriginal = ref(null);
 
 const openEdit = (e) => {
     editId.value = e.id;
@@ -78,8 +99,21 @@ const openEdit = (e) => {
     editForm.facebook_url = e.facebook_url || '';
     editForm.linkedin_url = e.linkedin_url || '';
 
+    editForm.logo = null;
+    editLogoOriginal.value = e.logo_url || null;
+    editLogoPreview.value = null;
+
     editForm.clearErrors();
     editing.value = true;
+};
+
+const onEditLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    editForm.logo = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => { editLogoPreview.value = ev.target.result; };
+    reader.readAsDataURL(file);
 };
 
 const submitEdit = () => {
@@ -189,6 +223,13 @@ const submitEdit = () => {
                         </div>
                     </div>
 
+                    <div class="sm:col-span-3">
+                        <InputLabel value="Logo" />
+                        <input type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @change="onCreateLogoChange" />
+                        <img v-if="createLogoPreview" :src="createLogoPreview" class="mt-2 h-16 w-auto object-contain border rounded" />
+                        <InputError class="mt-2" :message="createForm.errors.logo" />
+                    </div>
+
                     <div class="sm:col-span-3 flex justify-end">
                         <PrimaryButton :disabled="createForm.processing">Crear</PrimaryButton>
                     </div>
@@ -210,6 +251,7 @@ const submitEdit = () => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ARCA</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guias</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logo</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -221,12 +263,16 @@ const submitEdit = () => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.arca_pv_default }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.arca_env }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ e.permite_guias_no_fiscales ? 'Si' : 'No' }}</td>
+                                <td class="px-6 py-4">
+                                    <img v-if="e.logo_url" :src="e.logo_url" class="h-10 w-auto object-contain border rounded" />
+                                    <span v-else class="text-xs text-gray-400">—</span>
+                                </td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <SecondaryButton class="text-xs" @click.prevent="openEdit(e)">Editar</SecondaryButton>
                                 </td>
                             </tr>
                             <tr v-if="!empresas.length">
-                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
+                                <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -324,6 +370,14 @@ const submitEdit = () => {
                             <TextInput v-model="editForm.linkedin_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
                             <InputError class="mt-2" :message="editForm.errors.linkedin_url" />
                         </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <InputLabel value="Logo" />
+                        <input type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @change="onEditLogoChange" />
+                        <img v-if="editLogoPreview" :src="editLogoPreview" class="mt-2 h-16 w-auto object-contain border rounded" />
+                        <img v-else-if="editLogoOriginal" :src="editLogoOriginal" class="mt-2 h-16 w-auto object-contain border rounded" />
+                        <InputError class="mt-2" :message="editForm.errors.logo" />
                     </div>
                 </form>
             </template>

@@ -49,7 +49,7 @@ class HandleInertiaRequests extends Middleware
             }
 
             $currentEmpresa = $user->current_empresa_id
-                ? Empresa::query()->with('condicionIva:id,nombre')->whereKey($user->current_empresa_id)->first(['id', 'razon_social', 'cuit', 'condicion_iva', 'condicion_iva_id', 'arca_pv_default', 'arca_env'])
+                ? Empresa::query()->with('condicionIva:id,nombre')->whereKey($user->current_empresa_id)->first(['id', 'razon_social', 'cuit', 'condicion_iva', 'condicion_iva_id', 'arca_pv_default', 'arca_env', 'logo'])
                 : null;
 
             if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {

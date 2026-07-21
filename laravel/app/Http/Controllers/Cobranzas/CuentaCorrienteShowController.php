@@ -60,6 +60,31 @@ class CuentaCorrienteShowController extends Controller
             ->orderByDesc('id')
             ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
 
+        $reciboCredits = Recibo::query()
+            ->where('empresa_id', $empresaId)
+            ->where('tercero_cuenta_id', $cuenta->id)
+            ->doesntHave('aplicaciones')
+            ->orderByDesc('fecha')
+            ->orderByDesc('id')
+            ->get(['id', 'moneda', 'total', 'fecha', 'numero_interno'])
+            ->map(function (Recibo $rec) {
+                return (object) [
+                    'id' => 'rec_credit_'.$rec->id,
+                    'tipo' => 'pago_a_cuenta',
+                    'estado' => 'emitido',
+                    'moneda' => $rec->moneda,
+                    'total' => round(-1 * (float) $rec->total, 2),
+                    'fecha_emision' => $rec->fecha,
+                    'arca_cae' => null,
+                    'arca_punto_venta' => null,
+                    'arca_numero' => null,
+                    'numero_interno' => '#R-'.$rec->id,
+                    'is_credit' => true,
+                ];
+            });
+
+        $comprobantes = $comprobantes->concat($reciboCredits);
+
         return Inertia::render('Cobranzas/CuentaCorriente/Show', [
             'cuenta' => $cuenta,
             'movimientos' => $movimientos,

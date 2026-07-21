@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use App\Models\CondicionIva;
 use App\Models\Deposito;
 use App\Models\ManifiestoIngreso;
@@ -30,10 +31,15 @@ class Empresa extends Model
         'linkedin_url',
         'permite_guias_no_fiscales',
         'moneda_base',
+        'logo',
     ];
 
     protected $casts = [
         'permite_guias_no_fiscales' => 'bool',
+    ];
+
+    protected $appends = [
+        'logo_url',
     ];
 
     public function depositos(): HasMany
@@ -71,5 +77,10 @@ class Empresa extends Model
         return $this->configuracionContable()
             ->where('clave', $clave)
             ->first()?->cuentaContable;
+    }
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo ? Storage::url($this->logo) : null;
     }
 }

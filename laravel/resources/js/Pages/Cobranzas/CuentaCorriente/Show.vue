@@ -43,10 +43,25 @@ const reciboTotal = computed(() => {
     return reciboForm.items.reduce((sum, item) => sum + (parseFloat(item.importe) || 0), 0);
 });
 
+const esCredito = (tipo) => {
+    const t = String(tipo || '');
+    return t.startsWith('nota_credito') || t.startsWith('ajuste_credito') || t === 'pago_a_cuenta';
+};
+
+const comprobantesPendientes = computed(() => {
+    return (props.comprobantes || []).filter(c => !c.is_credit);
+});
+
+const creditosDisponibles = computed(() => {
+    return (props.comprobantes || []).filter(c => c.is_credit);
+});
+
 const selectedComprobantesTotal = computed(() => {
     return (reciboForm.comprobante_ids || []).reduce((sum, id) => {
         const c = props.comprobantes.find(c => c.id === id);
-        return sum + (c ? parseFloat(c.total) : 0);
+        if (!c) return sum;
+        const signo = esCredito(c.tipo) ? -1 : 1;
+        return sum + (parseFloat(c.total) * signo);
     }, 0);
 });
 
@@ -73,6 +88,7 @@ const tipoLabel = (tipo) => {
         nota_credito_manual: 'Nota credito',
         ajuste_debito: 'Ajuste debito',
         ajuste_credito: 'Ajuste credito',
+        pago_a_cuenta: 'Pago a cuenta',
     };
     return map[tipo] || tipo;
 };
@@ -131,11 +147,14 @@ const formatNum = (n) => {
                         <InputError :message="reciboForm.errors.moneda" />
                         <fieldset class="border border-gray-200 rounded p-1 max-h-36 overflow-y-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
-                            <div v-for="c in comprobantes" :key="c.id" class="flex items-center gap-1 py-0.5">
+                            <div v-for="c in comprobantesPendientes" :key="c.id" class="flex items-center gap-1 py-0.5">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
-                                <span class="text-xs text-gray-700">{{ c.tipo }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
+                                <span class="text-xs text-gray-700">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
-                            <div v-if="!comprobantes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
+                            <div v-if="!comprobantesPendientes.length && !creditosDisponibles.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
+                            <div v-if="creditosDisponibles.length" class="mt-0.5 text-xs text-green-600 border-t border-gray-100 pt-0.5">
+                                Creditos disponibles: <span v-for="(cr, idx) in creditosDisponibles" :key="cr.id">{{ idx > 0 ? ', ' : '' }}{{ cr.moneda }} {{ formatNum(Math.abs(cr.total)) }}</span>
+                            </div>
                             <div v-if="reciboForm.comprobante_ids.length" class="mt-0.5 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-0.5 flex items-center justify-between">
                                 <span>Total: {{ formatNum(selectedComprobantesTotal) }}</span>
                                 <button type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
@@ -233,12 +252,23 @@ const formatNum = (n) => {
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-4 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Comprobantes</h3></div>
                 <div class="space-y-3 p-4 sm:hidden">
-                    <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border border-gray-200 p-4">
+                        <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</div>
                                 <div class="text-xs text-gray-500">{{ formatFecha(c.fecha_emision) }}</div>
                             </div>
+                            <Link v-if="!c.is_credit" class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
+                            <span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span>
+                        </div>
+                        <div class="mt-3 text-sm font-medium text-gray-900">{{ c.moneda }} {{ formatNum(c.total) }}</div>
+                    </div>
+                </div>
+                <div class="hidden sm:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
+                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-4 py-2 text-sm text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table>
+                </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
                         </div>
                         <div class="mt-3 text-sm font-medium text-gray-900">{{ c.moneda }} {{ formatNum(c.total) }}</div>

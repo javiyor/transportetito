@@ -1,7 +1,15 @@
 <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #374151;">
     <div style="flex-shrink: 0;">
-        @if(file_exists(public_path('images/logo.jpeg')))
-            <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" style="height: 50px; width: auto;">
+        @php
+            $logoSrc = null;
+            if (!empty($empresa->logo)) {
+                $logoSrc = Storage::url($empresa->logo);
+            } elseif (file_exists(public_path('images/logo.jpeg'))) {
+                $logoSrc = asset('images/logo.jpeg');
+            }
+        @endphp
+        @if($logoSrc)
+            <img src="{{ $logoSrc }}" alt="Logo" style="height: 50px; width: auto;">
         @endif
     </div>
     <div>

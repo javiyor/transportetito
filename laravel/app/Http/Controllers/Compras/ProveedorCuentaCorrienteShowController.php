@@ -61,6 +61,27 @@ class ProveedorCuentaCorrienteShowController extends Controller
                 return $comprobante;
             });
 
+        $opCredits = OrdenPago::query()
+            ->where('empresa_id', $empresaId)
+            ->where('tercero_cuenta_id', $cuenta->id)
+            ->get()
+            ->filter(fn (OrdenPago $op) => empty($op->detalle['comprobante_ids'] ?? []))
+            ->map(function (OrdenPago $op) {
+                return (object) [
+                    'id' => 'op_credit_'.$op->id,
+                    'tipo' => 'pago_a_cuenta',
+                    'numero' => '#OP-'.$op->id,
+                    'total' => round((float) $op->total, 2),
+                    'moneda' => $op->moneda,
+                    'fecha_emision' => $op->fecha,
+                    'pagado_total' => 0,
+                    'saldo_pendiente' => round(-1 * (float) $op->total, 2),
+                    'is_credit' => true,
+                ];
+            });
+
+        $comprobantes = $comprobantes->concat($opCredits);
+
         $ordenesPago = OrdenPago::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)

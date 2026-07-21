@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -31,7 +31,7 @@ const form = useForm({
     moneda: 'ARS',
     comprobante_ids: [],
     items: [
-        { medio: 'efectivo', importe: '', moneda: 'ARS', cheque_numero: '', cheque_banco: '', cheque_vencimiento: '', cheque_id: '' },
+        { medio: 'efectivo', importe: '', moneda: 'ARS', cheque_numero: '', cheque_banco: '', cheque_tipo: 'fisico', cheque_vencimiento: '', cheque_id: '' },
     ],
     observacion: '',
 });
@@ -50,6 +50,10 @@ const comprobantesPendientes = computed(() => {
     return (props.comprobantes || []).filter(c => parseFloat(c.saldo_pendiente) > 0);
 });
 
+const creditosDisponibles = computed(() => {
+    return (props.comprobantes || []).filter(c => c.is_credit || parseFloat(c.saldo_pendiente) < 0);
+});
+
 const selectedComprobantesTotal = computed(() => {
     return (form.comprobante_ids || []).reduce((sum, id) => {
         const c = comprobantesPorId.value[id];
@@ -58,7 +62,7 @@ const selectedComprobantesTotal = computed(() => {
 });
 
 const agregarItem = () => {
-    form.items.push({ medio: 'efectivo', importe: '', moneda: form.moneda, cheque_numero: '', cheque_banco: '', cheque_vencimiento: '', cheque_id: '' });
+    form.items.push({ medio: 'efectivo', importe: '', moneda: form.moneda, cheque_numero: '', cheque_banco: '', cheque_tipo: 'fisico', cheque_vencimiento: '', cheque_id: '' });
 };
 
 const quitarItem = (idx) => {
@@ -69,10 +73,17 @@ const esChequeTercero = (medio) => medio === 'cheque_tercero';
 const esChequePropio = (medio) => medio === 'cheque_propio';
 
 const submit = () => {
-    if (selectedComprobantesTotal.value === 0 && form.comprobante_ids?.length > 0) {
+    if (!form.comprobante_ids?.length) {
+        if (!confirm('No seleccionaste comprobantes a pagar. ¿Emitir orden de pago igual?')) return;
+    } else if (selectedComprobantesTotal.value === 0) {
         if (!confirm('Los comprobantes seleccionados se cancelan entre si (total=0). ¿Confirmar compensación?')) return;
     }
     form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), { preserveScroll: true });
+};
+
+const eliminarOrdenPago = (o) => {
+    if (!confirm(`¿Eliminar orden de pago #${o.id}? Esta acción no se puede deshacer.`)) return;
+    router.delete(route('compras.proveedores.ordenes-pago.destroy', o.id), { preserveScroll: true });
 };
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
@@ -127,13 +138,19 @@ const chequesFiltrados = computed(() => {
                         <div><label class="block text-xs text-gray-500 mb-1">Observacion</label><TextInput v-model="form.observacion" type="text" class="block w-full text-sm" placeholder="Observacion" /></div>
                     </div>
 
-                    <fieldset class="border border-gray-200 rounded-md p-1 max-h-40 overflow-y-auto">
-                        <legend class="text-xs text-gray-500 px-1">Comprobantes a pagar (opcional)</legend>
-                        <table v-if="comprobantesPendientes.length" class="w-full text-xs">
-                            <thead><tr class="text-gray-500"><th class="text-left pr-2 py-0.5">Tipo</th><th class="text-left pr-2 py-0.5">Numero</th><th class="text-right pr-2 py-0.5">Total</th><th class="text-right py-0.5">Saldo</th><th class="w-4 py-0.5"></th></tr></thead>
-                            <tbody><tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50"><td class="pr-2 py-0.5 text-gray-700">{{ c.tipo }}</td><td class="pr-2 py-0.5 text-gray-700 font-mono">{{ c.numero || '-' }}</td><td class="pr-2 py-0.5 text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="pr-2 py-0.5 text-right text-gray-900 font-semibold">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td></tr></tbody>
-                        </table>
-                        <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
+                        <fieldset class="border border-gray-200 rounded-md p-1 max-h-40 overflow-y-auto">
+                            <legend class="text-xs text-gray-500 px-1">Comprobantes a pagar (opcional)</legend>
+                            <table v-if="comprobantesPendientes.length" class="w-full text-xs">
+                                <thead><tr class="text-gray-500"><th class="text-left pr-2 py-0.5">Tipo</th><th class="text-left pr-2 py-0.5">Numero</th><th class="text-right pr-2 py-0.5">Total</th><th class="text-right py-0.5">Saldo</th><th class="w-4 py-0.5"></th></tr></thead>
+                                <tbody><tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50"><td class="pr-2 py-0.5 text-gray-700">{{ c.tipo }}</td><td class="pr-2 py-0.5 text-gray-700 font-mono">{{ c.numero || '-' }}</td><td class="pr-2 py-0.5 text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="pr-2 py-0.5 text-right font-semibold text-gray-900">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td></tr></tbody>
+                            </table>
+                            <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
+                            <div v-if="creditosDisponibles.length" class="mt-1 text-xs text-green-600 border-t border-gray-100 pt-1">
+                                Creditos disponibles: 
+                                <span v-for="(cr, idx) in creditosDisponibles" :key="cr.id">
+                                    {{ idx > 0 ? ', ' : '' }}{{ cr.moneda }} {{ formatNum(Math.abs(cr.saldo_pendiente)) }}{{ cr.is_credit ? ' (Pago a cuenta)' : '' }}
+                                </span>
+                            </div>
                         <div v-if="form.comprobante_ids.length" class="mt-1 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-1">
                             Total seleccionado: {{ formatNum(selectedComprobantesTotal) }}
                             <span v-if="selectedComprobantesTotal === 0" class="text-amber-600">(compensación)</span>
@@ -218,7 +235,7 @@ const chequesFiltrados = computed(() => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-3 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Comprobantes proveedor</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pagado</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ c.tipo }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ c.numero || '-' }}</td><td class="px-4 py-2 text-sm text-right text-gray-900 font-semibold">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-sm text-gray-700 text-right">{{ c.moneda }} {{ formatNum(c.pagado_total) }}</td><td class="px-4 py-2 text-sm text-gray-700 text-right">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="px-4 py-2 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link></td></tr></tbody></table></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pagado</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id" :class="{'bg-green-50': c.is_credit}"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-4 py-2 text-sm" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td><td class="px-4 py-2 text-sm text-gray-700 font-mono">{{ c.numero || '-' }}</td><td class="px-4 py-2 text-sm text-right font-semibold" :class="c.is_credit ? 'text-green-600' : 'text-gray-900'">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-sm text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.pagado_total) }}</td><td class="px-4 py-2 text-sm text-right font-semibold" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table></div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">

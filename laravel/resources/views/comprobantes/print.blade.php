@@ -458,6 +458,15 @@
     $totalValorDeclarado = $comprobante->pedidos->sum(fn($p) => (float) $p->valor_declarado);
 @endphp
 
+@php
+    $logoSrc = null;
+    if (!empty($empresa->logo)) {
+        $logoSrc = Storage::url($empresa->logo);
+    } elseif (file_exists(public_path('images/logo.jpeg'))) {
+        $logoSrc = asset('images/logo.jpeg');
+    }
+@endphp
+
 @if($esGuia)
     {{-- ================================================================ --}}
     {{--  GUIA NO FISCAL  --}}
@@ -467,9 +476,9 @@
         <div class="content">
 
         <div class="guia-header-centered">
-            @if(file_exists(public_path('images/logo.jpeg')))
+            @if($logoSrc)
                 <div style="margin-bottom:4pt;">
-                    <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" style="max-height:35pt;max-width:120pt;object-fit:contain;">
+                    <img src="{{ $logoSrc }}" alt="Logo" style="max-height:35pt;max-width:120pt;object-fit:contain;">
                 </div>
             @endif
             <h1>Guía no fiscal</h1>
@@ -543,9 +552,9 @@
         <div class="header-row">
             {{-- LEFT: Logo + Empresa info --}}
             <div class="header-left">
-                @if(file_exists(public_path('images/logo.jpeg')))
+                @if($logoSrc ?? false)
                     <div style="margin-bottom:4pt;">
-                        <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" style="max-height:40pt;max-width:140pt;object-fit:contain;">
+                        <img src="{{ $logoSrc }}" alt="Logo" style="max-height:40pt;max-width:140pt;object-fit:contain;">
                     </div>
                 @endif
                 <div class="empresa-nombre">{{ $empresa->razon_social }}</div>
