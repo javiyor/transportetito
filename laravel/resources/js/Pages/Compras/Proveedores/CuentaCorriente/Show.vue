@@ -47,11 +47,7 @@ const comprobantesPorId = computed(() => {
 });
 
 const comprobantesPendientes = computed(() => {
-    return (props.comprobantes || []).filter(c => parseFloat(c.saldo_pendiente) > 0);
-});
-
-const creditosDisponibles = computed(() => {
-    return (props.comprobantes || []).filter(c => c.is_credit || parseFloat(c.saldo_pendiente) < 0);
+    return (props.comprobantes || []).filter(c => parseFloat(c.saldo_pendiente) !== 0);
 });
 
 const selectedComprobantesTotal = computed(() => {
@@ -73,6 +69,8 @@ const esChequeTercero = (medio) => medio === 'cheque_tercero';
 const esChequePropio = (medio) => medio === 'cheque_propio';
 
 const submit = () => {
+    const realIds = form.comprobante_ids.filter(id => Number.isInteger(Number(id)));
+    form.comprobante_ids = realIds;
     if (!form.comprobante_ids?.length) {
         if (!confirm('No seleccionaste comprobantes a pagar. ¿Emitir orden de pago igual?')) return;
     } else if (selectedComprobantesTotal.value === 0) {
@@ -139,18 +137,12 @@ const chequesFiltrados = computed(() => {
                     </div>
 
                         <fieldset class="border border-gray-200 rounded-md p-1 max-h-40 overflow-y-auto">
-                            <legend class="text-xs text-gray-500 px-1">Comprobantes a pagar (opcional)</legend>
+                            <legend class="text-xs text-gray-500 px-1">Comprobantes a pagar / creditos (opcional)</legend>
                             <table v-if="comprobantesPendientes.length" class="w-full text-xs">
-                                <thead><tr class="text-gray-500"><th class="text-left pr-2 py-0.5">Tipo</th><th class="text-left pr-2 py-0.5">Numero</th><th class="text-right pr-2 py-0.5">Total</th><th class="text-right py-0.5">Saldo</th><th class="w-4 py-0.5"></th></tr></thead>
-                                <tbody><tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50"><td class="pr-2 py-0.5 text-gray-700">{{ c.tipo }}</td><td class="pr-2 py-0.5 text-gray-700 font-mono">{{ c.numero || '-' }}</td><td class="pr-2 py-0.5 text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="pr-2 py-0.5 text-right font-semibold text-gray-900">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td></tr></tbody>
+                                <thead><tr class="text-gray-500"><th class="text-left pr-2 py-0.5">Fecha</th><th class="text-left pr-2 py-0.5">Tipo</th><th class="text-left pr-2 py-0.5">Numero</th><th class="text-right pr-2 py-0.5">Total</th><th class="text-right py-0.5">Saldo</th><th class="w-4 py-0.5"></th></tr></thead>
+                                <tbody><tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50"><td class="pr-2 py-0.5 text-gray-500">{{ formatFecha(c.fecha_emision) }}</td><td class="pr-2 py-0.5" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td><td class="pr-2 py-0.5 font-mono" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ c.numero || '-' }}</td><td class="pr-2 py-0.5 text-right" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="pr-2 py-0.5 text-right font-semibold" :class="c.is_credit ? 'text-green-600' : 'text-gray-900'">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td></tr></tbody>
                             </table>
-                            <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-1">Sin comprobantes pendientes</div>
-                            <div v-if="creditosDisponibles.length" class="mt-1 text-xs text-green-600 border-t border-gray-100 pt-1">
-                                Creditos disponibles: 
-                                <span v-for="(cr, idx) in creditosDisponibles" :key="cr.id">
-                                    {{ idx > 0 ? ', ' : '' }}{{ cr.moneda }} {{ formatNum(Math.abs(cr.saldo_pendiente)) }}{{ cr.is_credit ? ' (Pago a cuenta)' : '' }}
-                                </span>
-                            </div>
+                            <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-1">Sin comprobantes ni creditos disponibles</div>
                         <div v-if="form.comprobante_ids.length" class="mt-1 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-1">
                             Total seleccionado: {{ formatNum(selectedComprobantesTotal) }}
                             <span v-if="selectedComprobantesTotal === 0" class="text-amber-600">(compensación)</span>

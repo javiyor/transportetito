@@ -55,8 +55,12 @@ class ProveedorCuentaCorrienteShowController extends Controller
                     })
                     ->sum('total');
 
+                $tipo = $comprobante->tipo ?? '';
+                $esCredito = str_starts_with($tipo, 'NC') || str_starts_with($tipo, 'nota_credito') || str_starts_with($tipo, 'ajuste_credito');
+                $saldo = round((float) $comprobante->total - $pagado, 2);
+
                 $comprobante->setAttribute('pagado_total', round($pagado, 2));
-                $comprobante->setAttribute('saldo_pendiente', round((float) $comprobante->total - $pagado, 2));
+                $comprobante->setAttribute('saldo_pendiente', $esCredito ? (-1 * abs($saldo)) : $saldo);
 
                 return $comprobante;
             });

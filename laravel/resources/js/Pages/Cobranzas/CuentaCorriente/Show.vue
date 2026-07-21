@@ -49,11 +49,7 @@ const esCredito = (tipo) => {
 };
 
 const comprobantesPendientes = computed(() => {
-    return (props.comprobantes || []).filter(c => !c.is_credit);
-});
-
-const creditosDisponibles = computed(() => {
-    return (props.comprobantes || []).filter(c => c.is_credit);
+    return props.comprobantes || [];
 });
 
 const selectedComprobantesTotal = computed(() => {
@@ -64,6 +60,12 @@ const selectedComprobantesTotal = computed(() => {
         return sum + (parseFloat(c.total) * signo);
     }, 0);
 });
+
+const submitRecibo = () => {
+    const realIds = reciboForm.comprobante_ids.filter(id => Number.isInteger(Number(id)));
+    reciboForm.comprobante_ids = realIds;
+    reciboForm.post(route('cobranzas.ctacte.recibos.store', props.cuenta.id), { preserveScroll: true });
+};
 
 const agregarItem = () => {
     reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
@@ -79,7 +81,6 @@ const esCheque = (medio) => medio === 'cheque_tercero';
 
 const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
-const submitRecibo = () => reciboForm.post(route('cobranzas.ctacte.recibos.store', props.cuenta.id), { preserveScroll: true });
 
 const tipoLabel = (tipo) => {
     const map = {
@@ -145,16 +146,15 @@ const formatNum = (n) => {
                         </div>
                         <InputError :message="reciboForm.errors.fecha" />
                         <InputError :message="reciboForm.errors.moneda" />
-                        <fieldset class="border border-gray-200 rounded p-1 max-h-36 overflow-y-auto">
+                        <fieldset class="border border-gray-200 rounded p-1 max-h-40 overflow-y-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
                             <div v-for="c in comprobantesPendientes" :key="c.id" class="flex items-center gap-1 py-0.5">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
-                                <span class="text-xs text-gray-700">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} · {{ c.moneda }} {{ formatNum(c.total) }}</span>
+                                <span class="text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</span>
+                                <span class="text-xs text-gray-400">{{ formatFecha(c.fecha_emision) }}</span>
+                                <span class="text-xs" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
-                            <div v-if="!comprobantesPendientes.length && !creditosDisponibles.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
-                            <div v-if="creditosDisponibles.length" class="mt-0.5 text-xs text-green-600 border-t border-gray-100 pt-0.5">
-                                Creditos disponibles: <span v-for="(cr, idx) in creditosDisponibles" :key="cr.id">{{ idx > 0 ? ', ' : '' }}{{ cr.moneda }} {{ formatNum(Math.abs(cr.total)) }}</span>
-                            </div>
+                            <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                             <div v-if="reciboForm.comprobante_ids.length" class="mt-0.5 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-0.5 flex items-center justify-between">
                                 <span>Total: {{ formatNum(selectedComprobantesTotal) }}</span>
                                 <button type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
