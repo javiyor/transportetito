@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref } from 'vue';
+import { formatNum } from '@/Utils/format.js';
 
 const props = defineProps({
     cuentas: Array,
@@ -145,7 +146,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex items-center justify-between gap-4">
                         <p class="text-sm text-gray-600">Las cuentas con deuda vencida al {{ cutoff }} se resaltan.</p>
-                        <p class="text-sm font-medium text-gray-900">{{ cuentas.length }} cuentas &mdash; Total: ${{ sumBy(cuentas, 'saldo').toFixed(2) }}</p>
+                        <p class="text-sm font-medium text-gray-900">{{ cuentas.length }} cuentas &mdash; Total: ${{ formatNum(sumBy(cuentas, 'saldo')) }}</p>
                     </div>
                 </div>
                 <div class="space-y-4 p-4 sm:hidden">
@@ -172,22 +173,22 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Saldo total</div>
-                                    <div class="font-medium text-gray-900">${{ c.saldo.toFixed ? c.saldo.toFixed(2) : c.saldo }}</div>
+                                    <div class="font-medium text-gray-900">${{ formatNum(c.saldo) }}</div>
                                 </div>
                                 <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Vencido +30</div>
-                                    <div class="font-medium" :class="c.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">${{ c.vencido_30.toFixed ? c.vencido_30.toFixed(2) : c.vencido_30 }}</div>
+                                    <div class="font-medium" :class="c.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">${{ formatNum(c.vencido_30) }}</div>
                                 </div>
                             </div>
                             <div v-if="expandedRows[c.id] && c.docs_pendientes?.length" class="border-t border-gray-100 pt-2">
                                 <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Documentos pendientes</div>
                                 <div v-for="d in c.docs_pendientes" :key="d.id" class="flex items-center justify-between text-xs py-1">
                                     <span>{{ d.tipo }} {{ d.fecha_emision }}</span>
-                                    <span class="font-mono font-medium">${{ Number(d.total).toFixed(2) }}</span>
+                                    <span class="font-mono font-medium">${{ formatNum(d.total) }}</span>
                                 </div>
                                 <div class="flex items-center justify-between text-xs font-bold border-t border-gray-200 pt-1 mt-1">
                                     <span>Total pendiente</span>
-                                    <span>${{ Number(c.docs_total).toFixed(2) }}</span>
+                                    <span>${{ formatNum(c.docs_total) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -225,10 +226,10 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ c.localidad || 'Sin ciudad' }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || 'Sin barrio' }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ c.cobrador || '-' }}</td>
-                                    <td class="px-6 py-4 text-sm text-gray-700 font-mono">${{ c.saldo.toFixed ? c.saldo.toFixed(2) : c.saldo }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-700 font-mono">${{ formatNum(c.saldo) }}</td>
                                     <td class="px-6 py-4 text-sm font-mono font-medium" :class="c.vencido_30 > 0 ? 'text-red-700' : 'text-gray-700'">
-                                        <span v-if="c.vencido_30 > 0" class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">${{ c.vencido_30.toFixed ? c.vencido_30.toFixed(2) : c.vencido_30 }}</span>
-                                        <span v-else>$0.00</span>
+                                        <span v-if="c.vencido_30 > 0" class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">${{ formatNum(c.vencido_30) }}</span>
+                                        <span v-else>${{ formatNum(0) }}</span>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <button v-if="c.docs_count" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium" @click="toggleExpand(c.id)">{{ expandedRows[c.id] ? 'Ocultar' : c.docs_count + ' doc(s)' }}</button>
@@ -255,11 +256,11 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                                     <td class="py-1 pr-4 font-medium text-gray-900">{{ d.tipo }}</td>
                                                     <td class="py-1 pr-4 text-gray-600">{{ d.fecha_emision }}</td>
                                                     <td class="py-1 pr-4 text-gray-600 font-mono">{{ d.arca_cae || '-' }}</td>
-                                                    <td class="py-1 text-right font-mono text-gray-900">${{ Number(d.total).toFixed(2) }}</td>
+                                                    <td class="py-1 text-right font-mono text-gray-900">${{ formatNum(d.total) }}</td>
                                                 </tr>
                                                 <tr class="border-t border-gray-300 font-bold">
                                                     <td colspan="3" class="py-1 pr-4 text-right text-gray-700">Total pendiente</td>
-                                                    <td class="py-1 text-right font-mono text-gray-900">${{ Number(c.docs_total).toFixed(2) }}</td>
+                                                    <td class="py-1 text-right font-mono text-gray-900">${{ formatNum(c.docs_total) }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>

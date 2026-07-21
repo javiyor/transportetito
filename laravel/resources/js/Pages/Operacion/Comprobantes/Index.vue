@@ -128,7 +128,7 @@ const tipoLabel = (c) => {
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Total</div>
-                                    <div class="font-medium text-gray-900">{{ c.moneda }} {{ c.total }}</div>
+                                    <div class="font-medium text-gray-900">{{ c.moneda }} {{ formatNum(c.total) }}</div>
                                 </div>
                                 <div>
                                     <div class="text-xs uppercase tracking-wider text-gray-500">Cotizacion</div>
@@ -138,7 +138,7 @@ const tipoLabel = (c) => {
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Saldo acreditable</div>
                                 <div class="font-medium text-gray-900">
-                                    <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ c.credit_summary?.saldo_acreditable }}</span>
+                                    <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ formatNum(c.credit_summary?.saldo_acreditable) }}</span>
                                     <span v-else>-</span>
                                 </div>
                             </div>
@@ -173,9 +173,9 @@ const tipoLabel = (c) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ c.estado }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 text-right">{{ formatNum(c.subtotal) }}</td>
                                 <td class="px-6 py-4 text-sm text-blue-700 text-right">{{ formatNum(c.iva_total) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">{{ c.moneda }} {{ c.total }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">{{ c.moneda }} {{ formatNum(c.total) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 text-right">
-                                    <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ c.credit_summary?.saldo_acreditable }}</span>
+                                    <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ formatNum(c.credit_summary?.saldo_acreditable) }}</span>
                                     <span v-else>-</span>
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm">

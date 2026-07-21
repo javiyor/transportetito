@@ -549,7 +549,6 @@
                     </div>
                 @endif
                 <div class="empresa-nombre">{{ $empresa->razon_social }}</div>
-                <div class="header-line"><span class="header-label">Condición IVA:</span> <span class="header-data">{{ $empresa->condicion_iva ?? '-' }}</span></div>
                 @if($empresa->telefono)
                     <div class="header-line"><span class="header-label">Tel:</span> {{ $empresa->telefono }}</div>
                 @endif
@@ -583,7 +582,7 @@
                 <div class="fiscal-legend">COMPROBANTE FISCAL</div>
             </div>
 
-            {{-- RIGHT: PV + Num + Fecha + CUIT --}}
+            {{-- RIGHT: PV + Num + Fecha + Cond IVA + CUIT --}}
             <div class="header-right">
                 {{-- PV --}}
                 <div class="header-line"><span class="header-label">Punto de Venta:</span></div>
@@ -599,6 +598,11 @@
                 <div class="header-line" style="margin-top:4pt;">
                     <span class="header-label">Fecha Emisión:</span>
                     <span class="header-data">{{ optional($comprobante->fecha_emision)->format('d/m/Y') }}</span>
+                </div>
+                {{-- Condición IVA --}}
+                <div class="header-line" style="margin-top:2pt;">
+                    <span class="header-label">Condición IVA:</span>
+                    <span class="header-data">{{ $empresa->condicion_iva ?? '-' }}</span>
                 </div>
                 {{-- CUIT --}}
                 <div class="header-line" style="margin-top:2pt;">
@@ -774,6 +778,14 @@
             @endif
         </div>
 
+        {{-- ===== TÉRMINOS LEGALES ===== --}}
+        <div style="font-size:6.5pt;color:#444;text-align:justify;margin-bottom:6pt;line-height:1.3;">
+            Esta empresa recibe bultos cerrados sin verificar contenido, cantidad y calidad,
+            no responsabilizándose por faltantes o deficiencias que observe el destinatario en su interior.
+            El seguro cubre daños provenientes de choque, incendio y/o vuelco, y en caso de robo
+            el 80% del valor declarado.
+        </div>
+
         {{-- ===== FOOTER ===== --}}
         <div class="footer-row">
             {{-- LEFT: QR + CAE --}}
@@ -806,10 +818,7 @@
                 <div class="original-label">ORIGINAL</div>
                 <div style="font-size:8pt;">Recibí Conforme</div>
                 <div class="firma-line">Firma y aclaración</div>
-                <div style="font-size:6.5pt;color:#666;margin-top:4pt;">
-                    {{ $empresa->razon_social }}<br>
-                    CUIT: {{ $empresa->cuit }}
-                </div>
+
             </div>
         </div>
 

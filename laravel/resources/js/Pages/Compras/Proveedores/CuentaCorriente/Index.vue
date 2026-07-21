@@ -8,7 +8,7 @@ const props = defineProps({
 });
 
 const form = useForm({
-    filtro: props.filters?.filtro || 'todos',
+    filtro: props.filters?.filtro || 'con_saldo',
     buscar: props.filters?.buscar || '',
 });
 
