@@ -88,6 +88,7 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteIndexController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteShowController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteAjusteStoreController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteNotaStoreController;
+use App\Http\Controllers\Cobranzas\CuentaCorrienteReciboDestroyController;
 use App\Http\Controllers\Cobranzas\CuentaCorrienteReciboStoreController;
 use App\Http\Controllers\Cobranzas\CierreCajaController;
 use App\Http\Controllers\Cobranzas\CierreCajaPrintController;
@@ -352,6 +353,7 @@ Route::middleware([
         Route::post('/cuentas-corrientes/{cuenta}/ajustes', CuentaCorrienteAjusteStoreController::class)->name('ctacte.ajustes.store');
         Route::post('/cuentas-corrientes/{cuenta}/notas', CuentaCorrienteNotaStoreController::class)->name('ctacte.notas.store');
         Route::post('/cuentas-corrientes/{cuenta}/recibos', CuentaCorrienteReciboStoreController::class)->name('ctacte.recibos.store');
+        Route::delete('/recibos/{recibo}', CuentaCorrienteReciboDestroyController::class)->name('recibos.destroy');
 
         Route::get('/cierre', CierreCajaController::class)->name('cierre.index');
         Route::get('/cierre/print', CierreCajaPrintController::class)->name('cierre.print');

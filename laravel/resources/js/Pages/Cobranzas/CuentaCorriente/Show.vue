@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -82,6 +82,11 @@ const esCheque = (medio) => medio === 'cheque_tercero';
 const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
 
+const eliminarRecibo = (reciboId) => {
+    if (!confirm('¿Eliminar recibo? Esta accion no se puede deshacer.')) return;
+    router.delete(route('cobranzas.recibos.destroy', reciboId), { preserveScroll: true });
+};
+
 const tipoLabel = (tipo) => {
     const map = {
         factura_interna: 'Factura',
@@ -155,11 +160,11 @@ const formatNum = (n) => {
                                 <span class="text-xs" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.total) }}</span>
                             </div>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
-                            <div v-if="reciboForm.comprobante_ids.length" class="mt-0.5 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-0.5 flex items-center justify-between">
-                                <span>Total: {{ formatNum(selectedComprobantesTotal) }}</span>
-                                <button type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
-                            </div>
                         </fieldset>
+                        <div v-if="reciboForm.comprobante_ids.length" class="text-xs font-semibold text-gray-700 flex items-center justify-between pt-1">
+                            <span>Total: {{ formatNum(selectedComprobantesTotal) }}</span>
+                            <button type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
+                        </div>
                         <InputError :message="reciboForm.errors.comprobante_ids" />
 
                         <div class="border border-gray-200 rounded p-2 space-y-2">
@@ -309,7 +314,7 @@ const formatNum = (n) => {
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ref.</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ tipoLabel(m.tipo) }}</td><td class="px-4 py-2 text-sm text-gray-700"><template v-if="m.comprobante_tipo && m.comprobante_numero">{{ tipoLabel(m.comprobante_tipo) }} {{ m.comprobante_numero }}</template><span v-else class="text-gray-400">-</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ formatNum(m.importe_signed) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><Link v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo {{ m.recibo_numero || '' }}</Link><span v-else>-</span></td></tr></tbody>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ tipoLabel(m.tipo) }}</td><td class="px-4 py-2 text-sm text-gray-700"><template v-if="m.comprobante_tipo && m.comprobante_numero">{{ tipoLabel(m.comprobante_tipo) }} {{ m.comprobante_numero }}</template><span v-else class="text-gray-400">-</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ formatNum(m.importe_signed) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><span v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo {{ m.recibo_numero || '' }}</Link><button class="ml-1 text-red-500 hover:text-red-700" @click="eliminarRecibo(m.referencia_id)" title="Eliminar recibo">&times;</button></span><span v-else>-</span></td></tr></tbody>
                     </table>
                 </div>
             </div>
