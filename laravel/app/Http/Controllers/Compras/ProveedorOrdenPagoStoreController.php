@@ -39,6 +39,7 @@ class ProveedorOrdenPagoStoreController extends Controller
             'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],
             'items.*.cheque_vencimiento' => ['nullable', 'date'],
             'items.*.cheque_id' => ['nullable', 'integer', 'exists:cheques,id'],
+            'items.*.cheque_tipo' => ['nullable', 'string', 'in:fisico,echeq'],
             'observacion' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -78,7 +79,7 @@ class ProveedorOrdenPagoStoreController extends Controller
                 if ($item['medio'] === 'cheque_propio') {
                     $cheque = Cheque::query()->create([
                         'empresa_id' => $empresaId,
-                        'tipo' => 'fisico',
+                        'tipo' => $item['cheque_tipo'] ?? 'fisico',
                         'origen' => 'propio',
                         'numero' => $item['cheque_numero'],
                         'banco' => $item['cheque_banco'],
@@ -101,7 +102,6 @@ class ProveedorOrdenPagoStoreController extends Controller
             }
 
             $aplicaciones = [];
-            $aplicadoTotal = 0;
 
             if (! empty($data['comprobante_ids'])) {
                 $comprobantes = ProveedorComprobante::query()->whereIn('id', $data['comprobante_ids'])->get();
@@ -110,26 +110,55 @@ class ProveedorOrdenPagoStoreController extends Controller
                     abort_unless((int) $comp->tercero_cuenta_id === (int) $cuenta->id, 422, "Comprobante #{$comp->id} no pertenece a esta cuenta.");
                 }
 
-                foreach ($comprobantes as $comp) {
-                    $pagado = (float) OrdenPago::query()
-                        ->where('empresa_id', $empresaId)
-                        ->where(function ($q) use ($comp) {
-                            $q->whereJsonContains('detalle->proveedor_comprobante_id', $comp->id)
-                                ->orWhereJsonContains('detalle->comprobante_ids', $comp->id);
-                        })
-                        ->sum('total');
-                    $saldo = round((float) $comp->total - $pagado, 2);
+                if ($total > 0) {
+                    $aplicadoTotal = 0;
+                    foreach ($comprobantes as $comp) {
+                        $pagadoPrev = (float) OrdenPago::query()
+                            ->where('empresa_id', $empresaId)
+                            ->where('estado', 'emitida')
+                            ->where(function ($q) use ($comp) {
+                                $q->whereJsonContains('detalle->proveedor_comprobante_id', $comp->id)
+                                    ->orWhereJsonContains('detalle->comprobante_ids', $comp->id);
+                            })
+                            ->get()
+                            ->sum(fn (OrdenPago $op) => collect($op->detalle['aplicaciones'] ?? [])
+                                ->where('proveedor_comprobante_id', (int) $comp->id)
+                                ->sum('importe'));
 
-                    if ($saldo <= 0) continue;
+                        $saldo = round((float) $comp->total - $pagadoPrev, 2);
+                        if ($saldo <= 0) continue;
 
-                    $aplicar = min($saldo, round($total - $aplicadoTotal, 2));
-                    if ($aplicar <= 0) break;
+                        $aplicar = min($saldo, round($total - $aplicadoTotal, 2));
+                        if ($aplicar <= 0) break;
 
-                    $aplicaciones[] = [
-                        'proveedor_comprobante_id' => $comp->id,
-                        'importe' => $aplicar,
-                    ];
-                    $aplicadoTotal += $aplicar;
+                        $aplicaciones[] = [
+                            'proveedor_comprobante_id' => $comp->id,
+                            'importe' => $aplicar,
+                        ];
+                        $aplicadoTotal += $aplicar;
+                    }
+                } else {
+                    foreach ($comprobantes as $comp) {
+                        $pagadoPrev = (float) OrdenPago::query()
+                            ->where('empresa_id', $empresaId)
+                            ->where('estado', 'emitida')
+                            ->where(function ($q) use ($comp) {
+                                $q->whereJsonContains('detalle->proveedor_comprobante_id', $comp->id)
+                                    ->orWhereJsonContains('detalle->comprobante_ids', $comp->id);
+                            })
+                            ->get()
+                            ->sum(fn (OrdenPago $op) => collect($op->detalle['aplicaciones'] ?? [])
+                                ->where('proveedor_comprobante_id', (int) $comp->id)
+                                ->sum('importe'));
+
+                        $saldo = round((float) $comp->total - $pagadoPrev, 2);
+                        if ($saldo > 0) {
+                            $aplicaciones[] = [
+                                'proveedor_comprobante_id' => $comp->id,
+                                'importe' => $saldo,
+                            ];
+                        }
+                    }
                 }
             }
 

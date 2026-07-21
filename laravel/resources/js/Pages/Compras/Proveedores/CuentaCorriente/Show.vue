@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -82,6 +83,22 @@ const submit = () => {
 const eliminarOrdenPago = (o) => {
     if (!confirm(`¿Eliminar orden de pago #${o.id}? Esta acción no se puede deshacer.`)) return;
     router.delete(route('compras.proveedores.ordenes-pago.destroy', o.id), { preserveScroll: true });
+};
+
+const anularOPForm = useForm({ motivo: '' });
+const anularOPId = ref(null);
+
+const abrirAnularOP = (o) => {
+    anularOPId.value = o.id;
+    anularOPForm.motivo = '';
+    anularOPForm.clearErrors();
+};
+
+const confirmarAnularOP = () => {
+    anularOPForm.post(route('compras.proveedores.ordenes-pago.anular', anularOPId.value), {
+        preserveScroll: true,
+        onSuccess: () => { anularOPId.value = null; },
+    });
 };
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
@@ -171,7 +188,8 @@ const chequesFiltrados = computed(() => {
                                 </select>
                                 <p v-if="!chequesFiltrados.length" class="text-xs text-amber-600">No hay cheques de terceros disponibles en cartera.</p>
                             </div>
-                            <div v-if="esChequePropio(item.medio)" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div v-if="esChequePropio(item.medio)" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                <div><label class="block text-xs text-gray-500">Tipo</label><select v-model="item.cheque_tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="fisico">Físico</option><option value="echeq">E-Cheq</option></select></div>
                                 <div><label class="block text-xs text-gray-500">Nro. cheque</label><TextInput v-model="item.cheque_numero" type="text" class="block w-full text-sm" placeholder="Nro cheque" /></div>
                                 <div><label class="block text-xs text-gray-500">Banco</label><select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar banco</option><option v-for="b in (bancos || BANCOS)" :key="b.id || b" :value="b.nombre || b">{{ b.nombre || b }}</option></select></div>
                                 <div><label class="block text-xs text-gray-500">Vencimiento</label><TextInput v-model="item.cheque_vencimiento" type="date" class="block w-full text-sm" /></div>
@@ -232,7 +250,8 @@ const chequesFiltrados = computed(() => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-3 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Ordenes de pago</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cheque</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="o in ordenesPago" :key="o.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(o.fecha) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ o.medio || '-' }}</td><td class="px-4 py-2 text-sm text-right text-gray-900 font-semibold">{{ o.moneda }} {{ formatNum(o.total) }}</td><td class="px-4 py-2 text-sm text-gray-600"><template v-if="o.cheque"><span class="text-xs">{{ o.cheque.banco || '' }} {{ o.cheque.numero || '' }}</span></template><span v-else class="text-gray-400">—</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ o.observacion || '-' }}</td><td class="px-4 py-2 text-right text-sm"><a class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ordenes-pago.print', o.id)" target="_blank">Imprimir</a></td></tr></tbody></table></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cheque</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="o in ordenesPago" :key="o.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(o.fecha) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ o.medio || '-' }}</td><td class="px-4 py-2 text-sm text-right text-gray-900 font-semibold">{{ o.moneda }} {{ formatNum(o.total) }}</td><td class="px-4 py-2 text-sm text-gray-600"><template v-if="o.cheque"><span class="text-xs">{{ o.cheque.banco || '' }} {{ o.cheque.numero || '' }}</span></template><span v-else class="text-gray-400">—</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ o.observacion || '-' }}</td><td class="px-4 py-2 text-right text-sm whitespace-nowrap"><a class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ordenes-pago.print', o.id)" target="_blank">Imprimir</a>                        <button v-if="o.estado !== 'anulada'" class="ml-2 text-red-500 hover:text-red-700 text-xs" @click="abrirAnularOP(o)">Anular</button>
+                            <button v-if="o.estado === 'anulada'" class="ml-2 text-red-600 hover:text-red-800 text-xs" @click="eliminarOrdenPago(o)">Eliminar</button></td></tr></tbody></table></div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
@@ -240,5 +259,18 @@ const chequesFiltrados = computed(() => {
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ m.tipo }}</td><td class="px-4 py-2 text-sm text-gray-700"><template v-if="m.comprobante_numero && m.comprobante_tipo">{{ m.comprobante_tipo }} {{ m.comprobante_numero }}</template><span v-else class="text-gray-400">-</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ m.cotizacion_ars }})</span></td><td class="px-4 py-2 text-sm text-right text-gray-900 font-semibold">{{ formatNum(m.importe_signed) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ m.observacion || '-' }}</td></tr></tbody></table></div>
             </div>
         </div>
+
+        <DialogModal :show="!!anularOPId" @close="anularOPId = null">
+            <template #title>Anular orden de pago</template>
+            <template #content>
+                <InputLabel value="Motivo de anulacion" />
+                <TextInput v-model="anularOPForm.motivo" type="text" class="mt-1 block w-full" placeholder="Describa el motivo" />
+                <InputError class="mt-2" :message="anularOPForm.errors.motivo" />
+            </template>
+            <template #footer>
+                <SecondaryButton @click="anularOPId = null">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="anularOPForm.processing" @click="confirmarAnularOP">Anular</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

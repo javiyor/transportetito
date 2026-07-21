@@ -58,6 +58,7 @@ use App\Http\Controllers\Compras\ProveedorComprobanteShowController;
 use App\Http\Controllers\Compras\ProveedorComprobanteUpdateController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteIndexController;
 use App\Http\Controllers\Compras\ProveedorCuentaCorrienteShowController;
+use App\Http\Controllers\Compras\ProveedorOrdenPagoAnularController;
 use App\Http\Controllers\Compras\ProveedorOrdenPagoStoreController;
 use App\Http\Controllers\Compras\ProveedorOrdenPagoDestroyController;
 use App\Http\Controllers\Compras\ProveedorComprobantePrintController;
@@ -300,6 +301,7 @@ Route::middleware([
         Route::get('/proveedores/cuentas-corrientes/export', ProveedorCuentaCorrienteExportController::class)->name('proveedores.ctacte.export');
         Route::get('/proveedores/cuentas-corrientes/{cuenta}', ProveedorCuentaCorrienteShowController::class)->name('proveedores.ctacte.show');
         Route::post('/proveedores/cuentas-corrientes/{cuenta}/ordenes-pago', ProveedorOrdenPagoStoreController::class)->name('proveedores.ctacte.ordenes-pago.store');
+        Route::post('/proveedores/ordenes-pago/{ordenPago}/anular', ProveedorOrdenPagoAnularController::class)->name('proveedores.ordenes-pago.anular');
         Route::post('/proveedores/cuentas-corrientes/{cuenta}/ajustes', ProveedorCuentaCorrienteAjusteStoreController::class)->name('proveedores.ctacte.ajustes.store');
         Route::post('/proveedores/cuentas-corrientes/{cuenta}/notas', ProveedorCuentaCorrienteNotaStoreController::class)->name('proveedores.ctacte.notas.store');
         Route::get('/proveedores/ordenes-pago/{ordenPago}/print', OrdenPagoPrintController::class)->name('proveedores.ordenes-pago.print');

@@ -49,11 +49,15 @@ class ProveedorCuentaCorrienteShowController extends Controller
             ->map(function (ProveedorComprobante $comprobante) use ($empresaId) {
                 $pagado = (float) OrdenPago::query()
                     ->where('empresa_id', $empresaId)
+                    ->where('estado', 'emitida')
                     ->where(function ($q) use ($comprobante) {
                         $q->whereJsonContains('detalle->proveedor_comprobante_id', $comprobante->id)
                             ->orWhereJsonContains('detalle->comprobante_ids', $comprobante->id);
                     })
-                    ->sum('total');
+                    ->get()
+                    ->sum(fn (OrdenPago $op) => collect($op->detalle['aplicaciones'] ?? [])
+                        ->where('proveedor_comprobante_id', (int) $comprobante->id)
+                        ->sum('importe'));
 
                 $tipo = $comprobante->tipo ?? '';
                 $esCredito = str_starts_with($tipo, 'NC') || str_starts_with($tipo, 'nota_credito') || str_starts_with($tipo, 'ajuste_credito');

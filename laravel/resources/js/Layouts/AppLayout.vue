@@ -144,6 +144,7 @@ const switchEmpresa = (empresaId) => {
 
                                         <template #content>
                                             <DropdownLink :href="route('cobranzas.pre-recibos.index')">Cobranzas</DropdownLink>
+                                            <DropdownLink :href="route('cobranzas.recibos.index')">Recibos</DropdownLink>
                                             <DropdownLink :href="route('cobranzas.cierre.index')">Cierre</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('cobranzas.resumen-arca')">Resumen ARCA</DropdownLink>
                                             <DropdownLink v-if="($page.props.tt?.roles || []).includes('admin')" :href="route('compras.ingresos.index')">Ingresos varios</DropdownLink>
@@ -408,9 +409,16 @@ const switchEmpresa = (empresaId) => {
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
                             :href="route('cobranzas.pre-recibos.index')"
-                            :active="route().current('cobranzas.*') && !route().current('cobranzas.cierre.*')"
+                            :active="route().current('cobranzas.*') && !route().current('cobranzas.recibos.*') && !route().current('cobranzas.cierre.*')"
                         >
                             Cobranzas
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
+                            :href="route('cobranzas.recibos.index')"
+                            :active="route().current('cobranzas.recibos.*')"
+                        >
+                            Recibos
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['cobranzas', 'cobranzas_admin', 'cobrador'].includes(r))"
