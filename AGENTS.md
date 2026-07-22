@@ -178,6 +178,16 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `af37cbd` | Blanqueo Ventas/Compras en Configuración |
 | `5869029` | Retenciones+multi factura en recibos, impuestos en ventas, resumen ARCA |
 
+### Implemented
+
+| Cambio | Descripción |
+|--------|-------------|
+| `CargaDirectaCreateController` | Nuevo controlador Inertia que renderiza form con cuentas, cotizaciones |
+| `CargaDirectaStoreController` | Valida pedidos, crea terceros, tarifas, comprobante, pedidos, contabiliza, mail |
+| `Facturacion/CargaDirecta/Create.vue` | Form con tabla dinámica de pedidos, buscador de cuentas, totales |
+| `routes/web.php` | GET/POST `/facturacion/carga-directa` |
+| `AppLayout.vue` | Link "Carga directa" en dropdown Facturación (desktop + mobile) |
+
 ### Relevant files
 
 **Backend:**
@@ -214,6 +224,35 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 
 **Routes:**
 - `laravel/routes/web.php`
+
+### Plan: Carga directa de factura con pedidos (Jul 2026)
+
+**Objetivo**: Crear una factura con todos los datos de manifiesto/pedidos (remitente, destinatario, bultos, palets, valor declarado, etc.) directamente desde cero, sin importación externa ni manifiesto existente.
+
+**Archivos nuevos:**
+- `laravel/app/Http/Controllers/Facturacion/CargaDirectaCreateController.php` — renderiza el form
+- `laravel/app/Http/Controllers/Facturacion/CargaDirectaStoreController.php` — procesa y crea comprobante + pedidos
+- `laravel/resources/js/Pages/Facturacion/CargaDirecta/Create.vue` — formulario con tabla dinámica de pedidos
+
+**Archivos modificados:**
+- `laravel/routes/web.php` — GET/POST `/facturacion/carga-directa`
+- `laravel/resources/js/Layouts/AppLayout.vue` — link "Carga directa" en menú Facturación
+
+**Reutiliza:**
+- `TarifaResolver` — resuelve tarifa por par (remitente, destinatario)
+- `FacturaCalculator` — calcula flete, seguro, comisión CR, IVA
+- `TipoCambioResolver` — conversión de moneda
+- `ComprobanteMailer` — email al cliente
+- `ContabilizadorService` — contabilización
+
+**Lógica del store:**
+1. Validar pedidos (array dinámico)
+2. firstOrCreate Tercero + TerceroCuenta por CUIT (remitente y destinatario)
+3. Resolver tarifas por par (remitente_id, destinatario_id)
+4. Calcular con FacturaCalculator
+5. DB::transaction: Comprobante → Pedidos → Sync → CtaCteMovimiento → AuditLog
+6. $mailer->enviarSiCorresponde
+7. Redirect a facturacion.manifiestos.index
 
 ### Pending / Known issues
 

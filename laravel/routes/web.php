@@ -275,6 +275,8 @@ Route::middleware([
         Route::get('/manifiestos/{manifiesto}', ManifiestoShowController::class)->name('manifiestos.show');
         Route::get('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceCreateController::class)->name('manual.create');
         Route::post('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceStoreController::class)->name('manual.store');
+        Route::get('/carga-directa', \App\Http\Controllers\Facturacion\CargaDirectaCreateController::class)->name('carga-directa.create');
+        Route::post('/carga-directa', \App\Http\Controllers\Facturacion\CargaDirectaStoreController::class)->name('carga-directa.store');
         Route::get('/importar', ImportarFacturasIndexController::class)->name('importar.index');
         Route::post('/importar/csv', ImportarFacturasCsvStoreController::class)->name('importar.csv');
         Route::post('/importar/arca', ImportarFacturasArcaStoreController::class)->name('importar.arca');
