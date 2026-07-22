@@ -39,7 +39,8 @@ class CargaDirectaStoreController extends Controller
             'items.*.tipo' => ['required', 'in:bultos,palets'],
             'items.*.valor_declarado' => ['required', 'numeric', 'min:0'],
             'items.*.importe' => ['required', 'numeric', 'min:0'],
-            'items.*.cr_importe' => ['nullable', 'numeric', 'min:0'],
+            'items.*.seguro' => ['required', 'numeric', 'min:0'],
+            'items.*.cr' => ['required', 'numeric', 'min:0'],
             'items.*.remito' => ['nullable', 'string', 'max:100'],
             'observacion' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -68,7 +69,7 @@ class CargaDirectaStoreController extends Controller
         $bultos = 0;
         $palets = 0;
         $totalImporte = 0.0;
-        $totalValorDeclarado = 0.0;
+        $totalSeguro = 0.0;
         $totalCr = 0.0;
 
         foreach ($data['items'] as $row) {
@@ -76,9 +77,8 @@ class CargaDirectaStoreController extends Controller
             $tipo = $row['tipo'] ?? 'bultos';
             $vd = (float) ($row['valor_declarado'] ?? 0);
             $importe = (float) ($row['importe'] ?? 0);
-            $cr = ($row['cr_importe'] ?? null) !== null && $row['cr_importe'] !== ''
-                ? (float) $row['cr_importe']
-                : 0.0;
+            $seguro = (float) ($row['seguro'] ?? 0);
+            $cr = (float) ($row['cr'] ?? 0);
 
             if ($tipo === 'bultos') {
                 $bultos += $cantidad;
@@ -86,7 +86,7 @@ class CargaDirectaStoreController extends Controller
                 $palets += $cantidad;
             }
             $totalImporte += $importe;
-            $totalValorDeclarado += $vd;
+            $totalSeguro += $seguro;
             $totalCr += $cr;
 
             $descripcion = trim($row['descripcion'] ?? '');
@@ -97,7 +97,8 @@ class CargaDirectaStoreController extends Controller
                 'tipo' => $tipo,
                 'valor_declarado' => $vd,
                 'importe' => $importe,
-                'cr_importe' => $cr > 0 ? $cr : null,
+                'seguro' => $seguro,
+                'cr' => $cr,
                 'remito' => $row['remito'] ?? '',
             ];
 
@@ -123,26 +124,17 @@ class CargaDirectaStoreController extends Controller
             ];
         }
 
-        $seguroPct = (float) ($tarifa['seguro_pct'] ?? 0.007);
-        $crComisionPct = (float) ($tarifa['cr_comision_pct'] ?? 0.025);
         $ivaPct = (float) ($tarifa['iva_pct'] ?? 0.21);
-
-        $seguro = round($totalValorDeclarado * $seguroPct, 2);
-        $comisionCr = round($totalCr * $crComisionPct, 2);
-        $subtotalGravado = round($totalImporte + $seguro + $comisionCr, 2);
+        $subtotalGravado = round($totalImporte + $totalSeguro + $totalCr, 2);
         $iva = round($subtotalGravado * $ivaPct, 2);
         $total = round($subtotalGravado + $iva, 2);
 
         $calc = [
             'moneda' => 'ARS',
-            'seguro_pct' => $seguroPct,
-            'cr_comision_pct' => $crComisionPct,
             'iva_pct' => $ivaPct,
             'total_importe' => $totalImporte,
-            'total_valor_declarado' => $totalValorDeclarado,
+            'total_seguro' => $totalSeguro,
             'total_cr' => $totalCr,
-            'seguro' => $seguro,
-            'comision_cr' => $comisionCr,
             'subtotal_gravado' => $subtotalGravado,
             'iva' => $iva,
             'total' => $total,
@@ -155,11 +147,6 @@ class CargaDirectaStoreController extends Controller
             'facturar_a_destino' => (bool) $data['facturar_a_destino'],
             'origen_cuenta_id' => (int) $cuentaOrigen->id,
             'destino_cuenta_id' => (int) $cuentaDestino->id,
-            'tarifa' => [
-                'seguro_pct' => $seguroPct,
-                'cr_comision_pct' => $crComisionPct,
-                'iva_pct' => $ivaPct,
-            ],
             'items' => $itemsData,
             'calculo' => $calc,
             'observacion' => $data['observacion'] ?? null,

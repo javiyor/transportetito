@@ -15,8 +15,6 @@ const props = defineProps({
 });
 
 const defaultPct = Number(props.tarifaDefaults?.tarifa_valor_declarado_pct) || 0.03;
-const seguroPct = Number(props.tarifaDefaults?.seguro_pct) || 0.007;
-const crPct = Number(props.tarifaDefaults?.cr_comision_pct) || 0.025;
 const ivaPct = Number(props.tarifaDefaults?.iva_pct) || 0.21;
 
 const form = useForm({
@@ -65,6 +63,11 @@ const formatNum = (v) => {
     return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const parseNum = (v) => {
+    const cleaned = String(v).replace(/\./g, '').replace(',', '.');
+    return Number(cleaned) || 0;
+};
+
 const recalcularImporte = (it) => {
     const vd = Number(it.valor_declarado) || 0;
     it.importe = Math.round(vd * defaultPct * 100) / 100;
@@ -81,7 +84,8 @@ const agregarItem = () => {
         tipo: 'bultos',
         valor_declarado: 0,
         importe: 0,
-        cr_importe: null,
+        seguro: 0,
+        cr: 0,
         remito: '',
     });
 };
@@ -94,29 +98,25 @@ const eliminarItem = (key) => {
 };
 
 const totales = computed(() => {
-    let importe = 0, seguro = 0, comisionCr = 0, subtotal = 0, iva = 0, total = 0;
+    let importe = 0, seguro = 0, cr = 0, subtotal = 0, iva = 0, total = 0;
     for (const it of items.value) {
         const imp = Number(it.importe) || 0;
-        const vd = Number(it.valor_declarado) || 0;
-        const cr = Number(it.cr_importe) || 0;
-
-        const seg = vd * seguroPct;
-        const crc = cr * crPct;
-        const sub = imp + seg + crc;
+        const seg = Number(it.seguro) || 0;
+        const c = Number(it.cr) || 0;
+        const sub = imp + seg + c;
         const iv = sub * ivaPct;
-        const tot = sub + iv;
 
         importe += imp;
         seguro += seg;
-        comisionCr += crc;
+        cr += c;
         subtotal += sub;
         iva += iv;
-        total += tot;
+        total += sub + iv;
     }
     return {
         importe: Math.round(importe * 100) / 100,
         seguro: Math.round(seguro * 100) / 100,
-        comisionCr: Math.round(comisionCr * 100) / 100,
+        cr: Math.round(cr * 100) / 100,
         subtotal: Math.round(subtotal * 100) / 100,
         iva: Math.round(iva * 100) / 100,
         total: Math.round(total * 100) / 100,
@@ -130,7 +130,8 @@ const submit = () => {
         tipo: it.tipo,
         valor_declarado: Number(it.valor_declarado) || 0,
         importe: Number(it.importe) || 0,
-        cr_importe: it.cr_importe !== null && it.cr_importe !== '' ? Number(it.cr_importe) : null,
+        seguro: Number(it.seguro) || 0,
+        cr: Number(it.cr) || 0,
         remito: it.remito,
     }));
 
@@ -284,18 +285,18 @@ const submit = () => {
                                         <TextInput :id="'vd-' + it.key" v-model="it.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full" @input="recalcularImporte(it)" />
                                     </div>
                                     <div>
-                                        <InputLabel :for="'importe-' + it.key" value="Importe a facturar" />
+                                        <InputLabel :for="'importe-' + it.key" value="Importe" />
                                         <TextInput :id="'importe-' + it.key" v-model="it.importe" type="number" min="0" step="0.01" class="mt-1 block w-full" />
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <InputLabel :for="'cr-' + it.key" value="CR importe" />
-                                        <TextInput :id="'cr-' + it.key" v-model="it.cr_importe" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="(opcional)" />
+                                        <InputLabel :for="'seguro-' + it.key" value="Seguro" />
+                                        <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-1 block w-full" />
                                     </div>
                                     <div>
-                                        <InputLabel :for="'remito-' + it.key" value="Remito" />
-                                        <TextInput :id="'remito-' + it.key" v-model="it.remito" type="text" class="mt-1 block w-full" />
+                                        <InputLabel :for="'cr-' + it.key" value="CR" />
+                                        <TextInput :id="'cr-' + it.key" v-model="it.cr" type="number" min="0" step="0.01" class="mt-1 block w-full" />
                                     </div>
                                 </div>
                             </div>
@@ -311,6 +312,7 @@ const submit = () => {
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Val. declarado</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th>
+                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Seguro</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
                                         <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
                                         <th class="px-2 py-1.5"></th>
@@ -320,28 +322,31 @@ const submit = () => {
                                     <tr v-for="(it, i) in items" :key="it.key">
                                         <td class="px-2 py-1 text-xs text-gray-500 whitespace-nowrap">{{ i + 1 }}</td>
                                         <td class="px-2 py-1">
-                                            <input v-model="it.descripcion" type="text" class="w-24 border-gray-300 rounded text-xs py-0.5 px-1" placeholder="Descripcion" />
+                                            <input v-model="it.descripcion" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1" placeholder="Descripcion" />
                                         </td>
                                         <td class="px-2 py-1 text-center">
                                             <input v-model="it.cantidad" type="number" min="1" class="w-12 border-gray-300 rounded text-xs py-0.5 px-1 text-center" />
                                         </td>
                                         <td class="px-2 py-1 text-center">
-                                            <select v-model="it.tipo" class="w-20 border-gray-300 rounded text-xs py-0.5 px-0.5">
+                                            <select v-model="it.tipo" class="w-16 border-gray-300 rounded text-xs py-0.5 px-0.5">
                                                 <option value="bultos">Bultos</option>
                                                 <option value="palets">Palets</option>
                                             </select>
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input v-model="it.valor_declarado" type="number" min="0" step="0.01" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" @input="recalcularImporte(it)" />
+                                            <input :value="formatNum(it.valor_declarado)" @input="it.valor_declarado = parseNum($event.target.value); recalcularImporte(it)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input v-model="it.importe" type="number" min="0" step="0.01" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <input :value="formatNum(it.importe)" @input="it.importe = parseNum($event.target.value)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input v-model="it.cr_importe" type="number" min="0" step="0.01" class="w-16 border-gray-300 rounded text-xs py-0.5 px-1 text-right" placeholder="-" />
+                                            <input :value="formatNum(it.seguro)" @input="it.seguro = parseNum($event.target.value)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input v-model="it.remito" type="text" class="w-28 border-gray-300 rounded text-xs py-0.5 px-1" />
+                                            <input :value="formatNum(it.cr)" @input="it.cr = parseNum($event.target.value)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                        </td>
+                                        <td class="px-2 py-1">
+                                            <input v-model="it.remito" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1" />
                                         </td>
                                         <td class="px-2 py-1 text-center">
                                             <button v-if="items.length > 1" type="button" class="text-xs text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">X</button>
@@ -350,29 +355,19 @@ const submit = () => {
                                 </tbody>
                                 <tfoot class="bg-gray-50 font-semibold">
                                     <tr>
-                                        <td colspan="4" class="px-2 py-1.5 text-xs text-gray-700 text-right">Subtotales:</td>
-                                        <td class="px-2 py-1.5 text-xs text-gray-900 text-right">{{ formatNum(totales.importe + totales.seguro + totales.comisionCr) }}</td>
-                                        <td colspan="4"></td>
-                                    </tr>
-                                    <tr class="text-xs text-gray-600">
-                                        <td colspan="4" class="px-2 py-0.5 text-right">Seguro ({{ (seguroPct * 100).toFixed(1) }}% s/Val.dec):</td>
-                                        <td class="px-2 py-0.5 text-right">{{ formatNum(totales.seguro) }}</td>
-                                        <td colspan="4"></td>
-                                    </tr>
-                                    <tr class="text-xs text-gray-600">
-                                        <td colspan="4" class="px-2 py-0.5 text-right">Comision CR ({{ (crPct * 100).toFixed(1) }}% s/CR):</td>
-                                        <td class="px-2 py-0.5 text-right">{{ formatNum(totales.comisionCr) }}</td>
-                                        <td colspan="4"></td>
+                                        <td colspan="4" class="px-2 py-1.5 text-xs text-gray-700 text-right">Subtotal:</td>
+                                        <td class="px-2 py-1.5 text-xs text-gray-900 text-right">{{ formatNum(totales.importe + totales.seguro + totales.cr) }}</td>
+                                        <td colspan="5"></td>
                                     </tr>
                                     <tr class="text-xs text-gray-600">
                                         <td colspan="4" class="px-2 py-0.5 text-right">IVA ({{ (ivaPct * 100).toFixed(1) }}%):</td>
                                         <td class="px-2 py-0.5 text-right">{{ formatNum(totales.iva) }}</td>
-                                        <td colspan="4"></td>
+                                        <td colspan="5"></td>
                                     </tr>
                                     <tr class="border-t-2 border-gray-800">
                                         <td colspan="4" class="px-2 py-1.5 text-xs text-gray-900 text-right font-bold uppercase">Total factura:</td>
                                         <td class="px-2 py-1.5 text-xs text-gray-900 text-right font-bold">{{ formatNum(totales.total) }}</td>
-                                        <td colspan="4"></td>
+                                        <td colspan="5"></td>
                                     </tr>
                                 </tfoot>
                             </table>
