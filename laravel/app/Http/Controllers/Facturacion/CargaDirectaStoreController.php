@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Deposito;
 use App\Models\Empresa;
 use App\Models\Pedido;
 use App\Models\TerceroCuenta;
@@ -55,6 +56,10 @@ class CargaDirectaStoreController extends Controller
             : (int) $cuentaOrigen->id;
 
         $empresa = Empresa::query()->findOrFail($empresaId);
+        $deposito = Deposito::query()
+            ->where('empresa_id', $empresaId)
+            ->orderBy('es_central', 'desc')
+            ->firstOrFail();
         $fecha = $data['fecha_emision'];
 
         $tarifaResolver = new TarifaResolver();
@@ -104,7 +109,7 @@ class CargaDirectaStoreController extends Controller
 
             $pedidoRecords[] = [
                 'empresa_id' => $empresaId,
-                'deposito_id' => null,
+                'deposito_id' => $deposito->id,
                 'manifiesto_ingreso_id' => null,
                 'envio_consolidado_id' => null,
                 'remitente_tercero_id' => $cuentaOrigen->tercero_id,
