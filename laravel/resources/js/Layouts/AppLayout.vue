@@ -98,9 +98,9 @@ const switchEmpresa = (empresaId) => {
 
                                         <template #content>
                                             <DropdownLink :href="route('facturacion.manifiestos.index')">Manifiestos</DropdownLink>
+                                            <DropdownLink :href="route('facturacion.carga-directa.create')">Factura</DropdownLink>
                                             <DropdownLink :href="route('operacion.comprobantes.index')">Comprobantes</DropdownLink>
                                             <DropdownLink :href="route('facturacion.manual.create')">Cargas manuales</DropdownLink>
-                                            <DropdownLink :href="route('facturacion.carga-directa.create')">Carga directa</DropdownLink>
                                             <DropdownLink :href="route('facturacion.importar.index')">Importar facturas</DropdownLink>
                                         </template>
                                     </Dropdown>
@@ -360,6 +360,13 @@ const switchEmpresa = (empresaId) => {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
+                            :href="route('facturacion.carga-directa.create')"
+                            :active="route().current('facturacion.carga-directa.*')"
+                        >
+                            Factura
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
                             :href="route('operacion.comprobantes.index')"
                             :active="route().current('operacion.comprobantes.*')"
                         >
@@ -371,13 +378,6 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('facturacion.manual.*')"
                         >
                             Cargas manuales
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
-                            :href="route('facturacion.carga-directa.create')"
-                            :active="route().current('facturacion.carga-directa.*')"
-                        >
-                            Carga directa
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
