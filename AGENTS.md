@@ -239,18 +239,22 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/resources/js/Layouts/AppLayout.vue` — link "Carga directa" en menú Facturación
 
 **Reutiliza:**
-- `TarifaResolver` — resuelve tarifa por par (remitente, destinatario)
+- `TarifaResolver` — resuelve tarifa por par (origen, destino)
 - `FacturaCalculator` — calcula flete, seguro, comisión CR, IVA
-- `TipoCambioResolver` — conversión de moneda
 - `ComprobanteMailer` — email al cliente
 - `ContabilizadorService` — contabilización
 
+**Formulario:**
+- Header: **Origen** (remitente), **Destino** (destinatario/entrega), Checkbox "Facturar a destino"
+- Tabla dinámica por item: Descripción, Cant, Tipo (bultos/palets), Valor declarado, CR, Remito, Obs.
+- Cálculo automático con tarifas (flete, seguro, comisión CR, IVA, total)
+
 **Lógica del store:**
-1. Validar pedidos (array dinámico)
-2. firstOrCreate Tercero + TerceroCuenta por CUIT (remitente y destinatario)
-3. Resolver tarifas por par (remitente_id, destinatario_id)
+1. Validar items (array dinámico)
+2. Determinar facturar_cuenta_id según checkbox (origen o destino)
+3. Resolver tarifa con TarifaResolver por par (origen, destino)
 4. Calcular con FacturaCalculator
-5. DB::transaction: Comprobante → Pedidos → Sync → CtaCteMovimiento → AuditLog
+5. DB::transaction: Comprobante (detalle_facturacion con items[] + calculo) → Pedidos → Sync → CtaCteMovimiento → AuditLog
 6. $mailer->enviarSiCorresponde
 7. Redirect a facturacion.manifiestos.index
 
