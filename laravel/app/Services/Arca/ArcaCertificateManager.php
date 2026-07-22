@@ -58,7 +58,6 @@ class ArcaCertificateManager
                     'serial' => $parsed['serialNumber'] ?? '',
                     'hash' => $parsed['hash'] ?? '',
                 ];
-                openssl_x509_free($cert);
             }
         }
 
@@ -71,7 +70,6 @@ class ArcaCertificateManager
                     'bits' => $details['bits'] ?? 0,
                     'type' => $details['type'] ?? 0,
                 ];
-                openssl_pkey_free($key);
             }
         }
 
@@ -81,8 +79,6 @@ class ArcaCertificateManager
             $key = @openssl_get_privatekey(file_get_contents($keyPath));
             if ($cert && $key) {
                 $keyPairMatch = openssl_x509_check_private_key($cert, $key);
-                openssl_x509_free($cert);
-                openssl_pkey_free($key);
             }
         }
 
@@ -133,9 +129,6 @@ class ArcaCertificateManager
         openssl_csr_export($csr, $csrOut);
         file_put_contents($csrPath, $csrOut, LOCK_EX);
 
-        openssl_pkey_free($key);
-        openssl_csr_free($csr);
-
         @chmod($keyPath, 0600);
         @chmod($csrPath, 0644);
 
@@ -167,8 +160,6 @@ class ArcaCertificateManager
         }
 
         $match = openssl_x509_check_private_key($cert, $key);
-        openssl_x509_free($cert);
-        openssl_pkey_free($key);
 
         if (! $match) {
             throw new RuntimeException('El certificado no corresponde a la clave privada existente. Asegúrate de subir el certificado firmado para el CSR generado desde este sistema.');
