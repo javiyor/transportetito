@@ -18,6 +18,7 @@ const form = useForm({
     destino_cuenta_id: '',
     facturar_a_destino: true,
     fecha_emision: new Date().toISOString().slice(0, 10),
+    observacion: '',
     items: [],
 });
 
@@ -43,14 +44,15 @@ const filtered = (list) => {
 const filteredOrigen = computed(() => filtered(props.cuentas)(searchOrigen.value.toLowerCase().trim()));
 const filteredDestino = computed(() => filtered(props.cuentas)(searchDestino.value.toLowerCase().trim()));
 
-const selectCuenta = (field, searchRef, selectedRef, cuenta) => {
+const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
     form[field] = cuenta.id;
     selectedRef.value = cuenta.nombre_cuenta || cuenta.tercero?.razon_social || '';
     searchRef.value = selectedRef.value;
+    showRef.value = false;
 };
 
-const selectOrigen = (cuenta) => selectCuenta('origen_cuenta_id', searchOrigen, selectedOrigen, cuenta);
-const selectDestino = (cuenta) => selectCuenta('destino_cuenta_id', searchDestino, selectedDestino, cuenta);
+const selectOrigen = (cuenta) => selectCuenta('origen_cuenta_id', searchOrigen, selectedOrigen, showOrigenDropdown, cuenta);
+const selectDestino = (cuenta) => selectCuenta('destino_cuenta_id', searchDestino, selectedDestino, showDestinoDropdown, cuenta);
 
 const formatNum = (v) => {
     const n = Number(v) || 0;
@@ -69,7 +71,6 @@ const agregarItem = () => {
         valor_declarado: 0,
         cr_importe: null,
         remito: '',
-        observacion: '',
     });
 };
 
@@ -101,7 +102,6 @@ const submit = () => {
         valor_declarado: Number(it.valor_declarado) || 0,
         cr_importe: it.cr_importe !== null && it.cr_importe !== '' ? Number(it.cr_importe) : null,
         remito: it.remito,
-        observacion: it.observacion,
     }));
 
     form.post(route('facturacion.carga-directa.store'));
@@ -263,10 +263,6 @@ const submit = () => {
                                         <InputLabel :for="'remito-' + it.key" value="Remito" />
                                         <TextInput :id="'remito-' + it.key" v-model="it.remito" type="text" class="mt-1 block w-full" />
                                     </div>
-                                    <div>
-                                        <InputLabel :for="'obs-' + it.key" value="Observacion" />
-                                        <TextInput :id="'obs-' + it.key" v-model="it.observacion" type="text" class="mt-1 block w-full" />
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -279,10 +275,9 @@ const submit = () => {
                                         <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripcion</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cant</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                        <th class="px-2 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Val. declarado</th>
-                                        <th class="px-2 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
+                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Val. declarado</th>
+                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
                                         <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
-                                        <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th>
                                         <th class="px-2 py-1.5"></th>
                                     </tr>
                                 </thead>
@@ -296,9 +291,9 @@ const submit = () => {
                                             <input v-model="it.cantidad" type="number" min="1" class="w-12 border-gray-300 rounded text-xs py-0.5 px-1 text-center" />
                                         </td>
                                         <td class="px-2 py-1 text-center">
-                                            <select v-model="it.tipo" class="w-14 border-gray-300 rounded text-xs py-0.5 px-0.5">
-                                                <option value="bultos">B</option>
-                                                <option value="palets">P</option>
+                                            <select v-model="it.tipo" class="w-20 border-gray-300 rounded text-xs py-0.5 px-0.5">
+                                                <option value="bultos">Bultos</option>
+                                                <option value="palets">Palets</option>
                                             </select>
                                         </td>
                                         <td class="px-2 py-1">
@@ -308,10 +303,7 @@ const submit = () => {
                                             <input v-model="it.cr_importe" type="number" min="0" step="0.01" class="w-16 border-gray-300 rounded text-xs py-0.5 px-1 text-right" placeholder="-" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input v-model="it.remito" type="text" class="w-14 border-gray-300 rounded text-xs py-0.5 px-1" />
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            <input v-model="it.observacion" type="text" class="w-16 border-gray-300 rounded text-xs py-0.5 px-1" />
+                                            <input v-model="it.remito" type="text" class="w-28 border-gray-300 rounded text-xs py-0.5 px-1" />
                                         </td>
                                         <td class="px-2 py-1 text-center">
                                             <button v-if="items.length > 1" type="button" class="text-xs text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">X</button>
@@ -320,6 +312,18 @@ const submit = () => {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <InputLabel for="observacion" value="Observacion" />
+                        <textarea
+                            id="observacion"
+                            v-model="form.observacion"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            rows="2"
+                            placeholder="Observaciones generales de la factura (opcional)"
+                        ></textarea>
+                        <InputError :message="form.errors.observacion" />
                     </div>
 
                     <div class="border-t border-gray-200 pt-4 flex items-center justify-end gap-3">

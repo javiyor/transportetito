@@ -42,7 +42,7 @@ class CargaDirectaStoreController extends Controller
             'items.*.valor_declarado' => ['required', 'numeric', 'min:0'],
             'items.*.cr_importe' => ['nullable', 'numeric', 'min:0'],
             'items.*.remito' => ['nullable', 'string', 'max:100'],
-            'items.*.observacion' => ['nullable', 'string', 'max:1000'],
+            'observacion' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $cuentaOrigen = TerceroCuenta::query()->findOrFail($data['origen_cuenta_id']);
@@ -89,10 +89,6 @@ class CargaDirectaStoreController extends Controller
             $crImporte += $cr;
 
             $descripcion = trim($row['descripcion'] ?? '');
-            $observacion = trim($row['observacion'] ?? '');
-            $obsFinal = $descripcion
-                ? ($observacion ? $descripcion.' | '.$observacion : $descripcion)
-                : ($observacion ?: null);
 
             $itemsData[] = [
                 'descripcion' => $descripcion,
@@ -101,7 +97,6 @@ class CargaDirectaStoreController extends Controller
                 'valor_declarado' => $vd,
                 'cr_importe' => $cr > 0 ? $cr : null,
                 'remito' => $row['remito'] ?? '',
-                'observacion' => $observacion,
             ];
 
             $pedidoRecords[] = [
@@ -121,7 +116,7 @@ class CargaDirectaStoreController extends Controller
                 'cr_importe' => $cr > 0 ? $cr : null,
                 'es_devolucion' => false,
                 'estado' => 'facturado',
-                'observacion' => $obsFinal,
+                'observacion' => $descripcion ?: null,
                 'recepcion_estado' => 'correcto',
             ];
         }
@@ -146,6 +141,7 @@ class CargaDirectaStoreController extends Controller
             'destino_cuenta_id' => (int) $cuentaDestino->id,
             'items' => $itemsData,
             'calculo' => $calc,
+            'observacion' => $data['observacion'] ?? null,
         ];
 
         $maxInterno = Comprobante::query()
