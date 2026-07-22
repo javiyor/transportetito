@@ -380,9 +380,6 @@ const TreeNode = {
     props: ['node', 'depth', 'expanded'],
     emits: ['toggle', 'create', 'edit', 'delete'],
     setup(props, { emit }) {
-        const hasChildren = props.node.children?.length > 0;
-        const isExpanded = props.expanded.has(props.node.id);
-
         const paddingLeft = () => `${12 + props.depth * 24}px`;
 
         const indent = () => {
@@ -391,6 +388,8 @@ const TreeNode = {
         };
 
         return () => {
+            const hasChildren = props.node.children?.length > 0;
+            const isExpanded = props.expanded.has(props.node.id);
             const children = hasChildren && isExpanded ? props.node.children.map(child =>
                 h(TreeNode, {
                     node: child,
