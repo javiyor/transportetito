@@ -8,11 +8,9 @@ use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
 use App\Models\Pedido;
-use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Facturacion\ComprobanteMailer;
-use App\Services\Facturacion\FacturaCalculator;
 use App\Services\Facturacion\TarifaResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +38,7 @@ class CargaDirectaStoreController extends Controller
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.tipo' => ['required', 'in:bultos,palets'],
             'items.*.valor_declarado' => ['required', 'numeric', 'min:0'],
+            'items.*.importe' => ['required', 'numeric', 'min:0'],
             'items.*.cr_importe' => ['nullable', 'numeric', 'min:0'],
             'items.*.remito' => ['nullable', 'string', 'max:100'],
             'observacion' => ['nullable', 'string', 'max:2000'],
@@ -58,7 +57,6 @@ class CargaDirectaStoreController extends Controller
         $fecha = $data['fecha_emision'];
 
         $tarifaResolver = new TarifaResolver();
-        $calculator = new FacturaCalculator();
         $tarifa = $tarifaResolver->resolve(
             $empresaId,
             (int) $cuentaOrigen->tercero_id,
@@ -69,13 +67,15 @@ class CargaDirectaStoreController extends Controller
         $itemsData = [];
         $bultos = 0;
         $palets = 0;
-        $valorDeclarado = 0.0;
-        $crImporte = 0.0;
+        $totalImporte = 0.0;
+        $totalValorDeclarado = 0.0;
+        $totalCr = 0.0;
 
         foreach ($data['items'] as $row) {
             $cantidad = (int) ($row['cantidad'] ?? 1);
             $tipo = $row['tipo'] ?? 'bultos';
             $vd = (float) ($row['valor_declarado'] ?? 0);
+            $importe = (float) ($row['importe'] ?? 0);
             $cr = ($row['cr_importe'] ?? null) !== null && $row['cr_importe'] !== ''
                 ? (float) $row['cr_importe']
                 : 0.0;
@@ -85,8 +85,9 @@ class CargaDirectaStoreController extends Controller
             } else {
                 $palets += $cantidad;
             }
-            $valorDeclarado += $vd;
-            $crImporte += $cr;
+            $totalImporte += $importe;
+            $totalValorDeclarado += $vd;
+            $totalCr += $cr;
 
             $descripcion = trim($row['descripcion'] ?? '');
 
@@ -95,6 +96,7 @@ class CargaDirectaStoreController extends Controller
                 'cantidad' => $cantidad,
                 'tipo' => $tipo,
                 'valor_declarado' => $vd,
+                'importe' => $importe,
                 'cr_importe' => $cr > 0 ? $cr : null,
                 'remito' => $row['remito'] ?? '',
             ];
@@ -121,17 +123,31 @@ class CargaDirectaStoreController extends Controller
             ];
         }
 
-        $pedidosCalc = [
-            (object) [
-                'bultos' => $bultos,
-                'palets' => $palets,
-                'valor_declarado' => $valorDeclarado,
-                'cr_importe' => $crImporte,
-            ],
-        ];
+        $seguroPct = (float) ($tarifa['seguro_pct'] ?? 0.007);
+        $crComisionPct = (float) ($tarifa['cr_comision_pct'] ?? 0.025);
+        $ivaPct = (float) ($tarifa['iva_pct'] ?? 0.21);
 
-        $calc = $calculator->calcular($pedidosCalc, $tarifa);
-        $total = round((float) ($calc['total'] ?? 0), 2);
+        $seguro = round($totalValorDeclarado * $seguroPct, 2);
+        $comisionCr = round($totalCr * $crComisionPct, 2);
+        $subtotalGravado = round($totalImporte + $seguro + $comisionCr, 2);
+        $iva = round($subtotalGravado * $ivaPct, 2);
+        $total = round($subtotalGravado + $iva, 2);
+
+        $calc = [
+            'moneda' => 'ARS',
+            'seguro_pct' => $seguroPct,
+            'cr_comision_pct' => $crComisionPct,
+            'iva_pct' => $ivaPct,
+            'total_importe' => $totalImporte,
+            'total_valor_declarado' => $totalValorDeclarado,
+            'total_cr' => $totalCr,
+            'seguro' => $seguro,
+            'comision_cr' => $comisionCr,
+            'subtotal_gravado' => $subtotalGravado,
+            'iva' => $iva,
+            'total' => $total,
+            'cotizacion' => ['tasa_ars' => 1],
+        ];
 
         $detalleFacturacion = [
             'version' => 'v2',
@@ -139,6 +155,11 @@ class CargaDirectaStoreController extends Controller
             'facturar_a_destino' => (bool) $data['facturar_a_destino'],
             'origen_cuenta_id' => (int) $cuentaOrigen->id,
             'destino_cuenta_id' => (int) $cuentaDestino->id,
+            'tarifa' => [
+                'seguro_pct' => $seguroPct,
+                'cr_comision_pct' => $crComisionPct,
+                'iva_pct' => $ivaPct,
+            ],
             'items' => $itemsData,
             'calculo' => $calc,
             'observacion' => $data['observacion'] ?? null,
@@ -150,7 +171,7 @@ class CargaDirectaStoreController extends Controller
             ->max('numero_interno');
 
         $comprobante = DB::transaction(function () use (
-            $empresaId, $facturarCuentaId, $cuentaDestino, $fecha, $total, $calc,
+            $empresaId, $facturarCuentaId, $cuentaDestino, $fecha, $total, $subtotalGravado, $iva,
             $detalleFacturacion, $maxInterno, $pedidoRecords
         ) {
             $comprobante = Comprobante::query()->create([
@@ -160,10 +181,10 @@ class CargaDirectaStoreController extends Controller
                 'entrega_cuenta_id' => $cuentaDestino->id,
                 'tipo' => 'factura_interna',
                 'estado' => 'emitida',
-                'moneda' => (string) ($calc['moneda'] ?? 'ARS'),
+                'moneda' => 'ARS',
                 'total' => $total,
-                'subtotal' => round((float) ($calc['subtotal_gravado'] ?? 0), 2),
-                'iva_total' => round((float) ($calc['iva'] ?? 0), 2),
+                'subtotal' => $subtotalGravado,
+                'iva_total' => $iva,
                 'numero_interno' => $maxInterno ? $maxInterno + 1 : 1,
                 'fecha_emision' => $fecha,
                 'requiere_autorizacion_arca' => true,
@@ -182,8 +203,8 @@ class CargaDirectaStoreController extends Controller
                 'tercero_cuenta_id' => $facturarCuentaId,
                 'fecha' => $fecha,
                 'tipo' => 'factura',
-                'moneda' => (string) ($calc['moneda'] ?? 'ARS'),
-                'cotizacion_ars' => (float) ($calc['cotizacion']['tasa_ars'] ?? 1),
+                'moneda' => 'ARS',
+                'cotizacion_ars' => 1,
                 'importe_signed' => $total,
                 'referencia_tipo' => 'comprobante',
                 'referencia_id' => $comprobante->id,
@@ -197,7 +218,7 @@ class CargaDirectaStoreController extends Controller
                 'subject_id' => $comprobante->id,
                 'context' => [
                     'total' => $total,
-                    'moneda' => (string) ($calc['moneda'] ?? 'ARS'),
+                    'moneda' => 'ARS',
                     'facturar_cuenta_id' => $facturarCuentaId,
                     'entrega_cuenta_id' => $cuentaDestino->id,
                     'items_count' => count($pedidoRecords),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Facturacion;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\TerceroCuenta;
+use App\Services\Facturacion\TarifaResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,9 +25,12 @@ class CargaDirectaCreateController extends Controller
             ->orderBy('nombre_cuenta')
             ->get(['id', 'tercero_id', 'nombre_cuenta', 'email']);
 
+        $tarifaDefaults = TarifaResolver::DEFAULTS;
+
         return Inertia::render('Facturacion/CargaDirecta/Create', [
             'empresa' => $empresa,
             'cuentas' => $cuentas,
+            'tarifaDefaults' => $tarifaDefaults,
         ]);
     }
 }
