@@ -228,4 +228,12 @@ class ManifiestoIngresoController extends Controller
 
         return back()->with('success', 'Estado de facturacion actualizado.');
     }
+
+    public function destroy(ManifiestoIngreso $manifiesto): RedirectResponse
+    {
+        $manifiesto->pedidos()->update(['manifiesto_ingreso_id' => null]);
+        $manifiesto->delete();
+
+        return redirect()->route('operacion.manifiestos.index')->with('success', 'Manifiesto eliminado.');
+    }
 }

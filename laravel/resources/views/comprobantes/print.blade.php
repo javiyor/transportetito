@@ -523,7 +523,7 @@
                     <tr>
                         <td>{{ $pedido->id }}</td>
                         <td>{{ $pedido->remitente?->razon_social ?? '-' }}</td>
-                        <td>{{ $pedido->destinatario?->razon_social ?? '-' }}</td>
+                        <td>{{ $pedido->destinatario?->razon_social ?? '-' }}<br><span class="helper">{{ $pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino' }}</span></td>
                         <td class="num">{{ $pedido->bultos }}</td>
                         <td class="num">{{ $pedido->palets ?: '-' }}</td>
                     </tr>
@@ -698,6 +698,7 @@
                     @php
                         $descripcion = 'Flete: '.($pedido->remitente?->razon_social ?? '?').' → '.($pedido->destinatario?->razon_social ?? '?');
                         if ($pedido->remito_numero) $descripcion .= ' (Remito: '.$pedido->remito_numero.')';
+                        $descripcion .= ' ['.($pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino').']';
                     @endphp
                     <tr>
                         <td style="text-align:center;">{{ $pedido->bultos }}</td>

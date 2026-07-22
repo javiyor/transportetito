@@ -230,6 +230,7 @@ Route::middleware([
         Route::get('/manifiestos/create', [ManifiestoIngresoController::class, 'create'])->name('manifiestos.create');
         Route::post('/manifiestos', [ManifiestoIngresoController::class, 'store'])->name('manifiestos.store');
         Route::get('/manifiestos/{manifiesto}', [ManifiestoIngresoController::class, 'show'])->name('manifiestos.show');
+        Route::delete('/manifiestos/{manifiesto}', [ManifiestoIngresoController::class, 'destroy'])->name('manifiestos.destroy');
 
         Route::middleware(['role:facturacion|admin'])->get('/comprobantes', ComprobanteIndexController::class)->name('comprobantes.index');
         Route::middleware(['role:facturacion|admin'])->get('/comprobantes/{comprobante}', ComprobanteShowController::class)->name('comprobantes.show');

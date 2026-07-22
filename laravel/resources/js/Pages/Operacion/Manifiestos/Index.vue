@@ -3,6 +3,13 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { ref } from 'vue';
+
+const eliminar = (m) => {
+    if (confirm('¿Eliminar manifiesto? Los pedidos se desasignarán.')) {
+        router.delete(route('operacion.manifiestos.destroy', m.id), { preserveScroll: true });
+    }
+};
 
 const props = defineProps({
     manifiestos: Object,
@@ -86,10 +93,9 @@ const formatFecha = (value) => {
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
-                                <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs">
-                                    <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">
-                                        Ver
-                                    </Link>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs space-x-2">
+                                    <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
+                                    <button class="text-red-500 hover:text-red-700" @click="eliminar(m)">Eliminar</button>
                                 </td>
                             </tr>
                         </tbody>

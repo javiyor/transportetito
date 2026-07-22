@@ -8,6 +8,11 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 
+const formatNum = (v) => {
+    if (v === null || v === undefined || v === '') return '';
+    return Number(v).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 const props = defineProps({
     empresas: Array,
     depositos: Array,
@@ -120,12 +125,14 @@ const submit = () => {
                     <div>
                         <InputLabel for="valor_asegurado" value="Valor asegurado" />
                         <TextInput id="valor_asegurado" v-model="form.valor_asegurado" type="number" step="0.01" class="mt-1 block w-full" />
+                        <div v-if="form.valor_asegurado !== ''" class="mt-1 text-xs text-gray-400">$ {{ formatNum(form.valor_asegurado) }}</div>
                         <InputError class="mt-2" :message="form.errors.valor_asegurado" />
                     </div>
 
                     <div>
                         <InputLabel for="gastos_envio" value="Gastos envio" />
                         <TextInput id="gastos_envio" v-model="form.gastos_envio" type="number" step="0.01" class="mt-1 block w-full" />
+                        <div v-if="form.gastos_envio !== ''" class="mt-1 text-xs text-gray-400">$ {{ formatNum(form.gastos_envio) }}</div>
                         <InputError class="mt-2" :message="form.errors.gastos_envio" />
                     </div>
 
