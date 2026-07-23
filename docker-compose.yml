@@ -97,6 +97,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    mem_limit: 128m
     ports:
       - "63790:6379"
     networks:
