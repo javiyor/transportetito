@@ -160,7 +160,10 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="relative">
-                            <InputLabel value="Origen (Remitente)" />
+                            <div class="flex items-center justify-between">
+                                <InputLabel value="Origen (Remitente)" />
+                                <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
+                            </div>
                             <TextInput
                                 v-model="searchOrigen"
                                 type="text"
@@ -191,7 +194,10 @@ const submit = () => {
                         </div>
 
                         <div class="relative">
-                            <InputLabel value="Destino (Destinatario / Entrega)" />
+                            <div class="flex items-center justify-between">
+                                <InputLabel value="Destino (Destinatario / Entrega)" />
+                                <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
+                            </div>
                             <TextInput
                                 v-model="searchDestino"
                                 type="text"
