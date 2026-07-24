@@ -187,8 +187,39 @@ class RepararPlanCuentas extends Command
             $this->line("  Creada subcuenta: {$def['codigo']} {$def['nombre']}");
         }
 
+        $repaired = $this->repairExisting($empresaId);
+        if ($repaired > 0) {
+            $this->info("Reparadas: {$repaired} cuentas con codigo incorrecto.");
+        }
+
         $this->info("Completado. Creadas: {$stats['created']}, omitidas: {$stats['skipped']}");
         return 0;
+    }
+
+    private function repairExisting(int $empresaId): int
+    {
+        $fixes = [
+            ['old' => '1304.001', 'new' => '1.03.001.005.001', 'newParent' => '1.03.001.005'],
+            ['old' => '2012.001', 'new' => '2.01.002.003.001', 'newParent' => '2.01.002.003'],
+            ['old' => '2012.002', 'new' => '2.01.002.003.002', 'newParent' => '2.01.002.003'],
+            ['old' => '2012.003', 'new' => '2.01.002.003.003', 'newParent' => '2.01.002.003'],
+        ];
+
+        $count = 0;
+        foreach ($fixes as $fix) {
+            $cuenta = CuentaContable::where('empresa_id', $empresaId)->where('codigo', $fix['old'])->first();
+            if (! $cuenta) continue;
+
+            $parent = CuentaContable::where('empresa_id', $empresaId)->where('codigo_completo', $fix['newParent'])->first();
+            $cuenta->update([
+                'codigo' => $fix['new'],
+                'codigo_completo' => $fix['new'],
+                'parent_id' => $parent?->id,
+            ]);
+            $count++;
+        }
+
+        return $count;
     }
 
     private function getCapitulos(): array
@@ -365,10 +396,10 @@ class RepararPlanCuentas extends Command
         return [
             ['codigo' => '1.01.001.003.001', 'codigo_corto' => null, 'nombre' => 'Fondo Fijo Recepción', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 1],
             ['codigo' => '1.01.001.003.002', 'codigo_corto' => null, 'nombre' => 'Fondo Fijo Administración', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 2],
-            ['codigo' => '1304.001', 'codigo_corto' => null, 'nombre' => 'Deudores Morosos', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 1],
-            ['codigo' => '2012.001', 'codigo_corto' => null, 'nombre' => 'Cheques Diferidos Banco Nación', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 1],
-            ['codigo' => '2012.002', 'codigo_corto' => null, 'nombre' => 'Cheques Diferidos Banco Macro', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 2],
-            ['codigo' => '2012.003', 'codigo_corto' => null, 'nombre' => 'Cheques Diferidos Banco Galicia', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 3],
+            ['codigo' => '1.03.001.005.001', 'codigo_corto' => null, 'nombre' => 'Deudores Morosos', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 1],
+            ['codigo' => '2.01.002.003.001', 'codigo_corto' => null, 'nombre' => 'Cheques Diferidos Banco Nación', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 1],
+            ['codigo' => '2.01.002.003.002', 'codigo_corto' => null, 'nombre' => 'Cheques Diferidos Banco Macro', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 2],
+            ['codigo' => '2.01.002.003.003', 'codigo_corto' => null, 'nombre' => 'Cheques Diferidos Banco Galicia', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 3],
         ];
     }
 }
