@@ -45,6 +45,13 @@ const tipoArcaMap = {
     'nota de credito e': 'NCE', 'nota de credito m': 'NCM',
 };
 
+const tipoLabel = (t) => ({
+    'FA': 'Factura A', 'FB': 'Factura B', 'FC': 'Factura C', 'FE': 'Factura E', 'FM': 'Factura M',
+    'NDA': 'Nota de Débito A', 'NDB': 'Nota de Débito B', 'NDC': 'Nota de Débito C', 'NDE': 'Nota de Débito E', 'NDM': 'Nota de Débito M',
+    'NCA': 'Nota de Crédito A', 'NCB': 'Nota de Crédito B', 'NCC': 'Nota de Crédito C', 'NCE': 'Nota de Crédito E', 'NCM': 'Nota de Crédito M',
+    'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',
+}[t] || t);
+
 const monedaArcaMap = {
     'pes': 'ARS', 'pesos': 'ARS', '$': 'ARS',
     'dol': 'USD', 'dolares': 'USD', 'usd': 'USD',
@@ -164,7 +171,7 @@ const submitCsv = () => {
                                 <tr v-for="(r, i) in csvForm.rows" :key="i">
                                     <td class="px-2 py-1 font-mono">{{ r.proveedor_cuit }}</td>
                                     <td class="px-2 py-1">{{ r.proveedor_razon_social }}</td>
-                                    <td class="px-2 py-1">{{ r.tipo }}</td>
+                                    <td class="px-2 py-1">{{ tipoLabel(r.tipo) }}</td>
                                     <td class="px-2 py-1">{{ r.numero }}</td>
                                     <td class="px-2 py-1">{{ r.fecha_emision }}</td>
                                     <td class="px-2 py-1 text-right">{{ r.subtotal ?? '-' }}</td>
