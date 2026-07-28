@@ -12,6 +12,7 @@ const props = defineProps({
     egresos: Object,
     cuentasContables: Array,
     bancos: Array,
+    chequesDisponibles: Array,
     totales: Object,
 });
 
@@ -20,7 +21,13 @@ const form = useForm({
     moneda: 'ARS',
     forma_pago: 'efectivo',
     banco_origen_id: '',
+    tipo_cheque: 'propio',
     cheque_id: '',
+    cheque_banco_id: '',
+    cheque_numero: '',
+    cheque_importe: '',
+    cheque_fecha_vencimiento: '',
+    cheque_titular: '',
     fecha_pago: '',
     distribucion: [{ cuenta_contable_id: '', importe: '' }],
     referencia: '',
@@ -29,6 +36,8 @@ const form = useForm({
 
 const esTransferencia = computed(() => form.forma_pago === 'transferencia');
 const esCheque = computed(() => form.forma_pago === 'cheque');
+const esChequePropio = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'propio');
+const esChequeTercero = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'tercero');
 
 const sumaDistribucion = computed(() => {
     return form.distribucion.reduce((s, d) => s + (parseFloat(d.importe) || 0), 0);
@@ -100,10 +109,57 @@ const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transfere
                             </select>
                             <InputError class="mt-2" :message="form.errors.banco_origen_id" />
                         </div>
-                        <div v-if="esCheque">
-                            <InputLabel value="Cheque ID" />
-                            <TextInput v-model="form.cheque_id" type="number" min="1" class="mt-1 block w-full" placeholder="ID cheque" />
-                            <InputError class="mt-2" :message="form.errors.cheque_id" />
+                        <div v-if="esCheque" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-4">
+                            <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle del cheque</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <InputLabel value="Tipo" />
+                                    <select v-model="form.tipo_cheque" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                        <option value="propio">Cheque propio</option>
+                                        <option value="tercero">Cheque de tercero</option>
+                                    </select>
+                                </div>
+                                <template v-if="esChequePropio">
+                                    <div>
+                                        <InputLabel value="Banco" />
+                                        <select v-model="form.cheque_banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                            <option value="">Seleccionar...</option>
+                                            <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                        </select>
+                                        <InputError class="mt-2" :message="form.errors.cheque_banco_id" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Número" />
+                                        <TextInput v-model="form.cheque_numero" type="text" class="mt-1 block w-full text-sm" placeholder="N° cheque" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Importe" />
+                                        <TextInput v-model="form.cheque_importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full text-sm" />
+                                        <InputError class="mt-2" :message="form.errors.cheque_importe" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Vencimiento" />
+                                        <TextInput v-model="form.cheque_fecha_vencimiento" type="date" class="mt-1 block w-full text-sm" />
+                                        <InputError class="mt-2" :message="form.errors.cheque_fecha_vencimiento" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Titular / Librado por" />
+                                        <TextInput v-model="form.cheque_titular" type="text" class="mt-1 block w-full text-sm" placeholder="Titular" />
+                                    </div>
+                                </template>
+                                <template v-if="esChequeTercero">
+                                    <div class="sm:col-span-3">
+                                        <InputLabel value="Cheque en cartera" />
+                                        <select v-model="form.cheque_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                            <option value="">Seleccionar...</option>
+                                            <option v-for="ch in chequesDisponibles" :key="ch.id" :value="ch.id">
+                                                {{ ch.banco }} #{{ ch.numero || '—' }} — {{ ch.moneda }} {{ Number(ch.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }} — Vence: {{ ch.fecha_vencimiento || '—' }} {{ ch.titular ? '(' + ch.titular + ')' : '' }}
+                                            </option>
+                                        </select>
+                                        <InputError class="mt-2" :message="form.errors.cheque_id" />
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                         <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="form.errors.moneda" /></div>
                         <div><InputLabel value="Fecha pago" /><TextInput v-model="form.fecha_pago" type="date" class="mt-1 block w-full" /></div>
@@ -167,7 +223,7 @@ const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transfere
                                     <div v-if="g.categorias?.length">{{ g.categorias.map(c => c.cuenta_contable?.nombre).join(', ') }}</div>
                                     <span v-else>{{ g.cuenta_contable?.nombre || g.categoria }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ formaPagoLabel(g.forma_pago) }}<span v-if="g.banco_origen?.nombre"> / {{ g.banco_origen.nombre }}</span></td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ formaPagoLabel(g.forma_pago) }}<span v-if="g.banco_origen?.nombre"> / {{ g.banco_origen.nombre }}</span><span v-if="g.cheque"> / {{ g.cheque.banco }} #{{ g.cheque.numero }}</span></td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ g.referencia || '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 text-right font-mono">{{ g.moneda }} {{ Number(g.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ g.observacion || '-' }}</td>
