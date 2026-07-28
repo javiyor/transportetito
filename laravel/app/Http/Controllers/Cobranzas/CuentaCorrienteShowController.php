@@ -53,6 +53,22 @@ class CuentaCorrienteShowController extends Controller
                 return $m;
             });
 
+        $saldoTotal = round((float) $movimientos->sum('importe_signed'), 2);
+
+        $retencionesSum = round((float) Recibo::query()
+            ->where('empresa_id', $empresaId)
+            ->where('tercero_cuenta_id', $cuenta->id)
+            ->where('estado', 'activo')
+            ->get()
+            ->sum(function (Recibo $r) {
+                $ret = $r->retenciones;
+                $sum = 0;
+                foreach (['iibb', 'iva', 'ganancias'] as $k) {
+                    $sum += (float) (($ret[$k] ?? [])['importe'] ?? 0);
+                }
+                return $sum;
+            }), 2);
+
         $comprobantes = Comprobante::query()
             ->where('empresa_id', $empresaId)
             ->where('facturar_cuenta_id', $cuenta->id)
@@ -90,8 +106,10 @@ class CuentaCorrienteShowController extends Controller
             'movimientos' => $movimientos,
             'comprobantes' => $comprobantes,
             'saldos' => [
-                'saldo_total' => round((float) $movimientos->sum('importe_signed'), 2),
+                'saldo_total' => $saldoTotal,
                 'vencido_30' => round(max(0, (float) $movimientos->where('fecha', '<=', now()->subDays(30)->toDateString())->sum('importe_signed')), 2),
+                'retenciones' => $retencionesSum,
+                'saldo_a_cancelar' => round($saldoTotal - $retencionesSum, 2),
             ],
             'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);

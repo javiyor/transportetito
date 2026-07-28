@@ -139,6 +139,8 @@ const formatNum = (n) => {
                 <div><div class="text-xs text-gray-500">Ciudad</div><div class="text-sm font-medium text-gray-900">{{ cuenta.localidad || 'Sin ciudad' }}</div></div>
                 <div><div class="text-xs text-gray-500">Saldo total</div><div class="text-sm font-medium text-gray-900">{{ formatNum(saldos.saldo_total) }}</div></div>
                 <div><div class="text-xs text-gray-500">Vencido +30</div><div class="text-sm font-medium" :class="saldos.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ formatNum(saldos.vencido_30) }}</div></div>
+                <div><div class="text-xs text-gray-500">Retenciones</div><div class="text-sm font-medium text-blue-700">{{ formatNum(saldos.retenciones) }}</div></div>
+                <div><div class="text-xs text-gray-500">Saldo a cancelar</div><div class="text-sm font-medium" :class="saldos.saldo_a_cancelar > 0 ? 'text-green-700' : 'text-gray-900'">{{ formatNum(saldos.saldo_a_cancelar) }}</div></div>
             </div>
 
             <div class="space-y-6">

@@ -26,6 +26,7 @@ class ProveedorComprobante extends Model
         'detalle',
         'observacion',
         'creado_por_user_id',
+        'cuenta_contable_id',
     ];
 
     protected $casts = [
@@ -47,5 +48,10 @@ class ProveedorComprobante extends Model
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+    public function cuentaContable(): BelongsTo
+    {
+        return $this->belongsTo(CuentaContable::class);
     }
 }

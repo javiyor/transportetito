@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\CuentaContable;
 use App\Models\ProveedorComprobante;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
@@ -105,6 +106,16 @@ class ProveedorComprobanteIndexController extends Controller
     {
         $fiscal = $this->fiscalDetail($data, $data['tipo'] ?? null);
 
+        $cuentaContableId = $data['cuenta_contable_id'] ?? null;
+        if (! $cuentaContableId) {
+            $cuentaContableId = $cuenta->cuenta_contable_proveedor_id;
+        }
+        if (! $cuentaContableId) {
+            $empresa = $cuenta->empresa()->first();
+            $config = $empresa?->getCuentaContable('compras_default');
+            $cuentaContableId = $config?->id;
+        }
+
         return [
             'empresa_id' => $empresaId,
             'tercero_cuenta_id' => $cuenta->id,
@@ -124,6 +135,7 @@ class ProveedorComprobanteIndexController extends Controller
                 'cotizacion' => $cotizacion,
                 'retenciones_total' => $fiscal['retenciones_total'],
             ]),
+            'cuenta_contable_id' => $cuentaContableId,
             'creado_por_user_id' => $userId,
         ];
     }
@@ -133,7 +145,7 @@ class ProveedorComprobanteIndexController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
         $proveedores = TerceroCuenta::query()
-            ->with('tercero:id,cuit,razon_social')
+            ->with('tercero:id,cuit,razon_social', 'cuentaContableProveedor:id,codigo,nombre')
             ->where('empresa_id', $empresaId)
             ->whereExists(function ($q) use ($empresaId) {
                 $q->selectRaw('1')
@@ -143,7 +155,7 @@ class ProveedorComprobanteIndexController extends Controller
                     ->where('te.es_proveedor', true);
             })
             ->orderBy('numero_cliente')
-            ->get(['id', 'tercero_id', 'numero_cliente', 'nombre_cuenta']);
+            ->get(['id', 'tercero_id', 'numero_cliente', 'nombre_cuenta', 'cuenta_contable_proveedor_id']);
 
         $comprobantes = ProveedorComprobante::query()
             ->where('empresa_id', $empresaId)
@@ -173,6 +185,12 @@ class ProveedorComprobanteIndexController extends Controller
                 'percepciones' => collect(self::PERCEPCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
                 'retenciones' => collect(self::RETENCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
             ],
+            'cuentasContables' => CuentaContable::query()
+                ->where('empresa_id', $empresaId)
+                ->where('activo', true)
+                ->where('contabilizable', true)
+                ->orderBy('codigo')
+                ->get(['id', 'codigo', 'nombre']),
         ]);
     }
 
@@ -264,6 +282,7 @@ class ProveedorComprobanteIndexController extends Controller
             'numero' => ['nullable', 'string', 'max:64'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
+            'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
             'iva_items' => ['nullable', 'array'],
             'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],
             'iva_items.*.base_imponible' => ['required_with:iva_items.*.alicuota', 'numeric', 'min:0'],

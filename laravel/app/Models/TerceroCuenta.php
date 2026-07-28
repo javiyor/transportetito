@@ -35,6 +35,7 @@ class TerceroCuenta extends Model
         'enviar_comprobantes_por_email',
         'cobrador_user_id',
         'activo',
+        'cuenta_contable_proveedor_id',
     ];
 
     protected $casts = [
@@ -80,5 +81,10 @@ class TerceroCuenta extends Model
     public function cobradorUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cobrador_user_id');
+    }
+
+    public function cuentaContableProveedor(): BelongsTo
+    {
+        return $this->belongsTo(CuentaContable::class, 'cuenta_contable_proveedor_id');
     }
 }

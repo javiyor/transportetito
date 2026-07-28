@@ -45,6 +45,7 @@ const props = defineProps({
     comprobantes: Object,
     catalogos: Object,
     resumen: Object,
+    cuentasContables: Array,
 });
 
 const form = useForm({
@@ -53,6 +54,7 @@ const form = useForm({
     tipo: '',
     numero: '',
     moneda: 'ARS',
+    cuenta_contable_id: '',
     subtotal: '',
     iva_items: [
         { alicuota: 21, base_imponible: '' },
@@ -77,6 +79,7 @@ const editComprobanteForm = useForm({
     tipo: '',
     numero: '',
     moneda: 'ARS',
+    cuenta_contable_id: '',
     subtotal: '',
     iva_items: [{ alicuota: 21, base_imponible: '' }],
     percepciones: [],
@@ -289,6 +292,7 @@ const openEditComprobante = (c) => {
     editComprobanteForm.tipo = c.tipo || '';
     editComprobanteForm.numero = c.numero || '';
     editComprobanteForm.moneda = c.moneda || 'ARS';
+    editComprobanteForm.cuenta_contable_id = c.cuenta_contable_id || '';
     editComprobanteForm.subtotal = c.subtotal || '';
     editComprobanteForm.iva_items = c.detalle?.iva_items?.length ? c.detalle.iva_items.map((x) => ({ alicuota: x.alicuota, base_imponible: x.base_imponible })) : [{ alicuota: 21, base_imponible: '' }];
     editComprobanteForm.percepciones = c.detalle?.percepciones?.length ? c.detalle.percepciones.map((x) => ({ concepto: x.concepto, importe: x.importe })) : [];
@@ -385,6 +389,14 @@ const submitDelete = () => {
                     </div>
                     <div><InputLabel value="Numero" /><TextInput v-model="form.numero" type="text" class="mt-1 block w-full text-sm" /><InputError class="mt-1" :message="form.errors.numero" /></div>
                     <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-1" :message="form.errors.moneda" /></div>
+                    <div>
+                        <InputLabel value="Cuenta contable" />
+                        <select v-model="form.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">(predeterminada)</option>
+                            <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                        </select>
+                        <InputError class="mt-1" :message="form.errors.cuenta_contable_id" />
+                    </div>
                     <div v-if="form.tipo && form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-3">
                         <div class="flex items-center justify-between gap-4">
                             <h4 class="text-sm font-semibold text-gray-900">IVA</h4>

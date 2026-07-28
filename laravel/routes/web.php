@@ -99,6 +99,7 @@ use App\Http\Controllers\Cobranzas\CuentaCorrienteListadoPrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintController;
 use App\Http\Controllers\Cobranzas\CuentaCorrientePrintSelectedController;
 
+use App\Http\Controllers\Finanzas\MovimientoBancarioIndexController;
 use App\Http\Controllers\Finanzas\ResumenArcaController;
 use App\Http\Controllers\Admin\ArcaCertificateController;
 use App\Http\Controllers\Facturacion\ManifiestoIndexController;
@@ -106,6 +107,10 @@ use App\Http\Controllers\Facturacion\ManifiestoShowController;
 use App\Http\Controllers\Facturacion\ImportarFacturasIndexController;
 use App\Http\Controllers\Facturacion\ImportarFacturasCsvStoreController;
 use App\Http\Controllers\Facturacion\ImportarFacturasArcaStoreController;
+use App\Http\Controllers\Facturacion\Cotizacion\CotizacionPedidoCreateController;
+use App\Http\Controllers\Facturacion\Cotizacion\CotizacionPedidoStoreController;
+use App\Http\Controllers\Facturacion\Cotizacion\CotizacionPendienteIndexController;
+use App\Http\Controllers\Facturacion\Cotizacion\CotizacionConsultaIndexController;
 
 Route::get('/', function () {
     $empresa = Empresa::query()
@@ -280,6 +285,12 @@ Route::middleware([
         Route::get('/importar', ImportarFacturasIndexController::class)->name('importar.index');
         Route::post('/importar/csv', ImportarFacturasCsvStoreController::class)->name('importar.csv');
         Route::post('/importar/arca', ImportarFacturasArcaStoreController::class)->name('importar.arca');
+
+        Route::get('/cotizaciones/pedido', CotizacionPedidoCreateController::class)->name('cotizaciones.pedido.create');
+        Route::post('/cotizaciones/pedido', CotizacionPedidoStoreController::class)->name('cotizaciones.pedido.store');
+        Route::get('/cotizaciones/pendientes', CotizacionPendienteIndexController::class)->name('cotizaciones.pendientes');
+        Route::put('/cotizaciones/{cotizacion}/cotizar', [CotizacionPendienteIndexController::class, 'cotizar'])->name('cotizaciones.cotizar');
+        Route::get('/cotizaciones/consultas', CotizacionConsultaIndexController::class)->name('cotizaciones.consultas');
     });
 
     Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
@@ -330,6 +341,9 @@ Route::middleware([
         Route::get('/egresos', [EgresoIndexController::class, 'index'])->name('egresos.index');
         Route::post('/egresos', [EgresoIndexController::class, 'store'])->name('egresos.store');
         Route::get('/egresos/export', EgresoExportController::class)->name('egresos.export');
+
+        Route::get('/movimientos-bancarios', [MovimientoBancarioIndexController::class, 'index'])->name('movimientos-bancarios.index');
+        Route::post('/movimientos-bancarios/gasto', [MovimientoBancarioIndexController::class, 'storeGasto'])->name('movimientos-bancarios.gasto');
 
         Route::get('/libro-diario', [\App\Http\Controllers\Finanzas\LibroDiarioController::class, 'index'])->name('libro-diario');
         Route::get('/libro-mayor', [\App\Http\Controllers\Finanzas\LibroMayorController::class, 'index'])->name('libro-mayor');

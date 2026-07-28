@@ -6,6 +6,8 @@ use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
 use App\Models\Comprobante;
 use App\Models\Empresa;
+use App\Models\GastoOperativo;
+use App\Models\IngresoOperativo;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use App\Models\Recibo;
@@ -203,6 +205,68 @@ class ContabilizadorService
 
             $this->addLinea($asiento, $cuentaProveedores, $ordenPago->cuenta, $total, 0, 'Cancelacion deuda proveedor');
             $this->addLinea($asiento, $cuentaMedio, null, 0, $total, 'Pago via '.$ordenPago->medio);
+
+            return $asiento;
+        });
+    }
+
+    public function contabilizarGastoOperativo(GastoOperativo $gasto): AsientoContable
+    {
+        $empresa = $gasto->empresa;
+        $claveMedio = 'medio_pago.'.$gasto->forma_pago;
+        $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+        $categorias = $gasto->categorias;
+
+        return DB::transaction(function () use ($gasto, $empresa, $cuentaMedio, $categorias) {
+            $asiento = AsientoContable::create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $gasto->fecha_pago ?: $gasto->fecha,
+                'moneda' => $gasto->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'gasto_operativo',
+                'referencia_id' => $gasto->id,
+                'descripcion' => 'Gasto: '.($gasto->referencia ?: 'Egreso #'.$gasto->id),
+            ]);
+
+            $total = 0;
+            foreach ($categorias as $cat) {
+                $importe = (float) $cat->importe;
+                $this->addLinea($asiento, $cat->cuentaContable, null, $importe, 0, 'Gasto: '.($cat->cuentaContable?->nombre ?? ''));
+                $total += $importe;
+            }
+
+            $this->addLinea($asiento, $cuentaMedio, null, 0, $total, 'Pago via '.$gasto->forma_pago);
+
+            return $asiento;
+        });
+    }
+
+    public function contabilizarIngresoOperativo(IngresoOperativo $ingreso): AsientoContable
+    {
+        $empresa = $ingreso->empresa;
+        $claveMedio = 'medio_pago.'.$ingreso->forma_pago;
+        $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+        $categorias = $ingreso->categorias;
+
+        return DB::transaction(function () use ($ingreso, $empresa, $cuentaMedio, $categorias) {
+            $asiento = AsientoContable::create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $ingreso->fecha_cobro ?: $ingreso->fecha,
+                'moneda' => $ingreso->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'ingreso_operativo',
+                'referencia_id' => $ingreso->id,
+                'descripcion' => 'Ingreso: '.($ingreso->referencia ?: 'Ingreso #'.$ingreso->id),
+            ]);
+
+            $this->addLinea($asiento, $cuentaMedio, null, (float) $ingreso->importe, 0, 'Cobro via '.$ingreso->forma_pago);
+
+            $total = 0;
+            foreach ($categorias as $cat) {
+                $importe = (float) $cat->importe;
+                $this->addLinea($asiento, $cat->cuentaContable, null, 0, $importe, 'Ingreso: '.($cat->cuentaContable?->nombre ?? ''));
+                $total += $importe;
+            }
 
             return $asiento;
         });

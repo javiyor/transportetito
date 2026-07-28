@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class IngresoOperativo extends Model
 {
@@ -22,6 +23,10 @@ class IngresoOperativo extends Model
         'referencia',
         'observacion',
         'creado_por_user_id',
+        'forma_pago',
+        'banco_destino_id',
+        'cheque_id',
+        'fecha_cobro',
     ];
 
     protected $casts = [
@@ -29,6 +34,7 @@ class IngresoOperativo extends Model
         'detalle' => 'array',
         'cotizacion_ars' => 'decimal:6',
         'importe' => 'decimal:2',
+        'fecha_cobro' => 'date',
     ];
 
     public function empresa(): BelongsTo
@@ -39,5 +45,20 @@ class IngresoOperativo extends Model
     public function cuentaContable(): BelongsTo
     {
         return $this->belongsTo(CuentaContable::class);
+    }
+
+    public function bancoDestino(): BelongsTo
+    {
+        return $this->belongsTo(Banco::class, 'banco_destino_id');
+    }
+
+    public function cheque(): BelongsTo
+    {
+        return $this->belongsTo(Cheque::class);
+    }
+
+    public function categorias(): HasMany
+    {
+        return $this->hasMany(IngresoOperativoCategoria::class);
     }
 }
