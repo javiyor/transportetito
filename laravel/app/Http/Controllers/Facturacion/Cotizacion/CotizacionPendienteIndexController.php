@@ -16,7 +16,11 @@ class CotizacionPendienteIndexController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
         $pendientes = Cotizacion::query()
-            ->with(['remitente.tercero:id,cuit,razon_social', 'destinatario.tercero:id,cuit,razon_social', 'creador:id,name'])
+            ->with([
+                'remitente.tercero:id,cuit,razon_social,condicion_iva',
+                'destinatario.tercero:id,cuit,razon_social,condicion_iva',
+                'creador:id,name',
+            ])
             ->where('empresa_id', $empresaId)
             ->where('estado', 'pedido')
             ->orderByDesc('created_at')
