@@ -22,6 +22,11 @@ class Tercero extends Model
         'domicilio_fiscal' => 'array',
     ];
 
+    public function setCuitAttribute($value): void
+    {
+        $this->attributes['cuit'] = $value ? preg_replace('/\D+/', '', $value) : null;
+    }
+
     public function cuentas(): HasMany
     {
         return $this->hasMany(TerceroCuenta::class, 'tercero_id');
