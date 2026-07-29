@@ -43,8 +43,9 @@ class ContabilizadorService
 
             $this->addLinea($asiento, $cuentaDeudores, $comprobante->facturarCuenta, $total, 0, 'A credito facturado');
 
-            if ($subtotal > 0) {
-                $this->addLinea($asiento, $cuentaVentas, null, 0, $subtotal, 'Subtotal venta');
+            $ventasImporte = $subtotal > 0 ? $subtotal : max($total - $ivaTotal - $tributosTotal, 0);
+            if ($ventasImporte > 0) {
+                $this->addLinea($asiento, $cuentaVentas, null, 0, $ventasImporte, 'Subtotal venta');
             }
 
             if ($ivaTotal > 0) {
@@ -83,7 +84,10 @@ class ContabilizadorService
             $subtotal = (float) ($notaCredito->subtotal ?: 0);
             $ivaTotal = (float) ($notaCredito->iva_total ?: 0);
 
-            $this->addLinea($asiento, $cuentaVentas, null, $subtotal, 0, 'Reversion subtotal NC');
+            $ventasImporte = $subtotal > 0 ? $subtotal : max($total - $ivaTotal, 0);
+            if ($ventasImporte > 0) {
+                $this->addLinea($asiento, $cuentaVentas, null, $ventasImporte, 0, 'Reversion subtotal NC');
+            }
             if ($ivaTotal > 0) {
                 $this->addLinea($asiento, $cuentaIvaDebito, null, $ivaTotal, 0, 'Reversion IVA NC');
             }
@@ -116,7 +120,8 @@ class ContabilizadorService
             $subtotal = (float) ($comprobante->subtotal ?: 0);
             $ivaTotal = (float) ($comprobante->iva_total ?: 0);
 
-            $this->addLinea($asiento, $cuentaCompras, null, $subtotal, 0, 'Costo de compra');
+            $comprasImporte = $subtotal > 0 ? $subtotal : $total;
+            $this->addLinea($asiento, $cuentaCompras, null, $comprasImporte, 0, 'Costo de compra');
             if ($ivaTotal > 0) {
                 $this->addLinea($asiento, $cuentaIvaCredito, null, $ivaTotal, 0, 'IVA Credito Fiscal');
             }

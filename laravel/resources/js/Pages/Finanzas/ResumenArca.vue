@@ -35,8 +35,16 @@ const tipoLabel = (t) => {
         'FCA': 'Factura Crédito A', 'FCB': 'Factura Crédito B', 'FCC': 'Factura Crédito C',
         'NDA': 'ND A', 'NDB': 'ND B', 'NDC': 'ND C',
         'NCA': 'NC A', 'NCB': 'NC B', 'NCC': 'NC C',
+        'FM': 'Factura M', 'NDM': 'ND M', 'NCM': 'NC M',
         'factura_interna': 'Factura', 'guia_envio': 'Guía', 'nota_credito_interna': 'NC',
         'nota_debito_manual': 'ND', 'nota_credito_manual': 'NC manual',
+        'factura_a': 'Factura A', 'factura_b': 'Factura B', 'factura_c': 'Factura C',
+        'factura_e': 'Factura E', 'factura_m': 'Factura M',
+        'factura_credito_a': 'Factura Crédito A', 'factura_credito_b': 'Factura Crédito B', 'factura_credito_c': 'Factura Crédito C',
+        'nota_debito_a': 'ND A', 'nota_debito_b': 'ND B', 'nota_debito_c': 'ND C',
+        'nota_debito_e': 'ND E', 'nota_debito_m': 'ND M',
+        'nota_credito_a': 'NC A', 'nota_credito_b': 'NC B', 'nota_credito_c': 'NC C',
+        'nota_credito_e': 'NC E', 'nota_credito_m': 'NC M',
     };
     return map[String(t).trim().toUpperCase()] || t;
 };

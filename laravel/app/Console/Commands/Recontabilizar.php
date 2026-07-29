@@ -33,12 +33,13 @@ class Recontabilizar extends Command
         $omitidos = 0;
         $errores = 0;
 
-        $tipos = $tipo === 'todos' ? ['ventas', 'compras', 'cobros', 'pagos'] : [$tipo];
+        $tipos = $tipo === 'todos' ? ['ventas', 'notas_credito', 'compras', 'cobros', 'pagos'] : [$tipo];
 
         foreach ($tipos as $t) {
             $this->info("Procesando: {$t}");
             $result = match ($t) {
                 'ventas' => $this->recontabilizarVentas($contabilizador, $desde, $hasta, $dryRun, $force),
+                'notas_credito' => $this->recontabilizarNotasCredito($contabilizador, $desde, $hasta, $dryRun, $force),
                 'compras' => $this->recontabilizarCompras($contabilizador, $desde, $hasta, $dryRun, $force),
                 'cobros' => $this->recontabilizarCobros($contabilizador, $desde, $hasta, $dryRun, $force),
                 'pagos' => $this->recontabilizarPagos($contabilizador, $desde, $hasta, $dryRun, $force),
@@ -63,12 +64,32 @@ class Recontabilizar extends Command
 
     private function recontabilizarVentas(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
     {
-        $query = Comprobante::query()->whereNotIn('tipo', ['nota_credito_a', 'nota_credito_b', 'nota_credito_c', 'nota_credito_e', 'nota_credito_m']);
+        $query = Comprobante::query()
+            ->where(function ($q) {
+                $q->whereNotIn('tipo', [
+                    'nota_credito_a', 'nota_credito_b', 'nota_credito_c', 'nota_credito_e', 'nota_credito_m',
+                    'nota_credito_interna', 'nota_credito_manual',
+                ])->orWhereNull('tipo');
+            });
 
         if ($desde) $query->whereDate('fecha_emision', '>=', $desde);
         if ($hasta) $query->whereDate('fecha_emision', '<=', $hasta);
 
         return $this->procesarQuery($query, $contabilizador, 'contabilizarVenta', 'comprobante', $dryRun, $force);
+    }
+
+    private function recontabilizarNotasCredito(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    {
+        $query = Comprobante::query()
+            ->whereIn('tipo', [
+                'nota_credito_a', 'nota_credito_b', 'nota_credito_c', 'nota_credito_e', 'nota_credito_m',
+                'nota_credito_interna', 'nota_credito_manual',
+            ]);
+
+        if ($desde) $query->whereDate('fecha_emision', '>=', $desde);
+        if ($hasta) $query->whereDate('fecha_emision', '<=', $hasta);
+
+        return $this->procesarQuery($query, $contabilizador, 'contabilizarNotaCredito', 'comprobante', $dryRun, $force);
     }
 
     private function recontabilizarCompras(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
@@ -127,7 +148,13 @@ class Recontabilizar extends Command
                 }
 
                 try {
-                    DB::transaction(function () use ($contabilizador, $metodo, $doc) {
+                    DB::transaction(function () use ($contabilizador, $metodo, $doc, $refTipo, $force) {
+                        if ($force) {
+                            AsientoContable::query()
+                                ->where('referencia_tipo', $refTipo)
+                                ->where('referencia_id', $doc->id)
+                                ->delete();
+                        }
                         $contabilizador->$metodo($doc);
                     });
                 } catch (\Throwable $e) {
