@@ -60,7 +60,10 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('admin.terceros.index')">Clientes/Proveedores</DropdownLink>
                                             <DropdownLink :href="route('admin.empleados.index')">Empleados</DropdownLink>
                                             <DropdownLink :href="route('admin.depositos.index')">Depositos</DropdownLink>
-                                            <DropdownLink :href="route('admin.vehiculos.index')">Vehiculos</DropdownLink>
+                                            <DropdownLink :href="route('admin.vehiculos.index')">
+                                                Vehiculos
+                                                <span v-if="$page.props.tt?.alertasVehiculosCount > 0" class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $page.props.tt.alertasVehiculosCount }}</span>
+                                            </DropdownLink>
                                             <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
                                             <DropdownLink :href="route('admin.cotizaciones.index')">Cotizaciones</DropdownLink>
                                         </template>
@@ -332,6 +335,7 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('admin.vehiculos.*')"
                         >
                             Vehiculos
+                            <span v-if="$page.props.tt?.alertasVehiculosCount > 0" class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $page.props.tt.alertasVehiculosCount }}</span>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

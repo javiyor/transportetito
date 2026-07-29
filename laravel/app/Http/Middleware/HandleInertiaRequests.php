@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Cotizacion;
 use App\Models\Empresa;
+use App\Models\VehiculoControl;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -76,6 +77,12 @@ class HandleInertiaRequests extends Middleware
                 ],
                 'cotizacionesPendientesCount' => fn () => $user && $user->current_empresa_id
                     ? Cotizacion::query()->where('empresa_id', $user->current_empresa_id)->where('estado', 'pedido')->count()
+                    : 0,
+                'alertasVehiculosCount' => fn () => $user && $user->current_empresa_id
+                    ? VehiculoControl::query()
+                        ->whereHas('vehiculo', fn($q) => $q->where('empresa_id', $user->current_empresa_id))
+                        ->whereBetween('fecha_vencimiento', [now()->toDateString(), now()->addDays(10)->toDateString()])
+                        ->count()
                     : 0,
             ],
         ];

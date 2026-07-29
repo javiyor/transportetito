@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Vehiculo extends Model
 {
@@ -43,5 +44,10 @@ class Vehiculo extends Model
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+    public function controles(): HasMany
+    {
+        return $this->hasMany(VehiculoControl::class);
     }
 }

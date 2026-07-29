@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Vehiculo;
+use App\Models\VehiculoControl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,15 +17,23 @@ class VehiculoAdminController extends Controller
     {
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
-        $query = Vehiculo::query()->with('empresa:id,razon_social')->orderBy('patente');
+        $query = Vehiculo::query()->with(['empresa:id,razon_social', 'controles'])->orderBy('patente');
         if ($empresaId > 0) {
             $query->where('empresa_id', $empresaId);
         }
 
+        $vehiculos = $query->get(['id', 'empresa_id', 'patente', 'marca', 'modelo', 'activo', 'titulo_archivo', 'rto_archivo', 'seguro_archivo', 'observaciones']);
+
+        $alertasCount = VehiculoControl::query()
+            ->whereHas('vehiculo', fn($q) => $empresaId > 0 ? $q->where('empresa_id', $empresaId) : $q)
+            ->whereBetween('fecha_vencimiento', [now()->toDateString(), now()->addDays(10)->toDateString()])
+            ->count();
+
         return Inertia::render('Admin/Vehiculos/Index', [
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
-            'vehiculos' => $query->get(['id', 'empresa_id', 'patente', 'marca', 'modelo', 'activo', 'titulo_archivo', 'rto_archivo', 'seguro_archivo', 'observaciones']),
+            'vehiculos' => $vehiculos,
+            'alertasCount' => $alertasCount,
         ]);
     }
 
@@ -40,6 +49,10 @@ class VehiculoAdminController extends Controller
             'rto_archivo' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'seguro_archivo' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'observaciones' => ['nullable', 'string', 'max:2000'],
+            'controles' => ['nullable', 'array'],
+            'controles.*.tipo' => ['required', 'string', 'max:100'],
+            'controles.*.fecha_vencimiento' => ['required', 'date'],
+            'controles.*.observacion' => ['nullable', 'string', 'max:500'],
         ]);
 
         $exists = Vehiculo::query()->where('empresa_id', $data['empresa_id'])->where('patente', $data['patente'])->exists();
@@ -51,7 +64,14 @@ class VehiculoAdminController extends Controller
         $data['rto_archivo'] = $request->hasFile('rto_archivo') ? $request->file('rto_archivo')->store('vehiculos', 'public') : null;
         $data['seguro_archivo'] = $request->hasFile('seguro_archivo') ? $request->file('seguro_archivo')->store('vehiculos', 'public') : null;
 
-        Vehiculo::query()->create($data);
+        $controles = $data['controles'] ?? [];
+        unset($data['controles']);
+
+        $vehiculo = Vehiculo::query()->create($data);
+
+        foreach ($controles as $c) {
+            $vehiculo->controles()->create($c);
+        }
 
         return back();
     }
@@ -68,6 +88,10 @@ class VehiculoAdminController extends Controller
             'rto_archivo' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'seguro_archivo' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'observaciones' => ['nullable', 'string', 'max:2000'],
+            'controles' => ['nullable', 'array'],
+            'controles.*.tipo' => ['required', 'string', 'max:100'],
+            'controles.*.fecha_vencimiento' => ['required', 'date'],
+            'controles.*.observacion' => ['nullable', 'string', 'max:500'],
         ]);
 
         $exists = Vehiculo::query()
@@ -106,7 +130,15 @@ class VehiculoAdminController extends Controller
             unset($data['seguro_archivo']);
         }
 
+        $controles = $data['controles'] ?? [];
+        unset($data['controles']);
+
         $vehiculo->update($data);
+
+        $vehiculo->controles()->delete();
+        foreach ($controles as $c) {
+            $vehiculo->controles()->create($c);
+        }
 
         return back();
     }
