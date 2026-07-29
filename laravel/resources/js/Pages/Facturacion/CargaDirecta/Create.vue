@@ -115,17 +115,29 @@ watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id], buscarCotizac
 
 const importarCotizacion = (cq) => {
     if (!cq.items || !cq.items.length) return;
-    items.value = cq.items.map((it, i) => ({
-        key: nextKey++,
-        descripcion: it.descripcion || '',
-        cantidad: Number(it.cantidad) || 1,
-        tipo: it.tipo || 'bultos',
-        valor_declarado: Number(it.valor_declarado) || 0,
-        importe: Number(it.importe) || 0,
-        seguro: Number(it.seguro) || 0,
-        cr: Number(it.cr) || 0,
-        remito: it.remito || '',
-    }));
+    const importesItems = cq.items.map(it => Number(it.importe) || 0);
+    const sumaImportes = importesItems.reduce((a, b) => a + b, 0);
+    const flete = Number(cq.flete_final) || 0;
+    items.value = cq.items.map((it, i) => {
+        let importe = importesItems[i];
+        if (importe <= 0 && flete > 0) {
+            const totalVd = cq.items.reduce((s, item) => s + (Number(item.valor_declarado) || 0), 0);
+            if (totalVd > 0) {
+                importe = Math.round((Number(it.valor_declarado) || 0) / totalVd * flete * 100) / 100;
+            }
+        }
+        return {
+            key: nextKey++,
+            descripcion: it.descripcion || '',
+            cantidad: Number(it.cantidad) || 1,
+            tipo: it.tipo || 'bultos',
+            valor_declarado: Number(it.valor_declarado) || 0,
+            importe: importe,
+            seguro: Number(it.seguro) || 0,
+            cr: Number(it.cr) || 0,
+            remito: it.remito || '',
+        };
+    });
     cotizaciones.value = [];
 };
 
