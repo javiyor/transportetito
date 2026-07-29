@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -91,6 +91,43 @@ const agregarItem = () => {
 };
 
 agregarItem();
+
+const cotizaciones = ref([]);
+const cotizacionesLoading = ref(false);
+
+const buscarCotizaciones = async () => {
+    if (!form.origen_cuenta_id || !form.destino_cuenta_id) {
+        cotizaciones.value = [];
+        return;
+    }
+    cotizacionesLoading.value = true;
+    try {
+        const res = await fetch(route('facturacion.carga-directa.cotizaciones') + '?origen_cuenta_id=' + form.origen_cuenta_id + '&destino_cuenta_id=' + form.destino_cuenta_id);
+        cotizaciones.value = await res.json();
+    } catch {
+        cotizaciones.value = [];
+    } finally {
+        cotizacionesLoading.value = false;
+    }
+};
+
+watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id], buscarCotizaciones);
+
+const importarCotizacion = (cq) => {
+    if (!cq.items || !cq.items.length) return;
+    items.value = cq.items.map((it, i) => ({
+        key: nextKey++,
+        descripcion: it.descripcion || '',
+        cantidad: Number(it.cantidad) || 1,
+        tipo: it.tipo || 'bultos',
+        valor_declarado: Number(it.valor_declarado) || 0,
+        importe: Number(it.importe) || 0,
+        seguro: Number(it.seguro) || 0,
+        cr: Number(it.cr) || 0,
+        remito: it.remito || '',
+    }));
+    cotizaciones.value = [];
+};
 
 const eliminarItem = (key) => {
     if (items.value.length <= 1) return;
@@ -243,6 +280,23 @@ const submit = () => {
                                 <span class="text-sm text-gray-700 font-medium">Facturar a destino</span>
                                 <span class="text-xs text-gray-400">(si no, se factura a origen)</span>
                             </label>
+                        </div>
+                    </div>
+
+                    <div v-if="cotizacionesLoading" class="text-sm text-gray-500 py-2">Buscando presupuestos vigentes...</div>
+                    <div v-if="cotizaciones.length" class="border border-green-200 bg-green-50 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-green-800 mb-2">Presupuesto{{ cotizaciones.length > 1 ? 's' : '' }} vigente{{ cotizaciones.length > 1 ? 's' : '' }} para este origen y destino</h4>
+                        <div v-for="cq in cotizaciones" :key="cq.id" class="mb-2 last:mb-0 bg-white rounded border border-green-200 p-3 flex items-start justify-between gap-4">
+                            <div class="text-sm space-y-1">
+                                <div><span class="font-medium text-gray-700">Origen:</span> {{ cq.origen || '-' }} <span class="text-gray-400">→</span> <span class="font-medium text-gray-700">Destino:</span> {{ cq.destino || '-' }}</div>
+                                <div class="text-xs text-gray-500">Items: {{ (cq.items || []).length }} · Valor declarado: ${{ formatNum((cq.items || []).reduce((s, i) => s + (Number(i.valor_declarado) || 0), 0)) }}</div>
+                                <div class="text-xs text-gray-500">Validez: {{ formatFecha(cq.fecha_validez) }} · Creado: {{ formatFecha(cq.created_at) }}</div>
+                                <div class="text-xs" v-if="cq.observacion">Obs: {{ cq.observacion }}</div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="text-sm font-bold text-green-700">${{ formatNum(cq.flete_final) }}</div>
+                                <PrimaryButton type="button" class="!text-xs !px-2 !py-1 mt-1" @click="importarCotizacion(cq)">Importar items</PrimaryButton>
+                            </div>
                         </div>
                     </div>
 

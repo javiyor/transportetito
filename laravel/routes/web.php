@@ -282,6 +282,23 @@ Route::middleware([
         Route::post('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceStoreController::class)->name('manual.store');
         Route::get('/carga-directa', \App\Http\Controllers\Facturacion\CargaDirectaCreateController::class)->name('carga-directa.create');
         Route::post('/carga-directa', \App\Http\Controllers\Facturacion\CargaDirectaStoreController::class)->name('carga-directa.store');
+        Route::get('/carga-directa/cotizaciones', function (\Illuminate\Http\Request $request) {
+            $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+            $origenId = (int) $request->query('origen_cuenta_id');
+            $destinoId = (int) $request->query('destino_cuenta_id');
+            if (! $origenId || ! $destinoId) {
+                return response()->json([]);
+            }
+            return \App\Models\Cotizacion::query()
+                ->with(['remitente.tercero:id,razon_social,cuit', 'destinatario.tercero:id,razon_social,cuit'])
+                ->where('empresa_id', $empresaId)
+                ->where('estado', 'cotizada')
+                ->where('tercero_cuenta_id', $origenId)
+                ->where('tercero_destino_id', $destinoId)
+                ->whereDate('fecha_validez', '>=', now()->toDateString())
+                ->orderByDesc('created_at')
+                ->get(['id', 'origen', 'destino', 'items', 'flete_final', 'flete_sugerido', 'fecha_validez', 'observacion', 'created_at']);
+        })->name('carga-directa.cotizaciones');
         Route::get('/importar', ImportarFacturasIndexController::class)->name('importar.index');
         Route::post('/importar/csv', ImportarFacturasCsvStoreController::class)->name('importar.csv');
         Route::post('/importar/arca', ImportarFacturasArcaStoreController::class)->name('importar.arca');
