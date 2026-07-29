@@ -104,7 +104,10 @@ const switchEmpresa = (empresaId) => {
                                             <DropdownLink :href="route('facturacion.importar.index')">Importar facturas</DropdownLink>
                                             <hr class="my-1 border-gray-200" />
                                             <DropdownLink :href="route('facturacion.cotizaciones.pedido.create')">Cotizaciones - Pedido</DropdownLink>
-                                            <DropdownLink :href="route('facturacion.cotizaciones.pendientes')">Cotizaciones - Cotizar</DropdownLink>
+                                            <DropdownLink :href="route('facturacion.cotizaciones.pendientes')">
+                                                Cotizaciones - Cotizar
+                                                <span v-if="$page.props.tt?.cotizacionesPendientesCount > 0" class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $page.props.tt.cotizacionesPendientesCount }}</span>
+                                            </DropdownLink>
                                             <DropdownLink :href="route('facturacion.cotizaciones.consultas')">Cotizaciones - Consultas</DropdownLink>
                                         </template>
                                     </Dropdown>
@@ -407,6 +410,7 @@ const switchEmpresa = (empresaId) => {
                             :active="route().current('facturacion.cotizaciones.pendientes')"
                         >
                             Cotizar
+                            <span v-if="$page.props.tt?.cotizacionesPendientesCount > 0" class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $page.props.tt.cotizacionesPendientesCount }}</span>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"

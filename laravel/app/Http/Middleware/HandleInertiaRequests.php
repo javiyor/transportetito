@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Cotizacion;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -73,6 +74,9 @@ class HandleInertiaRequests extends Middleware
                     'importResult' => fn () => $request->session()->get('tt.import_result'),
                     'importError' => fn () => $request->session()->get('tt.import_error'),
                 ],
+                'cotizacionesPendientesCount' => fn () => $user && $user->current_empresa_id
+                    ? Cotizacion::query()->where('empresa_id', $user->current_empresa_id)->where('estado', 'pedido')->count()
+                    : 0,
             ],
         ];
     }
