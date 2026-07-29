@@ -22,8 +22,12 @@ const filtrar = () => {
     }, { preserveState: true, preserveScroll: true });
 };
 
+const totalItems = (items) => (items || []).reduce((s, i) => s + (Number(i.cantidad) || 0), 0);
+const totalValor = (items) => (items || []).reduce((s, i) => s + (Number(i.valor_declarado) || 0), 0);
+
 const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
 const formatNum = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+const ivaLabel = (v) => ({ ri: 'Resp. Inscripto', monotributo: 'Monotributo', consumidor_final: 'Cons. Final', exento: 'Exento' }[v] || v || '-');
 
 const estaVencida = (c) => {
     if (!c.fecha_validez) return false;
@@ -78,14 +82,17 @@ const estaVencida = (c) => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ c.remitente?.tercero?.razon_social || '#' + c.tercero_cuenta_id }}</div>
-                                <div class="text-xs text-gray-500">{{ formatFecha(c.created_at) }} · Validez: {{ formatFecha(c.fecha_validez) }}</div>
+                                <div class="text-xs text-gray-500">{{ formatFecha(c.created_at) }} · {{ totalItems(c.items) }} items · ${{ formatNum(totalValor(c.items)) }}</div>
                             </div>
                             <div class="text-right">
                                 <div class="text-sm font-semibold" :class="estaVencida(c) ? 'text-red-600' : 'text-green-700'">$ {{ formatNum(c.flete_final) }}</div>
                                 <div class="text-xs" :class="estaVencida(c) ? 'text-red-500' : 'text-green-600'">{{ estaVencida(c) ? 'Vencida' : 'Vigente' }}</div>
                             </div>
                         </div>
-                        <div class="mt-1 text-xs text-gray-600">{{ c.origen || '-' }} → {{ c.destino || '-' }}</div>
+                        <div class="mt-1 text-xs text-gray-600"><span class="font-medium">Origen:</span> {{ c.origen || '-' }}</div>
+                        <div class="text-xs text-gray-600"><span class="font-medium">Destino:</span> {{ c.destino || c.destinatario?.tercero?.razon_social || '-' }}</div>
+                        <div class="mt-1 text-xs text-gray-500" v-if="c.destinatario?.tercero">Destinatario: {{ c.destinatario.tercero.razon_social }}</div>
+                        <div class="text-xs text-gray-500">Validez: {{ formatFecha(c.fecha_validez) }} · Flete: ${{ formatNum(c.flete_final) }}</div>
                     </div>
                 </div>
 
@@ -93,22 +100,37 @@ const estaVencida = (c) => {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Remitente</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ruta</th>
-                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Flete</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Validez</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Remitente</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">CUIT</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Origen</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Destinatario</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Destino</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Items</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor declarado</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Flete</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Validez</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="c in cotizaciones.data" :key="c.id">
-                                <td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.created_at) }}</td>
-                                <td class="px-4 py-2 text-sm text-gray-700">{{ c.remitente?.tercero?.razon_social || '-' }}</td>
-                                <td class="px-4 py-2 text-sm text-gray-700">{{ c.origen || '-' }} → {{ c.destino || c.destinatario?.tercero?.razon_social || '-' }}</td>
-                                <td class="px-4 py-2 text-sm text-right font-mono">$ {{ formatNum(c.flete_final) }}</td>
-                                <td class="px-4 py-2 text-sm text-center">{{ formatFecha(c.fecha_validez) }}</td>
-                                <td class="px-4 py-2 text-sm text-center">
+                            <tr v-for="c in cotizaciones.data" :key="c.id" :class="estaVencida(c) ? 'bg-red-50' : ''">
+                                <td class="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{{ formatFecha(c.created_at) }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-700">{{ c.remitente?.tercero?.razon_social || '-' }}</td>
+                                <td class="px-3 py-2 text-sm font-mono text-gray-600">{{ c.remitente?.tercero?.cuit || '-' }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-700">{{ c.origen || '-' }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-700">
+                                    <template v-if="c.destinatario?.tercero">
+                                        {{ c.destinatario.tercero.razon_social }}<br><span class="text-xs text-gray-500">{{ ivaLabel(c.destinatario.tercero.condicion_iva) }}</span>
+                                    </template>
+                                    <span v-else>-</span>
+                                </td>
+                                <td class="px-3 py-2 text-sm text-gray-700">{{ c.destino || '-' }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-700 text-center">{{ totalItems(c.items) }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-700 text-right font-mono">$ {{ formatNum(totalValor(c.items)) }}</td>
+                                <td class="px-3 py-2 text-sm text-right font-mono font-semibold">$ {{ formatNum(c.flete_final) }}</td>
+                                <td class="px-3 py-2 text-sm text-center">{{ formatFecha(c.fecha_validez) }}</td>
+                                <td class="px-3 py-2 text-sm text-center">
                                     <span :class="estaVencida(c) ? 'text-red-600' : 'text-green-700'" class="font-medium">{{ estaVencida(c) ? 'Vencida' : 'Vigente' }}</span>
                                 </td>
                             </tr>
