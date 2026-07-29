@@ -62,7 +62,7 @@ const formatNum = (v) => {
     const n = Number(v) || 0;
     return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
-
+const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
 const parseNum = (v) => {
     const cleaned = String(v).replace(/\./g, '').replace(',', '.');
     return Number(cleaned) || 0;
