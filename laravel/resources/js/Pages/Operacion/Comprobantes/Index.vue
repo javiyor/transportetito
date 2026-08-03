@@ -168,35 +168,35 @@ const tipoLabel = (c) => {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo acred.</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo acred.</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in comprobantes.data" :key="c.id">
-                                <td class="px-6 py-4 text-sm font-mono text-gray-900">#{{ c.id }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ tipoLabel(c) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ c.estado }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700 text-right">{{ formatNum(c.subtotal) }}</td>
-                                <td class="px-6 py-4 text-sm text-blue-700 text-right">{{ formatNum(c.iva_total) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-900 font-semibold text-right">{{ c.moneda }} {{ formatNum(c.total) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700 text-right">
+                                <td class="px-3 py-2 text-xs whitespace-nowrap font-mono text-gray-900">#{{ c.id }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700">{{ tipoLabel(c) }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700">{{ c.estado }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700 text-right">{{ formatNum(c.subtotal) }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-blue-700 text-right">{{ formatNum(c.iva_total) }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-900 font-semibold text-right">{{ c.moneda }} {{ formatNum(c.total) }}</td>
+                                <td class="px-3 py-2 text-xs whitespace-nowrap text-gray-700 text-right">
                                     <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ formatNum(c.credit_summary?.saldo_acreditable) }}</span>
                                     <span v-else>-</span>
                                 </td>
-                                <td class="px-6 py-4 text-right text-sm">
+                                <td class="px-3 py-2 text-right text-xs whitespace-nowrap">
                                     <Link :href="route('operacion.comprobantes.show', c.id)" class="text-indigo-600 hover:text-indigo-800">Ver</Link>
                                 </td>
                             </tr>
