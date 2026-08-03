@@ -130,7 +130,7 @@ const ivaLabel = (v) => ({ ri: 'Resp. Inscripto', monotributo: 'Monotributo', co
                         <div><span class="font-medium text-gray-600">Remitente:</span> {{ cotizarItem.remitente?.tercero?.razon_social || '-' }}</div>
                         <div><span class="font-medium text-gray-600">CUIT:</span> <span class="font-mono">{{ cotizarItem.remitente?.tercero?.cuit || '-' }}</span></div>
                         <div><span class="font-medium text-gray-600">Origen:</span> {{ cotizarItem.origen || '-' }}</div>
-                        <div><span class="font-medium text-gray-600">IVa:</span> {{ ivaLabel(cotizarItem.remitente?.tercero?.condicion_iva) }}</div>
+                        <div><span class="font-medium text-gray-600">IVA:</span> {{ ivaLabel(cotizarItem.remitente?.tercero?.condicion_iva) }}</div>
                         <div v-if="cotizarItem.destinatario?.tercero"><span class="font-medium text-gray-600">Destinatario:</span> {{ cotizarItem.destinatario.tercero.razon_social }}</div>
                         <div v-if="cotizarItem.destinatario?.tercero"><span class="font-medium text-gray-600">CUIT dest.:</span> <span class="font-mono">{{ cotizarItem.destinatario.tercero.cuit }}</span></div>
                         <div><span class="font-medium text-gray-600">Destino:</span> {{ cotizarItem.destino || '-' }}</div>
