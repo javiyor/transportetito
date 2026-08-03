@@ -14,7 +14,7 @@ class ProveedorCuentaCorrienteIndexController extends Controller
     public function __invoke(Request $request): Response
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        $filtro = (string) ($request->query('filtro') ?: 'todos');
+        $filtro = (string) ($request->query('filtro') ?: 'con_saldo');
         $buscar = trim((string) ($request->query('buscar') ?: ''));
 
         $cuentas = TerceroCuenta::query()
@@ -58,8 +58,8 @@ class ProveedorCuentaCorrienteIndexController extends Controller
             ];
         })->filter(function (array $row) use ($filtro) {
             return match ($filtro) {
-                'con_saldo' => $row['saldo'] > 0,
-                'sin_saldo' => $row['saldo'] <= 0,
+                'con_saldo' => $row['saldo'] != 0,
+                'sin_saldo' => $row['saldo'] == 0,
                 default => true,
             };
         })->values();

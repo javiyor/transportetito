@@ -46,7 +46,7 @@ const applyFilters = () => {
                         <div class="text-sm font-medium text-gray-900">Filtro</div>
                         <select v-model="form.filtro" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="todos">Todos</option>
-                            <option value="con_saldo">Con saldo</option>
+                            <option value="con_saldo">Con saldo (distinto de 0)</option>
                             <option value="sin_saldo">Sin saldo</option>
                         </select>
                     </div>
