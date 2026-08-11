@@ -406,16 +406,16 @@ const submit = () => {
                                             </select>
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input :value="formatNum(it.valor_declarado)" @input="it.valor_declarado = parseNum($event.target.value); recalcularImporte(it)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <input :value="formatNum(it.valor_declarado)" @input="it.valor_declarado = parseNum($event.target.value); recalcularImporte(it)" type="text" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input :value="formatNum(it.importe)" @input="it.importe = parseNum($event.target.value)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <input :value="formatNum(it.importe)" @input="it.importe = parseNum($event.target.value)" type="text" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input :value="formatNum(it.seguro)" @input="it.seguro = parseNum($event.target.value)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <input :value="formatNum(it.seguro)" @input="it.seguro = parseNum($event.target.value)" type="text" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input :value="formatNum(it.cr)" @input="it.cr = parseNum($event.target.value)" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <input :value="formatNum(it.cr)" @input="it.cr = parseNum($event.target.value)" type="text" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
                                         </td>
                                         <td class="px-2 py-1">
                                             <input v-model="it.remito" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1" />
