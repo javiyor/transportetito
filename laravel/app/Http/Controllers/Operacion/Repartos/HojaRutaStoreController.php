@@ -39,6 +39,20 @@ class HojaRutaStoreController extends Controller
             ->whereIn('id', $data['comprobante_ids'])
             ->get();
 
+        $invalidos = $comprobantes->filter(function (Comprobante $c) {
+            $tienePedidos = $c->pedidos()->exists();
+
+            return $tienePedidos
+                && $c->pedidos()->where(function ($q) {
+                    $q->where('recepcion_estado', '!=', 'correcto')
+                        ->orWhereNull('recepcion_estado');
+                })->exists();
+        });
+
+        if ($invalidos->isNotEmpty()) {
+            return back()->with('error', 'No se pueden incluir en la hoja de ruta comprobantes con pedidos sin controlar o con errores.');
+        }
+
         $order = 10;
         foreach ($comprobantes as $c) {
             $cuenta = $c->entregaCuenta;

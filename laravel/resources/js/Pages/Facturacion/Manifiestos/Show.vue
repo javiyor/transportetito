@@ -198,7 +198,7 @@ const statsFacturacion = computed(() => {
 });
 
 const pedidosPendientes = computed(() => {
-    return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length) && p.recepcion_estado === 'correcto');
+    return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
 });
 
 const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {}, empresa_por_entrega: {} });
@@ -440,9 +440,7 @@ const comprobanteTipoLabel = (tipo) => {
 };
 
 const recepcionConErrores = computed(() => (props.manifiesto.pedidos || []).filter((p) => p.recepcion_estado === 'con_error'));
-const bloquearEmisionPorRecepcion = computed(() => recepcionConErrores.value.length > 0);
 const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
-const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.value.length > 0);
 </script>
 
 <template>
@@ -503,8 +501,8 @@ const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.valu
                         <p class="mt-1 text-sm text-gray-600">{{ statsFacturacion.total }} cargados · {{ statsFacturacion.pendientes }} pendientes · {{ statsFacturacion.emitidos }} comprobantes</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <PrimaryButton :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion || bloquearEmisionPorControlPendiente" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
-                        <SecondaryButton v-if="permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones || bloquearEmisionPorRecepcion || bloquearEmisionPorControlPendiente" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
+                        <PrimaryButton :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
+                        <SecondaryButton v-if="permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
 
@@ -516,11 +514,11 @@ const bloquearEmisionPorControlPendiente = computed(() => pedidosSinControl.valu
                     <div v-if="faltanSelecciones && gruposFacturacion.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         Falta seleccionar "Facturar a" en uno o mas grupos.
                     </div>
-                    <div v-if="bloquearEmisionPorRecepcion" class="mt-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                        Hay pedidos recibidos con error. Debes revisarlos/corregirlos antes de emitir facturas o guias.
+                    <div v-if="recepcionConErrores.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        Hay pedidos recibidos con error. Se pueden facturar igual, pero no estaran disponibles para la hoja de ruta de reparto hasta que se corrijan.
                     </div>
-                    <div v-if="bloquearEmisionPorControlPendiente" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                        Hay pedidos sin controlar. Solo se pueden facturar o emitir guias los pedidos ya controlados como correctos.
+                    <div v-if="pedidosSinControl.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        Hay pedidos sin controlar. Se pueden facturar igual, pero no estaran disponibles para la hoja de ruta de reparto hasta que se controlen como correctos.
                     </div>
 
                     <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">

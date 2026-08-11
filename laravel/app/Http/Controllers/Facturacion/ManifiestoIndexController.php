@@ -16,13 +16,11 @@ class ManifiestoIndexController extends Controller
         $manifiestos = ManifiestoIngreso::query()
             ->where('empresa_id', $empresaId)
             ->whereHas('pedidos', function ($q) {
-                $q->where('recepcion_estado', 'correcto')
-                  ->whereDoesntHave('comprobantes');
+                $q->whereDoesntHave('comprobantes');
             })
             ->with(['deposito:id,nombre'])
             ->withCount(['pedidos as pendientes_count' => function ($q) {
-                $q->where('recepcion_estado', 'correcto')
-                  ->whereDoesntHave('comprobantes');
+                $q->whereDoesntHave('comprobantes');
             }])
             ->orderByDesc('fecha')
             ->orderByDesc('id')

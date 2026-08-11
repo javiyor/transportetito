@@ -77,24 +77,6 @@ class ManifiestoEmitirGuiasController extends Controller
         $missingSelection = 0;
         $comprobanteIds = [];
 
-        $erroresRecepcion = Pedido::query()
-            ->where('manifiesto_ingreso_id', $manifiesto->id)
-            ->where('recepcion_estado', 'con_error')
-            ->count();
-
-        $sinControlRecepcion = Pedido::query()
-            ->where('manifiesto_ingreso_id', $manifiesto->id)
-            ->whereNull('recepcion_estado')
-            ->count();
-
-        if ($erroresRecepcion > 0) {
-            return back()->with('error', 'No se puede emitir: hay pedidos con error de recepcion pendientes de corregir.');
-        }
-
-        if ($sinControlRecepcion > 0) {
-            return back()->with('error', 'No se puede emitir: hay pedidos sin control de recepcion.');
-        }
-
         $tarifaResolver = new TarifaResolver();
         $calculator = new FacturaCalculator();
 
