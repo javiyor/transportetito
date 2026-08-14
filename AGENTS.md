@@ -173,6 +173,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - **CUITs con formato mixto**: normalizados para matching ARCA (`546b3b0`).
 - **`openssl_*_free()` eliminadas**: no existen en PHP 8.0+ (`86727ae`).
 - **Redis OOM**: agregado `mem_limit` 256m (`c610591`, `0eaf72d`); códigos de subcuentas corregidos (`b02917a`).
+- **Endpoint chofer invokable roto**: `POST /repartidor/ubicacion` registrado como controlador invokable (`RepartoUbicacionController` sin `__invoke`) → pings de geolocalización devolvían 500. Corregido a `[..., 'store']` y método renombrado `update`→`store` (`3677539`).
 
 ### Features / changes
 
@@ -248,6 +249,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `0cba337` | Red dedicada `ttnet` + IPs fijas + extra_hosts (redirecciones/edge) |
 | `fb6305a` | Permitir facturar manifiestos sin control de recepción; hoja de ruta solo para pedidos controlados y facturados |
 | `c13986d` | Mapa de reparto en tiempo real (admin, Leaflet) con polling 5s de choferes activos |
+| `3677539` | PWA instalable: manifest + service worker shell (precache vía /build/manifest.json), cache runtime tiles OSM + ubicaciones; icons + meta app.blade.php |
 
 ### Implemented
 
@@ -273,6 +275,8 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `RepartoMapController` | `index` (Inertia map) + `ubicaciones` (JSON) gated por `role:admin` |
 | `Admin/Reparto/Map.vue` | Mapa Leaflet (CDN), polling 5s, markers con popup chofer/última posición/hoja ruta, listado con badge online |
 | `AppLayout.vue` | Link "Mapa reparto" en dropdown Configuración (desktop + mobile), admin-only |
+| `manifest.webmanifest` / `sw.js` / `pwa-*.png` | PWA: manifest (start_url `/admin/reparto/mapa`), service worker raíz (precache shell + cache tiles/OSM + ubicaciones), icons generados |
+| `scripts/build_pwa_icons.php` | Genera icons PNG a partir de `brand/logo.png` (uso puntual) |
 
 ### Relevant files
 
@@ -341,6 +345,8 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/resources/js/Pages/Facturacion/Cotizaciones/Consultas.vue`
 - `laravel/resources/js/Pages/Facturacion/Cotizaciones/PedidoCreate.vue`
 - `laravel/resources/js/Pages/Admin/Reparto/Map.vue` — mapa tracking (Leaflet CDN, polling 5s)
+- `laravel/public/sw.js`, `manifest.webmanifest`, `pwa-*.png`, `apple-touch-icon.png` — PWA (shell offline + runtime cache)
+- `scripts/build_pwa_icons.php` — regenera icons a partir de `brand/logo.png`
 
 **Routes:**
 - `laravel/routes/web.php`
@@ -349,6 +355,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - Cotizaciones: `/facturacion/cotizaciones/pendientes`, `/facturacion/cotizaciones/consultas`, `/facturacion/cotizaciones/pedido`
 - Facturación: `facturacion.carga-directa` renombrado a "Factura" (`100447f`)
 - Admin/Reparto: `PUT /admin/users/{user}/ubicacion` (`admin.users.ubicacion.update`), `POST /repartidor/ubicacion` (`repartidor.ubicacion.store`)
+- Admin/Reparto mapa: `GET /admin/reparto/mapa` (`admin.reparto.mapa.index`), `GET /admin/reparto/ubicaciones.json` (`admin.reparto.ubicaciones.json`)
 
 ### Plan (COMPLETADO): Carga directa de factura con pedidos (Jul 2026)
 
