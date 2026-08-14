@@ -5,6 +5,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 
 const props = defineProps({
     choferes: Array,
+    choferesError: Boolean,
     tileUrl: String,
     tileAttribution: String,
 });
@@ -94,7 +95,9 @@ const fetchUbicaciones = async () => {
         });
         if (!res.ok) throw new Error('http ' + res.status);
         const data = await res.json();
-        choferesData.value = data;
+        if (Array.isArray(data)) {
+            choferesData.value = data;
+        }
         ultimaActualizacion.value = new Date();
         await renderMarkers();
     } catch (e) {
@@ -155,6 +158,13 @@ onBeforeUnmount(() => {
             <p v-if="!$page.props.tt?.roles?.includes('admin')" class="text-sm text-red-600">
                 Solo usuarios administradores pueden ver este mapa.
             </p>
+
+            <div v-if="props.choferesError" class="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                <p class="font-medium">No se pudieron cargar las ubicaciones.</p>
+                <p class="mt-1">Falta aplicar las migraciones en la base de datos. Ejecutá:</p>
+                <code class="mt-1 block break-all rounded bg-red-100/60 px-2 py-1 text-xs">docker compose exec -T app php artisan migrate --force</code>
+                <p class="mt-1">Luego recargá la página.</p>
+            </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div class="lg:col-span-8">
