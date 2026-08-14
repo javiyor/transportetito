@@ -113,3 +113,58 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
   - clave (seguro_pct_global, cr_pct_global, tope_cf_identificacion, ...)
   - valor (json)
   - vigencia_desde, vigencia_hasta
+
+## Contabilidad
+- cuentas_contables
+  - id, empresa_id
+  - codigo, codigo_completo, codigo_corto
+  - nombre, tipo, naturaleza, nivel (capitulo/categoria/cuenta)
+  - parent_id (auto-referencia) → árbol jerárquico colapsable
+  - moneda, activo, contabilizable, orden
+  - timestamps; unique (empresa_id, codigo)
+- configuracion_contable
+  - id, empresa_id, clave (ej. caja, deudores, iva_ars, ...), cuenta_contable_id
+  - unique (empresa_id, clave); sembrado por `ConfiguracionContableSeeder`; acceso vía `Empresa::getCuentaContable()`
+- asientos_contables
+  - id, empresa_id, fecha, moneda (ARS), estado (confirmado), referencia_tipo/referencia_id, descripcion, timestamps
+  - index (empresa_id, fecha); (referencia_tipo, referencia_id)
+- asiento_lineas
+  - id, asiento_id, cuenta_contable_id, tercero_cuenta_id (nullable), debe, haber, descripcion
+  - generados por `ContabilizadorService`; `contabilidad:recontabilizar --force` los borra/rehace
+
+## Cotizaciones
+- cotizaciones
+  - id, empresa_id, tercero_cuenta_id (remitente), tercero_destino_id (nullable)
+  - estado (pedido/cotizada/consultada), origen, destino
+  - items (json), flete_sugerido, flete_final, fecha_validez, observacion, creado_por_user_id
+  - flujo: Pedido → Cotizar → Consulta; badge de pendientes en menú
+
+## Finanzas
+- gastos_operativos
+  - id, empresa_id, fecha, categoria, moneda, cotizacion_ars, importe, forma_pago (efectivo/transferencia/cheque/tarjeta), banco_origen_id, cheque_id, fecha_pago, referencia, observacion, creado_por_user_id
+  - distribución multi-categoría → gasto_operativo_categorias
+- gasto_operativo_categorias
+  - id, gasto_operativo_id, cuenta_contable_id, importe
+- ingresos_operativos
+  - id, empresa_id, fecha, cuenta_contable_id (nullable), categoria, medio, detalle (json), moneda, cotizacion_ars, importe, referencia, observacion, creado_por_user_id
+- ingreso_operativo_categorias
+  - id, ingreso_operativo_id, cuenta_contable_id, importe
+- movimientos_bancarios
+  - id, empresa_id, banco_id, fecha, tipo (ingreso/egreso/gasto_bancario), concepto, importe, moneda (ARS), referencia_tipo/referencia_id, contabilizado (bool), creado_por_user_id
+
+## Proveedores / Cheques
+- proveedor_comprobantes
+  - id, empresa_id, tercero_cuenta_id, tipo, numero, estado (emitida), moneda, cotizacion_ars, subtotal/iva_total/tributos_total/total, fecha_emision, fecha_vencimiento, detalle (json), cuenta_contable_id, observacion, creado_por_user_id
+- ordenes_pago
+  - id, empresa_id, tercero_cuenta_id, numero_interno, estado (emitida), moneda, cotizacion_ars, total, fecha, medio, detalle (json), cheque_id (nullable), observacion, creado_por_user_id
+
+## Reparto
+- users.envia_ubicacion (bool, default false) — choferes que envían pings de geolocalización a `reparto_ubicaciones`
+- reparto_ubicaciones
+  - id, user_id, hoja_ruta_id (nullable), lat, lng, accuracy, created_at
+- vehiculo_controles
+  - id, vehiculo_id, tipo (RTO, matafuegos, etc.), fecha_vencimiento, observacion
+  - index (vehiculo_id, fecha_vencimiento); alertas de vencimiento + badge en menú Vehículos
+
+## Empresas
+- (extensión) logo (string, nullable) — renderizado en navbar y encabezados de impresiones

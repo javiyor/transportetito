@@ -160,11 +160,74 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - **Compras CSV no reconocía columnas Emisor**: HeaderMap solo tenía "Receptor".
 - **Orden de variables en `<script setup>`** causaba white screen en terceros (empresaFiltroId usada antes de definir).
 - **Pantalla blanca**: `empresaFiltroId` definido después de su uso en `useForm()`.
+- **DNS flaky de Docker**: `getaddrinfo for redis` (y postgres/minio) fallaba intermitente → errores 500. Solucionado con red dedicada (`ttnet`) + IPs fijas + `extra_hosts` para resolver por `/etc/hosts`. La vieja red `transportetito_appnet` no se borra (otra app, `organizing-web`, la comparte).
+- **favicon.ico vacío (0 bytes)** en `laravel/public/favicon.ico`: regenerado favicon válido.
+- **Flash messages invisibles**: `flash.success`/`flash.error` no se compartían a Inertia → mensajes ARCA invisibles (`015fdf0`).
+- **Contabilización desbalanceada**: debe≠haber cuando subtotal/IVA=0; `tipoLabel` snake_case; `contabilidad:recontabilizar --force` borra asientos previos (`e7151ea`).
+- **Plan de cuentas no colapsable**: `isExpanded` se evaluaba una sola vez en `setup` (`944ba21`).
+- **Pantalla blanca carga directa**: faltaba `formatFecha` en `<script setup>` (`9aafb93`).
+- **`flete_final` no importado**: al crear ítems desde presupuesto no se llevaba al importe (`4e50974`).
+- **`valor_declarado` en 0**: comprobantes importados quedaban en 0 (`3009206`).
+- **Fechas ISO en Libro Diario**: formato `T` y labels (`8a862ae`, `d51c224`).
+- **Compensación OP total=0**: ya registra aplicaciones; cheque físico/echéq; borrado de OP anulada (`68107c3`).
+- **CUITs con formato mixto**: normalizados para matching ARCA (`546b3b0`).
+- **`openssl_*_free()` eliminadas**: no existen en PHP 8.0+ (`86727ae`).
+- **Redis OOM**: agregado `mem_limit` 256m (`c610591`, `0eaf72d`); códigos de subcuentas corregidos (`b02917a`).
 
 ### Features / changes
 
 | Commit | Descripción |
 |--------|-------------|
+| `a65698e` | Compat chillerlan/php-qrcode (string outputType/eccLevel) |
+| `072aa7d` | Logo empresa en navbar web y encabezado de impresiones |
+| `3009206` | valor_declarado 0 en comprobantes importados |
+| `f6868c8` | Mostrar importes en comprobantes importados sin detalle_facturacion |
+| `8ceaafd` | Plan de cuentas jerárquico (árbol colapsable, filtro contabilizable) |
+| `f0ba250` | Botón nueva cuenta abre modal correctamente |
+| `80d6e6a` | Módulo contabilización automática + configuración por empresa |
+| `98b4702` | Vistas contables: Libro Diario/Mayor/Balance + export CSV |
+| `4280275` | Rutas libro-diario/libro-mayor usan `[Controller::class, 'index']` |
+| `b48a6eb` | Mover Libro Diario/Mayor/Balance a submenu Contabilidad (mobile) |
+| `29ce2f3` | Agregar Libro Diario/Mayor/Balance al dropdown Finanzas desktop |
+| `8a862ae` | Fecha DD-MM-YYYY en Libro Diario; `factura_interna`→`factura` |
+| `d51c224` | Fecha ISO con `T` en Libro Diario |
+| `9d66aab` | Auto-corrección tipo comprobante según condición cliente + fixes contables |
+| `d4c8888` | Logo jpeg; miles en saldo proveedores; cheques manual; unique plan cuentas |
+| `da56caa` | Créditos en CC (OPs/recibos sin imputación); fix signo notas crédito |
+| `f4adfa8` | Miles en cobranzas CC/comprobantes; términos legales en factura |
+| `d88ca40` | Fecha en checkboxes; créditos con signo en CC; NC en OPs |
+| `a35e0e5` | Cierre div faltante en listado cobranzas CC |
+| `68ca31c` | Total siempre visible; eliminar recibo con botón en movimientos |
+| `68107c3` | Compensación OP total=0 registra aplicaciones; cheque físico/echéq; borrar OP anulada; link recibos |
+| `91382e1` | Command `cuentas:reparar-plan` (capítulos 1 y 2) |
+| `944ba21` | Fix toggle expandir/colapsar plan de cuentas |
+| `015fdf0` | Share flash.success/error a Inertia |
+| `86727ae` | Eliminadas `openssl_*_free()` (PHP 8.0+) |
+| `b3431bd` | Eliminar manifiesto; pago origen/destino en print; miles en create |
+| `068eb29` | Carga directa de factura con pedidos (sin manifiesto) |
+| `3ee39c6` | UI carga directa: dropdown cierra al seleccionar; tipo nombre completo; obs en pie; remito ancho; headers alineados |
+| `8f36e6f` | Importe a facturar editable por fila; auto-calc desde valor declarado/IVA/seguro/CR |
+| `57bfaca` | Seguro y CR editables por fila; separadores de miles |
+| `100447f` | Rename 'Carga directa'→'Factura'; reorder menú (Manifiestos > Factura > Comprobantes) |
+| `96bbbb1` | deposito_id null en pedidos carga directa → depósito central empresa |
+| `0eaf72d` | mem_limit a redis (evita OOM) |
+| `12cef4c` | Link +Nuevo en origen y destino de carga directa |
+| `b02917a` | Corregidos códigos de subcuentas (Deudores Morosos, Cheques Diferidos) |
+| `c610591` | Aumentar mem_limit redis 256m |
+| `c952694` | Tabla comprobantes más compacta (text-xs, sin wrap) |
+| `060a0fc` | Fix typo IVA en detalle de cotización pendiente |
+| `4008801` | Filtro saldo distinto de 0 por defecto en cta cte proveedores |
+| `546b3b0` | Normalizar CUITs de terceros (formato mixto) para matching ARCA |
+| `5d3904a` | Controles por vehículo (RTO, matafuegos, etc.) con alertas de vencimiento |
+| `9aafb93` | pantalla blanca carga directa - faltaba formatFecha |
+| `f715169` | Mostrar presupuestos vigentes en carga directa (origen/destino coinciden) |
+| `e7d3fdb` | Consultas con mismos datos que pendientes (remitente, CUIT, origen, items, valor declarado) |
+| `707a360` | Mostrar remitente CUIT, origen, destinatario, items, valor declarado en pendientes cotizar |
+| `7d2f34a` | Badge con cantidad de cotizaciones pendientes en menú |
+| `be4c0f2` | Command `comprobantes:normalizar-tipos` (FM→factura_m, etc.) |
+| `c087d37` | Nombre completo del tipo de comprobante en preview CSV |
+| `be8e9ef` | Egreso cheque: propio (banco/número/importe/venc) o tercero (desde cartera) |
+| `0867de2` | Cotizaciones, retenciones sums, egresos/ingresos multi-categoría, movimientos bancarios, proveedores cuenta contable |
 | `5b46694` | Migración FKs nullables, ARCA/CSV controllers fixes |
 | `327a9ec` | Normalización de moneda, error display en Importar |
 | `90d9a40` | Compras import: columna Emisor, moneda, errores |
@@ -177,6 +240,13 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `f02f741` | Fix white screen terceros (orden variables script setup) |
 | `af37cbd` | Blanqueo Ventas/Compras en Configuración |
 | `5869029` | Retenciones+multi factura en recibos, impuestos en ventas, resumen ARCA |
+| `9611ba0` | Campos de importe más anchos en carga directa (soporta hasta 100M) |
+| `826cdc6` | Inputs de importe en carga directa usan v-model.number type=number (evita salto a decimales) |
+| `82e6704` | Tabla comprobantes más compacta (text-xs, sin wrap) |
+| `ac37a29` | Script de chequeo de salud del sitio (app vs edge del hosting) |
+| `c4c3081` | Red dedicada `ttnet` + IPs fijas + extra_hosts (evita DNS flaky de Docker) |
+| `0cba337` | Red dedicada `ttnet` + IPs fijas + extra_hosts (redirecciones/edge) |
+| `fb6305a` | Permitir facturar manifiestos sin control de recepción; hoja de ruta solo para pedidos controlados y facturados |
 
 ### Implemented
 
@@ -187,10 +257,29 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `Facturacion/CargaDirecta/Create.vue` | Form con tabla dinámica de pedidos, buscador de cuentas, totales |
 | `routes/web.php` | GET/POST `/facturacion/carga-directa` |
 | `AppLayout.vue` | Link "Carga directa" en dropdown Facturación (desktop + mobile) |
+| `ManifiestoFacturarController` / `ManifiestoEmitirGuiasController` | Ya no bloquean por control de recepción |
+| `Facturacion/Manifiestos/Show.vue` | Facturar desbloqueado (todo pedido pendiente); avisos informativos |
+| `Facturacion/ManifiestoIndexController` | Lista manifiestos con pedidos pendientes sin exigir control |
+| `FacturasListController` | Hoja de ruta: solo comprobantes con todos los pedidos controlados |
+| `HojaRutaStoreController` | Validación: rechaza comprobantes con pedidos sin controlar |
+| `UserUbicacionUpdateController` | Toggle flag `envia_ubicacion` por usuario (admin) |
+| `RepartoUbicacionController` | Endpoint choferes para recibir pings de geolocalización |
+| `RepartoUbicacion` (modelo) | Tabla `reparto_ubicaciones` para seguimiento de repartos |
+| `User.envia_ubicacion` | Flag booleano por usuario; consumido por Delivery.vue para iniciar tracking |
+| `Delivery.vue` | Geolocalización habilitada sólo cuando el chofer tiene `envia_ubicacion` |
+| `routes/web.php` | `PUT /admin/users/{user}/ubicacion` (`admin.users.ubicacion.update`) y `POST /repartidor/ubicacion` (`repartidor.ubicacion.store`) |
+| `migraciones 2026_08_13` | `users.envia_ubicacion` (bool) y tabla `reparto_ubicaciones` (lat/lng/accuracy/hoja_ruta) |
 
 ### Relevant files
 
 **Backend:**
+- `laravel/app/Http/Controllers/Operacion/Facturacion/ManifiestoFacturarController.php` — facturar sin bloquear por control de recepción
+- `laravel/app/Http/Controllers/Operacion/Facturacion/ManifiestoEmitirGuiasController.php` — emitir guías sin bloquear por control de recepción
+- `laravel/app/Http/Controllers/Operacion/Repartos/FacturasListController.php` — hoja de ruta filtra comprobantes controlados
+- `laravel/app/Http/Controllers/Operacion/Repartos/HojaRutaStoreController.php` — valida comprobantes controlados al crear hoja
+- `laravel/app/Http/Controllers/Admin/UserUbicacionUpdateController.php` — toggle `envia_ubicacion`
+- `laravel/app/Http/Controllers/Operacion/Repartos/RepartoUbicacionController.php` — recibe pings de geolocalización
+- `laravel/app/Models/RepartoUbicacion.php`
 - `laravel/app/Http/Controllers/Cobranzas/CuentaCorrienteReciboStoreController.php` — multi factura, retenciones, saldo a cuenta
 - `laravel/app/Http/Controllers/Facturacion/ImportarFacturasCsvStoreController.php` — +impuestos
 - `laravel/app/Http/Controllers/Facturacion/ImportarFacturasArcaStoreController.php` — +impuestos WSFE
@@ -206,6 +295,21 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/app/Console/Commands/TrasladarClientesEmpresa.php`
 - `laravel/app/Http/Middleware/HandleInertiaRequests.php`
 - `laravel/app/Services/Arca/WsfeClient.php` — +IVA/tributos en consultarComprobante
+- `laravel/app/Services/Contabilidad/ContabilizadorService.php` — contabiliza venta/NC/compra/cobro/pago proveedor/gasto operativo
+- `laravel/app/Console/Commands/Recontabilizar.php` — `contabilidad:recontabilizar` (`--force`)
+- `laravel/app/Console/Commands/RepararPlanCuentas.php` — `cuentas:reparar-plan`
+- `laravel/app/Console/Commands/NormalizarTiposComprobantes.php` — `comprobantes:normalizar-tipos`
+- `laravel/app/Models/ConfiguracionContable.php` + helper `Empresa::getCuentaContable()`
+- `laravel/app/Models/Cotizacion.php`
+- `laravel/app/Models/GastoOperativo.php` / `IngresoOperativo.php` / `MovimientoBancario.php`
+- `laravel/app/Http/Controllers/Finanzas/LibroDiarioController.php` — asientos paginados, filtros, totales Debe/Haber
+- `laravel/app/Http/Controllers/Finanzas/LibroMayorController.php` — movimientos por cuenta + saldo
+- `laravel/app/Http/Controllers/Finanzas/BalanceController.php` — sumas/saldos jerárquicos + export CSV
+- `laravel/app/Http/Controllers/Finanzas/EgresoIndexController.php` — egreso cheque propio/tercero, multi-categoría
+- `laravel/app/Http/Controllers/Finanzas/MovimientoBancarioIndexController.php`
+- `laravel/app/Http/Controllers/Compras/IngresoOperativoIndexController.php`
+- `laravel/app/Http/Controllers/Compras/ProveedorComprobanteIndexController.php`
+- `laravel/app/Models/VehiculoControl.php` — tabla `vehiculo_controles` (RTO, matafuegos)
 
 **Frontend:**
 - `laravel/resources/js/Layouts/AppLayout.vue` — menú reorganizado en dropdowns
@@ -221,11 +325,26 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/resources/js/Pages/Admin/Reportes/Estadisticas.vue`
 - `laravel/resources/js/Pages/Admin/Blanqueo/Index.vue`
 - `laravel/resources/js/Pages/Operacion/Repartos/Repartidor/Delivery.vue`
+- `laravel/resources/js/Pages/Finanzas/LibroDiario/Index.vue`
+- `laravel/resources/js/Pages/Finanzas/LibroMayor/Index.vue`
+- `laravel/resources/js/Pages/Finanzas/Balance/Index.vue`
+- `laravel/resources/js/Pages/Finanzas/Egresos/Index.vue`
+- `laravel/resources/js/Pages/Finanzas/MovimientosBancarios/Index.vue`
+- `laravel/resources/js/Pages/Compras/Ingresos/Index.vue`
+- `laravel/resources/js/Pages/Compras/Proveedores/Comprobantes/Index.vue`
+- `laravel/resources/js/Pages/Facturacion/Cotizaciones/Pendientes.vue`
+- `laravel/resources/js/Pages/Facturacion/Cotizaciones/Consultas.vue`
+- `laravel/resources/js/Pages/Facturacion/Cotizaciones/PedidoCreate.vue`
 
 **Routes:**
 - `laravel/routes/web.php`
+- Finanzas: GET `/finanzas/libro-diario`, `/finanzas/libro-mayor`, `/finanzas/balance`, `/finanzas/balance/export`, `/finanzas/egresos`, `/finanzas/movimientos-bancarios`
+- Compras: `/compras/ingresos`, `/compras/proveedores/comprobantes`, `/proveedores/ordenes-pago`
+- Cotizaciones: `/facturacion/cotizaciones/pendientes`, `/facturacion/cotizaciones/consultas`, `/facturacion/cotizaciones/pedido`
+- Facturación: `facturacion.carga-directa` renombrado a "Factura" (`100447f`)
+- Admin/Reparto: `PUT /admin/users/{user}/ubicacion` (`admin.users.ubicacion.update`), `POST /repartidor/ubicacion` (`repartidor.ubicacion.store`)
 
-### Plan: Carga directa de factura con pedidos (Jul 2026)
+### Plan (COMPLETADO): Carga directa de factura con pedidos (Jul 2026)
 
 **Objetivo**: Crear una factura con todos los datos de manifiesto/pedidos (remitente, destinatario, bultos, palets, valor declarado, etc.) directamente desde cero, sin importación externa ni manifiesto existente.
 
@@ -262,3 +381,6 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 
 - Delivery.vue muestra `saldo_pendiente` pero falta verificar con datos reales.
 - Al editar un tercero y cambiar empresa, el `numero_cliente` podría colisionar en la empresa destino.
+- `envia_ubicacion` envía pings de geolocalización con badge en `Delivery.vue`; **queda pendiente** pantalla de mapa para visualizar el tracking en tiempo real.
+- `docs/schema.md` está desactualizado frente a las tablas nuevas (cotizaciones, gastos/ingresos_operativos, movimientos_bancarios, asientos_contables/configuracion_contable, proveedor_comprobantes/ordenes_pago, reparto_ubicaciones, vehiculo_controles).
+- Contabilización de egresos/ingresos/movimientos bancarios implementada vía `ContabilizadorService`; falta UI de conciliación bancaria manual.

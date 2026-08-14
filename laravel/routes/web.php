@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\UserUnblockController;
 use App\Http\Controllers\Admin\UserUpdateController;
 use App\Http\Controllers\Admin\UserEmpresasUpdateController;
 use App\Http\Controllers\Admin\UserHorariosUpdateController;
+use App\Http\Controllers\Admin\UserUbicacionUpdateController;
 use App\Http\Controllers\Admin\CurrentEmpresaUpdateController;
 use App\Http\Controllers\Admin\EmpresaAdminController;
 use App\Http\Controllers\Admin\DepositoAdminController;
@@ -50,6 +51,7 @@ use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaCerrarController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaPrintController;
 use App\Http\Controllers\Operacion\Repartos\RepartidorController;
+use App\Http\Controllers\Operacion\Repartos\RepartoUbicacionController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoEmitirGuiasController;
 use App\Http\Controllers\Operacion\Facturacion\ComprobanteAutorizarArcaController;
@@ -160,6 +162,7 @@ Route::middleware([
         Route::put('/users/{user}', UserUpdateController::class)->name('users.update');
         Route::put('/users/{user}/empresas', UserEmpresasUpdateController::class)->name('users.empresas.update');
         Route::put('/users/{user}/horarios', UserHorariosUpdateController::class)->name('users.horarios.update');
+        Route::put('/users/{user}/ubicacion', UserUbicacionUpdateController::class)->name('users.ubicacion.update');
 
         Route::post('/current-empresa', CurrentEmpresaUpdateController::class)->name('current-empresa.update');
 
@@ -310,10 +313,11 @@ Route::middleware([
         Route::get('/cotizaciones/consultas', CotizacionConsultaIndexController::class)->name('cotizaciones.consultas');
     });
 
-    Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
-        Route::get('/', [RepartidorController::class, 'index'])->name('index');
-        Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
-    });
+        Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
+            Route::get('/', [RepartidorController::class, 'index'])->name('index');
+            Route::post('/ubicacion', RepartoUbicacionController::class)->name('ubicacion.store');
+            Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
+        });
 
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');

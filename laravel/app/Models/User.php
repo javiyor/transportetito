@@ -5,17 +5,14 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Empresa;
-use App\Models\TerceroCuenta;
-use App\Models\UserHorario;
 
 class User extends Authenticatable
 {
@@ -25,8 +22,8 @@ class User extends Authenticatable
     use HasFactory;
 
     use HasProfilePhoto;
-    use Notifiable;
     use HasRoles;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -38,6 +35,7 @@ class User extends Authenticatable
         'email',
         'password',
         'must_change_password',
+        'envia_ubicacion',
     ];
 
     /**
@@ -71,6 +69,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'blocked_at' => 'datetime',
             'must_change_password' => 'boolean',
+            'envia_ubicacion' => 'boolean',
         ];
     }
 
@@ -92,5 +91,10 @@ class User extends Authenticatable
     public function cuentasAsignadas(): HasMany
     {
         return $this->hasMany(TerceroCuenta::class, 'cobrador_user_id');
+    }
+
+    public function ubicaciones(): HasMany
+    {
+        return $this->hasMany(RepartoUbicacion::class)->latest('created_at');
     }
 }

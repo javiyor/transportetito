@@ -77,6 +77,21 @@ const saveRoles = (user) => {
     });
 };
 
+const ubicacionForms = ref({});
+const getUbicacionForm = (user) => {
+    if (!ubicacionForms.value[user.id]) {
+        ubicacionForms.value[user.id] = useForm({
+            envia_ubicacion: !!user.envia_ubicacion,
+        });
+    }
+    return ubicacionForms.value[user.id];
+};
+const toggleUbicacion = (user) => {
+    const form = getUbicacionForm(user);
+    form.envia_ubicacion = !form.envia_ubicacion;
+    form.put(route('admin.users.ubicacion.update', user.id), { preserveScroll: true });
+};
+
 const resetPassword = (user) => {
     openConfirm(
         'Resetear password',
@@ -240,8 +255,9 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -262,6 +278,18 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                                         <span v-else class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">No verificado</span>
 
                                     </div>
+                                </td>
+
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            :checked="!!getUbicacionForm(user).envia_ubicacion"
+                                            :disabled="getUbicacionForm(user).processing"
+                                            @change="toggleUbicacion(user)"
+                                        />
+                                        <span class="hidden sm:inline">Envía ubicación</span>
+                                    </label>
                                 </td>
 
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">

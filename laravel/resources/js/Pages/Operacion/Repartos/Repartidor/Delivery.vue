@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
     hojas: Array,
@@ -14,6 +14,55 @@ const expandedHojaId = ref(null);
 const toggleHoja = (id) => {
     expandedHojaId.value = expandedHojaId.value === id ? null : id;
 };
+
+const enviaUbicacion = computed(() => !!page.props.auth?.user?.envia_ubicacion);
+let watchId = null;
+const ubicacionError = ref('');
+
+const enviarUbicacion = (pos) => {
+    const hojaId = expandedHojaId.value || (props.hojas?.[0]?.id ?? null);
+    fetch(route('repartidor.ubicacion.store'), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            lat: pos.latitude,
+            lng: pos.longitude,
+            accuracy: pos.accuracy ?? null,
+            hoja_ruta_id: hojaId ? Number(hojaId) : null,
+        }),
+    }).catch(() => {});
+};
+
+const startUbicacion = () => {
+    if (!enviaUbicacion.value) return;
+    if (watchId !== null) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            ubicacionError.value = '';
+            enviarUbicacion(pos);
+        },
+        (err) => {
+            ubicacionError.value = 'No se pudo obtener la ubicacion.';
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
+    );
+};
+
+const stopUbicacion = () => {
+    if (watchId !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+    }
+    watchId = null;
+};
+
+onMounted(startUbicacion);
+onBeforeUnmount(stopUbicacion);
 
 const deliveryForm = useForm({
     estado_entrega: 'entregado',
@@ -123,7 +172,14 @@ const statusClass = (estado) => {
                     <h1 class="text-lg font-semibold text-gray-900">Repartidor</h1>
                     <p class="text-xs text-gray-500">{{ page.props.auth.user.name }}</p>
                 </div>
-                <div class="text-xs text-gray-500">{{ hojas.length }} hoja(s) asignada(s)</div>
+                <div class="text-xs text-gray-500">
+                    <span>{{ hojas.length }} hoja(s) asignada(s)</span>
+                    <span v-if="enviaUbicacion" class="inline-flex items-center gap-1 text-green-700 ml-3">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Enviando ubicación
+                    </span>
+                    <span v-else class="text-gray-400 ml-3">Tracking deshabilitado</span>
+                    <div v-if="ubicacionError" class="text-red-600 mt-0.5">{{ ubicacionError }}</div>
+                </div>
             </div>
         </div>
 
