@@ -17,3 +17,6 @@ laravel/public/storage
 # Certificates (never commit)
 certificados/
 laravel/certificados/
+
+# Windows null-device phantom (no real file; keep git status clean)
+nul
