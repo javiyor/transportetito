@@ -1,0 +1,24 @@
+{
+    "name": "TransporteTito",
+    "short_name": "TransporteTito",
+    "description": "Seguimiento y operación de repartos en tiempo real",
+    "start_url": "/admin/reparto/mapa",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#ffffff",
+    "theme_color": "#4338ca",
+    "icons": [
+        {
+            "src": "/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

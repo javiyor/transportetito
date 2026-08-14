@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 
 class RepartoUbicacionController extends Controller
 {
-    public function update(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $user = $request->user();
 

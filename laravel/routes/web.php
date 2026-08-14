@@ -319,7 +319,7 @@ Route::middleware([
 
         Route::middleware(['role:chofer'])->prefix('repartidor')->name('repartidor.')->group(function () {
             Route::get('/', [RepartidorController::class, 'index'])->name('index');
-            Route::post('/ubicacion', RepartoUbicacionController::class)->name('ubicacion.store');
+            Route::post('/ubicacion', [RepartoUbicacionController::class, 'store'])->name('ubicacion.store');
             Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
         });
 
