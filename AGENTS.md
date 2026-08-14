@@ -397,3 +397,8 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `envia_ubicacion` + pantalla de mapa implementados: `Delivery.vue` envía pings a `reparto_ubicaciones`; `/admin/reparto/mapa` (Leaflet, polling 5s) muestra choferes activos en tiempo real (admin‑only). Render de tiles depende de OSM (configurable vía `services.openstreetmap`).
 - `docs/schema.md` actualizado con tablas nuevas (cotizaciones, gastos/ingresos_operativos, movimientos_bancarios, asientos_contables/configuracion_contable, proveedor_comprobantes/ordenes_pago, reparto_ubicaciones, vehiculo_controles).
 - Contabilización de egresos/ingresos/movimientos bancarios implementada vía `ContabilizadorService`; falta UI de conciliación bancaria manual.
+
+### Deploy notes
+- El mapa de reparto (`admin/reparto/mapa` + choferes) **requiere aplicar las migraciones** `2026_08_13_*` (`users.envia_ubicacion` + tabla `reparto_ubicaciones`). Tras deploy: `php artisan migrate --force` (opcional `db:seed --force` para defaults de `configuracion_contable`).
+- La app es PWA instalable: `manifest.webmanifest` + `public/sw.js` (precarga shell vía `/build/manifest.json`, cache runtime tiles OSM + `ubicaciones.json`). El SW se registra en prod desde `app.js`; purge caché del navegador (unregister SW) tras rebuild de assets.
+- Frontend build es *gitignored* (`/public/build`): rebuildear con `docker compose run --rm node` y limpiar caché (`php artisan optimize:clear`).
