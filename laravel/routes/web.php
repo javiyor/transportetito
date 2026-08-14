@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\UserUpdateController;
 use App\Http\Controllers\Admin\UserEmpresasUpdateController;
 use App\Http\Controllers\Admin\UserHorariosUpdateController;
 use App\Http\Controllers\Admin\UserUbicacionUpdateController;
+use App\Http\Controllers\Admin\RepartoMapController;
 use App\Http\Controllers\Admin\CurrentEmpresaUpdateController;
 use App\Http\Controllers\Admin\EmpresaAdminController;
 use App\Http\Controllers\Admin\DepositoAdminController;
@@ -165,6 +166,9 @@ Route::middleware([
         Route::put('/users/{user}/ubicacion', UserUbicacionUpdateController::class)->name('users.ubicacion.update');
 
         Route::post('/current-empresa', CurrentEmpresaUpdateController::class)->name('current-empresa.update');
+
+        Route::get('/reparto/mapa', [RepartoMapController::class, 'index'])->name('reparto.mapa.index');
+        Route::get('/reparto/ubicaciones.json', [RepartoMapController::class, 'ubicaciones'])->name('reparto.ubicaciones.json');
 
         Route::get('/empresas', [EmpresaAdminController::class, 'index'])->name('empresas.index');
         Route::post('/empresas', [EmpresaAdminController::class, 'store'])->name('empresas.store');
