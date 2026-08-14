@@ -247,6 +247,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `c4c3081` | Red dedicada `ttnet` + IPs fijas + extra_hosts (evita DNS flaky de Docker) |
 | `0cba337` | Red dedicada `ttnet` + IPs fijas + extra_hosts (redirecciones/edge) |
 | `fb6305a` | Permitir facturar manifiestos sin control de recepción; hoja de ruta solo para pedidos controlados y facturados |
+| `c13986d` | Mapa de reparto en tiempo real (admin, Leaflet) con polling 5s de choferes activos |
 
 ### Implemented
 
@@ -269,6 +270,9 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 | `Delivery.vue` | Geolocalización habilitada sólo cuando el chofer tiene `envia_ubicacion` |
 | `routes/web.php` | `PUT /admin/users/{user}/ubicacion` (`admin.users.ubicacion.update`) y `POST /repartidor/ubicacion` (`repartidor.ubicacion.store`) |
 | `migraciones 2026_08_13` | `users.envia_ubicacion` (bool) y tabla `reparto_ubicaciones` (lat/lng/accuracy/hoja_ruta) |
+| `RepartoMapController` | `index` (Inertia map) + `ubicaciones` (JSON) gated por `role:admin` |
+| `Admin/Reparto/Map.vue` | Mapa Leaflet (CDN), polling 5s, markers con popup chofer/última posición/hoja ruta, listado con badge online |
+| `AppLayout.vue` | Link "Mapa reparto" en dropdown Configuración (desktop + mobile), admin-only |
 
 ### Relevant files
 
@@ -310,6 +314,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/app/Http/Controllers/Compras/IngresoOperativoIndexController.php`
 - `laravel/app/Http/Controllers/Compras/ProveedorComprobanteIndexController.php`
 - `laravel/app/Models/VehiculoControl.php` — tabla `vehiculo_controles` (RTO, matafuegos)
+- `laravel/app/Http/Controllers/Admin/RepartoMapController.php` — mapa en tiempo real (admin)
 
 **Frontend:**
 - `laravel/resources/js/Layouts/AppLayout.vue` — menú reorganizado en dropdowns
@@ -335,6 +340,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/resources/js/Pages/Facturacion/Cotizaciones/Pendientes.vue`
 - `laravel/resources/js/Pages/Facturacion/Cotizaciones/Consultas.vue`
 - `laravel/resources/js/Pages/Facturacion/Cotizaciones/PedidoCreate.vue`
+- `laravel/resources/js/Pages/Admin/Reparto/Map.vue` — mapa tracking (Leaflet CDN, polling 5s)
 
 **Routes:**
 - `laravel/routes/web.php`
@@ -381,6 +387,6 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 
 - Delivery.vue muestra `saldo_pendiente` pero falta verificar con datos reales.
 - Al editar un tercero y cambiar empresa, el `numero_cliente` podría colisionar en la empresa destino.
-- `envia_ubicacion` envía pings de geolocalización con badge en `Delivery.vue`; **queda pendiente** pantalla de mapa para visualizar el tracking en tiempo real.
-- `docs/schema.md` está desactualizado frente a las tablas nuevas (cotizaciones, gastos/ingresos_operativos, movimientos_bancarios, asientos_contables/configuracion_contable, proveedor_comprobantes/ordenes_pago, reparto_ubicaciones, vehiculo_controles).
+- `envia_ubicacion` + pantalla de mapa implementados: `Delivery.vue` envía pings a `reparto_ubicaciones`; `/admin/reparto/mapa` (Leaflet, polling 5s) muestra choferes activos en tiempo real (admin‑only). Render de tiles depende de OSM (configurable vía `services.openstreetmap`).
+- `docs/schema.md` actualizado con tablas nuevas (cotizaciones, gastos/ingresos_operativos, movimientos_bancarios, asientos_contables/configuracion_contable, proveedor_comprobantes/ordenes_pago, reparto_ubicaciones, vehiculo_controles).
 - Contabilización de egresos/ingresos/movimientos bancarios implementada vía `ContabilizadorService`; falta UI de conciliación bancaria manual.
