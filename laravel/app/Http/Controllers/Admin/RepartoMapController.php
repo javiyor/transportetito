@@ -14,11 +14,12 @@ class RepartoMapController extends Controller
 {
     public function index(Request $request): Response
     {
-        [$choferes, $error] = $this->choferesConUbicacion();
+        [$choferes, $error, $mensaje] = $this->choferesConUbicacion();
 
         return Inertia::render('Admin/Reparto/Map', [
             'choferes' => $choferes,
             'choferesError' => $error,
+            'choferesErrorMessage' => $mensaje,
             'tileUrl' => config('services.openstreetmap.tile_url', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
             'tileAttribution' => config('services.openstreetmap.attribution', '&copy; OpenStreetMap contributors'),
         ]);
@@ -26,15 +27,17 @@ class RepartoMapController extends Controller
 
     public function ubicaciones(Request $request): JsonResponse
     {
-        [$choferes] = $this->choferesConUbicacion();
+        [$choferes, $error, $mensaje] = $this->choferesConUbicacion();
+
+        if ($error) {
+            return response()->json(['error' => $mensaje, 'choferes' => []], 500);
+        }
 
         return response()->json($choferes);
     }
 
     /**
-     * Devuelve [choferes, huboError]. Si la tabla de ubicaciones no está
-     * migrada todavía, devuelve [] en lugar de lanzar 500 (el deploy puede
-     * aplicar migraciones después de servir el código).
+     * Devuelve [choferes, huboError, mensajeError].
      */
     protected function choferesConUbicacion(): array
     {
@@ -53,9 +56,9 @@ class RepartoMapController extends Controller
                 ->values()
                 ->all();
 
-            return [$data, false];
+            return [$data, false, null];
         } catch (QueryException $e) {
-            return [[], true];
+            return [[], true, $e->getMessage()];
         }
     }
 }

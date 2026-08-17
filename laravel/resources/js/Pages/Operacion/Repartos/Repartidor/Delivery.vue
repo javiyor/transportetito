@@ -18,6 +18,7 @@ const toggleHoja = (id) => {
 const enviaUbicacion = computed(() => !!page.props.auth?.user?.envia_ubicacion);
 let watchId = null;
 const ubicacionError = ref('');
+const permissionDenied = ref(false);
 
 const enviarUbicacion = (pos) => {
     const hojaId = expandedHojaId.value || (props.hojas?.[0]?.id ?? null);
@@ -38,27 +39,83 @@ const enviarUbicacion = (pos) => {
     }).catch(() => {});
 };
 
-const startUbicacion = () => {
+const startUbicacion = async () => {
     if (!enviaUbicacion.value) return;
     if (watchId !== null) return;
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        ubicacionError.value = 'Tu dispositivo no soporta geolocalizacion.';
+        return;
+    }
+
+    let permiso = 'prompt';
+    if (navigator.permissions && navigator.permissions.query) {
+        try {
+            const estado = await navigator.permissions.query({ name: 'geolocation' });
+            permiso = estado.state;
+            if (estado.state === 'granted') {
+                iniciarWatch();
+                return;
+            }
+            if (estado.state === 'denied') {
+                permissionDenied.value = true;
+                ubicacionError.value = 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.';
+                return;
+            }
+        } catch {
+            // permissions API no disponible, caemos al requestPrompt
+        }
+    }
+
+    requestUbicacionPrompt();
+};
+
+const requestUbicacionPrompt = () => {
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            ubicacionError.value = '';
+            permissionDenied.value = false;
+            enviarUbicacion(pos);
+            iniciarWatch();
+        },
+        (err) => {
+            permissionDenied.value = true;
+            ubicacionError.value = err.code === 1
+                ? 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.'
+                : 'No se pudo obtener la ubicacion.';
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
+    );
+};
+
+const iniciarWatch = () => {
+    if (watchId !== null) return;
     watchId = navigator.geolocation.watchPosition(
         (pos) => {
             ubicacionError.value = '';
             enviarUbicacion(pos);
         },
         (err) => {
-            ubicacionError.value = 'No se pudo obtener la ubicacion.';
+            if (err.code === 1) {
+                permissionDenied.value = true;
+                ubicacionError.value = 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.';
+            } else {
+                ubicacionError.value = 'Error de geolocalizacion.';
+            }
+            detenerWatchInterno();
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
     );
 };
 
-const stopUbicacion = () => {
+const detenerWatchInterno = () => {
     if (watchId !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchId);
     }
     watchId = null;
+};
+
+const stopUbicacion = () => {
+    detenerWatchInterno();
 };
 
 onMounted(startUbicacion);
@@ -176,6 +233,9 @@ const statusClass = (estado) => {
                     <span>{{ hojas.length }} hoja(s) asignada(s)</span>
                     <span v-if="enviaUbicacion" class="inline-flex items-center gap-1 text-green-700 ml-3">
                         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Enviando ubicación
+                    </span>
+                    <span v-else-if="permissionDenied" class="inline-flex items-center gap-1 text-orange-700 ml-3">
+                        <span class="w-2 h-2 rounded-full bg-orange-500"></span> Permiso bloqueado
                     </span>
                     <span v-else class="text-gray-400 ml-3">Tracking deshabilitado</span>
                     <div v-if="ubicacionError" class="text-red-600 mt-0.5">{{ ubicacionError }}</div>

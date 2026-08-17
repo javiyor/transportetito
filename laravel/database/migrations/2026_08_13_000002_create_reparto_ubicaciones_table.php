@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('reparto_ubicaciones', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('hoja_ruta_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('hoja_ruta_id')->nullable()->constrained('hojas_ruta')->nullOnDelete();
             $table->decimal('lat', 10, 8);
             $table->decimal('lng', 11, 8);
             $table->decimal('accuracy', 6, 2)->nullable();
