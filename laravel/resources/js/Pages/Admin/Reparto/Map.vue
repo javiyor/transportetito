@@ -95,13 +95,14 @@ const fetchUbicaciones = async () => {
         });
         if (!res.ok) throw new Error('http ' + res.status);
         const data = await res.json();
+        console.log('[mapa] ubicaciones recibidas:', data);
         if (Array.isArray(data)) {
             choferesData.value = data;
         }
         ultimaActualizacion.value = new Date();
         await renderMarkers();
     } catch (e) {
-        // mantener últimos datos; fallos son transitorios
+        console.error('[mapa] error fetch:', e);
     } finally {
         cargando.value = false;
     }
@@ -131,6 +132,17 @@ const initMap = async () => {
 };
 
 onMounted(initMap);
+
+const centrarEnChofer = (chofer) => {
+    if (!map || !chofer.ultima_ubicacion) return;
+    const u = chofer.ultima_ubicacion;
+    const lat = parseFloat(u.lat);
+    const lng = parseFloat(u.lng);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+    map.setView([lat, lng], 15, { animate: true });
+    const marker = markerByChofer.get(chofer.id);
+    if (marker) marker.openPopup();
+};
 
 onBeforeUnmount(() => {
     if (pollTimer) clearInterval(pollTimer);
@@ -188,23 +200,24 @@ onBeforeUnmount(() => {
                             No hay choferes con envío de ubicación activo.
                         </div>
 
-                        <ul v-else class="space-y-2">
-                            <li
-                                v-for="c in choferesData"
-                                :key="c.id"
-                                class="flex items-center justify-between text-sm"
-                            >
-                                <div class="truncate">
-                                    <span class="font-medium text-gray-800">{{ c.name }}</span>
-                                    <span v-if="c.email" class="block text-xs text-gray-500 truncate">{{ c.email }}</span>
-                                </div>
-                                <span
-                                    :class="c.ultima_ubicacion ? 'bg-green-500' : 'bg-gray-400'"
-                                    class="inline-block w-2.5 h-2.5 rounded-full"
-                                    :title="c.ultima_ubicacion ? 'Online' : 'Sin ubicación'"
-                                ></span>
-                            </li>
-                        </ul>
+<ul v-else class="space-y-2">
+    <li
+        v-for="c in choferesData"
+        :key="c.id"
+        class="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-50 rounded px-2 py-1"
+        @click="centrarEnChofer(c)"
+    >
+        <div class="truncate">
+            <span class="font-medium text-gray-800">{{ c.name }}</span>
+            <span v-if="c.email" class="block text-xs text-gray-500 truncate">{{ c.email }}</span>
+        </div>
+        <span
+            :class="c.ultima_ubicacion ? 'bg-green-500' : 'bg-gray-400'"
+            class="inline-block w-2.5 h-2.5 rounded-full"
+            :title="c.ultima_ubicacion ? 'Online' : 'Sin ubicación'"
+        ></span>
+    </li>
+</ul>
                     </div>
                 </div>
             </div>
