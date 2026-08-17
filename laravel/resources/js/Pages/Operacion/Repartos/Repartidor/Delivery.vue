@@ -47,64 +47,79 @@ const startUbicacion = async () => {
         return;
     }
 
-    let permiso = 'prompt';
-    if (navigator.permissions && navigator.permissions.query) {
-        try {
-            const estado = await navigator.permissions.query({ name: 'geolocation' });
-            permiso = estado.state;
-            if (estado.state === 'granted') {
-                iniciarWatch();
-                return;
+    try {
+        let permiso = 'prompt';
+        if (navigator.permissions && navigator.permissions.query) {
+            try {
+                const estado = await navigator.permissions.query({ name: 'geolocation' });
+                permiso = estado.state;
+                if (estado.state === 'granted') {
+                    iniciarWatch();
+                    return;
+                }
+                if (estado.state === 'denied') {
+                    permissionDenied.value = true;
+                    ubicacionError.value = 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.';
+                    return;
+                }
+            } catch {
+                // permissions API no disponible o lanza error, caemos al requestPrompt
             }
-            if (estado.state === 'denied') {
-                permissionDenied.value = true;
-                ubicacionError.value = 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.';
-                return;
-            }
-        } catch {
-            // permissions API no disponible, caemos al requestPrompt
         }
-    }
 
-    requestUbicacionPrompt();
+        requestUbicacionPrompt();
+    } catch (e) {
+        console.error('[Delivery] startUbicacion error:', e);
+        ubicacionError.value = 'Error al iniciar geolocalizacion.';
+    }
 };
 
 const requestUbicacionPrompt = () => {
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            ubicacionError.value = '';
-            permissionDenied.value = false;
-            enviarUbicacion(pos);
-            iniciarWatch();
-        },
-        (err) => {
-            permissionDenied.value = true;
-            ubicacionError.value = err.code === 1
-                ? 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.'
-                : 'No se pudo obtener la ubicacion.';
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
-    );
+    try {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                ubicacionError.value = '';
+                permissionDenied.value = false;
+                enviarUbicacion(pos);
+                iniciarWatch();
+            },
+            (err) => {
+                permissionDenied.value = true;
+                ubicacionError.value = err.code === 1
+                    ? 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.'
+                    : 'No se pudo obtener la ubicacion.';
+            },
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
+        );
+    } catch (e) {
+        console.error('[Delivery] requestUbicacionPrompt error:', e);
+        ubicacionError.value = 'Error al solicitar ubicacion.';
+    }
 };
 
 const iniciarWatch = () => {
-    if (watchId !== null) return;
-    watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            ubicacionError.value = '';
-            enviarUbicacion(pos);
-        },
-        (err) => {
-            if (err.code === 1) {
-                permissionDenied.value = true;
-                ubicacionError.value = 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.';
-            } else {
-                ubicacionError.value = 'Error de geolocalizacion.';
-            }
-            detenerWatchInterno();
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
-    );
+    try {
+        if (watchId !== null) return;
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                ubicacionError.value = '';
+                enviarUbicacion(pos);
+            },
+            (err) => {
+                if (err.code === 1) {
+                    permissionDenied.value = true;
+                    ubicacionError.value = 'El permiso de ubicacion esta bloqueado. Activalo en Ajustes del navegador o sistema para que tu posicion se comparta con el mapa de reparto.';
+                } else {
+                    ubicacionError.value = 'Error de geolocalizacion.';
+                }
+                detenerWatchInterno();
+            },
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 },
+        );
+    } catch (e) {
+        console.error('[Delivery] iniciarWatch error:', e);
+        ubicacionError.value = 'Error al iniciar seguimiento.';
+    }
 };
 
 const detenerWatchInterno = () => {
