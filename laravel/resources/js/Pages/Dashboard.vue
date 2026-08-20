@@ -3,7 +3,6 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 defineProps({
     empresa: Object,
-    contacts: Array,
 });
 
 const formatCuit = (value) => {
@@ -48,8 +47,8 @@ const formatCuit = (value) => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-white shadow sm:rounded-lg overflow-hidden">
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                         <div class="p-6 border-b border-gray-200">
                             <h3 class="text-base font-semibold text-gray-900">Depositos</h3>
                             <p class="mt-1 text-sm text-gray-600">Puntos operativos y PV asociado.</p>
@@ -76,33 +75,6 @@ const formatCuit = (value) => {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-
-                    <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                        <div class="p-6 border-b border-gray-200">
-                            <h3 class="text-base font-semibold text-gray-900">Contactos</h3>
-                            <p class="mt-1 text-sm text-gray-600">Usuarios habilitados en el sistema.</p>
-                        </div>
-
-                        <div class="divide-y divide-gray-200">
-                            <div v-for="c in (contacts || [])" :key="c.id" class="p-6">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <div class="text-sm font-medium text-gray-900">{{ c.name }}</div>
-                                        <div class="mt-1 text-sm text-gray-600">{{ c.email }}</div>
-                                        <div class="mt-2 flex flex-wrap gap-2">
-                                            <span v-for="r in (c.roles || [])" :key="r" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{{ r }}</span>
-                                            <span v-if="c.blocked_at" class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Bloqueado</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div v-if="!(contacts || []).length" class="p-6 text-center text-sm text-gray-500">
-                                Sin contactos cargados.
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

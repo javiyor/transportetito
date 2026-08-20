@@ -56,7 +56,7 @@ const switchEmpresa = (empresaId) => {
                                         </template>
 
                                         <template #content>
-                                            <DropdownLink :href="route('dashboard')">Dashboard</DropdownLink>
+                                            <DropdownLink :href="route('dashboard')">Pagina Principal</DropdownLink>
                                             <DropdownLink :href="route('admin.terceros.index')">Clientes/Proveedores</DropdownLink>
                                             <DropdownLink :href="route('admin.empleados.index')">Empleados</DropdownLink>
                                             <DropdownLink :href="route('admin.depositos.index')">Depositos</DropdownLink>
@@ -307,7 +307,7 @@ const switchEmpresa = (empresaId) => {
                             :href="route('dashboard')"
                             :active="route().current('dashboard')"
                         >
-                            Dashboard
+                            Pagina Principal
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
