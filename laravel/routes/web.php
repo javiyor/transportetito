@@ -174,6 +174,7 @@ Route::middleware([
         Route::get('/empresas', [EmpresaAdminController::class, 'index'])->name('empresas.index');
         Route::post('/empresas', [EmpresaAdminController::class, 'store'])->name('empresas.store');
         Route::put('/empresas/{empresa}', [EmpresaAdminController::class, 'update'])->name('empresas.update');
+        Route::delete('/empresas/{empresa}', [EmpresaAdminController::class, 'destroy'])->name('empresas.destroy');
 
         Route::get('/depositos', [DepositoAdminController::class, 'index'])->name('depositos.index');
         Route::post('/depositos', [DepositoAdminController::class, 'store'])->name('depositos.store');

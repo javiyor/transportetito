@@ -9,6 +9,7 @@ use App\Services\Arca\ArcaCertificateResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -87,6 +88,27 @@ class EmpresaAdminController extends Controller
         $empresa->update($data);
 
         return back();
+    }
+
+    public function destroy(Request $request, Empresa $empresa): RedirectResponse
+    {
+        $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        if ($currentEmpresaId === (int) $empresa->id) {
+            return back()->with('error', 'No se puede eliminar la empresa actualmente seleccionada.');
+        }
+
+        try {
+            if ($empresa->logo) {
+                Storage::disk('public')->delete($empresa->logo);
+            }
+
+            $empresa->delete();
+        } catch (QueryException $e) {
+            // FK constraints: empresa en uso.
+            return back()->with('error', 'No se puede eliminar: la empresa tiene datos asociados.');
+        }
+
+        return back()->with('success', 'Empresa eliminada.');
     }
 
     public function arcaDiagnostic(Request $request, ArcaCertificateResolver $resolver): JsonResponse

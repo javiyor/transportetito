@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
@@ -118,6 +118,12 @@ const onEditLogoChange = (e) => {
 
 const submitEdit = () => {
     editForm.put(route('admin.empresas.update', editId.value), { preserveScroll: true, onSuccess: () => (editing.value = false) });
+};
+
+const confirmDelete = (e) => {
+    if (confirm(`Eliminar empresa "${e.razon_social}"?`)) {
+        router.delete(route('admin.empresas.destroy', e.id), { preserveScroll: true });
+    }
 };
 </script>
 
@@ -269,6 +275,7 @@ const submitEdit = () => {
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <SecondaryButton class="text-xs" @click.prevent="openEdit(e)">Editar</SecondaryButton>
+                                    <button type="button" class="ml-2 text-xs text-red-600 hover:text-red-800" @click.prevent="confirmDelete(e)">Eliminar</button>
                                 </td>
                             </tr>
                             <tr v-if="!empresas.length">
