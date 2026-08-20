@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empleado;
-use App\Models\Empresa;
+use App\Models\EmpleadoPuesto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,17 +16,24 @@ class EmpleadoAdminController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
+        $puestos = EmpleadoPuesto::query()
+            ->where('empresa_id', $empresaId)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
         $empleados = Empleado::query()
             ->with('telefonos')
             ->where('empresa_id', $empresaId)
             ->orderBy('apellido')
             ->orderBy('nombre')
-            ->paginate(20)
+            ->paginate(40)
             ->withQueryString();
 
         return Inertia::render('Admin/Empleados/Index', [
             'empleados' => $empleados,
             'empresaId' => $empresaId,
+            'puestos' => $puestos,
         ]);
     }
 

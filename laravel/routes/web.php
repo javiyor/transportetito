@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\ChequeController;
 use App\Http\Controllers\Admin\VehiculoAdminController;
 use App\Http\Controllers\Admin\CuentaContableAdminController;
 use App\Http\Controllers\Admin\EmpleadoAdminController;
+use App\Http\Controllers\Admin\EmpleadoPuestoAdminController;
 use App\Http\Controllers\Admin\PlanDeCuentasController;
 use App\Http\Controllers\Finanzas\EgresoIndexController;
 use App\Http\Controllers\Finanzas\EgresoExportController;
@@ -207,6 +208,7 @@ Route::middleware([
 
         Route::get('/empleados', [EmpleadoAdminController::class, 'index'])->name('empleados.index');
         Route::post('/empleados', [EmpleadoAdminController::class, 'store'])->name('empleados.store');
+        Route::post('/empleados/puestos', [EmpleadoPuestoAdminController::class, 'store'])->name('empleados.puestos.store');
         Route::put('/empleados/{empleado}', [EmpleadoAdminController::class, 'update'])->name('empleados.update');
         Route::delete('/empleados/{empleado}', [EmpleadoAdminController::class, 'destroy'])->name('empleados.destroy');
 
