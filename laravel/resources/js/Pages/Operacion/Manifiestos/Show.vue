@@ -18,8 +18,8 @@ const props = defineProps({
 });
 
 const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
-const flashError = computed(() => page.props.flash?.error);
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const showAddForm = reactive({ value: false });
 

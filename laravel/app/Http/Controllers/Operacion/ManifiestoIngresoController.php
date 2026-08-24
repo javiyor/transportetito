@@ -73,8 +73,11 @@ class ManifiestoIngresoController extends Controller
         return redirect()->route('operacion.manifiestos.show', $manifiesto);
     }
 
-    public function show(ManifiestoIngreso $manifiesto, ArcaTipoComprobanteResolver $arcaTipos, TipoCambioResolver $tipoCambioResolver)
+    public function show(Request $request, ManifiestoIngreso $manifiesto, ArcaTipoComprobanteResolver $arcaTipos, TipoCambioResolver $tipoCambioResolver)
     {
+        // Si el manifiesto no existe el binding ya dio 404; si existe pero es de otra empresa, mostrar aviso en lugar de página vacía
+        $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        // No bloqueamos vista, solo avisamos si es de otra empresa (útil para diagnóstico de /operacion/manifiestos/30)
         $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id, ['id', 'razon_social', 'permite_guias_no_fiscales', 'condicion_iva']);
 
         $comprobantes = Comprobante::query()

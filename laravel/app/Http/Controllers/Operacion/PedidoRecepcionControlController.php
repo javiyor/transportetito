@@ -12,7 +12,11 @@ class PedidoRecepcionControlController extends Controller
 {
     public function __invoke(Request $request, Pedido $pedido): RedirectResponse
     {
-        abort_unless((int) $pedido->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
+        $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        if ((int) $pedido->empresa_id !== $currentEmpresaId) {
+            // Mensaje útil en lugar de 404 seco (pasa cuando se cambia de empresa)
+            return back()->with('flash.error', "El pedido #{$pedido->id} pertenece a otra empresa (ID {$pedido->empresa_id}). Cambiá a esa empresa arriba para confirmarlo. Actual: {$currentEmpresaId}.");
+        }
 
         $camposError = ['remitente', 'destinatario', 'valor_declarado', 'bultos', 'palets'];
 
