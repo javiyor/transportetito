@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -110,7 +111,44 @@ class EmpresaAdminController extends Controller
     {
         $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
         if ($currentEmpresaId === (int) $empresa->id) {
-            return back()->with('flash.error', 'No se puede eliminar la empresa actualmente seleccionada.');
+            return back()->with('flash.error', 'No se puede eliminar la empresa actualmente seleccionada. Cambiá la empresa activa arriba y reintentá.');
+        }
+
+        // Pre-chequeo para dar motivo detallado sin depender del mensaje PG
+        $checks = [
+            'depósitos' => DB::table('depositos')->where('empresa_id', $empresa->id)->count(),
+            'clientes/cuentas (tercero_cuentas)' => DB::table('tercero_cuentas')->where('empresa_id', $empresa->id)->count(),
+            'zonas' => DB::table('zonas')->where('empresa_id', $empresa->id)->count(),
+            'tarifas' => DB::table('tarifas')->where('empresa_id', $empresa->id)->count(),
+            'comprobantes' => DB::table('comprobantes')->where('empresa_id', $empresa->id)->count(),
+            'pedidos' => DB::table('pedidos')->where('empresa_id', $empresa->id)->count(),
+            'manifiestos' => DB::table('manifiesto_ingresos')->where('empresa_id', $empresa->id)->count(),
+            'hojas de ruta' => DB::table('hoja_ruta')->where('empresa_id', $empresa->id)->count() + DB::table('hoja_rutas')->where('empresa_id', $empresa->id)->count(),
+            'vehículos' => DB::table('vehiculos')->where('empresa_id', $empresa->id)->count(),
+            'empleados' => DB::table('empleados')->where('empresa_id', $empresa->id)->count(),
+            'puestos' => DB::table('empleado_puestos')->where('empresa_id', $empresa->id)->count(),
+            'usuarios asignados' => DB::table('empresa_user')->where('empresa_id', $empresa->id)->count(),
+            'cta cte' => DB::table('cta_cte_movimientos')->where('empresa_id', $empresa->id)->count(),
+            'asientos contables' => DB::table('asientos_contables')->where('empresa_id', $empresa->id)->count(),
+            'cuentas contables' => DB::table('cuentas_contables')->where('empresa_id', $empresa->id)->count(),
+        ];
+
+        $bloqueos = [];
+        foreach ($checks as $label => $cnt) {
+            if ($cnt > 0) {
+                $bloqueos[] = "{$cnt} {$label}";
+            }
+        }
+
+        // Checks adicionales que no usan empresa_id directo pero sí relacionan
+        $extra = [];
+        if (DB::table('users')->where('current_empresa_id', $empresa->id)->exists()) {
+            $extra[] = 'usuarios con empresa actual';
+        }
+
+        if ($bloqueos || $extra) {
+            $detalle = implode(', ', array_merge($bloqueos, $extra));
+            return back()->with('flash.error', "No se puede eliminar \"{$empresa->razon_social}\" porque tiene datos asociados: {$detalle}. Eliminá o trasladá esos datos (o usá Blanqueo) y reintentá.");
         }
 
         try {
@@ -120,11 +158,13 @@ class EmpresaAdminController extends Controller
 
             $empresa->delete();
         } catch (QueryException $e) {
-            // FK constraints: empresa en uso.
-            return back()->with('flash.error', 'No se puede eliminar: la empresa tiene datos asociados.');
+            $msg = $e->getMessage();
+            // Extrae detalle del constraint si PG lo informa
+            $detalle = str_contains($msg, 'violates foreign key') ? ' (restricción de clave foránea)' : '';
+            return back()->with('flash.error', "No se puede eliminar \"{$empresa->razon_social}\"{$detalle}: la base rechazó el borrado. Revisá Blanqueo/registros asociados. Detalle: ".substr($msg, 0, 400));
         }
 
-        return back()->with('flash.success', 'Empresa eliminada.');
+        return back()->with('flash.success', "Empresa \"{$empresa->razon_social}\" eliminada.");
     }
 
     public function arcaDiagnostic(Request $request, ArcaCertificateResolver $resolver): JsonResponse

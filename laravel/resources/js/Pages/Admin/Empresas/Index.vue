@@ -300,104 +300,105 @@ const confirmDelete = (e) => {
             </div>
         </div>
 
-        <DialogModal :show="editing" @close="editing = false">
+        <DialogModal :show="editing" max-width="4xl" @close="editing = false">
             <template #title>Editar empresa</template>
             <template #content>
-                <form class="grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="submitEdit">
+                <form class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm" @submit.prevent="submitEdit">
                     <div class="sm:col-span-2">
-                        <InputLabel value="Razon social" />
-                        <TextInput v-model="editForm.razon_social" type="text" class="mt-1 block w-full" required />
-                        <InputError class="mt-2" :message="editForm.errors.razon_social" />
+                        <InputLabel value="Razon social" class="!text-xs" />
+                        <TextInput v-model="editForm.razon_social" type="text" class="mt-0.5 block w-full text-sm py-1" required />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.razon_social" />
                     </div>
                     <div>
-                        <InputLabel value="CUIT" />
-                        <TextInput v-model="editForm.cuit" type="text" class="mt-1 block w-full" required />
-                        <InputError class="mt-2" :message="editForm.errors.cuit" />
+                        <InputLabel value="CUIT" class="!text-xs" />
+                        <TextInput v-model="editForm.cuit" type="text" class="mt-0.5 block w-full text-sm py-1" required />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.cuit" />
                     </div>
                     <div>
-                        <InputLabel value="Condicion IVA" />
-                        <select v-model="editForm.condicion_iva_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <InputLabel value="Condicion IVA" class="!text-xs" />
+                        <select v-model="editForm.condicion_iva_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1">
                             <option value="">Seleccionar...</option>
                             <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                         </select>
-                        <InputError class="mt-2" :message="editForm.errors.condicion_iva_id" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.condicion_iva_id" />
                     </div>
                     <div>
-                        <InputLabel value="Moneda base" />
-                        <select v-model="editForm.moneda_base" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <InputLabel value="Moneda base" class="!text-xs" />
+                        <select v-model="editForm.moneda_base" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1">
                             <option value="ARS">ARS</option>
                             <option value="USD">USD</option>
                             <option value="EUR">EUR</option>
                             <option value="BRL">BRL</option>
                         </select>
-                        <InputError class="mt-2" :message="editForm.errors.moneda_base" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.moneda_base" />
                     </div>
                     <div>
-                        <InputLabel value="PV default" />
-                        <TextInput v-model="editForm.arca_pv_default" type="number" min="1" class="mt-1 block w-full" required />
-                        <InputError class="mt-2" :message="editForm.errors.arca_pv_default" />
+                        <InputLabel value="PV default" class="!text-xs" />
+                        <TextInput v-model="editForm.arca_pv_default" type="number" min="1" class="mt-0.5 block w-full text-sm py-1" required />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.arca_pv_default" />
                     </div>
                     <div>
-                        <InputLabel value="Entorno ARCA" />
-                        <select v-model="editForm.arca_env" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <InputLabel value="Entorno ARCA" class="!text-xs" />
+                        <select v-model="editForm.arca_env" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1">
                             <option value="homologacion">Homologacion</option>
                             <option value="produccion">Produccion</option>
                         </select>
-                        <InputError class="mt-2" :message="editForm.errors.arca_env" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.arca_env" />
                     </div>
-                    <div class="sm:col-span-2">
-                        <label class="flex items-center gap-2 text-sm text-gray-700 pt-6">
+                    <div class="flex items-end pb-1">
+                        <label class="flex items-center gap-2 text-xs text-gray-700">
                             <Checkbox v-model:checked="editForm.permite_guias_no_fiscales" />
-                            Permite emitir guias no fiscales
+                            Permite guias no fiscales
                         </label>
                     </div>
+                    <div></div>
 
                     <div>
-                        <InputLabel value="Telefono" />
-                        <TextInput v-model="editForm.telefono" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="editForm.errors.telefono" />
+                        <InputLabel value="Telefono" class="!text-xs" />
+                        <TextInput v-model="editForm.telefono" type="text" class="mt-0.5 block w-full text-sm py-1" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.telefono" />
                     </div>
                     <div>
-                        <InputLabel value="Email" />
-                        <TextInput v-model="editForm.email" type="email" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="editForm.errors.email" />
+                        <InputLabel value="Email" class="!text-xs" />
+                        <TextInput v-model="editForm.email" type="email" class="mt-0.5 block w-full text-sm py-1" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.email" />
                     </div>
                     <div>
-                        <InputLabel value="WhatsApp" />
-                        <TextInput v-model="editForm.whatsapp" type="text" class="mt-1 block w-full" />
-                        <InputError class="mt-2" :message="editForm.errors.whatsapp" />
+                        <InputLabel value="WhatsApp" class="!text-xs" />
+                        <TextInput v-model="editForm.whatsapp" type="text" class="mt-0.5 block w-full text-sm py-1" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.whatsapp" />
                     </div>
 
-                    <div class="sm:col-span-2">
-                        <InputLabel value="Sitio web" />
-                        <TextInput v-model="editForm.sitio_web" type="url" class="mt-1 block w-full" placeholder="https://..." />
-                        <InputError class="mt-2" :message="editForm.errors.sitio_web" />
+                    <div class="sm:col-span-3">
+                        <InputLabel value="Sitio web" class="!text-xs" />
+                        <TextInput v-model="editForm.sitio_web" type="url" class="mt-0.5 block w-full text-sm py-1" placeholder="https://..." />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.sitio_web" />
                     </div>
 
-                    <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <InputLabel value="Instagram" />
-                            <TextInput v-model="editForm.instagram_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
-                            <InputError class="mt-2" :message="editForm.errors.instagram_url" />
-                        </div>
-                        <div>
-                            <InputLabel value="Facebook" />
-                            <TextInput v-model="editForm.facebook_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
-                            <InputError class="mt-2" :message="editForm.errors.facebook_url" />
-                        </div>
-                        <div>
-                            <InputLabel value="LinkedIn" />
-                            <TextInput v-model="editForm.linkedin_url" type="url" class="mt-1 block w-full" placeholder="https://..." />
-                            <InputError class="mt-2" :message="editForm.errors.linkedin_url" />
-                        </div>
+                    <div>
+                        <InputLabel value="Instagram" class="!text-xs" />
+                        <TextInput v-model="editForm.instagram_url" type="url" class="mt-0.5 block w-full text-sm py-1" placeholder="https://..." />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.instagram_url" />
+                    </div>
+                    <div>
+                        <InputLabel value="Facebook" class="!text-xs" />
+                        <TextInput v-model="editForm.facebook_url" type="url" class="mt-0.5 block w-full text-sm py-1" placeholder="https://..." />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.facebook_url" />
+                    </div>
+                    <div>
+                        <InputLabel value="LinkedIn" class="!text-xs" />
+                        <TextInput v-model="editForm.linkedin_url" type="url" class="mt-0.5 block w-full text-sm py-1" placeholder="https://..." />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.linkedin_url" />
                     </div>
 
-                    <div class="sm:col-span-2">
-                        <InputLabel value="Logo" />
-                        <input type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @change="onEditLogoChange" />
-                        <img v-if="editLogoPreview" :src="editLogoPreview" class="mt-2 h-16 w-auto object-contain border rounded" />
-                        <img v-else-if="editLogoOriginal" :src="editLogoOriginal" class="mt-2 h-16 w-auto object-contain border rounded" />
-                        <InputError class="mt-2" :message="editForm.errors.logo" />
+                    <div class="sm:col-span-3 flex items-center gap-3">
+                        <div class="flex-1">
+                            <InputLabel value="Logo" class="!text-xs" />
+                            <input type="file" accept="image/*" class="mt-0.5 block w-full text-xs text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" @change="onEditLogoChange" />
+                            <InputError class="mt-1 text-xs" :message="editForm.errors.logo" />
+                        </div>
+                        <img v-if="editLogoPreview" :src="editLogoPreview" class="h-12 w-auto object-contain border rounded" />
+                        <img v-else-if="editLogoOriginal" :src="editLogoOriginal" class="h-12 w-auto object-contain border rounded" />
                     </div>
                 </form>
             </template>
