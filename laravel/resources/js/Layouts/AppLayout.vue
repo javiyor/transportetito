@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import ApplicationMark from '@/Components/ApplicationMark.vue';
 import Banner from '@/Components/Banner.vue';
@@ -21,6 +21,21 @@ const logout = () => {
 const switchEmpresa = (empresaId) => {
     router.post(route('admin.current-empresa.update'), { empresa_id: empresaId }, { preserveScroll: true });
 };
+
+const showPwaUpdate = ref(false);
+const onPwaUpdate = () => { showPwaUpdate.value = true; };
+onMounted(() => window.addEventListener('pwa:update-available', onPwaUpdate));
+onUnmounted(() => window.removeEventListener('pwa:update-available', onPwaUpdate));
+const applyPwaUpdate = () => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then((reg) => {
+            if (reg?.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            else window.location.reload();
+        });
+    } else {
+        window.location.reload();
+    }
+};
 </script>
 
 <template>
@@ -28,6 +43,10 @@ const switchEmpresa = (empresaId) => {
         <Head :title="title" />
 
         <Banner />
+        <div v-if="showPwaUpdate" class="fixed bottom-0 inset-x-0 z-50 flex items-center justify-between gap-4 bg-indigo-600 text-white px-4 py-3 shadow-lg">
+            <span class="text-sm font-medium">Nueva versión disponible.</span>
+            <button type="button" class="shrink-0 rounded-md bg-white text-indigo-700 px-3 py-1.5 text-sm font-semibold shadow hover:bg-indigo-50" @click="applyPwaUpdate">Actualizar ahora</button>
+        </div>
 
         <div class="min-h-screen bg-gray-100">
             <nav class="bg-white border-b border-gray-100">

@@ -10,10 +10,22 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
-        $empresa = Empresa::query()
-            ->with(['depositos:id,empresa_id,nombre,direccion,punto_venta_numero'])
-            ->orderBy('id')
-            ->first();
+        $user = auth()->user();
+        $empresaId = $user?->current_empresa_id;
+
+        $query = Empresa::query()->with(['depositos:id,empresa_id,nombre,direccion,punto_venta_numero']);
+
+        $empresa = $empresaId
+            ? $query->whereKey($empresaId)->first()
+            : null;
+
+        if (! $empresa) {
+            // Fallback para primer acceso sin empresa seleccionada (misma lógica que HandleInertiaRequests)
+            $empresa = Empresa::query()
+                ->with(['depositos:id,empresa_id,nombre,direccion,punto_venta_numero'])
+                ->orderBy('id')
+                ->first();
+        }
 
         return Inertia::render('Dashboard', [
             'empresa' => $empresa ? [

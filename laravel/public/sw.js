@@ -50,8 +50,24 @@ self.addEventListener('install', (event) => {
     );
 });
 
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        (async () => {
+            const keys = await caches.keys();
+            await Promise.all(
+                keys
+                    .filter((k) => ![ASSETS_CACHE, TILE_CACHE, UBI_CACHE].includes(k))
+                    .map((k) => caches.delete(k))
+            );
+            await self.clients.claim();
+        })()
+    );
 });
 
 self.addEventListener('fetch', (event) => {
@@ -88,9 +104,11 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Assets estáticos del build: cache-first
+    // Assets estáticos del build: cache-first con fallback a network
     if (url.pathname.startsWith('/build/')) {
-        event.respondWith(caches.match(request));
+        event.respondWith(
+            caches.match(request).then((cached) => cached || fetch(request))
+        );
         return;
     }
 

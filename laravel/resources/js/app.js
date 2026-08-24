@@ -2,7 +2,36 @@ import './bootstrap';
 import '../css/app.css';
 
 if ('serviceWorker' in navigator && import.meta.env.MODE === 'production') {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+
+    const notifyUpdate = () => window.dispatchEvent(new CustomEvent('pwa:update-available'));
+
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+        // Detect waiting worker (update already downloaded)
+        if (reg.waiting) notifyUpdate();
+
+        reg.addEventListener('updatefound', () => {
+            const sw = reg.installing;
+            if (!sw) return;
+            sw.addEventListener('statechange', () => {
+                if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                    notifyUpdate();
+                }
+            });
+        });
+
+        // Chequeo periódico + al volver a la pestaña
+        const checkUpdate = () => reg.update().catch(() => {});
+        setInterval(checkUpdate, 60 * 60 * 1000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') checkUpdate();
+        });
+    }).catch(() => {});
 }
 
 import { createApp, h } from 'vue';
