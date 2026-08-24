@@ -196,7 +196,7 @@ const localidadNombre = (c) => {
             <h2 class="font-semibold text-lg text-gray-800 leading-tight">Admin / Terceros</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-6 sm:px-4 lg:px-6 space-y-4">
+        <div class="max-w-7xl mx-auto py-3 sm:px-4 lg:px-6 space-y-4">
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-sm font-semibold text-gray-900">Nueva cuenta</h3>
 
@@ -405,7 +405,7 @@ const localidadNombre = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td :colspan="mostrarCompartidos ? 14 : 13" class="px-3 py-6 text-center text-xs text-gray-500">Sin cuentas.</td>
+                                <td :colspan="mostrarCompartidos ? 14 : 13" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>

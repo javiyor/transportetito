@@ -11,8 +11,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Estadisticas</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <p class="text-sm text-gray-500">Proximamente: graficos y balance.</p>
             </div>
         </div>

@@ -39,8 +39,8 @@ const applyFilters = () => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Filtro</div>

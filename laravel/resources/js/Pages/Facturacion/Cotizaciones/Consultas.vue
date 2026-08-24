@@ -49,7 +49,7 @@ const estaVencida = (c) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                     <div>

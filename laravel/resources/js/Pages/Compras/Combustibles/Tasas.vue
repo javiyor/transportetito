@@ -50,8 +50,8 @@ const tipoLabel = (value) => TIPOS.find((t) => t.value === value)?.label || valu
                 <Link :href="route('compras.combustibles.index')" class="text-sm text-indigo-600 hover:text-indigo-800">Volver a pagos a cuenta</Link>
             </div>
         </template>
-        <div class="max-w-5xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nueva tasa</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submit">
                     <div>

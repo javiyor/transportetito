@@ -64,8 +64,8 @@ defineProps({
             </div>
         </template>
 
-        <div class="max-w-5xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><div class="text-xs text-gray-500">Tipo</div><div class="text-sm font-medium text-gray-900">{{ tipoLabel(comprobante.tipo) }}</div></div>
                 <div><div class="text-xs text-gray-500">PV / Nro</div><div class="text-sm font-medium text-gray-900 font-mono">{{ parsePv(comprobante.numero) }} · {{ parseNro(comprobante.numero) }}</div></div>
                 <div><div class="text-xs text-gray-500">Fecha / Vto</div><div class="text-sm font-medium text-gray-900">{{ formatFecha(comprobante.fecha_emision) }} · {{ formatFecha(comprobante.fecha_vencimiento) }}</div></div>
@@ -78,9 +78,9 @@ defineProps({
                 <div><div class="text-xs text-gray-500">Obs.</div><div class="text-sm font-medium text-gray-900">{{ comprobante.observacion || '-' }}</div></div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Detalle fiscal</h3>
-                <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6 text-sm">
+                <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3 text-sm">
                     <div>
                         <div class="text-sm font-medium text-gray-900">IVA</div>
                         <div class="mt-3 space-y-2">

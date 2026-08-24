@@ -69,7 +69,7 @@ const aplicarFiltro = (anio, mes) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <!-- Filtros -->
             <div class="bg-white shadow sm:rounded-lg p-4 flex flex-wrap items-center gap-3">
                 <div class="text-sm font-medium text-gray-700">Periodo:</div>
@@ -85,7 +85,7 @@ const aplicarFiltro = (anio, mes) => {
 
             <!-- Dashboard resumen -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Ventas (con CAE)</h3>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between"><span class="text-gray-500">Comprobantes:</span><span class="font-medium">{{ resumenVentas.cantidad }}</span></div>
@@ -95,7 +95,7 @@ const aplicarFiltro = (anio, mes) => {
                         <div class="flex justify-between border-t border-gray-200 pt-2"><span class="text-gray-700 font-semibold">Total:</span><span class="font-semibold">$ {{ formatNum(resumenVentas.total) }}</span></div>
                     </div>
                 </div>
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Compras</h3>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between"><span class="text-gray-500">Comprobantes:</span><span class="font-medium">{{ resumenCompras.cantidad }}</span></div>

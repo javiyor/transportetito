@@ -20,10 +20,10 @@ const formatCuit = (value) => {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Inicio / Empresa</h2>
         </template>
 
-        <div class="py-10">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="py-4">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-3">
                 <div class="bg-white overflow-hidden shadow sm:rounded-lg">
-                    <div class="p-6 flex items-center justify-between gap-6">
+                    <div class="p-6 flex items-center justify-between gap-3">
                         <div class="flex items-center gap-4">
                             <img src="/brand/logo.jpeg" alt="TransporteTito" class="h-12 w-auto" />
                             <div>
@@ -47,7 +47,7 @@ const formatCuit = (value) => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-6">
+                <div class="grid grid-cols-1 gap-3">
                     <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                         <div class="p-6 border-b border-gray-200">
                             <h3 class="text-base font-semibold text-gray-900">Depositos</h3>
@@ -70,7 +70,7 @@ const formatCuit = (value) => {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ d.punto_venta_numero ?? '-' }}</td>
                                     </tr>
                                     <tr v-if="!(empresa?.depositos || []).length">
-                                        <td colspan="3" class="px-6 py-10 text-center text-sm text-gray-500">Sin depositos cargados.</td>
+                                        <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Sin depositos cargados.</td>
                                     </tr>
                                 </tbody>
                             </table>

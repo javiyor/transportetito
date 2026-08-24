@@ -45,7 +45,7 @@ const submitEdit = () => {
             <h2 class="font-semibold text-lg text-gray-800 leading-tight">Admin / Bancos</h2>
         </template>
 
-        <div class="max-w-4xl mx-auto py-6 sm:px-4 lg:px-6 space-y-4">
+        <div class="max-w-4xl mx-auto py-3 sm:px-4 lg:px-6 space-y-4">
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-sm font-semibold text-gray-900">Nuevo banco</h3>
                 <form class="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-3" @submit.prevent="submit">
@@ -93,7 +93,7 @@ const submitEdit = () => {
                             </td>
                         </tr>
                         <tr v-if="!bancos.length">
-                            <td colspan="4" class="px-3 py-6 text-center text-xs text-gray-500">Sin bancos.</td>
+                            <td colspan="4" class="px-3 py-3 text-center text-xs text-gray-500">Sin bancos.</td>
                         </tr>
                     </tbody>
                 </table>

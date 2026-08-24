@@ -49,8 +49,8 @@ const formatFecha = (value) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6 mb-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow sm:rounded-lg p-4 mb-6">
                 <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Estado</div>
@@ -83,8 +83,8 @@ const formatFecha = (value) => {
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900">Resumen por zona</h3>
                     <div class="mt-4 space-y-2">
                         <div v-for="row in summaryByZona || []" :key="row.label" class="flex items-center justify-between rounded border border-gray-200 px-3 py-2 text-sm">
@@ -93,7 +93,7 @@ const formatFecha = (value) => {
                         </div>
                     </div>
                 </div>
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900">Resumen por ciudad</h3>
                     <div class="mt-4 space-y-2">
                         <div v-for="row in summaryByLocalidad || []" :key="row.label" class="flex items-center justify-between rounded border border-gray-200 px-3 py-2 text-sm">
@@ -139,7 +139,7 @@ const formatFecha = (value) => {
                             </div>
                         </div>
                     </div>
-                    <div v-if="!preRecibos.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">No hay pre-recibos.</div>
+                    <div v-if="!preRecibos.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">No hay pre-recibos.</div>
                 </div>
 
                 <div class="hidden sm:block overflow-x-auto">
@@ -173,7 +173,7 @@ const formatFecha = (value) => {
                             </tr>
 
                             <tr v-if="!preRecibos.data.length">
-                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">No hay pre-recibos.</td>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">No hay pre-recibos.</td>
                             </tr>
                         </tbody>
                     </table>

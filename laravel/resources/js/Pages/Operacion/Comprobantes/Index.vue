@@ -81,8 +81,8 @@ const tipoLabel = (c) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Tipo</div>
@@ -162,7 +162,7 @@ const tipoLabel = (c) => {
                             </div>
                         </div>
                     </div>
-                    <div v-if="!comprobantes.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</div>
+                    <div v-if="!comprobantes.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -201,7 +201,7 @@ const tipoLabel = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
-                                <td colspan="11" class="px-6 py-10 text-center text-sm text-gray-500">Sin comprobantes.</td>
+                                <td colspan="11" class="px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</td>
                             </tr>
                         </tbody>
                     </table>

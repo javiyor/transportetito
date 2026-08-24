@@ -133,8 +133,8 @@ const formatNum = (n) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><div class="text-xs text-gray-500">Zona</div><div class="text-sm font-medium text-gray-900">{{ cuenta.zona?.nombre || 'Sin zona' }}</div></div>
                 <div><div class="text-xs text-gray-500">Ciudad</div><div class="text-sm font-medium text-gray-900">{{ cuenta.localidad || 'Sin ciudad' }}</div></div>
                 <div><div class="text-xs text-gray-500">Saldo total</div><div class="text-sm font-medium text-gray-900">{{ formatNum(saldos.saldo_total) }}</div></div>
@@ -143,7 +143,7 @@ const formatNum = (n) => {
                 <div><div class="text-xs text-gray-500">Saldo a cancelar</div><div class="text-sm font-medium" :class="saldos.saldo_a_cancelar > 0 ? 'text-green-700' : 'text-gray-900'">{{ formatNum(saldos.saldo_a_cancelar) }}</div></div>
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-3">
                 <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-sm font-semibold text-gray-900">Emitir recibo</h3>
                     <div class="mt-2 space-y-2">

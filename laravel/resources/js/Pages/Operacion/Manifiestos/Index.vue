@@ -47,7 +47,7 @@ const formatFecha = (value) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-4">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-4">
             <div class="flex items-center gap-2">
                 <button @click="toggleCompartidos"
                     class="text-xs px-3 py-1.5 rounded border font-medium transition-colors"
@@ -61,7 +61,7 @@ const formatFecha = (value) => {
                     <p class="text-xs text-gray-600">Ingreso de camion completo + pedidos por destinatario.</p>
                 </div>
 
-                <div v-if="!manifiestos.data.length" class="px-6 py-10 text-center text-sm text-gray-500">
+                <div v-if="!manifiestos.data.length" class="px-6 py-4 text-center text-sm text-gray-500">
                     Sin manifiestos todavia.
                 </div>
 

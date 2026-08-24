@@ -95,12 +95,12 @@ const submitAnular = () => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
                 {{ flashSuccess }}
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <div class="text-xs text-gray-500">Cuenta</div>
@@ -195,7 +195,7 @@ const submitAnular = () => {
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Retenciones de impuestos</h3>
                 <form @submit.prevent="guardarRetenciones" class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">

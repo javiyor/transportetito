@@ -61,8 +61,8 @@ const submit = () => {
             </div>
         </template>
 
-        <div class="max-w-4xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-4xl mx-auto py-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <form class="grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="submit">
                     <div>
                         <InputLabel value="Empresa" />

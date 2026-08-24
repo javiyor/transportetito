@@ -43,8 +43,8 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Monedas</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <InputLabel value="Empresa" />
                     <select v-model="filtros.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
@@ -60,7 +60,7 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Cotizacion efectiva</h3>
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div v-for="r in resueltas" :key="r.moneda" class="rounded-lg border border-gray-200 p-4">
@@ -71,8 +71,8 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900">Cargar cotizacion oficial/manual</h3>
                     <form class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="oficialForm.post(route('admin.cotizaciones.oficial.store'), { preserveScroll: true })">
                         <div><InputLabel value="Fecha" /><TextInput v-model="oficialForm.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="oficialForm.errors.fecha" /></div>
@@ -83,7 +83,7 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
                     </form>
                 </div>
 
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900">Override por empresa</h3>
                     <form class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="overrideForm.post(route('admin.cotizaciones.override.store'), { preserveScroll: true })">
                         <div><InputLabel value="Empresa" /><select v-model="overrideForm.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option></select><InputError class="mt-2" :message="overrideForm.errors.empresa_id" /></div>
@@ -96,7 +96,7 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                     <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Ultimas cotizaciones</h3></div>
                     <div class="overflow-x-auto">

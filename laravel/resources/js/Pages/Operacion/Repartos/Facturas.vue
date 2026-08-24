@@ -92,8 +92,8 @@ const toggleAll = (checked) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Zona</div>
@@ -173,7 +173,7 @@ const toggleAll = (checked) => {
                             </div>
                         </div>
                     </div>
-                    <div v-if="!facturas.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</div>
+                    <div v-if="!facturas.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</div>
                 </div>
 
                 <div class="hidden sm:block overflow-x-auto">
@@ -210,7 +210,7 @@ const toggleAll = (checked) => {
                                 <td class="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">Seleccionar</td>
                             </tr>
                             <tr v-if="!facturas.length">
-                                <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
+                                <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>

@@ -45,7 +45,7 @@ const submit = () => {
             </div>
         </template>
 
-        <div class="max-w-3xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-3xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="importError" class="bg-red-50 border border-red-200 text-red-900 rounded-lg p-4">
                 <div class="font-medium">No se pudo importar</div>
                 <div class="mt-1 text-sm font-mono break-all">{{ importError }}</div>
@@ -58,7 +58,7 @@ const submit = () => {
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <form class="grid grid-cols-1 sm:grid-cols-3 gap-4" @submit.prevent="submit">
                     <div class="sm:col-span-3">
                         <InputLabel value="Empresa seleccionada" />

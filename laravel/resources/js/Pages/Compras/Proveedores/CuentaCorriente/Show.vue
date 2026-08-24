@@ -137,7 +137,7 @@ const chequesFiltrados = computed(() => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-4">
+        <div class="max-w-7xl mx-auto py-3 sm:px-6 lg:px-8 space-y-4">
             <div class="bg-white shadow sm:rounded-lg p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                 <div><div class="text-xs text-gray-500">Proveedor</div><div class="font-medium text-gray-900">{{ cuenta.tercero?.razon_social || '-' }}</div></div>
                 <div><div class="text-xs text-gray-500">Saldo total</div><div class="font-medium text-gray-900">{{ formatNum(saldoTotal) }}</div></div>

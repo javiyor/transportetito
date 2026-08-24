@@ -128,9 +128,9 @@ const puestoOptionsFor = (current) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <!-- CREATE FORM -->
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nuevo empleado</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3" @submit.prevent="submitCreate">
                     <div><InputLabel class="text-xs" value="Nombre" /><TextInput v-model="createForm.nombre" type="text" class="mt-1 block w-full text-sm" required /><InputError :message="createForm.errors.nombre" /></div>

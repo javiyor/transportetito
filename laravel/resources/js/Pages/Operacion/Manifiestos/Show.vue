@@ -205,7 +205,7 @@ const formatFecha = (value) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
                 {{ flashSuccess }}
             </div>
@@ -214,7 +214,7 @@ const formatFecha = (value) => {
                 {{ flashError }}
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <div class="text-xs uppercase tracking-wider text-gray-500">Transporte</div>
@@ -233,7 +233,7 @@ const formatFecha = (value) => {
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h3 class="text-base font-semibold text-gray-900">Pedidos</h3>
@@ -446,7 +446,7 @@ const formatFecha = (value) => {
 
                     </div>
 
-                    <div v-if="!pedidosVisibles.length" class="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">
+                    <div v-if="!pedidosVisibles.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">
                         Todavia no hay pedidos cargados.
                     </div>
                 </div>
@@ -507,7 +507,7 @@ const formatFecha = (value) => {
                              </tr>
 
                              <tr v-if="!pedidosVisibles.length">
-                                 <td colspan="9" class="px-4 py-10 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
+                                 <td colspan="9" class="px-4 py-4 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
                              </tr>
                         </tbody>
                     </table>

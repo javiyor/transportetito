@@ -63,11 +63,11 @@ const certStatus = (env) => {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">ARCA - Configuracion</h2>
         </template>
 
-        <div class="max-w-4xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-4xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded text-sm">{{ flashSuccess }}</div>
             <div v-if="flashError" class="bg-red-50 border border-red-200 text-red-900 px-4 py-3 rounded text-sm">{{ flashError }}</div>
 
-            <div v-if="empresa" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="empresa" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Empresa</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div><div class="text-xs text-gray-500">Razon social</div><div class="text-sm font-medium text-gray-900">{{ empresa.razon_social }}</div></div>

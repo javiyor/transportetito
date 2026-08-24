@@ -19,7 +19,7 @@ defineProps({
     <Head :title="empresa?.razon_social || 'Transporte'" />
 
     <div class="min-h-screen bg-[radial-gradient(1200px_600px_at_20%_-10%,#fde68a33,transparent),radial-gradient(900px_500px_at_110%_20%,#bfdbfe66,transparent),linear-gradient(to_bottom,#f8fafc,#ffffff)] text-gray-900">
-        <div class="max-w-6xl mx-auto px-6 py-10">
+        <div class="max-w-6xl mx-auto px-6 py-4">
             <header class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="size-10 rounded-xl bg-amber-100 ring-1 ring-amber-200 flex items-center justify-center">
@@ -59,7 +59,7 @@ defineProps({
                 </nav>
             </header>
 
-            <main class="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <main class="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-3">
                 <section class="lg:col-span-7 bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-7">
                     <div class="text-xs uppercase tracking-wider text-gray-500">Presentacion</div>
                     <h1 class="mt-2 text-3xl font-semibold leading-tight">Transporte y logistica</h1>

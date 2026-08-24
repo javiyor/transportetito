@@ -121,9 +121,9 @@ const hasOverride = (r, field) => {
             <div class="bg-green-100 border border-green-200 text-green-800 px-4 py-2 rounded text-sm">{{ flash.success }}</div>
         </div>
 
-        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto py-3 sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div v-if="!rows.length" class="px-6 py-10 text-center text-sm text-gray-500">
+                <div v-if="!rows.length" class="px-6 py-4 text-center text-sm text-gray-500">
                     No hay movimientos en {{ mesNombre }} {{ anio }}.
                 </div>
 

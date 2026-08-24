@@ -16,7 +16,8 @@ const props = defineProps({
 });
 
 const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const hojaResumen = computed(() => page.props.tt?.flash?.hoja_resumen || page.props.flash?.hoja_resumen || page.props.tt?.hojaResumen || null);
 
 const closeForm = useForm({ confirm: true });
 
@@ -173,12 +174,21 @@ const vehiculoLabel = computed(() => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded mb-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
+            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded mb-3">
                 {{ flashSuccess }}
             </div>
+            <div v-if="hojaResumen" class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-3">
+                <h4 class="text-sm font-semibold text-indigo-900">Resumen — Hoja #{{ hojaResumen.hoja_id }} creada</h4>
+                <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div><div class="text-xs text-gray-500">Comprobantes</div><div class="font-medium text-gray-900">{{ hojaResumen.cantidad }}</div></div>
+                    <div><div class="text-xs text-gray-500">Total</div><div class="font-medium text-gray-900">ARS {{ Number(hojaResumen.total || 0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) }}</div></div>
+                    <div><div class="text-xs text-gray-500">Fecha</div><div class="font-medium text-gray-900">{{ hojaResumen.fecha }}</div></div>
+                    <div><div class="text-xs text-gray-500">IDs</div><div class="font-mono text-xs text-gray-700">{{ (hojaResumen.ids || []).join(', ') }}</div></div>
+                </div>
+            </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6 mb-6">
+            <div class="bg-white shadow sm:rounded-lg p-4 mb-6">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                         <div class="text-xs text-gray-500">Items</div>
@@ -273,7 +283,7 @@ const vehiculoLabel = computed(() => {
                                 </td>
                             </tr>
                             <tr v-if="!hoja.items?.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin items.</td>
+                                <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Sin items.</td>
                             </tr>
                         </tbody>
                     </table>

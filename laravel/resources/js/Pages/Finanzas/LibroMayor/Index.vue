@@ -27,7 +27,7 @@ const applyFilters = () => {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Libro Mayor</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
                     <div>
@@ -92,7 +92,7 @@ const applyFilters = () => {
                                 <td class="px-4 py-2 text-sm text-right font-mono text-red-700">{{ parseFloat(mov.haber) > 0 ? '$ ' + parseFloat(mov.haber).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '' }}</td>
                             </tr>
                             <tr v-if="!movimientos.data?.length">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">Sin movimientos.</td>
+                                <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Sin movimientos.</td>
                             </tr>
                         </tbody>
                     </table>

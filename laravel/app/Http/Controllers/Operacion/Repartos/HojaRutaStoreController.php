@@ -54,8 +54,10 @@ class HojaRutaStoreController extends Controller
         }
 
         $order = 10;
+        $total = 0;
         foreach ($comprobantes as $c) {
             $cuenta = $c->entregaCuenta;
+            $total += (float) ($c->total ?? 0);
             HojaRutaItem::query()->create([
                 'hoja_ruta_id' => $hoja->id,
                 'comprobante_id' => $c->id,
@@ -72,6 +74,16 @@ class HojaRutaStoreController extends Controller
             $order += 10;
         }
 
-        return redirect()->route('operacion.repartos.hojas.show', $hoja);
+        $cantidad = $comprobantes->count();
+        $resumen = "Hoja #{$hoja->id} creada: {$cantidad} comprobante".($cantidad !== 1 ? 's' : '')." — total ARS ".number_format($total, 2, ',', '.')." — depósito #{$hoja->deposito_id} · {$hoja->fecha}.";
+
+        return redirect()->route('operacion.repartos.hojas.show', $hoja)->with('flash.success', $resumen)->with('flash.hoja_resumen', [
+            'hoja_id' => $hoja->id,
+            'cantidad' => $cantidad,
+            'total' => $total,
+            'fecha' => $hoja->fecha,
+            'deposito_id' => $hoja->deposito_id,
+            'ids' => $comprobantes->pluck('id')->all(),
+        ]);
     }
 }

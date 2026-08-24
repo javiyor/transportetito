@@ -356,7 +356,7 @@ const submitDelete = () => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-4">
+        <div class="max-w-7xl mx-auto py-3 sm:px-6 lg:px-8 space-y-4">
             <div class="bg-white shadow sm:rounded-lg p-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
                 <div><div class="text-xs text-gray-500">Subtotal</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.subtotal || 0) }}</div></div>
                 <div><div class="text-xs text-gray-500">IVA</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.iva_total || 0) }}</div></div>

@@ -37,8 +37,8 @@ const ejecutar = () => {
             <h2 class="font-semibold text-lg text-gray-800 leading-tight">{{ titulo }}</h2>
         </template>
 
-        <div class="max-w-3xl mx-auto py-6 sm:px-4 lg:px-6 space-y-4">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-3xl mx-auto py-3 sm:px-4 lg:px-6 space-y-4">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <p class="text-sm text-gray-600 mb-4">{{ descripcion }}</p>
 
                 <div class="mb-4">

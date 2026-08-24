@@ -233,7 +233,8 @@ class CargaDirectaStoreController extends Controller
         $mailer->enviarSiCorresponde($comprobante);
 
         return redirect()
-            ->route('facturacion.manifiestos.index')
-            ->with('success', "Factura #{$comprobante->id} creada por carga directa.");
+            ->route('facturacion.carga-directa.create')
+            ->with('flash.success', "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').") — lista para otra. " . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : ''));
+
     }
 }

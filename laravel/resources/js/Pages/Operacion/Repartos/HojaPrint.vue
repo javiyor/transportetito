@@ -28,7 +28,7 @@ const vehiculoLabel = computed(() => {
         <Head :title="`Hoja de ruta #${hoja.id}`" />
 
         <div class="max-w-5xl mx-auto p-8">
-            <div class="flex items-start justify-between gap-6">
+            <div class="flex items-start justify-between gap-3">
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Hoja de ruta</div>
                     <h1 class="mt-1 text-2xl font-semibold">#{{ hoja.id }}</h1>

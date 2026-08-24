@@ -54,8 +54,8 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Desde</div>
@@ -71,8 +71,8 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Ingresos (Recibos)</h3>
                     <p class="text-xs text-gray-500 mb-3">{{ cantidadRecibos }} recibos confirmados</p>
                     <div v-if="Object.keys(ingresosPorMedio).length" class="space-y-2">
@@ -102,7 +102,7 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                     <p v-else class="text-sm text-gray-400">Sin pre-ingresos en el periodo.</p>
                 </div>
 
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Egresos (Ordenes de pago)</h3>
                     <p class="text-xs text-gray-500 mb-3">{{ cantidadOrdenes }} ordenes confirmadas</p>
                     <div v-if="Object.keys(egresosPorMedio).length" class="space-y-2">
@@ -126,7 +126,7 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                     </div>
                 </div>
 
-                <div class="bg-white shadow sm:rounded-lg p-6">
+                <div class="bg-white shadow sm:rounded-lg p-4">
                     <h3 class="text-base font-semibold text-gray-900 mb-3">Resumen contable</h3>
                     <p class="text-xs text-gray-500 mb-3">{{ cantidadAsientos }} asientos confirmados</p>
                     <div v-if="resumenContable?.length" class="space-y-1 max-h-64 overflow-y-auto">

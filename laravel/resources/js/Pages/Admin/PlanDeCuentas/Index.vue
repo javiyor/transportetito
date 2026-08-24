@@ -175,7 +175,7 @@ const rowBg = (nivel) => ({
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white shadow sm:rounded-lg p-4">
                     <div class="text-xs text-gray-500">Capítulos</div>
@@ -226,7 +226,7 @@ const rowBg = (nivel) => ({
                                 />
                             </template>
                             <tr v-if="!arbol.length">
-                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">Sin cuentas cargadas.</td>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Sin cuentas cargadas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -282,7 +282,7 @@ const rowBg = (nivel) => ({
                         <TextInput v-model="createForm.orden" type="number" min="0" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="createForm.errors.orden" />
                     </div>
-                    <div class="sm:col-span-2 flex items-center gap-6">
+                    <div class="sm:col-span-2 flex items-center gap-3">
                         <label class="flex items-center gap-2 text-sm text-gray-700">
                             <Checkbox v-model:checked="createForm.contabilizable" /> Contabilizable
                         </label>
@@ -342,7 +342,7 @@ const rowBg = (nivel) => ({
                         <TextInput v-model="editForm.orden" type="number" min="0" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="editForm.errors.orden" />
                     </div>
-                    <div class="sm:col-span-2 flex items-center gap-6">
+                    <div class="sm:col-span-2 flex items-center gap-3">
                         <label class="flex items-center gap-2 text-sm text-gray-700">
                             <Checkbox v-model:checked="editForm.contabilizable" /> Contabilizable
                         </label>

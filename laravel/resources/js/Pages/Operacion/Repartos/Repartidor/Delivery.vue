@@ -264,7 +264,7 @@ const statusClass = (estado) => {
             </div>
         </div>
 
-        <div class="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        <div class="max-w-3xl mx-auto px-4 py-3 space-y-4">
             <div v-if="!hojas.length" class="text-center py-16">
                 <div class="text-gray-400 text-5xl mb-4">&#128666;</div>
                 <h2 class="text-lg font-medium text-gray-700">No tenes hojas de ruta asignadas</h2>

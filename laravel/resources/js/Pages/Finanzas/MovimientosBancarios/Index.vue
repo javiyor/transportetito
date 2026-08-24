@@ -65,7 +65,7 @@ const filtrar = () => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
                     <div>
@@ -135,7 +135,7 @@ const filtrar = () => {
 
         <!-- Gasto bancario dialog -->
         <div v-if="gastoDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="gastoDialog = false">
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div class="bg-white rounded-lg shadow-xl p-4 w-full max-w-md mx-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Registrar gasto bancario</h3>
                 <form @submit.prevent="submitGasto" class="space-y-3">
                     <div>

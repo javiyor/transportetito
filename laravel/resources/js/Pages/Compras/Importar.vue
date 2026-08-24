@@ -128,7 +128,7 @@ const submitCsv = () => {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Importar comprobantes de proveedores</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="importResult" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
                 {{ importResult }}
             </div>
@@ -140,7 +140,7 @@ const submitCsv = () => {
                 </ul>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde CSV</h3>
                 <p class="text-sm text-gray-500 mb-4">Pegue el CSV. Detecta columnas automaticamente. Requiere: proveedor_cuit/CUIT, proveedor_razon_social/denominacion, fecha_emision, total.</p>
 

@@ -38,9 +38,9 @@ const monedaSymbol = (moneda) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div v-if="!manifiestos?.data?.length" class="px-6 py-10 text-center text-sm text-gray-500">
+                <div v-if="!manifiestos?.data?.length" class="px-6 py-4 text-center text-sm text-gray-500">
                     No hay manifiestos con pedidos pendientes de facturar.
                 </div>
 

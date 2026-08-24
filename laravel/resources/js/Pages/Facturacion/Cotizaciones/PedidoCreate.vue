@@ -47,8 +47,8 @@ const submit = () => form.post(route('facturacion.cotizaciones.pedido.store'), {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Nuevo pedido de cotizacion</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

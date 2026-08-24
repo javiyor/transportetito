@@ -137,8 +137,8 @@ const formatFecha = (v) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
@@ -186,7 +186,7 @@ const formatFecha = (v) => {
                 <PrimaryButton @click="showForm = !showForm">{{ showForm ? 'Cancelar' : '+ Nuevo cheque' }}</PrimaryButton>
             </div>
 
-            <div v-if="showForm" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="showForm" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Nuevo cheque</h3>
                 <form class="grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitCreate">
                     <div>
@@ -306,7 +306,7 @@ const formatFecha = (v) => {
                                 </td>
                             </tr>
                             <tr v-if="!cheques.data.length">
-                                <td colspan="13" class="px-6 py-10 text-center text-sm text-gray-500">Sin cheques.</td>
+                                <td colspan="13" class="px-6 py-4 text-center text-sm text-gray-500">Sin cheques.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -320,7 +320,7 @@ const formatFecha = (v) => {
                 </div>
             </div>
 
-            <div v-if="editId" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="editId" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Editar cheque #{{ editId }}</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitEdit">
                     <div>

@@ -70,6 +70,7 @@ class HandleInertiaRequests extends Middleware
                 'flash' => [
                     'success' => fn () => $request->session()->get('flash.success'),
                     'error' => fn () => $request->session()->get('flash.error'),
+                    'hoja_resumen' => fn () => $request->session()->get('flash.hoja_resumen'),
                     'tempPassword' => fn () => $request->session()->get('tt.temp_password'),
                     'tempPasswordEmail' => fn () => $request->session()->get('tt.temp_password_email'),
                     'importResult' => fn () => $request->session()->get('tt.import_result'),

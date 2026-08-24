@@ -145,11 +145,11 @@ const confirmDelete = (e) => {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Empresas</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="flashSuccess" class="rounded-md bg-green-50 border border-green-200 p-4 text-sm text-green-800">{{ flashSuccess }}</div>
             <div v-if="flashError" class="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-800">{{ flashError }}</div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nueva empresa</h3>
 
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4" @submit.prevent="submitCreate">
@@ -292,7 +292,7 @@ const confirmDelete = (e) => {
                                 </td>
                             </tr>
                             <tr v-if="!empresas.length">
-                                <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">Sin empresas.</td>
+                                <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Sin empresas.</td>
                             </tr>
                         </tbody>
                     </table>

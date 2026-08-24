@@ -56,8 +56,8 @@ const formatFecha = (v) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
@@ -95,7 +95,7 @@ const formatFecha = (v) => {
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Resumen</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
@@ -151,7 +151,7 @@ const formatFecha = (v) => {
                                 </td>
                             </tr>
                             <tr v-if="!hojas.data.length">
-                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">Sin hojas de ruta.</td>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Sin hojas de ruta.</td>
                             </tr>
                         </tbody>
                     </table>

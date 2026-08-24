@@ -155,7 +155,7 @@ const submitArca = () => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="importResult" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
                 {{ importResult }}
             </div>
@@ -173,7 +173,7 @@ const submitArca = () => {
             </div>
 
             <!-- CSV mode -->
-            <div v-if="modo === 'csv'" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="modo === 'csv'" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde CSV</h3>
                 <p class="text-sm text-gray-500 mb-4">Pegue el CSV descargado de ARCA (formato separado por punto y coma) o el formato simple. Detecta columnas automaticamente.</p>
 
@@ -211,7 +211,7 @@ const submitArca = () => {
             </div>
 
             <!-- ARCA mode -->
-            <div v-if="modo === 'arca'" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="modo === 'arca'" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde ARCA (WSFE)</h3>
                 <p class="text-sm text-gray-500 mb-4">Consultar comprobantes emitidos en AFIP/ARCA por rango de numeración.</p>
 

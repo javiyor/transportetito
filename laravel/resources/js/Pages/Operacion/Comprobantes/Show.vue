@@ -111,8 +111,8 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
             </div>
         </template>
 
-        <div class="max-w-5xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Empresa</div>
                     <div class="mt-1 text-sm text-gray-900">{{ comprobante.empresa?.razon_social || '-' }}</div>
@@ -178,7 +178,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
             </div>
 
-            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nota de credito</h3>
                 <p class="mt-1 text-sm text-gray-600">Genera una nota de credito vinculada a esta factura fiscal. Queda auditada.</p>
                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
@@ -210,7 +210,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 <div v-if="notaCreditoForm.errors.importe" class="mt-2 text-sm text-red-600">{{ notaCreditoForm.errors.importe }}</div>
             </div>
 
-            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nota de debito fiscal</h3>
                 <p class="mt-1 text-sm text-gray-600">Genera una nota de debito fiscal vinculada a esta factura.</p>
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -224,7 +224,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 <div v-if="notaDebitoForm.errors.importe" class="mt-2 text-sm text-red-600">{{ notaDebitoForm.errors.importe }}</div>
             </div>
 
-            <div v-if="(comprobante.notas_credito || []).length" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="(comprobante.notas_credito || []).length" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Notas de credito relacionadas</h3>
                 <div class="mt-4 space-y-2">
                     <div v-for="nc in comprobante.notas_credito" :key="nc.id" class="flex items-center justify-between rounded border border-gray-200 px-4 py-3">
@@ -240,7 +240,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-6">
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Detalle de pedidos</h3>
                 <div class="mt-4 space-y-3 sm:hidden">
                     <div v-for="p in comprobante.pedidos || []" :key="p.id" class="rounded-lg border border-gray-200 p-4">
@@ -289,7 +289,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
             </div>
 
-            <div v-if="(auditLogs || []).length" class="bg-white shadow sm:rounded-lg p-6">
+            <div v-if="(auditLogs || []).length" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Auditoria</h3>
                 <div class="mt-4 space-y-3">
                     <div v-for="log in auditLogs" :key="log.id" class="rounded border border-gray-200 px-4 py-3">

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -13,6 +13,10 @@ const props = defineProps({
     cuentas: Array,
     tarifaDefaults: Object,
 });
+
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const defaultPct = Number(props.tarifaDefaults?.tarifa_valor_declarado_pct) || 0.03;
 const ivaPct = Number(props.tarifaDefaults?.iva_pct) || 0.21;
@@ -172,6 +176,22 @@ const totales = computed(() => {
     };
 });
 
+const resetForNext = () => {
+    items.value = [{
+        key: nextKey++,
+        descripcion: '',
+        cantidad: 1,
+        tipo: 'bultos',
+        valor_declarado: 0,
+        importe: 0,
+        seguro: 0,
+        cr: 0,
+        remito: '',
+    }];
+    form.observacion = '';
+    form.clearErrors();
+};
+
 const submit = () => {
     form.items = items.value.map(it => ({
         descripcion: it.descripcion,
@@ -184,7 +204,10 @@ const submit = () => {
         remito: it.remito,
     }));
 
-    form.post(route('facturacion.carga-directa.store'));
+    form.post(route('facturacion.carga-directa.store'), {
+        preserveScroll: true,
+        onSuccess: () => resetForNext(),
+    });
 };
 </script>
 
@@ -204,9 +227,14 @@ const submit = () => {
             </div>
         </template>
 
-        <div class="max-w-6xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6">
-                <form @submit.prevent="submit" class="space-y-6">
+        <div class="max-w-6xl mx-auto py-4 sm:px-6 lg:px-8">
+            <div v-if="flashSuccess" class="mb-3 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800 flex items-center justify-between gap-4">
+                <span>{{ flashSuccess }}</span>
+                <Link :href="route('facturacion.manifiestos.index')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold whitespace-nowrap">Ver comprobantes →</Link>
+            </div>
+            <div v-if="flashError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
+            <div class="bg-white shadow sm:rounded-lg p-4">
+                <form @submit.prevent="submit" class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="relative">
                             <div class="flex items-center justify-between">
