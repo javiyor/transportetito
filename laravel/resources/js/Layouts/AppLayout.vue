@@ -65,7 +65,7 @@ const switchEmpresa = (empresaId) => {
                                                 <span v-if="$page.props.tt?.alertasVehiculosCount > 0" class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $page.props.tt.alertasVehiculosCount }}</span>
                                             </DropdownLink>
                                             <DropdownLink :href="route('admin.tarifas.index')">Tarifas</DropdownLink>
-                                            <DropdownLink :href="route('admin.cotizaciones.index')">Cotizaciones</DropdownLink>
+                                            <DropdownLink :href="route('admin.cotizaciones.index')">Monedas</DropdownLink>
                                         </template>
                                     </Dropdown>
                                 </div>
@@ -350,7 +350,7 @@ const switchEmpresa = (empresaId) => {
                             :href="route('admin.cotizaciones.index')"
                             :active="route().current('admin.cotizaciones.*')"
                         >
-                            Cotizaciones
+                            Monedas
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink

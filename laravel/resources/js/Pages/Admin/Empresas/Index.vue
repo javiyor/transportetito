@@ -1,5 +1,5 @@
 <script setup>
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
@@ -8,7 +8,11 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const props = defineProps({
     empresas: Array,
@@ -122,7 +126,13 @@ const submitEdit = () => {
 
 const confirmDelete = (e) => {
     if (confirm(`Eliminar empresa "${e.razon_social}"?`)) {
-        router.delete(route('admin.empresas.destroy', e.id), { preserveScroll: true });
+        router.delete(route('admin.empresas.destroy', e.id), {
+            preserveScroll: true,
+            onError: (errors) => {
+                const msg = errors?.error || errors?.message || 'No se pudo eliminar la empresa.';
+                alert(msg);
+            },
+        });
     }
 };
 </script>
@@ -136,6 +146,9 @@ const confirmDelete = (e) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
+            <div v-if="flashSuccess" class="rounded-md bg-green-50 border border-green-200 p-4 text-sm text-green-800">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-800">{{ flashError }}</div>
+
             <div class="bg-white shadow sm:rounded-lg p-6">
                 <h3 class="text-base font-semibold text-gray-900">Nueva empresa</h3>
 

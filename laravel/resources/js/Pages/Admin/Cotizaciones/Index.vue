@@ -6,6 +6,12 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 
+const formatNum = (v) => Number(v || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatTasa = (v) => {
+    const n = Number(v) || 0;
+    return n.toLocaleString('es-AR', { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+};
+
 const props = defineProps({
     empresas: Array,
     empresaId: [Number, null],
@@ -30,11 +36,11 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
 </script>
 
 <template>
-    <AppLayout title="Admin / Cotizaciones">
-        <Head title="Admin / Cotizaciones" />
+    <AppLayout title="Admin / Monedas">
+        <Head title="Admin / Monedas" />
 
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Cotizaciones</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Monedas</h2>
         </template>
 
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8 space-y-6">
@@ -71,7 +77,7 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
                     <form class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4" @submit.prevent="oficialForm.post(route('admin.cotizaciones.oficial.store'), { preserveScroll: true })">
                         <div><InputLabel value="Fecha" /><TextInput v-model="oficialForm.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="oficialForm.errors.fecha" /></div>
                         <div><InputLabel value="Moneda" /><select v-model="oficialForm.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option v-for="m in monedas" :key="m" :value="m">{{ m }}</option></select><InputError class="mt-2" :message="oficialForm.errors.moneda" /></div>
-                        <div><InputLabel value="Tasa en ARS" /><TextInput v-model="oficialForm.tasa_ars" type="number" min="0.000001" step="0.000001" class="mt-1 block w-full" /><InputError class="mt-2" :message="oficialForm.errors.tasa_ars" /></div>
+                        <div><InputLabel value="Tasa en ARS" /><TextInput v-model="oficialForm.tasa_ars" type="number" min="0.000001" step="0.000001" class="mt-1 block w-full" /><div v-if="oficialForm.tasa_ars !== ''" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatTasa(oficialForm.tasa_ars) }}</div><InputError class="mt-2" :message="oficialForm.errors.tasa_ars" /></div>
                         <div><InputLabel value="Fuente" /><TextInput v-model="oficialForm.fuente" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="oficialForm.errors.fuente" /></div>
                         <div class="sm:col-span-2 flex justify-end"><PrimaryButton :disabled="oficialForm.processing">Guardar</PrimaryButton></div>
                     </form>
@@ -83,7 +89,7 @@ const overrideForm = useForm({ empresa_id: props.empresaId || props.empresas?.[0
                         <div><InputLabel value="Empresa" /><select v-model="overrideForm.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option></select><InputError class="mt-2" :message="overrideForm.errors.empresa_id" /></div>
                         <div><InputLabel value="Fecha" /><TextInput v-model="overrideForm.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="overrideForm.errors.fecha" /></div>
                         <div><InputLabel value="Moneda" /><select v-model="overrideForm.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option v-for="m in monedas" :key="m" :value="m">{{ m }}</option></select><InputError class="mt-2" :message="overrideForm.errors.moneda" /></div>
-                        <div><InputLabel value="Tasa en ARS" /><TextInput v-model="overrideForm.tasa_ars" type="number" min="0.000001" step="0.000001" class="mt-1 block w-full" /><InputError class="mt-2" :message="overrideForm.errors.tasa_ars" /></div>
+                        <div><InputLabel value="Tasa en ARS" /><TextInput v-model="overrideForm.tasa_ars" type="number" min="0.000001" step="0.000001" class="mt-1 block w-full" /><div v-if="overrideForm.tasa_ars !== ''" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatTasa(overrideForm.tasa_ars) }}</div><InputError class="mt-2" :message="overrideForm.errors.tasa_ars" /></div>
                         <div class="sm:col-span-2"><InputLabel value="Motivo" /><TextInput v-model="overrideForm.motivo" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="overrideForm.errors.motivo" /></div>
                         <div class="sm:col-span-2 flex justify-end"><PrimaryButton :disabled="overrideForm.processing">Guardar</PrimaryButton></div>
                     </form>

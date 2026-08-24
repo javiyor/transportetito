@@ -48,11 +48,19 @@ class EmpresaAdminController extends Controller
 
         if ($request->hasFile('logo')) {
             $data['logo'] = $request->file('logo')->store('logos', 'public');
+        } else {
+            unset($data['logo']);
+        }
+
+        foreach (['telefono', 'email', 'whatsapp', 'sitio_web', 'instagram_url', 'facebook_url', 'linkedin_url', 'condicion_iva'] as $k) {
+            if (array_key_exists($k, $data) && trim((string) $data[$k]) === '') {
+                $data[$k] = null;
+            }
         }
 
         Empresa::query()->create($data);
 
-        return back();
+        return back()->with('flash.success', 'Empresa creada.');
     }
 
     public function update(Request $request, Empresa $empresa): RedirectResponse
@@ -83,18 +91,26 @@ class EmpresaAdminController extends Controller
                 Storage::disk('public')->delete($empresa->logo);
             }
             $data['logo'] = $request->file('logo')->store('logos', 'public');
+        } else {
+            unset($data['logo']);
+        }
+
+        foreach (['telefono', 'email', 'whatsapp', 'sitio_web', 'instagram_url', 'facebook_url', 'linkedin_url', 'condicion_iva'] as $k) {
+            if (array_key_exists($k, $data) && trim((string) $data[$k]) === '') {
+                $data[$k] = null;
+            }
         }
 
         $empresa->update($data);
 
-        return back();
+        return back()->with('flash.success', 'Empresa actualizada.');
     }
 
     public function destroy(Request $request, Empresa $empresa): RedirectResponse
     {
         $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
         if ($currentEmpresaId === (int) $empresa->id) {
-            return back()->with('error', 'No se puede eliminar la empresa actualmente seleccionada.');
+            return back()->with('flash.error', 'No se puede eliminar la empresa actualmente seleccionada.');
         }
 
         try {
@@ -105,10 +121,10 @@ class EmpresaAdminController extends Controller
             $empresa->delete();
         } catch (QueryException $e) {
             // FK constraints: empresa en uso.
-            return back()->with('error', 'No se puede eliminar: la empresa tiene datos asociados.');
+            return back()->with('flash.error', 'No se puede eliminar: la empresa tiene datos asociados.');
         }
 
-        return back()->with('success', 'Empresa eliminada.');
+        return back()->with('flash.success', 'Empresa eliminada.');
     }
 
     public function arcaDiagnostic(Request $request, ArcaCertificateResolver $resolver): JsonResponse

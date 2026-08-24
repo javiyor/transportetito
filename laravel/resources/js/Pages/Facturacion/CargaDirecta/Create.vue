@@ -355,20 +355,24 @@ const submit = () => {
                                     <div>
                                         <InputLabel :for="'vd-' + it.key" value="Valor declarado" />
                                         <TextInput :id="'vd-' + it.key" v-model="it.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full" @input="recalcularImporte(it)" />
+                                        <div v-if="it.valor_declarado !== '' && it.valor_declarado !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.valor_declarado) }}</div>
                                     </div>
                                     <div>
                                         <InputLabel :for="'importe-' + it.key" value="Importe" />
                                         <TextInput :id="'importe-' + it.key" v-model="it.importe" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                        <div v-if="it.importe !== '' && it.importe !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.importe) }}</div>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <InputLabel :for="'seguro-' + it.key" value="Seguro" />
                                         <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                        <div v-if="it.seguro !== '' && it.seguro !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.seguro) }}</div>
                                     </div>
                                     <div>
                                         <InputLabel :for="'cr-' + it.key" value="CR" />
                                         <TextInput :id="'cr-' + it.key" v-model="it.cr" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                        <div v-if="it.cr !== '' && it.cr !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.cr) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -407,15 +411,19 @@ const submit = () => {
                                         </td>
                                         <td class="px-2 py-1">
                                             <input v-model.number="it.valor_declarado" @input="recalcularImporte(it)" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <div v-if="it.valor_declarado !== '' && it.valor_declarado !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.valor_declarado) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
                                             <input v-model.number="it.importe" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <div v-if="it.importe !== '' && it.importe !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.importe) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
                                             <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <div v-if="it.seguro !== '' && it.seguro !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.seguro) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
                                             <input v-model.number="it.cr" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <div v-if="it.cr !== '' && it.cr !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.cr) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
                                             <input v-model="it.remito" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1" />
