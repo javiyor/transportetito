@@ -115,22 +115,29 @@ class EmpresaAdminController extends Controller
         }
 
         // Pre-chequeo para dar motivo detallado sin depender del mensaje PG
+        $safeCount = function (string $table) use ($empresa): int {
+            try {
+                return DB::table($table)->where('empresa_id', $empresa->id)->count();
+            } catch (\Throwable $e) {
+                return 0;
+            }
+        };
         $checks = [
-            'depósitos' => DB::table('depositos')->where('empresa_id', $empresa->id)->count(),
-            'clientes/cuentas (tercero_cuentas)' => DB::table('tercero_cuentas')->where('empresa_id', $empresa->id)->count(),
-            'zonas' => DB::table('zonas')->where('empresa_id', $empresa->id)->count(),
-            'tarifas' => DB::table('tarifas')->where('empresa_id', $empresa->id)->count(),
-            'comprobantes' => DB::table('comprobantes')->where('empresa_id', $empresa->id)->count(),
-            'pedidos' => DB::table('pedidos')->where('empresa_id', $empresa->id)->count(),
-            'manifiestos' => DB::table('manifiesto_ingresos')->where('empresa_id', $empresa->id)->count(),
-            'hojas de ruta' => DB::table('hoja_ruta')->where('empresa_id', $empresa->id)->count() + DB::table('hoja_rutas')->where('empresa_id', $empresa->id)->count(),
-            'vehículos' => DB::table('vehiculos')->where('empresa_id', $empresa->id)->count(),
-            'empleados' => DB::table('empleados')->where('empresa_id', $empresa->id)->count(),
-            'puestos' => DB::table('empleado_puestos')->where('empresa_id', $empresa->id)->count(),
-            'usuarios asignados' => DB::table('empresa_user')->where('empresa_id', $empresa->id)->count(),
-            'cta cte' => DB::table('cta_cte_movimientos')->where('empresa_id', $empresa->id)->count(),
-            'asientos contables' => DB::table('asientos_contables')->where('empresa_id', $empresa->id)->count(),
-            'cuentas contables' => DB::table('cuentas_contables')->where('empresa_id', $empresa->id)->count(),
+            'depósitos' => $safeCount('depositos'),
+            'clientes/cuentas (tercero_cuentas)' => $safeCount('tercero_cuentas'),
+            'zonas' => $safeCount('zonas'),
+            'tarifas' => $safeCount('tarifas_relaciones'),
+            'comprobantes' => $safeCount('comprobantes'),
+            'pedidos' => $safeCount('pedidos'),
+            'manifiestos' => $safeCount('manifiestos_ingreso'),
+            'hojas de ruta' => $safeCount('hojas_ruta'),
+            'vehículos' => $safeCount('vehiculos'),
+            'empleados' => $safeCount('empleados'),
+            'puestos' => $safeCount('empleado_puestos'),
+            'usuarios asignados' => $safeCount('empresa_user'),
+            'cta cte' => $safeCount('cta_cte_movimientos'),
+            'asientos contables' => $safeCount('asientos_contables'),
+            'cuentas contables' => $safeCount('cuentas_contables'),
         ];
 
         $bloqueos = [];
