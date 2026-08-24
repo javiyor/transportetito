@@ -75,6 +75,7 @@ const formatCuit = (value) => {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
                 </div>
             </div>
         </div>
