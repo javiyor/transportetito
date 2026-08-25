@@ -8,9 +8,12 @@ use App\Models\Cheque;
 use App\Models\CuentaContable;
 use App\Models\Empresa;
 use App\Models\GastoOperativo;
+use App\Models\MovimientoBancario;
+use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,7 +56,7 @@ class GastoOperativoIndexController extends Controller
         ]);
     }
 
-    public function store(Request $request, TipoCambioResolver $tipoCambioResolver): RedirectResponse
+    public function store(Request $request, TipoCambioResolver $tipoCambioResolver, ContabilizadorService $contabilizador): RedirectResponse
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $data = $request->validate([
@@ -102,7 +105,7 @@ class GastoOperativoIndexController extends Controller
 
         $cuentaContable = CuentaContable::query()->findOrFail($data['cuenta_contable_id']);
 
-        GastoOperativo::query()->create([
+        $gasto = GastoOperativo::query()->create([
             'empresa_id' => $empresaId,
             'fecha' => $data['fecha'],
             'cuenta_contable_id' => $data['cuenta_contable_id'],
@@ -119,6 +122,50 @@ class GastoOperativoIndexController extends Controller
             'creado_por_user_id' => $request->user()->id,
         ]);
 
-        return back()->with('flash.success', 'Gasto sin proveedor registrado.');
+        // Crear línea de categoría para que el contabilizador lo tome (gasto simple = 1 categoría)
+        $gasto->categorias()->create([
+            'cuenta_contable_id' => $data['cuenta_contable_id'],
+            'importe' => $data['importe'],
+        ]);
+
+        // Contabilizar en Libro Diario
+        try {
+            $gasto->load(['categorias.cuentaContable', 'empresa']);
+            $contabilizador->contabilizarGastoOperativo($gasto);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo contabilizar gasto operativo', ['gasto_id' => $gasto->id, 'error' => $e->getMessage()]);
+        }
+
+        // Si corresponde, crear movimiento bancario espejo
+        $bancoIdParaMovimiento = null;
+        if (in_array($data['forma_pago'], ['transferencia', 'cheque', 'tarjeta'], true)) {
+            $bancoIdParaMovimiento = $data['banco_origen_id'] ?? null;
+            // Para cheque propio, usar banco del cheque
+            if ($data['forma_pago'] === 'cheque' && ($data['tipo_cheque'] ?? null) === 'propio') {
+                $bancoIdParaMovimiento = $data['cheque_banco_id'] ?? $bancoIdParaMovimiento;
+            }
+        }
+
+        if ($bancoIdParaMovimiento) {
+            try {
+                MovimientoBancario::query()->create([
+                    'empresa_id' => $empresaId,
+                    'banco_id' => $bancoIdParaMovimiento,
+                    'fecha' => $data['fecha_pago'] ?: $data['fecha'],
+                    'tipo' => 'egreso',
+                    'concepto' => $data['referencia'] ?: ('Gasto: '.$cuentaContable->nombre.' #'.$gasto->id),
+                    'importe' => $data['importe'],
+                    'moneda' => $data['moneda'],
+                    'referencia_tipo' => 'gasto_operativo',
+                    'referencia_id' => $gasto->id,
+                    'contabilizado' => true, // ya contabilizado vía asiento del gasto
+                    'creado_por_user_id' => $request->user()->id,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo crear movimiento bancario para gasto', ['gasto_id' => $gasto->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return back()->with('flash.success', 'Gasto sin proveedor registrado, contabilizado y movimiento bancario creado si corresponde.');
     }
 }
