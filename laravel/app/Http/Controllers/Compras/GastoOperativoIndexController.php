@@ -129,11 +129,13 @@ class GastoOperativoIndexController extends Controller
         ]);
 
         // Contabilizar en Libro Diario
+        $contaError = null;
         try {
             $gasto->load(['categorias.cuentaContable', 'empresa']);
             $contabilizador->contabilizarGastoOperativo($gasto);
         } catch (\Throwable $e) {
-            Log::warning('No se pudo contabilizar gasto operativo', ['gasto_id' => $gasto->id, 'error' => $e->getMessage()]);
+            $contaError = $e->getMessage();
+            Log::warning('No se pudo contabilizar gasto operativo', ['gasto_id' => $gasto->id, 'error' => $contaError]);
         }
 
         // Si corresponde, crear movimiento bancario espejo
@@ -164,6 +166,10 @@ class GastoOperativoIndexController extends Controller
             } catch (\Throwable $e) {
                 Log::warning('No se pudo crear movimiento bancario para gasto', ['gasto_id' => $gasto->id, 'error' => $e->getMessage()]);
             }
+        }
+
+        if ($contaError) {
+            return back()->with('flash.success', 'Gasto registrado (ID #'.$gasto->id.') pero NO se pudo contabilizar en Libro Diario: '.$contaError.' — Revisá Plan de Cuentas / Configuración contable (medio_pago.'.$data['forma_pago'].') y recontabilizá.')->with('flash.error', 'Atención: '.$contaError);
         }
 
         return back()->with('flash.success', 'Gasto sin proveedor registrado, contabilizado y movimiento bancario creado si corresponde.');
