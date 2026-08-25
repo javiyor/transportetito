@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Deposito;
 use App\Models\Empresa;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DepositoAdminController extends Controller
@@ -46,7 +48,7 @@ class DepositoAdminController extends Controller
                 ->update(['es_central' => false]);
         }
 
-        return back();
+        return back()->with('flash.success', 'Depósito creado.');
     }
 
     public function update(Request $request, Deposito $deposito): RedirectResponse
@@ -68,6 +70,45 @@ class DepositoAdminController extends Controller
                 ->update(['es_central' => false]);
         }
 
-        return back();
+        return back()->with('flash.success', 'Depósito actualizado.');
+    }
+
+    public function destroy(Request $request, Deposito $deposito): RedirectResponse
+    {
+        $safeCount = function (string $table, string $column = 'deposito_id') use ($deposito): int {
+            try {
+                return DB::table($table)->where($column, $deposito->id)->count();
+            } catch (\Throwable $e) {
+                return 0;
+            }
+        };
+
+        $checks = [
+            'manifiestos' => $safeCount('manifiestos_ingreso'),
+            'pedidos' => $safeCount('pedidos'),
+            'comprobantes' => $safeCount('comprobantes'),
+            'hojas de ruta' => $safeCount('hojas_ruta'),
+            'recibos' => $safeCount('recibos'),
+        ];
+
+        $bloqueos = [];
+        foreach ($checks as $label => $cnt) {
+            if ($cnt > 0) {
+                $bloqueos[] = "{$cnt} {$label}";
+            }
+        }
+
+        if ($bloqueos) {
+            $detalle = implode(', ', $bloqueos);
+            return back()->with('flash.error', "No se puede eliminar el depósito \"{$deposito->nombre}\" porque tiene datos asociados: {$detalle}.");
+        }
+
+        try {
+            $deposito->delete();
+        } catch (QueryException $e) {
+            return back()->with('flash.error', "No se puede eliminar \"{$deposito->nombre}\": la base rechazó el borrado. Detalle: ".substr($e->getMessage(), 0, 400));
+        }
+
+        return back()->with('flash.success', "Depósito \"{$deposito->nombre}\" eliminado.");
     }
 }

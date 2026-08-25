@@ -1,5 +1,5 @@
 <script setup>
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
@@ -8,7 +8,11 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const props = defineProps({
     empresas: Array,
@@ -59,6 +63,18 @@ const submitEdit = () => {
 const changeEmpresa = (id) => {
     router.get(route('admin.depositos.index'), { empresa_id: id || null }, { preserveState: true, preserveScroll: true, replace: true });
 };
+
+const confirmDelete = (d) => {
+    if (confirm(`Eliminar depósito "${d.nombre}"?`)) {
+        router.delete(route('admin.depositos.destroy', d.id), {
+            preserveScroll: true,
+            onError: (errors) => {
+                const msg = errors?.error || errors?.message || 'No se pudo eliminar el depósito.';
+                alert(msg);
+            },
+        });
+    }
+};
 </script>
 
 <template>
@@ -82,6 +98,8 @@ const changeEmpresa = (id) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="flashSuccess" class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nuevo deposito</h3>
 
@@ -146,6 +164,7 @@ const changeEmpresa = (id) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ d.es_central ? 'Si' : 'No' }}</td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <SecondaryButton class="text-xs" @click.prevent="openEdit(d)">Editar</SecondaryButton>
+                                    <button type="button" class="ml-2 text-xs text-red-600 hover:text-red-800" @click.prevent="confirmDelete(d)">Eliminar</button>
                                 </td>
                             </tr>
                             <tr v-if="!depositos.length">

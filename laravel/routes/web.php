@@ -179,6 +179,7 @@ Route::middleware([
         Route::get('/depositos', [DepositoAdminController::class, 'index'])->name('depositos.index');
         Route::post('/depositos', [DepositoAdminController::class, 'store'])->name('depositos.store');
         Route::put('/depositos/{deposito}', [DepositoAdminController::class, 'update'])->name('depositos.update');
+        Route::delete('/depositos/{deposito}', [DepositoAdminController::class, 'destroy'])->name('depositos.destroy');
 
         Route::get('/terceros', [TerceroAdminController::class, 'index'])->name('terceros.index');
         Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
