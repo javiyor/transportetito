@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\Pedido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,8 +15,11 @@ class PedidoRecepcionControlController extends Controller
     {
         $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
         if ((int) $pedido->empresa_id !== $currentEmpresaId) {
-            // Mensaje útil en lugar de 404 seco (pasa cuando se cambia de empresa)
-            return back()->with('flash.error', "El pedido #{$pedido->id} pertenece a otra empresa (ID {$pedido->empresa_id}). Cambiá a esa empresa arriba para confirmarlo. Actual: {$currentEmpresaId}.");
+            $pedidoEmpresa = Empresa::query()->find($pedido->empresa_id, ['razon_social']);
+            $actualEmpresa = $currentEmpresaId ? Empresa::query()->find($currentEmpresaId, ['razon_social']) : null;
+            $pedidoNombre = $pedidoEmpresa?->razon_social ?: "ID {$pedido->empresa_id}";
+            $actualNombre = $actualEmpresa?->razon_social ?: ($currentEmpresaId ? "ID {$currentEmpresaId}" : 'ninguna');
+            return back()->with('flash.error', "El pedido #{$pedido->id} pertenece a \"{$pedidoNombre}\". Cambiá a esa empresa arriba para confirmarlo. Empresa actual: \"{$actualNombre}\".");
         }
 
         $camposError = ['remitente', 'destinatario', 'valor_declarado', 'bultos', 'palets'];
