@@ -1,7 +1,13 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ref } from 'vue';
+import DialogModal from '@/Components/DialogModal.vue';
+import InputError from '@/Components/InputError.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import TextInput from '@/Components/TextInput.vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     asientos: Object,
@@ -10,12 +16,76 @@ const props = defineProps({
     totales: Object,
 });
 
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
+
 const expanded = ref(new Set());
 
 const toggle = (id) => {
     const s = new Set(expanded.value);
     s.has(id) ? s.delete(id) : s.add(id);
     expanded.value = s;
+};
+
+const showCreate = ref(false);
+const createForm = useForm({
+    fecha: new Date().toISOString().slice(0, 10),
+    descripcion: '',
+    moneda: 'ARS',
+    lineas: [
+        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '' },
+        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '' },
+    ],
+});
+
+const openCreate = () => {
+    createForm.fecha = new Date().toISOString().slice(0, 10);
+    createForm.descripcion = '';
+    createForm.moneda = 'ARS';
+    createForm.lineas = [
+        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '' },
+        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '' },
+    ];
+    createForm.clearErrors();
+    showCreate.value = true;
+};
+
+const addLinea = () => {
+    createForm.lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '' });
+};
+
+const removeLinea = (idx) => {
+    if (createForm.lineas.length <= 2) return;
+    createForm.lineas.splice(idx, 1);
+};
+
+const totalesCreate = computed(() => {
+    let debe = 0, haber = 0;
+    for (const l of createForm.lineas) {
+        debe += parseFloat(l.debe) || 0;
+        haber += parseFloat(l.haber) || 0;
+    }
+    return { debe: Math.round(debe * 100) / 100, haber: Math.round(haber * 100) / 100, diff: Math.round((debe - haber) * 100) / 100, balanceado: Math.abs(debe - haber) < 0.01 && debe > 0 };
+});
+
+const submitCreate = () => {
+    // Enviar solo líneas con cuenta seleccionada
+    const payload = {
+        fecha: createForm.fecha,
+        descripcion: createForm.descripcion,
+        moneda: createForm.moneda,
+        lineas: createForm.lineas.map(l => ({
+            cuenta_contable_id: l.cuenta_contable_id ? parseInt(l.cuenta_contable_id, 10) : null,
+            debe: l.debe === '' ? 0 : parseFloat(l.debe) || 0,
+            haber: l.haber === '' ? 0 : parseFloat(l.haber) || 0,
+            descripcion: l.descripcion || null,
+        })),
+    };
+    createForm.transform(() => payload).post(route('finanzas.libro-diario.store'), {
+        preserveScroll: true,
+        onSuccess: () => { showCreate.value = false; },
+    });
 };
 
 const applyFilters = () => {
@@ -54,12 +124,15 @@ const fmtDesc = (d) => {
         <Head title="Libro Diario" />
 
         <template #header>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Libro Diario</h2>
+                <PrimaryButton @click="openCreate">Crear asiento</PrimaryButton>
             </div>
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="flashSuccess" class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
                     <div>
@@ -167,5 +240,84 @@ const fmtDesc = (d) => {
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="showCreate" max-width="5xl" @close="showCreate = false">
+            <template #title>Crear asiento manual</template>
+            <template #content>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <InputLabel value="Fecha" class="!text-xs" />
+                            <TextInput v-model="createForm.fecha" type="date" class="mt-0.5 block w-full text-sm py-1" />
+                            <InputError class="mt-1 text-xs" :message="createForm.errors.fecha" />
+                        </div>
+                        <div>
+                            <InputLabel value="Moneda" class="!text-xs" />
+                            <select v-model="createForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm py-1">
+                                <option value="ARS">ARS</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="BRL">BRL</option>
+                            </select>
+                            <InputError class="mt-1 text-xs" :message="createForm.errors.moneda" />
+                        </div>
+                        <div class="sm:col-span-1">
+                            <InputLabel value="Descripción" class="!text-xs" />
+                            <TextInput v-model="createForm.descripcion" type="text" class="mt-0.5 block w-full text-sm py-1" placeholder="Ej: Ajuste manual" />
+                            <InputError class="mt-1 text-xs" :message="createForm.errors.descripcion" />
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-semibold text-gray-700">Líneas (mínimo 2, Debe = Haber)</span>
+                            <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" @click="addLinea">+ Agregar línea</button>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="hidden sm:grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-gray-500 px-1">
+                                <div class="col-span-5">Cuenta</div>
+                                <div class="col-span-2 text-right">Debe</div>
+                                <div class="col-span-2 text-right">Haber</div>
+                                <div class="col-span-2">Detalle</div>
+                                <div class="col-span-1"></div>
+                            </div>
+                            <div v-for="(linea, idx) in createForm.lineas" :key="idx" class="grid grid-cols-12 gap-2 items-start">
+                                <div class="col-span-12 sm:col-span-5">
+                                    <select v-model="linea.cuenta_contable_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
+                                        <option value="">Seleccionar cuenta...</option>
+                                        <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo_completo || c.codigo }} - {{ c.nombre }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-5 sm:col-span-2">
+                                    <TextInput v-model="linea.debe" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />
+                                </div>
+                                <div class="col-span-5 sm:col-span-2">
+                                    <TextInput v-model="linea.haber" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />
+                                </div>
+                                <div class="col-span-10 sm:col-span-2">
+                                    <TextInput v-model="linea.descripcion" type="text" class="block w-full text-xs py-1" placeholder="Detalle" />
+                                </div>
+                                <div class="col-span-2 sm:col-span-1 flex justify-end pt-1">
+                                    <button type="button" class="text-xs text-red-600 hover:text-red-800 disabled:opacity-30" :disabled="createForm.lineas.length <= 2" @click="removeLinea(idx)">✕</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <InputError class="mt-2 text-xs" :message="createForm.errors.lineas" />
+
+                        <div class="mt-3 flex justify-end gap-4 text-xs font-mono border-t border-gray-200 pt-2">
+                            <span>Debe: <b class="text-green-700">{{ totalesCreate.debe.toLocaleString('es-AR', {minimumFractionDigits:2}) }}</b></span>
+                            <span>Haber: <b class="text-red-700">{{ totalesCreate.haber.toLocaleString('es-AR', {minimumFractionDigits:2}) }}</b></span>
+                            <span :class="totalesCreate.balanceado ? 'text-green-600' : 'text-red-600'">{{ totalesCreate.balanceado ? '✓ Balanceado' : '✗ Desbalance: ' + totalesCreate.diff.toLocaleString('es-AR', {minimumFractionDigits:2}) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="showCreate = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="createForm.processing || !totalesCreate.balanceado" @click="submitCreate">Crear asiento</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

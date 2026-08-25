@@ -375,6 +375,7 @@ Route::middleware([
         Route::post('/movimientos-bancarios/gasto', [MovimientoBancarioIndexController::class, 'storeGasto'])->name('movimientos-bancarios.gasto');
 
         Route::get('/libro-diario', [\App\Http\Controllers\Finanzas\LibroDiarioController::class, 'index'])->name('libro-diario');
+        Route::post('/libro-diario', \App\Http\Controllers\Finanzas\AsientoStoreController::class)->name('libro-diario.store');
         Route::get('/libro-mayor', [\App\Http\Controllers\Finanzas\LibroMayorController::class, 'index'])->name('libro-mayor');
         Route::get('/balance', [\App\Http\Controllers\Finanzas\BalanceController::class, 'index'])->name('balance');
         Route::get('/balance/export', [\App\Http\Controllers\Finanzas\BalanceController::class, 'export'])->name('balance.export');
