@@ -10,7 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -59,9 +61,17 @@ class EmpresaAdminController extends Controller
             }
         }
 
-        Empresa::query()->create($data);
+        $empresa = Empresa::query()->create($data);
 
-        return back()->with('flash.success', 'Empresa creada.');
+        // Auto-crear plan de cuentas y configuración contable para que gastos/egresos contabilicen
+        try {
+            Artisan::call('cuentas:reparar-plan', ['empresa_id' => $empresa->id]);
+            Artisan::call('db:seed', ['--class' => 'ConfiguracionContableSeeder', '--force' => true]);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo auto-crear plan/config para empresa nueva', ['empresa_id' => $empresa->id, 'error' => $e->getMessage()]);
+        }
+
+        return back()->with('flash.success', 'Empresa creada y plan contable inicializado.');
     }
 
     public function update(Request $request, Empresa $empresa): RedirectResponse
