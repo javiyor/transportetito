@@ -44,15 +44,15 @@ const openCreate = () => {
     createForm.descripcion = '';
     createForm.moneda = 'ARS';
     createForm.lineas = [
-        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '' },
-        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '' },
+        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false },
+        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false },
     ];
     createForm.clearErrors();
     showCreate.value = true;
 };
 
 const addLinea = () => {
-    createForm.lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '' });
+    createForm.lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false });
 };
 
 const removeLinea = (idx) => {
@@ -68,6 +68,34 @@ const totalesCreate = computed(() => {
     }
     return { debe: Math.round(debe * 100) / 100, haber: Math.round(haber * 100) / 100, diff: Math.round((debe - haber) * 100) / 100, balanceado: Math.abs(debe - haber) < 0.01 && debe > 0 };
 });
+
+const cuentaLabel = (c) => `${c.codigo_completo || c.codigo} - ${c.nombre}`;
+
+const filteredCuentas = (query) => {
+    if (!query) return props.cuentasContables;
+    const q = String(query).toLowerCase();
+    return props.cuentasContables.filter(c =>
+        (c.codigo_completo || c.codigo || '').toLowerCase().includes(q) ||
+        (c.codigo || '').toLowerCase().includes(q) ||
+        (c.nombre || '').toLowerCase().includes(q)
+    );
+};
+
+const onCuentaSearchInput = (linea) => {
+    linea._showCuentas = true;
+};
+
+const selectCuenta = (linea, cuenta) => {
+    linea.cuenta_contable_id = cuenta.id;
+    linea._search = cuentaLabel(cuenta);
+    linea._showCuentas = false;
+};
+
+const clearCuenta = (linea) => {
+    linea.cuenta_contable_id = '';
+    linea._search = '';
+    linea._showCuentas = false;
+};
 
 const submitCreate = () => {
     // Enviar solo líneas con cuenta seleccionada
@@ -87,6 +115,10 @@ const submitCreate = () => {
         onSuccess: () => { showCreate.value = false; },
     });
 };
+
+const filtroCuentaQuery = ref('');
+
+const cuentasFiltradasFiltro = computed(() => filteredCuentas(filtroCuentaQuery.value));
 
 const applyFilters = () => {
     router.get(route('finanzas.libro-diario'), {
@@ -145,10 +177,12 @@ const fmtDesc = (d) => {
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Cuenta contable</label>
+                        <input v-model="filtroCuentaQuery" type="text" placeholder="Buscar por código o descripción..." class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1 mb-1" />
                         <select id="cuenta_contable_id" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="">Todas</option>
-                            <option v-for="c in cuentasContables" :key="c.id" :value="c.id" :selected="filtros.cuenta_contable_id == c.id">{{ c.codigo_completo || c.codigo }} - {{ c.nombre }}</option>
+                            <option v-for="c in cuentasFiltradasFiltro" :key="c.id" :value="c.id" :selected="filtros.cuenta_contable_id == c.id">{{ cuentaLabel(c) }}</option>
                         </select>
+                        <div v-if="filtroCuentaQuery && !cuentasFiltradasFiltro.length" class="text-[10px] text-gray-400 mt-1">Sin resultados</div>
                     </div>
                     <div>
                         <button @click="applyFilters" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700">Filtrar</button>
@@ -283,11 +317,15 @@ const fmtDesc = (d) => {
                                 <div class="col-span-1"></div>
                             </div>
                             <div v-for="(linea, idx) in createForm.lineas" :key="idx" class="grid grid-cols-12 gap-2 items-start">
-                                <div class="col-span-12 sm:col-span-5">
-                                    <select v-model="linea.cuenta_contable_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
-                                        <option value="">Seleccionar cuenta...</option>
-                                        <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo_completo || c.codigo }} - {{ c.nombre }}</option>
-                                    </select>
+                                <div class="col-span-12 sm:col-span-5 relative">
+                                    <input v-model="linea._search" @input="onCuentaSearchInput(linea)" @focus="linea._showCuentas = true" @blur="setTimeout(() => linea._showCuentas = false, 150)" type="text" placeholder="Buscar por código o descripción..." class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
+                                    <button v-if="linea.cuenta_contable_id" type="button" class="absolute right-1 top-1.5 text-gray-400 hover:text-gray-600 text-[10px]" @mousedown.prevent="clearCuenta(linea)">✕</button>
+                                    <ul v-if="linea._showCuentas" class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                        <li v-for="c in filteredCuentas(linea._search).slice(0, 40)" :key="c.id" class="px-2 py-1 text-xs hover:bg-indigo-50 cursor-pointer" @mousedown.prevent="selectCuenta(linea, c)">{{ cuentaLabel(c) }}</li>
+                                        <li v-if="!filteredCuentas(linea._search).length" class="px-2 py-1 text-xs text-gray-400">Sin resultados</li>
+                                    </ul>
+                                    <div v-if="linea.cuenta_contable_id" class="text-[10px] text-green-700 mt-0.5 truncate">{{ cuentaLabel(cuentasContables.find(x => x.id == linea.cuenta_contable_id) || {}) }}</div>
+                                    <div v-else class="text-[10px] text-gray-400 mt-0.5">Seleccioná una cuenta (código o nombre)</div>
                                 </div>
                                 <div class="col-span-5 sm:col-span-2">
                                     <TextInput v-model="linea.debe" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />

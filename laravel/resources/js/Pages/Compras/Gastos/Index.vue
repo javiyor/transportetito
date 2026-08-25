@@ -5,10 +5,13 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import InputError from '@/Components/InputError.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     gastos: Object,
     cuentasContables: Array,
+    bancos: Array,
+    chequesDisponibles: Array,
     totales: Object,
 });
 
@@ -17,11 +20,28 @@ const form = useForm({
     cuenta_contable_id: '',
     moneda: 'ARS',
     importe: '',
+    forma_pago: 'efectivo',
+    banco_origen_id: '',
+    tipo_cheque: 'propio',
+    cheque_id: '',
+    cheque_banco_id: '',
+    cheque_numero: '',
+    cheque_importe: '',
+    cheque_fecha_vencimiento: '',
+    cheque_titular: '',
+    fecha_pago: '',
     referencia: '',
     observacion: '',
 });
 
+const esTransferencia = computed(() => form.forma_pago === 'transferencia');
+const esCheque = computed(() => form.forma_pago === 'cheque');
+const esChequePropio = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'propio');
+const esChequeTercero = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'tercero');
+
 const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: true });
+
+const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjeta', cuenta_corriente: 'Cuenta corriente' }[f] || f);
 </script>
 
 <template>
@@ -47,27 +67,89 @@ const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: 
 
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nuevo gasto</h3>
-                <form class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4" @submit.prevent="submit">
-                    <div><InputLabel value="Fecha" /><TextInput v-model="form.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha" /></div>
-                    <div>
-                        <InputLabel value="Categoria" />
-                        <select v-model="form.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
-                        </select>
-                        <InputError class="mt-2" :message="form.errors.cuenta_contable_id" />
+                <form class="mt-4 space-y-4" @submit.prevent="submit">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div><InputLabel value="Fecha" /><TextInput v-model="form.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha" /></div>
+                        <div>
+                            <InputLabel value="Categoria" />
+                            <select v-model="form.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Seleccionar...</option>
+                                <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="form.errors.cuenta_contable_id" />
+                        </div>
+                        <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="form.errors.moneda" /></div>
+                        <div><InputLabel value="Importe" /><TextInput v-model="form.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.importe" /></div>
+                        <div>
+                            <InputLabel value="Forma de pago" />
+                            <select v-model="form.forma_pago" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="cheque">Cheque</option>
+                                <option value="tarjeta">Tarjeta</option>
+                                <option value="cuenta_corriente">Cuenta corriente</option>
+                            </select>
+                            <InputError class="mt-2" :message="form.errors.forma_pago" />
+                        </div>
+                        <div v-if="esTransferencia">
+                            <InputLabel value="Banco origen" />
+                            <select v-model="form.banco_origen_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">Seleccionar...</option>
+                                <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="form.errors.banco_origen_id" />
+                        </div>
+                        <div><InputLabel value="Fecha pago" /><TextInput v-model="form.fecha_pago" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha_pago" /></div>
                     </div>
-                    <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-2" :message="form.errors.moneda" /></div>
-                    <div><InputLabel value="Importe" /><TextInput v-model="form.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.importe" /></div>
-                    <div><InputLabel value="Referencia" /><TextInput v-model="form.referencia" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.referencia" /></div>
-                    <div class="sm:col-span-3"><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.observacion" /></div>
-                    <div class="sm:col-span-3 flex justify-end"><PrimaryButton :disabled="form.processing">Guardar</PrimaryButton></div>
+
+                    <div v-if="esCheque" class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle del cheque</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <InputLabel value="Tipo" />
+                                <select v-model="form.tipo_cheque" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                    <option value="propio">Cheque propio</option>
+                                    <option value="tercero">Cheque de tercero</option>
+                                </select>
+                            </div>
+                            <template v-if="esChequePropio">
+                                <div>
+                                    <InputLabel value="Banco" />
+                                    <select v-model="form.cheque_banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                        <option value="">Seleccionar...</option>
+                                        <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                    </select>
+                                    <InputError class="mt-2" :message="form.errors.cheque_banco_id" />
+                                </div>
+                                <div><InputLabel value="Número" /><TextInput v-model="form.cheque_numero" type="text" class="mt-1 block w-full text-sm" /></div>
+                                <div><InputLabel value="Importe cheque" /><TextInput v-model="form.cheque_importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full text-sm" /><InputError class="mt-2" :message="form.errors.cheque_importe" /></div>
+                                <div><InputLabel value="Vencimiento" /><TextInput v-model="form.cheque_fecha_vencimiento" type="date" class="mt-1 block w-full text-sm" /><InputError class="mt-2" :message="form.errors.cheque_fecha_vencimiento" /></div>
+                                <div><InputLabel value="Titular" /><TextInput v-model="form.cheque_titular" type="text" class="mt-1 block w-full text-sm" /></div>
+                            </template>
+                            <template v-if="esChequeTercero">
+                                <div class="sm:col-span-2">
+                                    <InputLabel value="Cheque en cartera" />
+                                    <select v-model="form.cheque_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                        <option value="">Seleccionar...</option>
+                                        <option v-for="ch in chequesDisponibles" :key="ch.id" :value="ch.id">{{ ch.banco }} #{{ ch.numero || '—' }} — {{ ch.moneda }} {{ Number(ch.importe).toLocaleString('es-AR', {minimumFractionDigits:2}) }} — Vence: {{ ch.fecha_vencimiento || '—' }}</option>
+                                    </select>
+                                    <InputError class="mt-2" :message="form.errors.cheque_id" />
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div><InputLabel value="Referencia" /><TextInput v-model="form.referencia" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.referencia" /></div>
+                        <div class="sm:col-span-2"><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.observacion" /></div>
+                    </div>
+                    <div class="flex justify-end"><PrimaryButton :disabled="form.processing">Guardar</PrimaryButton></div>
                 </form>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Gastos registrados</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="g in gastos.data" :key="g.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(g.fecha || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.cuenta_contable?.nombre || g.categoria }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.referencia || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.moneda }} {{ g.importe }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.observacion || '-' }}</td></tr></tbody></table></div>
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pago</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="g in gastos.data" :key="g.id"><td class="px-6 py-4 text-sm text-gray-700">{{ String(g.fecha || '').slice(0,10) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.cuenta_contable?.nombre || g.categoria }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formaPagoLabel(g.forma_pago) }}<span v-if="g.banco_origen?.nombre"> / {{ g.banco_origen.nombre }}</span><span v-if="g.cheque"> / {{ g.cheque.banco }} #{{ g.cheque.numero }}</span></td><td class="px-6 py-4 text-sm text-gray-700">{{ g.referencia || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700 text-right font-mono">{{ g.moneda }} {{ Number(g.importe).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ g.observacion || '-' }}</td></tr></tbody></table></div>
             </div>
         </div>
     </AppLayout>
