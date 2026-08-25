@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\AsientoContable;
 use App\Models\Comprobante;
+use App\Models\GastoOperativo;
+use App\Models\IngresoOperativo;
+use App\Models\MovimientoBancario;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use App\Models\Recibo;
@@ -14,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class Recontabilizar extends Command
 {
     protected $signature = 'contabilidad:recontabilizar
-        {--tipo= : Tipo de documento a procesar (ventas,compras,cobros,pagos,todos)}
+        {--tipo= : Tipo de documento a procesar (ventas,compras,cobros,pagos,gastos,ingresos,movimientos,todos)}
         {--desde= : Fecha desde (Y-m-d)}
         {--hasta= : Fecha hasta (Y-m-d)}
         {--dry-run : Solo mostrar que se procesaria sin crear asientos}
@@ -33,7 +36,7 @@ class Recontabilizar extends Command
         $omitidos = 0;
         $errores = 0;
 
-        $tipos = $tipo === 'todos' ? ['ventas', 'notas_credito', 'compras', 'cobros', 'pagos'] : [$tipo];
+        $tipos = $tipo === 'todos' ? ['ventas', 'notas_credito', 'compras', 'cobros', 'pagos', 'gastos', 'ingresos', 'movimientos'] : [$tipo];
 
         foreach ($tipos as $t) {
             $this->info("Procesando: {$t}");
@@ -43,6 +46,9 @@ class Recontabilizar extends Command
                 'compras' => $this->recontabilizarCompras($contabilizador, $desde, $hasta, $dryRun, $force),
                 'cobros' => $this->recontabilizarCobros($contabilizador, $desde, $hasta, $dryRun, $force),
                 'pagos' => $this->recontabilizarPagos($contabilizador, $desde, $hasta, $dryRun, $force),
+                'gastos' => $this->recontabilizarGastos($contabilizador, $desde, $hasta, $dryRun, $force),
+                'ingresos' => $this->recontabilizarIngresos($contabilizador, $desde, $hasta, $dryRun, $force),
+                'movimientos' => $this->recontabilizarMovimientos($desde, $hasta, $dryRun, $force),
                 default => [0, 0, 0],
             };
             $procesados += $result[0];
@@ -122,6 +128,88 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarPagoProveedor', 'orden_pago', $dryRun, $force);
     }
 
+    private function recontabilizarGastos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    {
+        $query = GastoOperativo::query()->with('categorias');
+
+        if ($desde) $query->whereDate('fecha', '>=', $desde);
+        if ($hasta) $query->whereDate('fecha', '<=', $hasta);
+
+        // Si no tiene categorias pero tiene cuenta_contable_id, crear una provisoria para contabilizar (gastos simples)
+        return $this->procesarQueryConBackfill($query, $contabilizador, 'contabilizarGastoOperativo', 'gasto_operativo', $dryRun, $force, function ($gasto) {
+            if ($gasto->categorias->isEmpty() && $gasto->cuenta_contable_id) {
+                $gasto->categorias()->create([
+                    'cuenta_contable_id' => $gasto->cuenta_contable_id,
+                    'importe' => $gasto->importe,
+                ]);
+                $gasto->load('categorias');
+            }
+        });
+    }
+
+    private function recontabilizarIngresos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    {
+        $query = IngresoOperativo::query()->with('categorias');
+
+        if ($desde) $query->whereDate('fecha', '>=', $desde);
+        if ($hasta) $query->whereDate('fecha', '<=', $hasta);
+
+        return $this->procesarQueryConBackfill($query, $contabilizador, 'contabilizarIngresoOperativo', 'ingreso_operativo', $dryRun, $force, function ($ingreso) {
+            if ($ingreso->categorias->isEmpty() && $ingreso->cuenta_contable_id) {
+                $ingreso->categorias()->create([
+                    'cuenta_contable_id' => $ingreso->cuenta_contable_id,
+                    'importe' => $ingreso->importe,
+                ]);
+                $ingreso->load('categorias');
+            }
+        });
+    }
+
+    private function recontabilizarMovimientos(?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    {
+        $query = MovimientoBancario::query();
+        if ($desde) $query->whereDate('fecha', '>=', $desde);
+        if ($hasta) $query->whereDate('fecha', '<=', $hasta);
+
+        $procesados = 0; $omitidos = 0; $errores = 0;
+        $query->chunk(100, function ($movs) use ($desde, $hasta, $dryRun, $force, &$procesados, &$omitidos, &$errores) {
+            foreach ($movs as $mov) {
+                $existe = AsientoContable::query()->where('referencia_tipo', 'movimiento_bancario')->where('referencia_id', $mov->id)->exists();
+                if ($existe && !$force) { $omitidos++; continue; }
+                $procesados++;
+                if ($dryRun) { $this->line("  [DRY-RUN] movimiento_bancario #{$mov->id}"); continue; }
+                try {
+                    DB::transaction(function () use ($mov, $force) {
+                        if ($force) AsientoContable::query()->where('referencia_tipo', 'movimiento_bancario')->where('referencia_id', $mov->id)->delete();
+                        $empresa = $mov->empresa;
+                        $cuentaGastos = $empresa?->getCuentaContable('gastos_bancarios') ?? $empresa?->getCuentaContable('gastos_default');
+                        $cuentaMedio = $empresa?->getCuentaContable('medio_pago.transferencia') ?? $empresa?->getCuentaContable('caja_default');
+                        if (! $cuentaGastos || ! $cuentaMedio) throw new \RuntimeException('Cuentas contables no configuradas para movimiento #'.$mov->id);
+                        $asiento = AsientoContable::create([
+                            'empresa_id' => $mov->empresa_id,
+                            'fecha' => $mov->fecha,
+                            'moneda' => $mov->moneda,
+                            'estado' => 'confirmado',
+                            'referencia_tipo' => 'movimiento_bancario',
+                            'referencia_id' => $mov->id,
+                            'descripcion' => 'Movimiento bancario: '.$mov->concepto,
+                        ]);
+                        $esIngreso = in_array($mov->tipo, ['ingreso', 'deposito'], true);
+                        if ($esIngreso) {
+                            \App\Models\AsientoLinea::create(['asiento_id' => $asiento->id, 'cuenta_contable_id' => $cuentaMedio->id, 'debe' => (float)$mov->importe, 'haber' => 0, 'descripcion' => $mov->concepto]);
+                            \App\Models\AsientoLinea::create(['asiento_id' => $asiento->id, 'cuenta_contable_id' => $cuentaGastos->id, 'debe' => 0, 'haber' => (float)$mov->importe, 'descripcion' => 'Ingreso bancario']);
+                        } else {
+                            \App\Models\AsientoLinea::create(['asiento_id' => $asiento->id, 'cuenta_contable_id' => $cuentaGastos->id, 'debe' => (float)$mov->importe, 'haber' => 0, 'descripcion' => $mov->concepto]);
+                            \App\Models\AsientoLinea::create(['asiento_id' => $asiento->id, 'cuenta_contable_id' => $cuentaMedio->id, 'debe' => 0, 'haber' => (float)$mov->importe, 'descripcion' => 'Debito bancario']);
+                        }
+                        $mov->update(['contabilizado' => true]);
+                    });
+                } catch (\Throwable $e) { $this->error("  Error movimiento_bancario #{$mov->id}: {$e->getMessage()}"); $errores++; }
+            }
+        });
+        return [$procesados, $omitidos, $errores];
+    }
+
     private function procesarQuery($query, ContabilizadorService $contabilizador, string $metodo, string $refTipo, bool $dryRun, bool $force): array
     {
         $procesados = 0;
@@ -164,6 +252,27 @@ class Recontabilizar extends Command
             }
         });
 
+        return [$procesados, $omitidos, $errores];
+    }
+
+    private function procesarQueryConBackfill($query, ContabilizadorService $contabilizador, string $metodo, string $refTipo, bool $dryRun, bool $force, ?callable $backfill = null): array
+    {
+        $procesados = 0; $omitidos = 0; $errores = 0;
+        $query->chunk(100, function ($documentos) use ($contabilizador, $metodo, $refTipo, $dryRun, $force, $backfill, &$procesados, &$omitidos, &$errores) {
+            foreach ($documentos as $doc) {
+                $existe = AsientoContable::query()->where('referencia_tipo', $refTipo)->where('referencia_id', $doc->id)->exists();
+                if ($existe && ! $force) { $omitidos++; continue; }
+                $procesados++;
+                if ($dryRun) { $this->line("  [DRY-RUN] {$metodo} {$refTipo} #{$doc->id}"); continue; }
+                try {
+                    DB::transaction(function () use ($contabilizador, $metodo, $doc, $refTipo, $force, $backfill) {
+                        if ($force) AsientoContable::query()->where('referencia_tipo', $refTipo)->where('referencia_id', $doc->id)->delete();
+                        if ($backfill) $backfill($doc);
+                        $contabilizador->$metodo($doc);
+                    });
+                } catch (\Throwable $e) { $this->error("  Error {$metodo} {$refTipo} #{$doc->id}: {$e->getMessage()}"); $errores++; }
+            }
+        });
         return [$procesados, $omitidos, $errores];
     }
 }

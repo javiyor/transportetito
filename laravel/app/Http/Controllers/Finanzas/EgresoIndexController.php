@@ -12,6 +12,7 @@ use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -127,9 +128,44 @@ class EgresoIndexController extends Controller
             ]);
         }
 
-        $gasto->load('categorias.cuentaContable');
-        $contabilizador->contabilizarGastoOperativo($gasto);
+        $gasto->load('categorias.cuentaContable', 'empresa');
 
-        return back()->with('success', 'Egreso registrado y contabilizado.');
+        // Contabilizar en Libro Diario (con manejo para no dejar egreso sin asiento silencioso)
+        try {
+            $contabilizador->contabilizarGastoOperativo($gasto);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo contabilizar egreso', ['gasto_id' => $gasto->id, 'error' => $e->getMessage()]);
+            return back()->with('flash.error', 'Egreso guardado pero no se pudo contabilizar: '.$e->getMessage().' — Revisá Plan de Cuentas (cuenta gasto / medio pago).');
+        }
+
+        // Si corresponde, crear movimiento bancario espejo (igual que gastos simples)
+        $bancoIdParaMovimiento = null;
+        if (in_array($data['forma_pago'], ['transferencia', 'cheque', 'tarjeta'], true)) {
+            $bancoIdParaMovimiento = $data['banco_origen_id'] ?? null;
+            if ($data['forma_pago'] === 'cheque' && ($data['tipo_cheque'] ?? null) === 'propio') {
+                $bancoIdParaMovimiento = $data['cheque_banco_id'] ?? $bancoIdParaMovimiento;
+            }
+        }
+        if ($bancoIdParaMovimiento) {
+            try {
+                \App\Models\MovimientoBancario::query()->create([
+                    'empresa_id' => $empresaId,
+                    'banco_id' => $bancoIdParaMovimiento,
+                    'fecha' => $data['fecha_pago'] ?: $data['fecha'],
+                    'tipo' => 'egreso',
+                    'concepto' => $data['referencia'] ?: ('Egreso #'.$gasto->id),
+                    'importe' => $data['importe'],
+                    'moneda' => $data['moneda'],
+                    'referencia_tipo' => 'gasto_operativo',
+                    'referencia_id' => $gasto->id,
+                    'contabilizado' => true,
+                    'creado_por_user_id' => $request->user()->id,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo crear movimiento bancario para egreso', ['gasto_id' => $gasto->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return back()->with('flash.success', 'Egreso registrado y contabilizado.');
     }
 }
