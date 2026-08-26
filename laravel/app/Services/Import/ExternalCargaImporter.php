@@ -148,17 +148,41 @@ SQL,
     private function firstOrCreateTercero(string $cuit, string $razonSocial, int $externalId): Tercero
     {
         $cleanCuit = preg_replace('/\D+/', '', $cuit) ?? '';
-
-        if ($cleanCuit === '') {
-            $cleanCuit = 'EXT-'.$externalId;
-        }
-
         $cleanRazon = trim($razonSocial) !== '' ? trim($razonSocial) : ('Tercero '.$externalId);
 
-        return Tercero::query()->firstOrCreate(
-            ['cuit' => $cleanCuit],
-            ['razon_social' => $cleanRazon]
-        );
+        // CUIT no válido (corto como 1463): buscar por razón social para no chocar con unique
+        $isValidCuit = (bool) preg_match('/^\d{11}$/', $cleanCuit);
+        if (!$isValidCuit) {
+            if ($cleanCuit !== '') {
+                $byCuit = Tercero::query()->where('cuit', $cleanCuit)->first();
+                if ($byCuit) return $byCuit;
+            }
+            $byName = Tercero::query()->where('razon_social', $cleanRazon)->first();
+            if ($byName) return $byName;
+            $cleanCuit = 'EXT-'.$externalId;
+            $byExt = Tercero::query()->where('cuit', $cleanCuit)->first();
+            if ($byExt) return $byExt;
+            try {
+                return Tercero::query()->create(['cuit' => $cleanCuit, 'razon_social' => $cleanRazon]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if (str_contains($e->getMessage(), 'terceros_cuit_unique')) {
+                    return Tercero::query()->where('cuit', $cleanCuit)->firstOrFail();
+                }
+                throw $e;
+            }
+        }
+
+        try {
+            return Tercero::query()->firstOrCreate(
+                ['cuit' => $cleanCuit],
+                ['razon_social' => $cleanRazon]
+            );
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (str_contains($e->getMessage(), 'terceros_cuit_unique')) {
+                return Tercero::query()->where('cuit', $cleanCuit)->firstOrFail();
+            }
+            throw $e;
+        }
     }
 
     private function firstOrCreateCuenta(Empresa $empresa, Tercero $tercero, int $numeroCliente, string $nombreCuenta): ?TerceroCuenta

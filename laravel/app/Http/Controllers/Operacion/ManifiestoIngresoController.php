@@ -169,9 +169,6 @@ class ManifiestoIngresoController extends Controller
 
     public function corregirPedido(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
     {
-        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
-        abort_unless((int) $manifiesto->empresa_id === $empresaId, 404);
-
         $data = $request->validate([
             'bultos' => ['nullable', 'integer', 'min:0'],
             'palets' => ['nullable', 'integer', 'min:0'],
@@ -193,9 +190,6 @@ class ManifiestoIngresoController extends Controller
 
     public function adjuntarFotoBultos(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
     {
-        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
-        abort_unless((int) $manifiesto->empresa_id === $empresaId, 404);
-
         $data = $request->validate([
             'foto_bultos' => ['required', 'image', 'max:10240'],
         ]);
@@ -216,9 +210,6 @@ class ManifiestoIngresoController extends Controller
 
     public function marcarFacturacion(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
     {
-        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
-        abort_unless((int) $manifiesto->empresa_id === $empresaId, 404);
-
         $data = $request->validate([
             'recepcion_facturacion_estado' => ['required', 'in:pendiente,facturado,devuelto'],
             'recepcion_facturacion_observacion' => ['nullable', 'string', 'max:1000'],

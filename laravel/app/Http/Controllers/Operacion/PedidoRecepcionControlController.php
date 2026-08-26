@@ -13,14 +13,8 @@ class PedidoRecepcionControlController extends Controller
 {
     public function __invoke(Request $request, Pedido $pedido): RedirectResponse
     {
-        $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        if ((int) $pedido->empresa_id !== $currentEmpresaId) {
-            $pedidoEmpresa = Empresa::query()->find($pedido->empresa_id, ['razon_social']);
-            $actualEmpresa = $currentEmpresaId ? Empresa::query()->find($currentEmpresaId, ['razon_social']) : null;
-            $pedidoNombre = $pedidoEmpresa?->razon_social ?: "ID {$pedido->empresa_id}";
-            $actualNombre = $actualEmpresa?->razon_social ?: ($currentEmpresaId ? "ID {$currentEmpresaId}" : 'ninguna');
-            return back()->with('flash.error', "El pedido #{$pedido->id} pertenece a \"{$pedidoNombre}\". Cambiá a esa empresa arriba para confirmarlo. Empresa actual: \"{$actualNombre}\".");
-        }
+        // Control sin restricción de empresa (pedido puede ser de cualquier empresa)
+        // Se mantiene el log por auditoría pero no se bloquea
 
         $camposError = ['remitente', 'destinatario', 'valor_declarado', 'bultos', 'palets'];
 
