@@ -128,6 +128,16 @@ const applyFilters = () => {
     }, { preserveState: true, replace: true });
 };
 
+const goToPage = (page) => {
+    if (page < 1 || page > props.asientos.last_page) return;
+    router.get(route('finanzas.libro-diario'), {
+        fecha_desde: props.filtros.fecha_desde || '',
+        fecha_hasta: props.filtros.fecha_hasta || '',
+        cuenta_contable_id: props.filtros.cuenta_contable_id || '',
+        page,
+    }, { preserveState: true, preserveScroll: true });
+};
+
 const refLabel = (tipo) => ({
     comprobante: 'Venta',
     proveedor_comprobante: 'Compra',
@@ -263,12 +273,19 @@ const fmtDesc = (d) => {
                         </tbody>
                     </table>
                 </div>
-                <div class="p-4 border-t border-gray-200" v-if="asientos.total > asientos.per_page">
-                    <div class="flex items-center justify-between text-sm">
+                <div class="p-4 border-t border-gray-200" v-if="asientos.last_page > 1">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
                         <span class="text-gray-500">Pág. {{ asientos.current_page }} de {{ asientos.last_page }} ({{ asientos.total }} asientos)</span>
-                        <div class="flex gap-2">
-                            <Link v-if="asientos.prev_page_url" :href="asientos.prev_page_url" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50">Anterior</Link>
-                            <Link v-if="asientos.next_page_url" :href="asientos.next_page_url" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50">Siguiente</Link>
+                        <div class="flex items-center gap-1 flex-wrap">
+                            <button :disabled="asientos.current_page <= 1" @click="goToPage(asientos.current_page - 1)" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                            <button
+                                v-for="p in asientos.last_page"
+                                :key="p"
+                                @click="goToPage(p)"
+                                :class="p === asientos.current_page ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white hover:bg-gray-50'"
+                                class="px-3 py-1 border rounded-md min-w-[36px]"
+                            >{{ p }}</button>
+                            <button :disabled="asientos.current_page >= asientos.last_page" @click="goToPage(asientos.current_page + 1)" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
                         </div>
                     </div>
                 </div>
