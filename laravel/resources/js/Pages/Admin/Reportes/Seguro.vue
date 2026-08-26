@@ -12,6 +12,7 @@ import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     rows: Array,
+    detallesPorChofer: Object,
     totalGeneral: Number,
     mes: Number,
     anio: Number,
@@ -90,13 +91,27 @@ const ejecutarEliminar = () => {
     });
 };
 
-const descargarCsv = () => {
+const descargarExcel = () => {
     window.open(route('admin.reportes.seguro.csv', { mes: props.mes, anio: props.anio }), '_blank');
 };
 
 const hasOverride = (r, field) => {
     const ov = r.override_fields || {};
     return ov[field] !== null && ov[field] !== undefined;
+};
+
+const expandedChofer = ref(new Set());
+const toggleChofer = (key) => {
+    const s = new Set(expandedChofer.value);
+    if (s.has(key)) s.delete(key);
+    else s.add(key);
+    expandedChofer.value = s;
+};
+const choferKey = (r) => `${r.nummovil}|${r.nomchof || 'sin-chofer'}`;
+const formatFecha = (v) => {
+    if (!v) return '-';
+    const d = new Date(String(v).slice(0, 10) + 'T12:00:00');
+    return isNaN(d.getTime()) ? String(v).slice(0, 10) : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 </script>
 
@@ -111,7 +126,7 @@ const hasOverride = (r, field) => {
                     <button @click="cambiarMes(-1)" class="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50">&larr; Mes anterior</button>
                     <span class="text-sm font-medium">{{ mesNombre }} {{ anio }}</span>
                     <button @click="cambiarMes(1)" class="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50">Mes siguiente &rarr;</button>
-                    <button @click="descargarCsv" class="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50">CSV</button>
+                    <button @click="descargarExcel" class="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Excel</button>
                     <button @click="window.print()" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Imprimir</button>
                 </div>
             </div>
@@ -136,6 +151,7 @@ const hasOverride = (r, field) => {
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Patente</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Acoplado</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha envío</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Depósitos origen</th>
                                 <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Viajes</th>
                                 <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Cargas</th>
@@ -144,27 +160,67 @@ const hasOverride = (r, field) => {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="r in rows" :key="r.nummovil" class="hover:bg-gray-50">
-                                <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-900">{{ r.nummovil }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ r.desmovil || '-' }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-700">{{ r.patmovil || '-' }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-700">{{ r.pacmovil || '-' }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ r.nomchof || '-' }}</td>
-                                <td class="px-3 py-2 text-gray-700 max-w-[200px]">{{ r.depositos_origen || '-' }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_viajes') }">{{ r.total_viajes }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_cargas') }">{{ r.total_cargas }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-right font-mono text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_valor_declarado') }">{{ formatNum(r.total_valor_declarado) }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-center print:hidden">
-                                    <div class="flex items-center justify-center gap-1">
-                                        <button @click="abrirEditar(r)" class="text-indigo-600 hover:text-indigo-800 text-[10px] underline">Editar</button>
-                                        <button @click="confirmarEliminar(r.nummovil)" class="text-red-600 hover:text-red-800 text-[10px] underline">Eliminar</button>
-                                    </div>
-                                </td>
-                            </tr>
+                            <template v-for="r in rows" :key="r.nummovil">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-900">
+                                        <button @click="toggleChofer(choferKey(r))" class="text-indigo-600 hover:text-indigo-800 mr-1">{{ expandedChofer.has(choferKey(r)) ? '▼' : '▶' }}</button>
+                                        {{ r.nummovil }}
+                                    </td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ r.desmovil || '-' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-700">{{ r.patmovil || '-' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-700">{{ r.pacmovil || '-' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ r.nomchof || '-' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-700 text-xs">{{ r.primera_fecha ? formatFecha(r.primera_fecha) : '-' }}<span v-if="r.ultima_fecha && r.ultima_fecha !== r.primera_fecha"> - {{ formatFecha(r.ultima_fecha) }}</span></td>
+                                    <td class="px-3 py-2 text-gray-700 max-w-[200px] text-xs">{{ r.depositos_origen || '-' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_viajes') }">{{ r.total_viajes }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_cargas') }">{{ r.total_cargas }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-right font-mono text-gray-700" :class="{ 'font-bold text-amber-700': hasOverride(r, 'total_valor_declarado') }">{{ formatNum(r.total_valor_declarado) }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center print:hidden">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <button @click="abrirEditar(r)" class="text-indigo-600 hover:text-indigo-800 text-[10px] underline">Editar</button>
+                                            <button @click="confirmarEliminar(r.nummovil)" class="text-red-600 hover:text-red-800 text-[10px] underline">Eliminar</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="expandedChofer.has(choferKey(r))" class="bg-blue-50/50">
+                                    <td colspan="11" class="px-4 py-2">
+                                        <div class="text-xs font-semibold text-gray-700 mb-1">Detalle de viajes — {{ r.nomchof || 'Sin chofer' }} ({{ (props.detallesPorChofer?.[choferKey(r)] || []).length }} viajes)</div>
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full divide-y divide-gray-200 text-xs bg-white rounded border">
+                                                <thead class="bg-gray-100"><tr>
+                                                    <th class="px-2 py-1 text-left">Fecha</th>
+                                                    <th class="px-2 py-1 text-left">ID Envío</th>
+                                                    <th class="px-2 py-1 text-left">Depósito</th>
+                                                    <th class="px-2 py-1 text-left">Carga ID</th>
+                                                    <th class="px-2 py-1 text-center">Cant.</th>
+                                                    <th class="px-2 py-1 text-left">Unidad</th>
+                                                    <th class="px-2 py-1 text-left">Remito</th>
+                                                    <th class="px-2 py-1 text-right">Valor</th>
+                                                </tr></thead>
+                                                <tbody>
+                                                    <tr v-for="d in (props.detallesPorChofer?.[choferKey(r)] || [])" :key="d.carga_id + '-' + d.id_envio" class="border-t border-gray-100 hover:bg-gray-50">
+                                                        <td class="px-2 py-1 whitespace-nowrap">{{ formatFecha(d.fecha_envio) }}</td>
+                                                        <td class="px-2 py-1 font-mono">#{{ d.id_envio }}</td>
+                                                        <td class="px-2 py-1">{{ d.deposito_origen }}</td>
+                                                        <td class="px-2 py-1 font-mono">#{{ d.carga_id }}</td>
+                                                        <td class="px-2 py-1 text-center">{{ d.cantidad }}</td>
+                                                        <td class="px-2 py-1">{{ d.unidad || '-' }}</td>
+                                                        <td class="px-2 py-1 font-mono">{{ d.remito || '-' }}</td>
+                                                        <td class="px-2 py-1 text-right font-mono">$ {{ Number(d.valordeclarado || 0).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td>
+                                                    </tr>
+                                                    <tr v-if="!(props.detallesPorChofer?.[choferKey(r)] || []).length">
+                                                        <td colspan="8" class="px-2 py-2 text-center text-gray-400">Sin detalle</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                         <tfoot class="bg-gray-100">
                             <tr>
-                                <td colspan="8" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
+                                <td colspan="9" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
                                 <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
                                 <td class="print:hidden"></td>
                             </tr>

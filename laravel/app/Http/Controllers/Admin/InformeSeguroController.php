@@ -30,6 +30,9 @@ class InformeSeguroController extends Controller
               m.pacmovil,
               cd.nomchof,
               group_concat(distinct d.nombre separator ', ') as depositos_origen,
+              min(hr.fecha) as primera_fecha,
+              max(hr.fecha) as ultima_fecha,
+              group_concat(distinct hr.fecha order by hr.fecha separator ', ') as fechas_envio,
               sum(c.valordeclarado) as total_valor_declarado,
               count(distinct c.id) as total_cargas,
               count(distinct hr.id) as total_viajes
@@ -45,6 +48,42 @@ class InformeSeguroController extends Controller
             SQL,
             [$desde->toDateString(), $hasta->toDateString()]
         );
+
+        // Detalle de viajes por chofer para despliegue
+        $detallesRaw = DB::connection('mysql_external')->select(
+            <<<'SQL'
+            select
+              hr.fecha as fecha_envio,
+              hr.id as id_envio,
+              m.nummovil,
+              m.desmovil,
+              m.patmovil,
+              m.pacmovil,
+              cd.nomchof,
+              d.nombre as deposito_origen,
+              c.id as carga_id,
+              c.cantidad,
+              c.unidad,
+              c.remito,
+              c.valordeclarado
+            from hojaderuta hr
+            inner join moviles m on hr.idcamion = m.nummovil
+            left join conductores cd on hr.idchofer = cd.nrochof
+            inner join cargaporenvio cpe on cpe.idenvio = hr.id
+            inner join carga c on c.id = cpe.idcarga
+            inner join depositos d on c.iddeposito = d.id
+            where hr.fecha >= ? and hr.fecha < ?
+            order by cd.nomchof, hr.fecha, m.nummovil
+            SQL,
+            [$desde->toDateString(), $hasta->toDateString()]
+        );
+
+        $detallesPorChofer = [];
+        foreach ($detallesRaw as $d) {
+            $key = $d->nummovil.'|'.($d->nomchof ?? 'sin-chofer');
+            if (!isset($detallesPorChofer[$key])) $detallesPorChofer[$key] = [];
+            $detallesPorChofer[$key][] = $d;
+        }
 
         $overrides = InformeSeguroOverride::where('mes', $mes)
             ->where('anio', $anio)
@@ -85,6 +124,7 @@ class InformeSeguroController extends Controller
 
         return Inertia::render('Admin/Reportes/Seguro', [
             'rows' => $rows,
+            'detallesPorChofer' => $detallesPorChofer,
             'totalGeneral' => (float) $totalGeneral,
             'mes' => $mes,
             'anio' => $anio,
@@ -144,83 +184,65 @@ class InformeSeguroController extends Controller
         $desde = CarbonImmutable::createFromDate($anio, $mes, 1)->startOfMonth();
         $hasta = $desde->addMonth();
 
+        // Planilla completa sin agrupar: detalle de cada carga/viaje
         $rows = DB::connection('mysql_external')->select(
             <<<'SQL'
             select
+              hr.fecha as fecha_envio,
+              hr.id as id_envio,
               m.nummovil,
               m.desmovil,
               m.patmovil,
               m.pacmovil,
               cd.nomchof,
-              group_concat(distinct d.nombre separator ', ') as depositos_origen,
-              sum(c.valordeclarado) as total_valor_declarado,
-              count(distinct c.id) as total_cargas,
-              count(distinct hr.id) as total_viajes
-            from moviles m
-            inner join hojaderuta hr on hr.idcamion = m.nummovil
+              d.nombre as deposito_origen,
+              c.id as carga_id,
+              c.cantidad,
+              c.unidad,
+              c.remito,
+              c.valordeclarado
+            from hojaderuta hr
+            inner join moviles m on hr.idcamion = m.nummovil
             left join conductores cd on hr.idchofer = cd.nrochof
             inner join cargaporenvio cpe on cpe.idenvio = hr.id
             inner join carga c on c.id = cpe.idcarga
             inner join depositos d on c.iddeposito = d.id
             where hr.fecha >= ? and hr.fecha < ?
-            group by m.nummovil, m.desmovil, m.patmovil, m.pacmovil, cd.nomchof
-            order by m.nummovil
+            order by hr.fecha, m.nummovil, cd.nomchof
             SQL,
             [$desde->toDateString(), $hasta->toDateString()]
         );
 
-        $overrides = InformeSeguroOverride::where('mes', $mes)
-            ->where('anio', $anio)
-            ->get()
-            ->keyBy('nummovil');
+        $filename = sprintf('informe-seguro-detalle-%s-%d.xls', str_pad($mes, 2, '0', STR_PAD_LEFT), $anio);
 
-        foreach ($rows as $r) {
-            $ov = $overrides->get($r->nummovil);
-            if (!$ov) {
-                continue;
-            }
-            if ($ov->desmovil !== null) {
-                $r->desmovil = $ov->desmovil;
-            }
-            if ($ov->patmovil !== null) {
-                $r->patmovil = $ov->patmovil;
-            }
-            if ($ov->pacmovil !== null) {
-                $r->pacmovil = $ov->pacmovil;
-            }
-            if ($ov->total_viajes !== null) {
-                $r->total_viajes = (int) $ov->total_viajes;
-            }
-            if ($ov->total_cargas !== null) {
-                $r->total_cargas = (int) $ov->total_cargas;
-            }
-            if ($ov->total_valor_declarado !== null) {
-                $r->total_valor_declarado = (float) $ov->total_valor_declarado;
-            }
-        }
-
-        $filename = sprintf('informe-seguro-%s-%d.csv', str_pad($mes, 2, '0', STR_PAD_LEFT), $anio);
-
-        $response = new StreamedResponse(function () use ($rows) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Móvil', 'Descripción', 'Patente', 'Acoplado', 'Chofer', 'Depósitos origen', 'Viajes', 'Cargas', 'Valor declarado']);
+        $response = new StreamedResponse(function () use ($rows, $mes, $anio) {
+            // Excel compatible HTML
+            echo "<html><head><meta charset='UTF-8'><style>td{border:1px solid #ddd;padding:4px;font-size:11px} th{border:1px solid #ddd;padding:4px;background:#f3f4f6;font-size:11px}</style></head><body>";
+            echo "<h3>Informe Seguro - ".str_pad($mes, 2, '0', STR_PAD_LEFT)."/$anio - Detalle completo sin agrupar</h3>";
+            echo "<table><thead><tr>";
+            echo "<th>Fecha envío</th><th>ID Envío</th><th>Móvil</th><th>Descripción</th><th>Patente</th><th>Acoplado</th><th>Chofer</th><th>Depósito origen</th><th>Carga ID</th><th>Cantidad</th><th>Unidad</th><th>Remito</th><th>Valor declarado</th>";
+            echo "</tr></thead><tbody>";
             foreach ($rows as $r) {
-                fputcsv($handle, [
-                    $r->nummovil,
-                    $r->desmovil,
-                    $r->patmovil,
-                    $r->pacmovil,
-                    $r->nomchof,
-                    $r->depositos_origen,
-                    $r->total_viajes,
-                    $r->total_cargas,
-                    number_format((float) $r->total_valor_declarado, 2, ',', '.'),
-                ]);
+                echo "<tr>";
+                echo "<td>".htmlspecialchars($r->fecha_envio)."</td>";
+                echo "<td>".htmlspecialchars($r->id_envio)."</td>";
+                echo "<td>".htmlspecialchars($r->nummovil)."</td>";
+                echo "<td>".htmlspecialchars($r->desmovil)."</td>";
+                echo "<td>".htmlspecialchars($r->patmovil)."</td>";
+                echo "<td>".htmlspecialchars($r->pacmovil)."</td>";
+                echo "<td>".htmlspecialchars($r->nomchof ?? '')."</td>";
+                echo "<td>".htmlspecialchars($r->deposito_origen)."</td>";
+                echo "<td>".htmlspecialchars($r->carga_id)."</td>";
+                echo "<td>".htmlspecialchars($r->cantidad)."</td>";
+                echo "<td>".htmlspecialchars($r->unidad ?? '')."</td>";
+                echo "<td>".htmlspecialchars($r->remito ?? '')."</td>";
+                echo "<td>".number_format((float) $r->valordeclarado, 2, ',', '.')."</td>";
+                echo "</tr>";
             }
-            fclose($handle);
+            echo "</tbody></table></body></html>";
         });
 
-        $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
+        $response->headers->set('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
         $response->headers->set('Content-Disposition', "attachment; filename=\"$filename\"");
 
         return $response;
