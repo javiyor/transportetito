@@ -83,11 +83,27 @@ class CuentaCorrienteIndexController extends Controller
         $comprobantes = Comprobante::query()
             ->where('empresa_id', $empresaId)
             ->whereIn('facturar_cuenta_id', $cuentaIds)
-            ->where('estado', 'emitido')
+            ->where('estado', 'emitida')
             ->orderBy('fecha_emision')
             ->get(['id', 'facturar_cuenta_id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae']);
 
-        $comprobantesPorCuenta = $comprobantes->groupBy('facturar_cuenta_id');
+        // Calcular saldo pendiente real por comprobante (total - sum aplicaciones no anuladas)
+        $aplicacionesSum = \App\Models\ReciboAplicacion::query()
+            ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
+            ->where('recibos.estado', '!=', 'anulada')
+            ->whereIn('recibo_aplicaciones.comprobante_id', $comprobantes->pluck('id'))
+            ->selectRaw('comprobante_id, SUM(recibo_aplicaciones.importe) as sum_importe')
+            ->groupBy('comprobante_id')
+            ->pluck('sum_importe', 'comprobante_id');
+
+        // Filtrar solo comprobantes con saldo pendiente > 0.01
+        $comprobantesPendientes = $comprobantes->filter(function ($c) use ($aplicacionesSum) {
+            $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
+            $pendiente = (float) $c->total - $aplicado;
+            return $pendiente > 0.01;
+        });
+
+        $comprobantesPorCuenta = $comprobantesPendientes->groupBy('facturar_cuenta_id');
 
         $zonas = Zona::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
@@ -109,20 +125,25 @@ class CuentaCorrienteIndexController extends Controller
 
         $cobradores = User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']);
 
-        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta) {
+        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $aplicacionesSum) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
             $vencido30 = round(max(0, (float) $items->where('fecha', '<=', $cutoff)->sum('importe_signed')), 2);
 
             $docsPendientes = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
-                ->map(fn (Comprobante $c) => [
-                    'id' => $c->id,
-                    'tipo' => $c->tipo,
-                    'total' => (float) $c->total,
-                    'moneda' => $c->moneda,
-                    'fecha_emision' => $c->fecha_emision?->format('Y-m-d'),
-                    'arca_cae' => $c->arca_cae,
-                ])
+                ->map(function (Comprobante $c) use ($aplicacionesSum) {
+                    $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
+                    $pendiente = round((float) $c->total - $aplicado, 2);
+                    return [
+                        'id' => $c->id,
+                        'tipo' => $c->tipo,
+                        'total' => $pendiente > 0 ? $pendiente : 0,
+                        'moneda' => $c->moneda,
+                        'fecha_emision' => $c->fecha_emision?->format('Y-m-d'),
+                        'arca_cae' => $c->arca_cae,
+                    ];
+                })
+                ->filter(fn ($d) => $d['total'] > 0.01)
                 ->values();
 
             return [
