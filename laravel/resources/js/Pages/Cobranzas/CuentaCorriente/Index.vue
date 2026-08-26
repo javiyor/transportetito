@@ -6,6 +6,7 @@ import { formatNum } from '@/Utils/format.js';
 
 const props = defineProps({
     cuentas: Array,
+    totales: Object,
     cutoff: String,
     filters: Object,
     zonas: Array,
@@ -146,7 +147,12 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex items-center justify-between gap-4">
                         <p class="text-sm text-gray-600">Las cuentas con deuda vencida al {{ cutoff }} se resaltan.</p>
-                        <p class="text-sm font-medium text-gray-900">{{ cuentas.length }} cuentas &mdash; Total: ${{ formatNum(sumBy(cuentas, 'saldo')) }}</p>
+                        <p class="text-sm font-medium text-gray-900">
+                            {{ cuentas.length }} cuentas &mdash; Total: ${{ formatNum(totales?.general ?? sumBy(cuentas, 'saldo')) }}
+                            <span v-if="totales && Math.abs(totales.docs - totales.general) > 0.01" class="ml-2 text-xs font-normal" :class="totales.docs < totales.general ? 'text-amber-600' : 'text-gray-500'">
+                                (Docs pendientes: ${{ formatNum(totales.docs) }})
+                            </span>
+                        </p>
                     </div>
                 </div>
                 <div class="space-y-4 p-4 sm:hidden">

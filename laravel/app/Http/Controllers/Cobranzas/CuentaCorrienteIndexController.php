@@ -171,8 +171,17 @@ class CuentaCorrienteIndexController extends Controller
             };
         })->values();
 
+        $totalGeneral = round($rows->sum('saldo'), 2);
+        $totalVencido = round($rows->sum('vencido_30'), 2);
+        $totalDocs = round($rows->sum('docs_total'), 2);
+
         return Inertia::render('Cobranzas/CuentaCorriente/Index', [
             'cuentas' => $rows,
+            'totales' => [
+                'general' => $totalGeneral,
+                'vencido' => $totalVencido,
+                'docs' => $totalDocs,
+            ],
             'cutoff' => $cutoff,
             'zonas' => $zonas,
             'localidades' => $localidades,
