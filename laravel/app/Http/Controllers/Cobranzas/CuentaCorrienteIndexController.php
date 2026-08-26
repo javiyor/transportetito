@@ -85,9 +85,9 @@ class CuentaCorrienteIndexController extends Controller
             ->whereIn('facturar_cuenta_id', $cuentaIds)
             ->where('estado', 'emitida')
             ->orderBy('fecha_emision')
-            ->get(['id', 'facturar_cuenta_id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae']);
+            ->get(['id', 'facturar_cuenta_id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'comprobante_origen_id']);
 
-        // Calcular saldo pendiente real por comprobante (total - sum aplicaciones no anuladas)
+        // Calcular saldo pendiente real por comprobante (total - notas - recibos aplicados)
         $aplicacionesSum = \App\Models\ReciboAplicacion::query()
             ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
             ->where('recibos.estado', '!=', 'anulada')
@@ -96,10 +96,21 @@ class CuentaCorrienteIndexController extends Controller
             ->groupBy('comprobante_id')
             ->pluck('sum_importe', 'comprobante_id');
 
-        // Filtrar solo comprobantes con saldo pendiente > 0.01
-        $comprobantesPendientes = $comprobantes->filter(function ($c) use ($aplicacionesSum) {
+        $notasSum = Comprobante::query()
+            ->where('empresa_id', $empresaId)
+            ->whereIn('comprobante_origen_id', $comprobantes->pluck('id'))
+            ->where('estado', '!=', 'anulada')
+            ->where('tipo', 'like', 'nota_credito%')
+            ->selectRaw('comprobante_origen_id, SUM(ABS(total)) as sum_notas')
+            ->groupBy('comprobante_origen_id')
+            ->pluck('sum_notas', 'comprobante_origen_id');
+
+        // Filtrar solo comprobantes de deuda (total >0) con saldo pendiente > 0.01
+        $comprobantesPendientes = $comprobantes->filter(function ($c) use ($aplicacionesSum, $notasSum) {
+            if ((float) $c->total <= 0) return false; // no contar NC como deuda pendiente
             $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
-            $pendiente = (float) $c->total - $aplicado;
+            $notas = (float) ($notasSum[$c->id] ?? 0);
+            $pendiente = (float) $c->total - $aplicado - $notas;
             return $pendiente > 0.01;
         });
 
@@ -125,15 +136,16 @@ class CuentaCorrienteIndexController extends Controller
 
         $cobradores = User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']);
 
-        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $aplicacionesSum) {
+        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $aplicacionesSum, $notasSum) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
             $vencido30 = round(max(0, (float) $items->where('fecha', '<=', $cutoff)->sum('importe_signed')), 2);
 
             $docsPendientes = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
-                ->map(function (Comprobante $c) use ($aplicacionesSum) {
+                ->map(function (Comprobante $c) use ($aplicacionesSum, $notasSum) {
                     $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
-                    $pendiente = round((float) $c->total - $aplicado, 2);
+                    $notas = (float) ($notasSum[$c->id] ?? 0);
+                    $pendiente = round((float) $c->total - $aplicado - $notas, 2);
                     return [
                         'id' => $c->id,
                         'tipo' => $c->tipo,

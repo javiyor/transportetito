@@ -108,6 +108,12 @@ class ImportarFacturasCsvStoreController extends Controller
                 ];
                 $tipo = $arcaTipoMap[$tipoFinal] ?? 'factura_interna';
 
+                $isNotaCredito = str_contains($tipo, 'nota_credito');
+                $isNotaDebito = str_contains($tipo, 'nota_debito');
+                $totalBruto = (float) $row['total'];
+                $totalParaComprobante = $isNotaCredito ? -1 * abs($totalBruto) : $totalBruto;
+                $totalParaCtaCte = $isNotaCredito ? -1 * abs($totalBruto) : ($isNotaDebito ? abs($totalBruto) : $totalBruto);
+
                 $comprobante = Comprobante::create([
                     'empresa_id' => $empresa->id,
                     'deposito_id' => null,
@@ -116,7 +122,7 @@ class ImportarFacturasCsvStoreController extends Controller
                     'tipo' => $tipo,
                     'estado' => 'emitida',
                     'moneda' => $row['moneda'],
-                    'total' => $row['total'],
+                    'total' => $totalParaComprobante,
                     'subtotal' => $row['subtotal'] ?? 0,
                     'iva_total' => $row['iva_total'] ?? 0,
                     'tributos_total' => $row['tributos_total'] ?? 0,
@@ -131,17 +137,19 @@ class ImportarFacturasCsvStoreController extends Controller
                 ]);
 
                 if ($cuenta) {
+                    // Para notas de crédito, el movimiento debe ser negativo (reduce deuda)
+                    $tipoMov = $isNotaCredito ? 'nota_credito' : ($isNotaDebito ? 'nota_debito' : 'factura');
                     CtaCteMovimiento::query()->create([
                         'empresa_id' => $empresa->id,
                         'tercero_cuenta_id' => $cuenta->id,
                         'fecha' => $row['fecha_emision'],
-                        'tipo' => 'factura',
+                        'tipo' => $tipoMov,
                         'moneda' => $row['moneda'],
                         'cotizacion_ars' => 1,
-                        'importe_signed' => (float) $row['total'],
+                        'importe_signed' => $totalParaCtaCte,
                         'referencia_tipo' => 'comprobante',
                         'referencia_id' => $comprobante->id,
-                        'observacion' => 'Importacion CSV factura #'.$comprobante->id,
+                        'observacion' => 'Importacion CSV '.($isNotaCredito ? 'NC' : ($isNotaDebito ? 'ND' : 'factura')).' #'.$comprobante->id,
                     ]);
                 }
 
