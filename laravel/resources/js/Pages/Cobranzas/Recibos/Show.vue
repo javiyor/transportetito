@@ -64,6 +64,22 @@ const totalRetenciones = computed(() => {
     return importeRet(r.iibb) + importeRet(r.iva) + importeRet(r.ganancias);
 });
 
+const medioLabel = (medio) => {
+    const map = { efectivo: 'Efectivo', transferencia: 'Transferencia', cheque_tercero: 'Cheque tercero', cheque_propio: 'Cheque propio' };
+    return map[medio] || medio;
+};
+
+const formatChequeDetalle = (detalle) => {
+    if (!detalle || typeof detalle !== 'object') return null;
+    const parts = [];
+    if (detalle.banco) parts.push(`Banco: ${detalle.banco}`);
+    if (detalle.numero) parts.push(`N°: ${detalle.numero}`);
+    if (detalle.fecha_vencimiento) parts.push(`Vto: ${formatFecha(detalle.fecha_vencimiento)}`);
+    if (detalle.titular) parts.push(`Titular: ${detalle.titular}`);
+    if (detalle.detalle) parts.push(`Obs: ${detalle.detalle}`);
+    return parts.length ? parts : null;
+};
+
 const anularForm = useForm({ motivo: '' });
 const submitAnular = () => {
     if (!confirm('¿Estas seguro de anular este recibo? Se revertiran los movimientos de cuenta corriente.')) return;
@@ -129,12 +145,16 @@ const submitAnular = () => {
                     <div v-for="it in (recibo.items || [])" :key="it.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">{{ it.medio }}</div>
-                                <div class="text-xs text-gray-500">{{ it.moneda }} {{ it.importe }}</div>
+                                <div class="text-sm font-semibold text-gray-900">{{ medioLabel(it.medio) }}</div>
+                                <div class="text-xs text-gray-500">{{ it.moneda }} {{ formatNum(it.importe) }}</div>
                             </div>
                             <div class="text-xs text-gray-500">{{ it.moneda === 'ARS' ? '-' : it.cotizacion_ars }}</div>
                         </div>
-                        <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-auto whitespace-pre-wrap">{{ it.detalle ? JSON.stringify(it.detalle, null, 2) : '' }}</pre>
+                        <div v-if="formatChequeDetalle(it.detalle)" class="mt-3 text-xs bg-blue-50 border border-blue-200 rounded p-2 space-y-1">
+                            <div v-for="(part, idx) in formatChequeDetalle(it.detalle)" :key="idx" class="text-gray-700">{{ part }}</div>
+                        </div>
+                        <div v-else-if="it.detalle?.detalle" class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded p-2 text-gray-700">{{ it.detalle.detalle }}</div>
+                        <div v-else-if="it.detalle && Object.keys(it.detalle).length" class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded p-2 text-gray-500">{{ JSON.stringify(it.detalle) }}</div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
@@ -149,10 +169,17 @@ const submitAnular = () => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="it in (recibo.items || [])" :key="it.id">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.medio }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.moneda }} {{ it.importe }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ medioLabel(it.medio) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.moneda }} {{ formatNum(it.importe) }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.moneda === 'ARS' ? '-' : it.cotizacion_ars }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700"><pre class="text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-auto">{{ it.detalle ? JSON.stringify(it.detalle, null, 2) : '' }}</pre></td>
+                                <td class="px-6 py-4 text-sm text-gray-700">
+                                    <div v-if="formatChequeDetalle(it.detalle)" class="text-xs bg-blue-50 border border-blue-200 rounded p-2 space-y-0.5">
+                                        <div v-for="(part, idx) in formatChequeDetalle(it.detalle)" :key="idx" class="text-gray-700">{{ part }}</div>
+                                    </div>
+                                    <div v-else-if="it.detalle?.detalle" class="text-xs bg-gray-50 border border-gray-200 rounded p-2 text-gray-700">{{ it.detalle.detalle }}</div>
+                                    <div v-else-if="it.detalle && Object.keys(it.detalle).length" class="text-xs text-gray-400">{{ JSON.stringify(it.detalle) }}</div>
+                                    <span v-else class="text-gray-400">-</span>
+                                </td>
                             </tr>
                         </tbody>
                     </table>

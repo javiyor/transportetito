@@ -146,6 +146,46 @@ class PreReciboConfirmer
         $cuentaValores = $this->getOrCreateCuenta($preRecibo->empresa_id, '1003', 'Valores a depositar', 'activo');
 
         $total = (float) $preRecibo->total;
+        $retenciones = $preRecibo->retenciones ?: [];
+        $retencionesSum = 0;
+        $retencionesNorm = [];
+        if (isset($retenciones['iibb']) || isset($retenciones['iva']) || isset($retenciones['ganancias'])) {
+            foreach (['iibb', 'iva', 'ganancias'] as $k) {
+                if (!empty($retenciones[$k]['importe']) && (float) $retenciones[$k]['importe'] > 0) {
+                    $retencionesNorm[] = ['tipo' => $k, 'importe' => (float) $retenciones[$k]['importe']];
+                }
+            }
+        } else {
+            foreach ($retenciones as $ret) {
+                if (is_array($ret) && isset($ret['importe'])) $retencionesNorm[] = $ret;
+            }
+        }
+        foreach ($retencionesNorm as $ret) {
+            $tipo = $ret['tipo'] ?? '';
+            $importeRet = (float) ($ret['importe'] ?? 0);
+            if ($importeRet <= 0) continue;
+            $claveRet = match ($tipo) {
+                'ganancias' => 'retenciones_ganancias',
+                'iibb' => 'retenciones_iibb',
+                'iva' => 'retenciones_iva',
+                default => null,
+            };
+            $cuentaRet = $claveRet ? $this->getOrCreateCuenta($preRecibo->empresa_id, $claveRet === 'retenciones_ganancias' ? '2303' : ($claveRet === 'retenciones_iibb' ? '2311' : '1404'), $tipo, 'activo') : null;
+            // Fallback: usar cuenta genérica si no hay mapeo
+            if (!$cuentaRet) {
+                $cuentaRet = $this->getOrCreateCuenta($preRecibo->empresa_id, '2303', 'Retenciones', 'activo');
+            }
+            AsientoLinea::query()->create([
+                'asiento_id' => $asiento->id,
+                'cuenta_contable_id' => $cuentaRet->id,
+                'tercero_cuenta_id' => null,
+                'debe' => $importeRet,
+                'haber' => 0,
+                'descripcion' => 'Ret '.($tipo ?: 'retencion'),
+            ]);
+            $retencionesSum += $importeRet;
+        }
+        $totalGross = $total + $retencionesSum;
 
         // Debe: medios de cobro (agrupado por tipo)
         $sumaEfectivo = (float) $preRecibo->items->where('medio', 'efectivo')->sum('importe');
@@ -185,13 +225,13 @@ class PreReciboConfirmer
             ]);
         }
 
-        // Haber: clientes
+        // Haber: clientes (total + retenciones para que quede saldado)
         AsientoLinea::query()->create([
             'asiento_id' => $asiento->id,
             'cuenta_contable_id' => $cuentaClientes->id,
             'tercero_cuenta_id' => $preRecibo->tercero_cuenta_id,
             'debe' => 0,
-            'haber' => $total,
+            'haber' => $totalGross,
             'descripcion' => 'Aplicacion a clientes',
         ]);
     }

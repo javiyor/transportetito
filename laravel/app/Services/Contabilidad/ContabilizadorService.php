@@ -163,24 +163,61 @@ class ContabilizadorService
             }
 
             $retenciones = $recibo->retenciones ?: [];
-            foreach ($retenciones as $ret) {
+            // Retenciones pueden venir como ['iibb'=>['importe'=>..], 'iva'=>..., 'ganancias'=>...] o como lista con 'tipo'
+            $retencionesSum = 0;
+            $retencionesNorm = [];
+            if (isset($retenciones['iibb']) || isset($retenciones['iva']) || isset($retenciones['ganancias'])) {
+                foreach (['iibb', 'iva', 'ganancias'] as $k) {
+                    if (!empty($retenciones[$k]['importe']) && (float) $retenciones[$k]['importe'] > 0) {
+                        $retencionesNorm[] = ['tipo' => $k, 'importe' => (float) $retenciones[$k]['importe'], 'descripcion' => $retenciones[$k]['descripcion'] ?? ''];
+                    }
+                }
+            } else {
+                foreach ($retenciones as $ret) {
+                    if (is_array($ret) && isset($ret['importe'])) {
+                        $retencionesNorm[] = $ret;
+                    }
+                }
+            }
+            foreach ($retencionesNorm as $ret) {
                 $importeRet = (float) ($ret['importe'] ?? 0);
                 if ($importeRet <= 0) continue;
-
-                $claveRet = match ($ret['tipo'] ?? '') {
+                $tipo = $ret['tipo'] ?? '';
+                // Si tipo viene como key (iibb) o como valor dentro, normalizar
+                if (!$tipo && isset($ret['descripcion'])) {
+                    // intentar inferir tipo por descripcion
+                    $tipo = '';
+                }
+                $claveRet = match ($tipo) {
                     'ganancias' => 'retenciones_ganancias',
                     'iibb' => 'retenciones_iibb',
+                    'iva' => 'retenciones_iva',
                     default => null,
                 };
-
+                // Fallback: si no hay tipo, usar ganancias por defecto para compatibilidad
+                if (!$claveRet && $tipo === '') {
+                    // intentar mapear por descripcion si contiene palabras clave
+                    $desc = strtolower($ret['descripcion'] ?? '');
+                    if (str_contains($desc, 'ganancias')) $claveRet = 'retenciones_ganancias';
+                    elseif (str_contains($desc, 'iibb') || str_contains($desc, 'ingresos brutos')) $claveRet = 'retenciones_iibb';
+                }
                 if ($claveRet) {
                     $cuentaRet = $empresa->getCuentaContable($claveRet);
                     if ($cuentaRet) {
-                        $this->addLinea($asiento, $cuentaRet, null, 0, $importeRet, 'Ret '.($ret['tipo'] ?? ''));
+                        $this->addLinea($asiento, $cuentaRet, null, $importeRet, 0, 'Ret '.($tipo ?: $ret['descripcion'] ?? ''));
+                        $retencionesSum += $importeRet;
+                    }
+                } else {
+                    // Si no hay cuenta configurada, igual sumar para que el asiento cuadre (usar una genérica si existe)
+                    $cuentaRetGen = $empresa->getCuentaContable('retenciones_ganancias') ?? $empresa->getCuentaContable('retenciones_iibb');
+                    if ($cuentaRetGen) {
+                        $this->addLinea($asiento, $cuentaRetGen, null, $importeRet, 0, 'Ret '.($tipo ?: ''));
+                        $retencionesSum += $importeRet;
                     }
                 }
-                $totalCobrado -= $importeRet;
             }
+
+            $totalCobrado = $totalCobrado + $retencionesSum;
 
             $this->addLinea($asiento, $cuentaDeudores, $recibo->cuenta, 0, $totalCobrado, 'Cancelacion de deuda');
 

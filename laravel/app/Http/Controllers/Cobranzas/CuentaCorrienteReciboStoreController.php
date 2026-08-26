@@ -60,6 +60,13 @@ class CuentaCorrienteReciboStoreController extends Controller
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
 
         $total = collect($data['items'])->sum(fn ($i) => (float) $i['importe']);
+        $retencionesSum = 0;
+        if (!empty($data['retenciones'])) {
+            foreach (['iibb', 'iva', 'ganancias'] as $k) {
+                $retencionesSum += (float) ($data['retenciones'][$k]['importe'] ?? 0);
+            }
+        }
+        $totalAplicar = $total + $retencionesSum;
 
         $maxInterno = Recibo::query()->where('empresa_id', $cuenta->empresa_id)->max('numero_interno') ?? 0;
 
@@ -132,7 +139,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             }
 
             foreach ($comprobantes as $comprobante) {
-                $aplicar = min((float) $comprobante->total, $total - $aplicadoTotal);
+                $aplicar = min((float) $comprobante->total, $totalAplicar - $aplicadoTotal);
                 if ($aplicar <= 0) break;
 
                 ReciboAplicacion::query()->create([
@@ -148,7 +155,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             }
         }
 
-        $sobrante = $total - $aplicadoTotal;
+        $sobrante = $totalAplicar - $aplicadoTotal;
         if ($sobrante > 0) {
             ReciboAplicacion::query()->create([
                 'recibo_id' => $recibo->id,
@@ -167,10 +174,10 @@ class CuentaCorrienteReciboStoreController extends Controller
             'tipo' => 'cobro',
             'moneda' => $data['moneda'],
             'cotizacion_ars' => $cotizacion['tasa_ars'],
-            'importe_signed' => (-1 * $total),
+            'importe_signed' => (-1 * $totalAplicar),
             'referencia_tipo' => 'recibo',
             'referencia_id' => $recibo->id,
-            'observacion' => 'Recibo manual',
+            'observacion' => 'Recibo manual' . ($retencionesSum > 0 ? ' (incluye retenciones $'.number_format($retencionesSum, 2, ',', '.').')' : ''),
         ]);
 
         try {
