@@ -13,6 +13,8 @@ import InputError from '@/Components/InputError.vue';
 const props = defineProps({
     rows: Array,
     detallesPorChofer: Object,
+    viajes: Array,
+    bultosPorViaje: Object,
     totalGeneral: Number,
     mes: Number,
     anio: Number,
@@ -100,7 +102,10 @@ const hasOverride = (r, field) => {
     return ov[field] !== null && ov[field] !== undefined;
 };
 
+const vista = ref('viaje'); // viaje | chofer | bulto
+
 const expandedChofer = ref(new Set());
+const expandedViaje = ref(new Set());
 const toggleChofer = (key) => {
     const s = new Set(expandedChofer.value);
     if (s.has(key)) s.delete(key);
