@@ -18,17 +18,56 @@ const csvForm = useForm({
 });
 
 const headerMap = {
-    'nro. doc. emisor': 'proveedor_cuit', 'denominación emisor': 'proveedor_razon_social',
-    'tipo de comprobante': 'tipo', 'número desde': 'numero',
-    'punto de venta': 'pv', 'fecha de emisión': 'fecha_emision',
-    'imp. total': 'total', 'moneda': 'moneda', 'tipo cambio': 'tipo_cambio',
-    'cód. autorización': 'arca_cae', 'código de autorización': 'arca_cae',
-    'proveedor_cuit': 'proveedor_cuit', 'proveedor_razon_social': 'proveedor_razon_social',
-    'tipo': 'tipo', 'numero': 'numero', 'pv': 'pv',
-    'fecha_emision': 'fecha_emision',     'total': 'total', 'moneda': 'moneda',
-    'subtotal': 'subtotal', 'importe sujeto a impuesto': 'subtotal',
-    'iva': 'iva_total', 'importe iva': 'iva_total', 'iva total': 'iva_total',
-    'impuestos nacionales': 'tributos_total', 'tributos': 'tributos_total', 'impuestos': 'tributos_total',
+    'nro doc emisor': 'proveedor_cuit',
+    'denominacion emisor': 'proveedor_razon_social',
+    'tipo de comprobante': 'tipo',
+    'tipo comprobante': 'tipo',
+    'numero desde': 'numero',
+    'nro desde': 'numero',
+    'punto de venta': 'pv',
+    'punto venta': 'pv',
+    'fecha de emision': 'fecha_emision',
+    'fecha emision': 'fecha_emision',
+    'fecha': 'fecha_emision',
+    'imp total': 'total',
+    'importe total': 'total',
+    'total': 'total',
+    'moneda': 'moneda',
+    'tipo cambio': 'tipo_cambio',
+    'cod autorizacion': 'arca_cae',
+    'codigo de autorizacion': 'arca_cae',
+    'proveedor_cuit': 'proveedor_cuit',
+    'proveedor_razon_social': 'proveedor_razon_social',
+    'tipo': 'tipo',
+    'numero': 'numero',
+    'pv': 'pv',
+    'fecha_emision': 'fecha_emision',
+    'subtotal': 'subtotal',
+    'importe sujeto a impuesto': 'subtotal',
+    'iva': 'iva_total',
+    'importe iva': 'iva_total',
+    'iva total': 'iva_total',
+    'total iva': 'iva_total',
+    'impuestos nacionales': 'tributos_total',
+    'tributos': 'tributos_total',
+    'impuestos': 'tributos_total',
+    'imp neto gravado total': 'neto_total',
+    'imp neto no gravado': 'neto_no_gravado',
+    'imp op exentas': 'op_exentas',
+    'importe op exentas': 'op_exentas',
+    'otros tributos': 'tributos_total',
+    // Detalle por alícuota ARCA (para sumar cuando no hay total)
+    'imp neto gravado iva 0': 'neto_iva_0',
+    'iva 2 5': 'iva_2_5',
+    'imp neto gravado iva 2 5': 'neto_iva_2_5',
+    'iva 5': 'iva_5',
+    'imp neto gravado iva 5': 'neto_iva_5',
+    'iva 10 5': 'iva_10_5',
+    'imp neto gravado iva 10 5': 'neto_iva_10_5',
+    'iva 21': 'iva_21',
+    'imp neto gravado iva 21': 'neto_iva_21',
+    'iva 27': 'iva_27',
+    'imp neto gravado iva 27': 'neto_iva_27',
 };
 
 const tipoArcaMap = {
@@ -59,6 +98,33 @@ const monedaArcaMap = {
     'brl': 'BRL', 'real': 'BRL', 'reales': 'BRL',
 };
 
+const normalizeKey = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+const parseArNumber = (v) => {
+    if (v == null || String(v).trim() === '') return null;
+    let s = String(v).trim().replace(/\s/g, '').replace(/\$/g, '');
+    // Si tiene coma, es decimal argentino: 1.234,56 -> 1234.56
+    if (s.includes(',')) {
+        s = s.replace(/\./g, '').replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+};
+const parseArDate = (v) => {
+    if (!v) return '';
+    const s = String(v).trim();
+    // Ya viene YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    // DD/MM/YYYY o DD-MM-YYYY o DD.MM.YYYY
+    const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+    if (m) {
+        const dd = m[1].padStart(2, '0');
+        const mm = m[2].padStart(2, '0');
+        const yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+    }
+    return s;
+};
+
 const parseCsv = () => {
     const lines = csvText.value.trim().split('\n').filter(Boolean);
     if (lines.length < 2) {
@@ -66,17 +132,39 @@ const parseCsv = () => {
         return;
     }
     const raw = lines[0].trim();
-    const delim = raw.includes(';') ? ';' : ',';
+    // Detectar delimitador: tab > ; > ,
+    let delim = ',';
+    if (raw.includes('\t')) delim = '\t';
+    else if (raw.includes(';')) delim = ';';
+    else if (raw.includes(',')) delim = ',';
+
     const cleanHeader = (h) => h.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').trim();
     const rawHeaders = raw.split(delim).map(cleanHeader);
     const mapped = rawHeaders.map((h) => {
-        const key = h.toLowerCase().replace(/['"]/g, '').trim();
-        return headerMap[key] || null;
+        const key = normalizeKey(h);
+        // Fallback para headers que no están en mapa pero contienen neto/iva
+        if (headerMap[key]) return headerMap[key];
+        if (key.startsWith('imp neto gravado')) {
+            // Mapear genérico a neto_detail si no está explícito
+            if (headerMap[key]) return headerMap[key];
+            // Intentar encontrar coincidencia parcial
+            for (const k of Object.keys(headerMap)) {
+                if (k.startsWith('imp neto gravado') && key.includes(k.replace('imp neto gravado', '').trim())) {
+                    return headerMap[k];
+                }
+            }
+            return null;
+        }
+        if (key.startsWith('iva ')) {
+            if (headerMap[key]) return headerMap[key];
+            return null;
+        }
+        return null;
     });
     const required = ['proveedor_cuit', 'proveedor_razon_social', 'fecha_emision', 'total'];
     const missing = required.filter((r) => !mapped.includes(r));
     if (missing.length) {
-        alert('No se encontraron estas columnas: ' + missing.join(', ') + '. Detectadas: ' + rawHeaders.join(', '));
+        alert('No se encontraron estas columnas: ' + missing.join(', ') + '. Detectadas: ' + rawHeaders.join(', ') + ' (delim=' + (delim === '\t' ? 'TAB' : delim) + ')');
         return;
     }
     const rows = lines.slice(1).map((line) => {
@@ -95,18 +183,48 @@ const parseCsv = () => {
         let moneda = (r.moneda || 'ARS').trim().toLowerCase().replace(/[^a-z$]/g, '');
         moneda = monedaArcaMap[moneda] || (['ars','usd','eur','brl'].includes(moneda) ? moneda.toUpperCase() : 'ARS');
 
+        // Parsear montos con formato argentino
+        const total = parseArNumber(r.total) || 0;
+        let subtotal = parseArNumber(r.subtotal);
+        let iva_total = parseArNumber(r.iva_total);
+        let tributos_total = parseArNumber(r.tributos_total);
+
+        // Si viene formato ARCA detallado, calcular subtotal/iva desde desglose
+        const netoTotal = parseArNumber(r.neto_total);
+        const netoNoGrav = parseArNumber(r.neto_no_gravado) || 0;
+        const opEx = parseArNumber(r.op_exentas) || 0;
+        const perNeto = ['neto_iva_0','neto_iva_2_5','neto_iva_5','neto_iva_10_5','neto_iva_21','neto_iva_27'].reduce((s,k) => s + (parseArNumber(r[k]) || 0), 0);
+        const perIva = ['iva_2_5','iva_5','iva_10_5','iva_21','iva_27'].reduce((s,k) => s + (parseArNumber(r[k]) || 0), 0);
+
+        if (subtotal == null) {
+            if (netoTotal != null) {
+                subtotal = netoTotal + netoNoGrav + opEx;
+            } else if (perNeto > 0 || netoNoGrav > 0 || opEx > 0) {
+                subtotal = perNeto + netoNoGrav + opEx;
+            }
+        }
+        if (iva_total == null && perIva > 0) {
+            iva_total = perIva;
+        }
+        // Si Otros Tributos viene pero tributos_total ya es ese valor, ok
+        if (tributos_total == null && r.tributos_total != null) {
+            tributos_total = parseArNumber(r.tributos_total);
+        }
+
+        const fechaNorm = parseArDate(r.fecha_emision);
+
         return {
             proveedor_cuit: r.proveedor_cuit || '',
             proveedor_razon_social: r.proveedor_razon_social || '',
             tipo: tipo,
             numero: r.numero || '',
-            pv: r.pv ? parseInt(r.pv, 10) : null,
-            fecha_emision: r.fecha_emision || '',
-            total: parseFloat(r.total) || 0,
+            pv: r.pv ? parseInt(String(r.pv).replace(/\D/g,''), 10) || null : null,
+            fecha_emision: fechaNorm || r.fecha_emision || '',
+            total: total,
             moneda: moneda,
-            subtotal: r.subtotal ? parseFloat(r.subtotal) : null,
-            iva_total: r.iva_total ? parseFloat(r.iva_total) : null,
-            tributos_total: r.tributos_total ? parseFloat(r.tributos_total) : null,
+            subtotal: subtotal,
+            iva_total: iva_total,
+            tributos_total: tributos_total,
         };
     });
 };
