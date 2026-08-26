@@ -14,12 +14,38 @@ const eliminar = (m) => {
 const props = defineProps({
     manifiestos: Object,
     compartidos: { type: String, default: '1' },
+    orden: { type: String, default: 'desc' },
 });
 
 const toggleCompartidos = () => {
     router.get(route('operacion.manifiestos.index'), {
         compartidos: props.compartidos === '1' ? '0' : '1',
+        orden: props.orden || 'desc',
     }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const toggleOrden = () => {
+    router.get(route('operacion.manifiestos.index'), {
+        compartidos: props.compartidos || '1',
+        orden: props.orden === 'asc' ? 'desc' : 'asc',
+    }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const goToPage = (page) => {
+    if (!page || page < 1 || page > props.manifiestos.last_page) return;
+    router.get(route('operacion.manifiestos.index'), {
+        compartidos: props.compartidos || '1',
+        orden: props.orden || 'desc',
+        page,
+    }, { preserveState: true, preserveScroll: true });
+};
+
+const traducirLabel = (label) => {
+    if (!label) return '';
+    let l = label.replace(/&laquo;/g, '').replace(/&raquo;/g, '').trim();
+    if (l.toLowerCase() === 'previous') return 'Anterior';
+    if (l.toLowerCase() === 'next') return 'Siguiente';
+    return l;
 };
 
 const formatFecha = (value) => {
@@ -82,7 +108,12 @@ const formatFecha = (value) => {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <button @click="toggleOrden" class="inline-flex items-center gap-1 hover:text-gray-700">
+                                        Fecha
+                                        <span class="text-[10px]">{{ orden === 'asc' ? '▲' : '▼' }}</span>
+                                    </button>
+                                </th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
                                 <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -102,14 +133,27 @@ const formatFecha = (value) => {
                     </table>
                 </div>
 
-                <div v-if="manifiestos.links?.length" class="p-3 border-t border-gray-200 flex flex-wrap gap-2">
-                    <Link
+                <div v-if="manifiestos.last_page > 1" class="p-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <span class="text-gray-500">Pág. {{ manifiestos.current_page }} de {{ manifiestos.last_page }} ({{ manifiestos.total }} manifiestos)</span>
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <button :disabled="manifiestos.current_page <= 1" @click="goToPage(manifiestos.current_page - 1)" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                        <button
+                            v-for="p in manifiestos.last_page"
+                            :key="p"
+                            @click="goToPage(p)"
+                            :class="p === manifiestos.current_page ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'"
+                            class="px-3 py-1 border rounded-md min-w-[36px]"
+                        >{{ p }}</button>
+                        <button :disabled="manifiestos.current_page >= manifiestos.last_page" @click="goToPage(manifiestos.current_page + 1)" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+                    </div>
+                </div>
+                <div v-else-if="manifiestos.links?.length" class="p-3 border-t border-gray-200 flex flex-wrap gap-2">
+                    <span
                         v-for="link in manifiestos.links"
                         :key="link.label"
                         class="px-2 py-1 text-xs rounded border"
-                        :class="link.active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'"
-                        :href="link.url || ''"
-                        v-html="link.label"
+                        :class="link.active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200'"
+                        v-html="traducirLabel(link.label)"
                     />
                 </div>
             </div>

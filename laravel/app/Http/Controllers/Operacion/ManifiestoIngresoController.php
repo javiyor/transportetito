@@ -23,6 +23,8 @@ class ManifiestoIngresoController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $compartidos = $request->query('compartidos', '1');
+        $orden = $request->query('orden', 'desc');
+        $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
 
         $empresaIds = [$empresaId];
 
@@ -40,18 +42,22 @@ class ManifiestoIngresoController extends Controller
             $empresaIds = array_merge([$empresaId], $shared);
         }
 
-        $manifiestos = ManifiestoIngreso::query()
+        $query = ManifiestoIngreso::query()
             ->with(['deposito:id,nombre'])
-            ->whereIn('empresa_id', $empresaIds)
-            ->orderBy('deposito_id')
-            ->orderByDesc('fecha')
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
+            ->whereIn('empresa_id', $empresaIds);
+
+        if ($orden === 'asc') {
+            $query->orderBy('fecha')->orderBy('id');
+        } else {
+            $query->orderByDesc('fecha')->orderByDesc('id');
+        }
+
+        $manifiestos = $query->paginate(20)->withQueryString();
 
         return Inertia::render('Operacion/Manifiestos/Index', [
             'manifiestos' => $manifiestos,
             'compartidos' => $compartidos,
+            'orden' => $orden,
         ]);
     }
 
