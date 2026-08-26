@@ -69,12 +69,43 @@ class CuentaCorrienteShowController extends Controller
                 return $sum;
             }), 2);
 
-        $comprobantes = Comprobante::query()
+        $comprobantesRaw = Comprobante::query()
             ->where('empresa_id', $empresaId)
             ->where('facturar_cuenta_id', $cuenta->id)
             ->orderByDesc('numero_interno')
             ->orderByDesc('id')
-            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
+            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
+
+        // Calcular pendiente real por comprobante para marcar pagadas
+        $aplicacionesSum = \App\Models\ReciboAplicacion::query()
+            ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
+            ->where('recibos.estado', '!=', 'anulada')
+            ->whereIn('recibo_aplicaciones.comprobante_id', $comprobantesRaw->pluck('id'))
+            ->selectRaw('comprobante_id, SUM(recibo_aplicaciones.importe) as sum_importe')
+            ->groupBy('comprobante_id')
+            ->pluck('sum_importe', 'comprobante_id');
+
+        $notasSum = Comprobante::query()
+            ->where('empresa_id', $empresaId)
+            ->whereIn('comprobante_origen_id', $comprobantesRaw->pluck('id'))
+            ->where('estado', '!=', 'anulada')
+            ->where('tipo', 'like', 'nota_credito%')
+            ->selectRaw('comprobante_origen_id, SUM(ABS(total)) as sum_notas')
+            ->groupBy('comprobante_origen_id')
+            ->pluck('sum_notas', 'comprobante_origen_id');
+
+        $comprobantes = $comprobantesRaw->map(function ($c) use ($aplicacionesSum, $notasSum) {
+            $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
+            $notas = (float) ($notasSum[$c->id] ?? 0);
+            $pendiente = round((float) $c->total - $aplicado - $notas, 2);
+            // Para NC, el pendiente no aplica (son créditos)
+            $isNota = str_contains($c->tipo ?? '', 'nota_credito') || (float) $c->total < 0;
+            $c->setAttribute('pendiente', $isNota ? 0 : $pendiente);
+            $c->setAttribute('is_pagada', !$isNota && $pendiente <= 0.01);
+            $c->setAttribute('aplicado', $aplicado);
+            $c->setAttribute('notas_aplicadas', $notas);
+            return $c;
+        });
 
         $reciboCredits = Recibo::query()
             ->where('empresa_id', $empresaId)
@@ -96,6 +127,8 @@ class CuentaCorrienteShowController extends Controller
                     'arca_numero' => null,
                     'numero_interno' => '#R-'.$rec->id,
                     'is_credit' => true,
+                    'pendiente' => round(-1 * (float) $rec->total, 2),
+                    'is_pagada' => false,
                 ];
             });
 
