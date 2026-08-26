@@ -16,6 +16,7 @@ const flashError = computed(() => page.props.tt?.flash?.error || page.props.flas
 const props = defineProps({
     egresos: Object,
     cuentasContables: Array,
+    cuentasPasivo: Array,
     bancos: Array,
     chequesDisponibles: Array,
     totales: Object,
@@ -34,6 +35,7 @@ const form = useForm({
     cheque_fecha_vencimiento: '',
     cheque_titular: '',
     fecha_pago: '',
+    cuenta_pasivo_id: '',
     distribucion: [{ cuenta_contable_id: '', importe: '' }],
     referencia: '',
     observacion: '',
@@ -84,6 +86,7 @@ const editForm = useForm({
     cheque_fecha_vencimiento: '',
     cheque_titular: '',
     fecha_pago: '',
+    cuenta_pasivo_id: '',
     distribucion: [{ cuenta_contable_id: '', importe: '' }],
     referencia: '',
     observacion: '',
@@ -111,6 +114,7 @@ const openEdit = (e) => {
     editForm.cheque_fecha_vencimiento = '';
     editForm.cheque_titular = '';
     editForm.fecha_pago = e.fecha_pago ? String(e.fecha_pago).slice(0,10) : '';
+    editForm.cuenta_pasivo_id = e.cuenta_pasivo_id || '';
     editForm.referencia = e.referencia || '';
     editForm.observacion = e.observacion || '';
     if (e.categorias && e.categorias.length) {
@@ -169,6 +173,7 @@ const confirmDelete = (e) => {
                                 <option value="transferencia">Transferencia</option>
                                 <option value="cheque">Cheque</option>
                                 <option value="tarjeta">Tarjeta</option>
+                                <option value="cuenta_corriente">Cuenta corriente</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.forma_pago" />
                         </div>
@@ -179,6 +184,15 @@ const confirmDelete = (e) => {
                                 <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.banco_origen_id" />
+                        </div>
+                        <div v-if="form.forma_pago === 'cuenta_corriente'">
+                            <InputLabel value="Cuenta pasivo a acreditar" />
+                            <select v-model="form.cuenta_pasivo_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Seleccionar cuenta pasivo...</option>
+                                <option v-for="c in cuentasPasivo" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                            </select>
+                            <InputError class="mt-2" :message="form.errors.cuenta_pasivo_id" />
+                            <div class="text-xs text-gray-500 mt-1">Se generará asiento Debe: gasto / Haber: pasivo seleccionado</div>
                         </div>
                         <div v-if="esCheque" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-4">
                             <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle del cheque</h4>
@@ -315,8 +329,9 @@ const confirmDelete = (e) => {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div><InputLabel value="Fecha" class="!text-xs" /><TextInput v-model="editForm.fecha" type="date" class="mt-0.5 block w-full text-sm" /><InputError class="mt-1 text-xs" :message="editForm.errors.fecha" /></div>
                         <div><InputLabel value="Moneda" class="!text-xs" /><select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select></div>
-                        <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option></select></div>
+                        <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
                         <div v-if="esEditTransferencia"><InputLabel value="Banco origen" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
+                        <div v-if="editForm.forma_pago === 'cuenta_corriente'"><InputLabel value="Cuenta pasivo" class="!text-xs" /><select v-model="editForm.cuenta_pasivo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar pasivo...</option><option v-for="c in cuentasPasivo" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_pasivo_id" /></div>
                         <div><InputLabel value="Fecha pago" class="!text-xs" /><TextInput v-model="editForm.fecha_pago" type="date" class="mt-0.5 block w-full text-sm" /></div>
                     </div>
                     <div v-if="esEditCheque" class="border border-gray-200 rounded-lg p-3">

@@ -15,6 +15,7 @@ class GastoOperativo extends Model
         'fecha',
         'categoria',
         'cuenta_contable_id',
+        'cuenta_pasivo_id',
         'moneda',
         'cotizacion_ars',
         'importe',
@@ -52,6 +53,11 @@ class GastoOperativo extends Model
     public function cheque(): BelongsTo
     {
         return $this->belongsTo(Cheque::class);
+    }
+
+    public function cuentaPasivo(): BelongsTo
+    {
+        return $this->belongsTo(CuentaContable::class, 'cuenta_pasivo_id');
     }
 
     public function categorias(): HasMany

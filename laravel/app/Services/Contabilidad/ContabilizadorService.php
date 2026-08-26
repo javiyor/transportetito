@@ -255,8 +255,15 @@ class ContabilizadorService
     public function contabilizarGastoOperativo(GastoOperativo $gasto): AsientoContable
     {
         $empresa = $gasto->empresa;
-        $claveMedio = 'medio_pago.'.$gasto->forma_pago;
-        $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+        if ($gasto->forma_pago === 'cuenta_corriente' && $gasto->cuenta_pasivo_id) {
+            $cuentaMedio = $gasto->cuentaPasivo ?? CuentaContable::find($gasto->cuenta_pasivo_id);
+            if (!$cuentaMedio) {
+                $cuentaMedio = $empresa->getCuentaContable('proveedores_default') ?? $empresa->getCuentaContable('caja_default');
+            }
+        } else {
+            $claveMedio = 'medio_pago.'.$gasto->forma_pago;
+            $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+        }
         $categorias = $gasto->categorias;
 
         return DB::transaction(function () use ($gasto, $empresa, $cuentaMedio, $categorias) {

@@ -39,6 +39,13 @@ class EgresoIndexController extends Controller
                 ->where('contabilizable', true)
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
+            'cuentasPasivo' => CuentaContable::query()
+                ->where('empresa_id', $empresaId)
+                ->where('tipo', 'pasivo')
+                ->where('activo', true)
+                ->where('contabilizable', true)
+                ->orderBy('codigo')
+                ->get(['id', 'codigo', 'nombre']),
             'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
             'chequesDisponibles' => Cheque::query()
                 ->where('empresa_id', $empresaId)
@@ -64,7 +71,7 @@ class EgresoIndexController extends Controller
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'importe' => ['required', 'numeric', 'gt:0'],
-            'forma_pago' => ['required', 'in:efectivo,transferencia,cheque,tarjeta'],
+            'forma_pago' => ['required', 'in:efectivo,transferencia,cheque,tarjeta,cuenta_corriente'],
             'banco_origen_id' => ['nullable', 'exists:bancos,id', 'required_if:forma_pago,transferencia'],
             'tipo_cheque' => ['nullable', 'required_if:forma_pago,cheque', 'in:propio,tercero'],
             'cheque_id' => ['nullable', 'exists:cheques,id'],
@@ -74,6 +81,7 @@ class EgresoIndexController extends Controller
             'cheque_fecha_vencimiento' => ['nullable', 'date', 'required_if:tipo_cheque,propio'],
             'cheque_titular' => ['nullable', 'string', 'max:255'],
             'fecha_pago' => ['nullable', 'date'],
+            'cuenta_pasivo_id' => ['nullable', 'exists:cuentas_contables,id', 'required_if:forma_pago,cuenta_corriente'],
             'distribucion' => ['required', 'array', 'min:1'],
             'distribucion.*.cuenta_contable_id' => ['required', 'exists:cuentas_contables,id'],
             'distribucion.*.importe' => ['required', 'numeric', 'gt:0'],
@@ -118,6 +126,7 @@ class EgresoIndexController extends Controller
             'forma_pago' => $data['forma_pago'],
             'banco_origen_id' => $data['banco_origen_id'] ?: null,
             'cheque_id' => $data['cheque_id'] ?: null,
+            'cuenta_pasivo_id' => $data['cuenta_pasivo_id'] ?? null,
             'fecha_pago' => $data['fecha_pago'] ?: null,
         ]);
 
@@ -178,7 +187,7 @@ class EgresoIndexController extends Controller
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'importe' => ['required', 'numeric', 'gt:0'],
-            'forma_pago' => ['required', 'in:efectivo,transferencia,cheque,tarjeta'],
+            'forma_pago' => ['required', 'in:efectivo,transferencia,cheque,tarjeta,cuenta_corriente'],
             'banco_origen_id' => ['nullable', 'exists:bancos,id', 'required_if:forma_pago,transferencia'],
             'tipo_cheque' => ['nullable', 'required_if:forma_pago,cheque', 'in:propio,tercero'],
             'cheque_id' => ['nullable', 'exists:cheques,id'],
@@ -188,6 +197,7 @@ class EgresoIndexController extends Controller
             'cheque_fecha_vencimiento' => ['nullable', 'date', 'required_if:tipo_cheque,propio'],
             'cheque_titular' => ['nullable', 'string', 'max:255'],
             'fecha_pago' => ['nullable', 'date'],
+            'cuenta_pasivo_id' => ['nullable', 'exists:cuentas_contables,id', 'required_if:forma_pago,cuenta_corriente'],
             'distribucion' => ['required', 'array', 'min:1'],
             'distribucion.*.cuenta_contable_id' => ['required', 'exists:cuentas_contables,id'],
             'distribucion.*.importe' => ['required', 'numeric', 'gt:0'],
@@ -235,6 +245,7 @@ class EgresoIndexController extends Controller
             'forma_pago' => $data['forma_pago'],
             'banco_origen_id' => $data['banco_origen_id'] ?? null,
             'cheque_id' => $data['cheque_id'] ?? null,
+            'cuenta_pasivo_id' => $data['cuenta_pasivo_id'] ?? null,
             'fecha_pago' => $data['fecha_pago'] ?? null,
         ]);
 
