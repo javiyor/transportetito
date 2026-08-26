@@ -94,7 +94,7 @@ const ejecutarEliminar = () => {
 };
 
 const descargarExcel = () => {
-    window.open(route('admin.reportes.seguro.csv', { mes: props.mes, anio: props.anio }), '_blank');
+    window.open(route('admin.reportes.seguro.csv', { mes: props.mes, anio: props.anio, agrupacion: vista.value }), '_blank');
 };
 
 const hasOverride = (r, field) => {
@@ -142,9 +142,124 @@ const formatFecha = (v) => {
         </div>
 
         <div class="max-w-7xl mx-auto py-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-center gap-2 mb-3 print:hidden">
+                <span class="text-xs text-gray-500">Vista:</span>
+                <button @click="vista = 'chofer'" :class="vista === 'chofer' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'" class="px-3 py-1 text-xs rounded border">Por chofer/camión</button>
+                <button @click="vista = 'viaje'" :class="vista === 'viaje' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'" class="px-3 py-1 text-xs rounded border">Por viaje (ID envío)</button>
+                <button @click="vista = 'bulto'" :class="vista === 'bulto' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'" class="px-3 py-1 text-xs rounded border">Detalle por bultos</button>
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div v-if="!rows.length" class="px-6 py-4 text-center text-sm text-gray-500">
                     No hay movimientos en {{ mesNombre }} {{ anio }}.
+                </div>
+
+                <!-- Vista por viaje (agrupado por id_envio) - nuevo requerimiento -->
+                <div v-if="vista === 'viaje'" class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">ID Envío</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Móvil</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Depósitos</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Cargas</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
+                                <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider print:hidden">Detalle</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template v-for="v in (props.viajes || [])" :key="v.id_envio">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-3 py-2 whitespace-nowrap font-mono text-indigo-700 font-bold">
+                                        <button @click="toggleViaje(v.id_envio)" class="text-indigo-600 hover:text-indigo-800 mr-1">{{ expandedViaje.has(v.id_envio) ? '▼' : '▶' }}</button>
+                                        #{{ v.id_envio }}
+                                    </td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ formatFecha(v.fecha_envio) }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap font-mono text-gray-700">{{ v.nummovil }} <span class="text-gray-400">({{ v.patmovil || '-' }})</span></td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ v.nomchof || '-' }}</td>
+                                    <td class="px-3 py-2 text-gray-700 max-w-[180px] text-xs">{{ v.depositos_origen || '-' }}</td>
+                                    <td class="px-3 py-2 text-center text-gray-700">{{ v.total_cargas }}</td>
+                                    <td class="px-3 py-2 text-center text-gray-700">{{ v.total_bultos || '-' }}</td>
+                                    <td class="px-3 py-2 text-right font-mono text-gray-700">{{ formatNum(v.total_valor_declarado) }}</td>
+                                    <td class="px-3 py-2 text-center print:hidden"><span class="text-xs text-gray-400">{{ (props.bultosPorViaje?.[v.id_envio] || []).length }} bultos</span></td>
+                                </tr>
+                                <tr v-if="expandedViaje.has(v.id_envio)" class="bg-blue-50/50">
+                                    <td colspan="9" class="px-4 py-2">
+                                        <div class="text-xs font-semibold text-gray-700 mb-1">Bultos del envío #{{ v.id_envio }} — {{ v.nomchof || 'Sin chofer' }} ({{ (props.bultosPorViaje?.[v.id_envio] || []).length }} bultos)</div>
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full divide-y divide-gray-200 text-xs bg-white rounded border">
+                                                <thead class="bg-gray-100"><tr>
+                                                    <th class="px-2 py-1 text-left">Carga ID</th>
+                                                    <th class="px-2 py-1 text-left">Depósito</th>
+                                                    <th class="px-2 py-1 text-center">Cant.</th>
+                                                    <th class="px-2 py-1 text-left">Unidad</th>
+                                                    <th class="px-2 py-1 text-left">Remito</th>
+                                                    <th class="px-2 py-1 text-right">Valor</th>
+                                                </tr></thead>
+                                                <tbody>
+                                                    <tr v-for="b in (props.bultosPorViaje?.[v.id_envio] || [])" :key="b.carga_id" class="border-t border-gray-100 hover:bg-gray-50">
+                                                        <td class="px-2 py-1 font-mono">#{{ b.carga_id }}</td>
+                                                        <td class="px-2 py-1">{{ b.deposito_origen }}</td>
+                                                        <td class="px-2 py-1 text-center">{{ b.cantidad }}</td>
+                                                        <td class="px-2 py-1">{{ b.unidad || '-' }}</td>
+                                                        <td class="px-2 py-1 font-mono">{{ b.remito || '-' }}</td>
+                                                        <td class="px-2 py-1 text-right font-mono">$ {{ Number(b.valordeclarado || 0).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot class="bg-gray-100">
+                            <tr>
+                                <td colspan="7" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
+                                <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
+                                <td class="print:hidden"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div v-else-if="vista === 'bulto'" class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">ID Envío</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Móvil</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Depósito</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Carga</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Cant.</th>
+                                <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template v-for="r in rows" :key="r.nummovil">
+                                <tr v-for="d in (props.detallesPorChofer?.[choferKey(r)] || [])" :key="d.carga_id + '-' + d.id_envio" class="hover:bg-gray-50">
+                                    <td class="px-3 py-2 whitespace-nowrap">{{ formatFecha(d.fecha_envio) }}</td>
+                                    <td class="px-3 py-2 font-mono">#{{ d.id_envio }}</td>
+                                    <td class="px-3 py-2 font-mono">{{ d.nummovil }}</td>
+                                    <td class="px-3 py-2">{{ d.nomchof || '-' }}</td>
+                                    <td class="px-3 py-2">{{ d.deposito_origen }}</td>
+                                    <td class="px-3 py-2 font-mono">#{{ d.carga_id }}</td>
+                                    <td class="px-3 py-2 text-center">{{ d.cantidad }}</td>
+                                    <td class="px-3 py-2 text-right font-mono">$ {{ Number(d.valordeclarado || 0).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot class="bg-gray-100">
+                            <tr>
+                                <td colspan="7" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
+                                <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
 
                 <div v-else class="overflow-x-auto">
