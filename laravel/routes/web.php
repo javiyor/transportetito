@@ -358,9 +358,13 @@ Route::middleware([
         Route::get('/combustibles/tasa-actual', [PagoCuentaCombustibleIndexController::class, 'tasaActual'])->name('combustibles.tasa-actual');
         Route::get('/gastos', [GastoOperativoIndexController::class, 'index'])->name('gastos.index');
         Route::post('/gastos', [GastoOperativoIndexController::class, 'store'])->name('gastos.store');
+        Route::put('/gastos/{gasto}', [GastoOperativoIndexController::class, 'update'])->name('gastos.update');
+        Route::delete('/gastos/{gasto}', [GastoOperativoIndexController::class, 'destroy'])->name('gastos.destroy');
         Route::get('/gastos/export', GastoOperativoExportController::class)->name('gastos.export');
         Route::get('/ingresos', [IngresoOperativoIndexController::class, 'index'])->name('ingresos.index');
         Route::post('/ingresos', [IngresoOperativoIndexController::class, 'store'])->name('ingresos.store');
+        Route::put('/ingresos/{ingreso}', [IngresoOperativoIndexController::class, 'update'])->name('ingresos.update');
+        Route::delete('/ingresos/{ingreso}', [IngresoOperativoIndexController::class, 'destroy'])->name('ingresos.destroy');
         Route::get('/ingresos/export', IngresoOperativoExportController::class)->name('ingresos.export');
         Route::get('/importar', \App\Http\Controllers\Compras\ImportarComprasIndexController::class)->name('importar.index');
         Route::post('/importar/csv', \App\Http\Controllers\Compras\ImportarComprasCsvStoreController::class)->name('importar.csv');
@@ -369,6 +373,8 @@ Route::middleware([
     Route::middleware(['role:admin'])->prefix('finanzas')->name('finanzas.')->group(function () {
         Route::get('/egresos', [EgresoIndexController::class, 'index'])->name('egresos.index');
         Route::post('/egresos', [EgresoIndexController::class, 'store'])->name('egresos.store');
+        Route::put('/egresos/{egreso}', [EgresoIndexController::class, 'update'])->name('egresos.update');
+        Route::delete('/egresos/{egreso}', [EgresoIndexController::class, 'destroy'])->name('egresos.destroy');
         Route::get('/egresos/export', EgresoExportController::class)->name('egresos.export');
 
         Route::get('/movimientos-bancarios', [MovimientoBancarioIndexController::class, 'index'])->name('movimientos-bancarios.index');

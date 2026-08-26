@@ -168,4 +168,131 @@ class EgresoIndexController extends Controller
 
         return back()->with('flash.success', 'Egreso registrado y contabilizado.');
     }
+
+    public function update(Request $request, GastoOperativo $egreso, TipoCambioResolver $tipoCambioResolver, ContabilizadorService $contabilizador): RedirectResponse
+    {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        abort_unless($egreso->empresa_id === $empresaId, 404);
+
+        $data = $request->validate([
+            'fecha' => ['required', 'date'],
+            'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'importe' => ['required', 'numeric', 'gt:0'],
+            'forma_pago' => ['required', 'in:efectivo,transferencia,cheque,tarjeta'],
+            'banco_origen_id' => ['nullable', 'exists:bancos,id', 'required_if:forma_pago,transferencia'],
+            'tipo_cheque' => ['nullable', 'required_if:forma_pago,cheque', 'in:propio,tercero'],
+            'cheque_id' => ['nullable', 'exists:cheques,id'],
+            'cheque_banco_id' => ['nullable', 'exists:bancos,id', 'required_if:tipo_cheque,propio'],
+            'cheque_numero' => ['nullable', 'string', 'max:64'],
+            'cheque_importe' => ['nullable', 'numeric', 'gt:0', 'required_if:tipo_cheque,propio'],
+            'cheque_fecha_vencimiento' => ['nullable', 'date', 'required_if:tipo_cheque,propio'],
+            'cheque_titular' => ['nullable', 'string', 'max:255'],
+            'fecha_pago' => ['nullable', 'date'],
+            'distribucion' => ['required', 'array', 'min:1'],
+            'distribucion.*.cuenta_contable_id' => ['required', 'exists:cuentas_contables,id'],
+            'distribucion.*.importe' => ['required', 'numeric', 'gt:0'],
+            'referencia' => ['nullable', 'string', 'max:255'],
+            'observacion' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($data['forma_pago'] === 'cheque' && $data['tipo_cheque'] === 'propio') {
+            $banco = Banco::query()->findOrFail($data['cheque_banco_id']);
+            $cheque = Cheque::query()->create([
+                'empresa_id' => $empresaId,
+                'tipo' => 'fisico',
+                'origen' => 'propio',
+                'numero' => $data['cheque_numero'] ?: null,
+                'banco' => $banco->nombre,
+                'importe' => $data['cheque_importe'],
+                'moneda' => $data['moneda'],
+                'fecha_emision' => $data['fecha'],
+                'fecha_vencimiento' => $data['cheque_fecha_vencimiento'],
+                'titular' => $data['cheque_titular'] ?: null,
+                'estado' => 'en_cartera',
+            ]);
+            $data['cheque_id'] = $cheque->id;
+        } elseif ($data['forma_pago'] === 'cheque' && $data['tipo_cheque'] === 'tercero') {
+            $cheque = Cheque::query()->findOrFail($data['cheque_id']);
+            $cheque->update(['estado' => 'endosado']);
+        }
+
+        $oldChequeId = $egreso->cheque_id;
+        if ($oldChequeId && $oldChequeId != ($data['cheque_id'] ?? null)) {
+            $old = Cheque::find($oldChequeId);
+            if ($old && $old->origen === 'tercero') $old->update(['estado' => 'en_cartera']);
+        }
+
+        $empresa = Empresa::query()->findOrFail($empresaId);
+        $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
+
+        $egreso->update([
+            'fecha' => $data['fecha'],
+            'moneda' => $data['moneda'],
+            'cotizacion_ars' => $cotizacion['tasa_ars'],
+            'importe' => $data['importe'],
+            'referencia' => $data['referencia'] ?: null,
+            'observacion' => $data['observacion'] ?: null,
+            'forma_pago' => $data['forma_pago'],
+            'banco_origen_id' => $data['banco_origen_id'] ?? null,
+            'cheque_id' => $data['cheque_id'] ?? null,
+            'fecha_pago' => $data['fecha_pago'] ?? null,
+        ]);
+
+        $egreso->categorias()->delete();
+        foreach ($data['distribucion'] as $item) {
+            $egreso->categorias()->create([
+                'cuenta_contable_id' => $item['cuenta_contable_id'],
+                'importe' => $item['importe'],
+            ]);
+        }
+
+        \App\Models\AsientoContable::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
+        try {
+            $egreso->load('categorias.cuentaContable', 'empresa');
+            $contabilizador->contabilizarGastoOperativo($egreso);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo recontabilizar egreso', ['egreso_id' => $egreso->id, 'error' => $e->getMessage()]);
+            return back()->with('flash.error', 'Egreso actualizado pero no se pudo contabilizar: '.$e->getMessage());
+        }
+
+        \App\Models\MovimientoBancario::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
+        $bancoIdParaMovimiento = null;
+        if (in_array($data['forma_pago'], ['transferencia', 'cheque', 'tarjeta'], true)) {
+            $bancoIdParaMovimiento = $data['banco_origen_id'] ?? null;
+            if ($data['forma_pago'] === 'cheque' && ($data['tipo_cheque'] ?? null) === 'propio') {
+                $bancoIdParaMovimiento = $data['cheque_banco_id'] ?? $bancoIdParaMovimiento;
+            }
+        }
+        if ($bancoIdParaMovimiento) {
+            \App\Models\MovimientoBancario::query()->create([
+                'empresa_id' => $empresaId,
+                'banco_id' => $bancoIdParaMovimiento,
+                'fecha' => $data['fecha_pago'] ?: $data['fecha'],
+                'tipo' => 'egreso',
+                'concepto' => $data['referencia'] ?: ('Egreso #'.$egreso->id),
+                'importe' => $data['importe'],
+                'moneda' => $data['moneda'],
+                'referencia_tipo' => 'gasto_operativo',
+                'referencia_id' => $egreso->id,
+                'contabilizado' => true,
+                'creado_por_user_id' => $request->user()->id,
+            ]);
+        }
+
+        return back()->with('flash.success', 'Egreso actualizado y recontabilizado.');
+    }
+
+    public function destroy(GastoOperativo $egreso): RedirectResponse
+    {
+        abort_unless($egreso->empresa_id === (int) (request()->user()->current_empresa_id ?: 0), 404);
+        if ($egreso->cheque_id) {
+            $ch = \App\Models\Cheque::find($egreso->cheque_id);
+            if ($ch && $ch->origen === 'tercero') $ch->update(['estado' => 'en_cartera']);
+        }
+        \App\Models\AsientoContable::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
+        \App\Models\MovimientoBancario::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
+        $egreso->categorias()->delete();
+        $egreso->delete();
+        return back()->with('flash.success', 'Egreso eliminado.');
+    }
 }

@@ -90,6 +90,7 @@ class ProveedorComprobanteUpdateController extends Controller
             'tipo' => ['required', 'string', 'max:64'],
             'numero' => ['nullable', 'string', 'max:64'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
             'iva_items' => ['nullable', 'array'],
             'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],
@@ -113,6 +114,12 @@ class ProveedorComprobanteUpdateController extends Controller
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha_emision']);
         $fiscal = $this->fiscalDetail($data, $data['tipo']);
 
+        // Resolver cuenta contable: si viene del form usarla, sino mantener la existente o fallback a cuenta del proveedor/empresa
+        $cuentaContableId = $data['cuenta_contable_id'] ?? $comprobante->cuenta_contable_id;
+        if (!$cuentaContableId) {
+            $cuentaContableId = $comprobante->cuenta?->cuenta_contable_proveedor_id ?: $empresa->getCuentaContable('compras_default')?->id;
+        }
+
         $comprobante->update([
             'tipo' => $data['tipo'],
             'numero' => $data['numero'] ?: null,
@@ -125,6 +132,7 @@ class ProveedorComprobanteUpdateController extends Controller
             'fecha_emision' => $data['fecha_emision'],
             'fecha_vencimiento' => $data['fecha_vencimiento'] ?: null,
             'observacion' => $data['observacion'] ?: null,
+            'cuenta_contable_id' => $cuentaContableId,
             'detalle' => array_merge($fiscal['detalle'], ['cotizacion' => $cotizacion, 'retenciones_total' => $fiscal['retenciones_total']]),
         ]);
 
