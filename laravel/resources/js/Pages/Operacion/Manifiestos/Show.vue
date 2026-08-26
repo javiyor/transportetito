@@ -435,9 +435,9 @@ const formatFecha = (value) => {
                                 <div v-if="p.recepcion_fotos?.length" class="text-xs text-green-600">Fotos: {{ p.recepcion_fotos.length }}</div>
                             </div>
                             <div class="flex items-center justify-between gap-2">
-                                <div class="text-xs text-gray-500">
-                                    <span v-if="p.recepcion_controlado_at">Ultimo control: {{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 16) }}</span>
-                                    <span v-else>Sin control</span>
+                                <div class="text-xs font-medium">
+                                    <span v-if="p.recepcion_controlado_at" class="text-green-600">Ultimo control: {{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
+                                    <span v-else class="text-red-600">sin control</span>
                                 </div>
                                 <PrimaryButton :disabled="recepcionForms[p.id].processing" @click.prevent="guardarRecepcion(p.id)">Guardar</PrimaryButton>
                             </div>
@@ -485,9 +485,9 @@ const formatFecha = (value) => {
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
                                     </div>
-                                    <div class="text-[10px] text-gray-400 mt-0.5">
-                                        <span v-if="p.recepcion_controlado_at">{{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
-                                        <span v-else>Sin control</span>
+                                    <div class="text-[10px] font-medium mt-0.5">
+                                        <span v-if="p.recepcion_controlado_at" class="text-green-600">{{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
+                                        <span v-else class="text-red-600">sin control</span>
                                     </div>
                                 </td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">
