@@ -33,8 +33,22 @@
         <thead><tr><th>Medio</th><th>Importe</th><th>Cotizacion</th><th>Detalle</th></tr></thead>
         <tbody>
             @foreach($preRecibo->items as $item)
+                @php
+                    $medioLabel = ['efectivo' => 'Efectivo', 'transferencia' => 'Transferencia', 'cheque_tercero' => 'Cheque de tercero', 'cheque_propio' => 'Cheque propio'][$item->medio] ?? $item->medio;
+                    $det = $item->detalle;
+                    $detalleOut = '';
+                    if (is_array($det)) {
+                        $parts = [];
+                        if (!empty($det['banco'])) $parts[] = 'Banco: '.$det['banco'];
+                        if (!empty($det['numero'])) $parts[] = 'N°: '.$det['numero'];
+                        if (!empty($det['fecha_vencimiento'])) $parts[] = 'Vto: '.date('d/m/Y', strtotime($det['fecha_vencimiento']));
+                        if (!empty($det['titular'])) $parts[] = 'Titular: '.$det['titular'];
+                        if (!empty($det['detalle'])) $parts[] = $det['detalle'];
+                        $detalleOut = $parts ? implode(' — ', $parts) : '';
+                    }
+                @endphp
                 <tr>
-                    <td>{{ $item->medio }}</td>
+                    <td>{{ $medioLabel }}</td>
                     <td>{{ $item->moneda }} {{ number_format((float) $item->importe, 2, ',', '.') }}</td>
                     <td>{{ $item->moneda === 'ARS' ? '-' : number_format((float) $item->cotizacion_ars, 6, ',', '.') }}</td>
                     <td>
@@ -44,14 +58,14 @@
                         @if (!empty($item->detalle['foto_comprobante_pago']))
                             <a href="{{ asset('storage/'.$item->detalle['foto_comprobante_pago']) }}" target="_blank">Ver comprobante pago</a><br>
                         @endif
-                        {{ $item->detalle ? json_encode($item->detalle, JSON_UNESCAPED_UNICODE) : '' }}
+                        {{ $detalleOut ?: ($item->detalle ? json_encode($item->detalle, JSON_UNESCAPED_UNICODE) : '') }}
                     </td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
-    <h3>Aplicaciones</h3>
+    <h3>Imputaciones</h3>
     <table>
         <thead><tr><th>Modo</th><th>Comprobante</th><th>Importe</th><th>Cotizacion</th></tr></thead>
         <tbody>

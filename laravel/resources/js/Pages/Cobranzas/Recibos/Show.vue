@@ -187,7 +187,7 @@ const submitAnular = () => {
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Aplicaciones</h3></div>
+                <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Imputaciones</h3></div>
                 <div class="space-y-3 p-4 sm:hidden">
                     <div v-for="ap in (recibo.aplicaciones || [])" :key="ap.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">

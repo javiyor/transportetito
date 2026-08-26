@@ -33,11 +33,32 @@
         <thead><tr><th>Medio</th><th>Importe</th><th>Cotizacion</th><th>Detalle</th></tr></thead>
         <tbody>
             @foreach($recibo->items as $item)
+                @php
+                    $medioLabel = ['efectivo' => 'Efectivo', 'transferencia' => 'Transferencia', 'cheque_tercero' => 'Cheque de tercero', 'cheque_propio' => 'Cheque propio'][$item->medio] ?? $item->medio;
+                    $det = $item->detalle;
+                    $detalleOut = '';
+                    if (is_array($det)) {
+                        $parts = [];
+                        if (!empty($det['banco'])) $parts[] = 'Banco: '.$det['banco'];
+                        if (!empty($det['numero'])) $parts[] = 'N°: '.$det['numero'];
+                        if (!empty($det['fecha_vencimiento'])) {
+                            $parts[] = 'Vto: '.date('d/m/Y', strtotime($det['fecha_vencimiento']));
+                        }
+                        if (!empty($det['titular'])) $parts[] = 'Titular: '.$det['titular'];
+                        if (!empty($det['detalle'])) $parts[] = $det['detalle'];
+                        if (!empty($det['titular']) && empty($det['banco']) && !empty($det['numero'])) {
+                            // fallback ya cubierto
+                        }
+                        $detalleOut = $parts ? implode(' — ', $parts) : (!empty($det['detalle']) ? $det['detalle'] : (count($det) ? json_encode($det, JSON_UNESCAPED_UNICODE) : ''));
+                    } elseif (is_string($det)) {
+                        $detalleOut = $det;
+                    }
+                @endphp
                 <tr>
-                    <td>{{ $item->medio }}</td>
+                    <td>{{ $medioLabel }}</td>
                     <td>{{ $item->moneda }} {{ number_format((float) $item->importe, 2, ',', '.') }}</td>
                     <td>{{ $item->moneda === 'ARS' ? '-' : number_format((float) $item->cotizacion_ars, 6, ',', '.') }}</td>
-                    <td>{{ $item->detalle ? json_encode($item->detalle, JSON_UNESCAPED_UNICODE) : '' }}</td>
+                    <td>{{ $detalleOut }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -66,7 +87,7 @@
         </table>
     @endif
 
-    <h3>Aplicaciones</h3>
+    <h3>Imputaciones</h3>
     <table>
         <thead><tr><th>Modo</th><th>Comprobante</th><th>Importe</th><th>Cotizacion</th></tr></thead>
         <tbody>
