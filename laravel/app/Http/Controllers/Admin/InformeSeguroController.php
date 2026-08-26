@@ -113,11 +113,47 @@ class InformeSeguroController extends Controller
             [$desde->toDateString(), $hasta->toDateString()]
         );
 
+        // Enriquecer detalles con remitente para agrupar por remitente dentro de cada viaje
+        $detallesConRemitenteRaw = DB::connection('mysql_external')->select(
+            <<<'SQL'
+            select
+              hr.id as id_envio,
+              hr.fecha as fecha_envio,
+              c.id as carga_id,
+              c.cantidad,
+              c.unidad,
+              c.remito,
+              c.valordeclarado,
+              d.nombre as deposito_origen,
+              o.nomclie as remitente,
+              o.cuiclie as cuit_remitente
+            from hojaderuta hr
+            inner join cargaporenvio cpe on cpe.idenvio = hr.id
+            inner join carga c on c.id = cpe.idcarga
+            inner join depositos d on c.iddeposito = d.id
+            inner join clientes o on c.idproveedor = o.numclie
+            where hr.fecha >= ? and hr.fecha < ?
+            order by hr.id, o.nomclie
+            SQL,
+            [$desde->toDateString(), $hasta->toDateString()]
+        );
+
         $bultosPorViaje = [];
         foreach ($detallesRaw as $d) {
             $key = $d->id_envio;
             if (!isset($bultosPorViaje[$key])) $bultosPorViaje[$key] = [];
             $bultosPorViaje[$key][] = $d;
+        }
+        // Sobrescribir con detalle enriquecido por remitente si existe
+        $bultosPorViajeDetallado = [];
+        foreach ($detallesConRemitenteRaw as $d) {
+            $key = $d->id_envio;
+            if (!isset($bultosPorViajeDetallado[$key])) $bultosPorViajeDetallado[$key] = [];
+            $bultosPorViajeDetallado[$key][] = $d;
+        }
+        // Usar el detallado si tiene datos, sino el anterior
+        if (!empty($bultosPorViajeDetallado)) {
+            $bultosPorViaje = $bultosPorViajeDetallado;
         }
 
         $overrides = InformeSeguroOverride::where('mes', $mes)

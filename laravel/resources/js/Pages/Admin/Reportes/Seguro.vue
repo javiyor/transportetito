@@ -192,6 +192,7 @@ const formatFecha = (v) => {
                                         <div class="overflow-x-auto">
                                             <table class="min-w-full divide-y divide-gray-200 text-xs bg-white rounded border">
                                                 <thead class="bg-gray-100"><tr>
+                                                    <th class="px-2 py-1 text-left">Remitente</th>
                                                     <th class="px-2 py-1 text-left">Carga ID</th>
                                                     <th class="px-2 py-1 text-left">Depósito</th>
                                                     <th class="px-2 py-1 text-center">Cant.</th>
@@ -200,14 +201,18 @@ const formatFecha = (v) => {
                                                     <th class="px-2 py-1 text-right">Valor</th>
                                                 </tr></thead>
                                                 <tbody>
-                                                    <tr v-for="b in (props.bultosPorViaje?.[v.id_envio] || [])" :key="b.carga_id" class="border-t border-gray-100 hover:bg-gray-50">
-                                                        <td class="px-2 py-1 font-mono">#{{ b.carga_id }}</td>
-                                                        <td class="px-2 py-1">{{ b.deposito_origen }}</td>
-                                                        <td class="px-2 py-1 text-center">{{ b.cantidad }}</td>
-                                                        <td class="px-2 py-1">{{ b.unidad || '-' }}</td>
-                                                        <td class="px-2 py-1 font-mono">{{ b.remito || '-' }}</td>
-                                                        <td class="px-2 py-1 text-right font-mono">$ {{ Number(b.valordeclarado || 0).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td>
-                                                    </tr>
+                                                    <template v-for="(grupo, remitente) in (() => { const g={}; (props.bultosPorViaje?.[v.id_envio] || []).forEach(b=>{ const k=b.remitente || 'Sin remitente'; if(!g[k]) g[k]=[]; g[k].push(b); }); return g; })()" :key="remitente">
+                                                        <tr class="bg-gray-100"><td colspan="7" class="px-2 py-1 font-semibold text-gray-700">Remitente: {{ remitente }} ({{ grupo.length }} bultos)</td></tr>
+                                                        <tr v-for="b in grupo" :key="b.carga_id" class="border-t border-gray-100 hover:bg-gray-50">
+                                                            <td class="px-2 py-1 text-gray-600">{{ b.remitente || '-' }}</td>
+                                                            <td class="px-2 py-1 font-mono">#{{ b.carga_id }}</td>
+                                                            <td class="px-2 py-1">{{ b.deposito_origen }}</td>
+                                                            <td class="px-2 py-1 text-center">{{ b.cantidad }}</td>
+                                                            <td class="px-2 py-1">{{ b.unidad || '-' }}</td>
+                                                            <td class="px-2 py-1 font-mono">{{ b.remito || '-' }}</td>
+                                                            <td class="px-2 py-1 text-right font-mono">$ {{ Number(b.valordeclarado || 0).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td>
+                                                        </tr>
+                                                    </template>
                                                 </tbody>
                                             </table>
                                         </div>
