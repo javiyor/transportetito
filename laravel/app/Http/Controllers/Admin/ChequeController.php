@@ -17,7 +17,7 @@ class ChequeController extends Controller
     {
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
-        $query = Cheque::query()->with(['recibo.cuenta.tercero']);
+        $query = Cheque::query()->with(['recibo.cuenta.tercero', 'bancoDeposito', 'movimientoBancario']);
 
         if ($empresaId > 0) {
             $query->where('empresa_id', $empresaId);
@@ -110,11 +110,90 @@ class ChequeController extends Controller
             'tipo' => ['nullable', 'in:' . implode(',', Cheque::TIPOS)],
             'numero' => ['nullable', 'string', 'max:64'],
             'banco' => ['nullable', 'string', 'max:255'],
+            'banco_deposito_id' => ['nullable', 'exists:bancos,id'],
         ]);
+
+        $oldEstado = $cheque->estado;
+        $newEstado = $data['estado'];
+
+        // Manejar transición a depositado: crear movimiento pendiente
+        if ($newEstado === 'depositado' && $oldEstado !== 'depositado') {
+            $request->validate(['banco_deposito_id' => ['required', 'exists:bancos,id'], 'fecha_deposito' => ['required', 'date']]);
+            $bancoDepositoId = $request->input('banco_deposito_id');
+            $fechaDeposito = $request->input('fecha_deposito');
+
+            // Crear movimiento bancario pendiente
+            $mov = \App\Models\MovimientoBancario::create([
+                'empresa_id' => $cheque->empresa_id,
+                'banco_id' => $bancoDepositoId,
+                'fecha' => $fechaDeposito,
+                'tipo' => 'deposito_pendiente',
+                'concepto' => 'Deposito cheque '.($cheque->numero ? '#'.$cheque->numero : '#'.$cheque->id).' - '.$cheque->banco,
+                'importe' => $cheque->importe,
+                'moneda' => $cheque->moneda,
+                'referencia_tipo' => 'cheque',
+                'referencia_id' => $cheque->id,
+                'contabilizado' => false,
+                'creado_por_user_id' => $request->user()->id,
+            ]);
+
+            $data['banco_deposito_id'] = $bancoDepositoId;
+            $data['movimiento_bancario_id'] = $mov->id;
+            $data['estado_deposito'] = 'pendiente';
+        }
+
+        // Manejar transición a cobrado (acreditado): actualizar movimiento a acreditado
+        if ($newEstado === 'cobrado' && $oldEstado !== 'cobrado') {
+            // Si venía de depositado, actualizar el movimiento pendiente
+            if ($cheque->movimiento_bancario_id) {
+                $mov = \App\Models\MovimientoBancario::find($cheque->movimiento_bancario_id);
+                if ($mov) {
+                    $mov->update([
+                        'fecha' => $data['fecha_cobro'] ?: $cheque->fecha_deposito ?: now()->toDateString(),
+                        'tipo' => 'ingreso',
+                        'contabilizado' => true,
+                    ]);
+                    $data['estado_deposito'] = 'acreditado';
+                }
+            } elseif (!empty($data['banco_deposito_id'])) {
+                // Si se manda directo a cobrado sin pasar por depositado, crear movimiento acreditado
+                $bancoId = $data['banco_deposito_id'] ?? $cheque->banco_deposito_id;
+                if ($bancoId) {
+                    $mov = \App\Models\MovimientoBancario::create([
+                        'empresa_id' => $cheque->empresa_id,
+                        'banco_id' => $bancoId,
+                        'fecha' => $data['fecha_cobro'] ?: now()->toDateString(),
+                        'tipo' => 'ingreso',
+                        'concepto' => 'Acreditacion cheque '.($cheque->numero ? '#'.$cheque->numero : '#'.$cheque->id).' - '.$cheque->banco,
+                        'importe' => $cheque->importe,
+                        'moneda' => $cheque->moneda,
+                        'referencia_tipo' => 'cheque',
+                        'referencia_id' => $cheque->id,
+                        'contabilizado' => true,
+                        'creado_por_user_id' => $request->user()->id,
+                    ]);
+                    $data['movimiento_bancario_id'] = $mov->id;
+                    $data['estado_deposito'] = 'acreditado';
+                }
+            } else {
+                $data['estado_deposito'] = 'acreditado';
+            }
+        }
+
+        // Si se vuelve a en_cartera o rechazado, revertir movimiento pendiente si existe y está pendiente
+        if (in_array($newEstado, ['en_cartera', 'rechazado', 'anulado']) && $cheque->movimiento_bancario_id) {
+            $mov = \App\Models\MovimientoBancario::find($cheque->movimiento_bancario_id);
+            if ($mov && $mov->tipo === 'deposito_pendiente' && !$mov->contabilizado) {
+                $mov->delete();
+                $data['movimiento_bancario_id'] = null;
+                $data['estado_deposito'] = null;
+                $data['banco_deposito_id'] = null;
+            }
+        }
 
         $cheque->update($data);
 
-        return back()->with('success', 'Cheque actualizado.');
+        return back()->with('success', 'Cheque actualizado.'.($newEstado === 'depositado' ? ' Movimiento bancario pendiente generado.' : ($newEstado === 'cobrado' ? ' Cheque acreditado.' : '')));
     }
 
     public function bancos(): JsonResponse

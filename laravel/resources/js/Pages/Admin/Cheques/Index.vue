@@ -50,6 +50,7 @@ const editForm = useForm({
     fecha_cobro: '',
     fecha_rechazo: '',
     endosado_a: '',
+    banco_deposito_id: '',
     observacion: '',
 });
 
@@ -63,6 +64,7 @@ const openEdit = (c) => {
     editForm.fecha_cobro = c.fecha_cobro ? String(c.fecha_cobro).slice(0, 10) : '';
     editForm.fecha_rechazo = c.fecha_rechazo ? String(c.fecha_rechazo).slice(0, 10) : '';
     editForm.endosado_a = c.endosado_a || '';
+    editForm.banco_deposito_id = c.banco_deposito_id || '';
     editForm.observacion = c.observacion || '';
     editForm.clearErrors();
 };
@@ -281,6 +283,8 @@ const formatFecha = (v) => {
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Endosado a</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Depósito</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cobro</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Banco depósito</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mov. bancario</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>
                             </tr>
@@ -298,6 +302,8 @@ const formatFecha = (v) => {
                                 <td class="px-4 py-3 text-sm text-gray-700">{{ c.endosado_a || '-' }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-700">{{ formatFecha(c.fecha_deposito) }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-700">{{ formatFecha(c.fecha_cobro) }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ c.banco_deposito?.nombre || c.bancoDeposito?.nombre || '-' }}<span v-if="c.estado_deposito" class="ml-1 text-xs" :class="c.estado_deposito === 'pendiente' ? 'text-blue-600' : 'text-green-600'">({{ c.estado_deposito }})</span></td>
+                                <td class="px-4 py-3 text-sm text-gray-700"><span v-if="c.movimiento_bancario_id" class="text-xs text-indigo-600">#{{ c.movimiento_bancario_id }}<span v-if="c.movimientoBancario?.contabilizado" class="text-green-600"> ✓</span><span v-else class="text-amber-600"> ⏳</span></span><span v-else class="text-gray-400">-</span></td>
                                 <td class="px-4 py-3 text-sm">
                                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="estadoBadgeClass(c.estado)">{{ estadoLabel(c.estado) }}</span>
                                 </td>
@@ -306,7 +312,7 @@ const formatFecha = (v) => {
                                 </td>
                             </tr>
                             <tr v-if="!cheques.data.length">
-                                <td colspan="13" class="px-6 py-4 text-center text-sm text-gray-500">Sin cheques.</td>
+                                <td colspan="15" class="px-6 py-4 text-center text-sm text-gray-500">Sin cheques.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -356,8 +362,18 @@ const formatFecha = (v) => {
                         <TextInput v-model="editForm.fecha_deposito" type="date" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_deposito" />
                     </div>
+                    <div v-if="editForm.estado === 'depositado' || editForm.estado === 'cobrado'">
+                        <div class="text-xs font-medium text-gray-700 mb-1">Banco donde se deposita</div>
+                        <select v-model="editForm.banco_deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">(seleccionar banco)</option>
+                            <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                        </select>
+                        <InputError :message="editForm.errors.banco_deposito_id" />
+                        <div v-if="editForm.estado === 'depositado'" class="text-xs text-blue-600 mt-1">Se generará movimiento bancario pendiente</div>
+                        <div v-if="editForm.estado === 'cobrado'" class="text-xs text-green-600 mt-1">Se marcará como acreditado</div>
+                    </div>
                     <div v-if="editForm.estado === 'cobrado'">
-                        <div class="text-xs font-medium text-gray-700 mb-1">Fecha cobro</div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Fecha cobro (acreditación)</div>
                         <TextInput v-model="editForm.fecha_cobro" type="date" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_cobro" />
                     </div>

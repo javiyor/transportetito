@@ -76,6 +76,25 @@ const monedaArcaMap = {
     'brl': 'BRL', 'real': 'BRL', 'reales': 'BRL',
 };
 
+const normalizeKey = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+const parseArNumber = (v) => {
+    if (v == null || String(v).trim() === '') return null;
+    let s = String(v).trim().replace(/\s/g, '').replace(/\$/g, '');
+    if (s.includes(',')) {
+        s = s.replace(/\./g, '').replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+};
+const parseArDate = (v) => {
+    if (!v) return '';
+    const s = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return s;
+};
+
 const parseCsv = () => {
     const lines = csvText.value.trim().split('\n').filter(Boolean);
     if (lines.length < 2) {
@@ -83,12 +102,14 @@ const parseCsv = () => {
         return;
     }
     const raw = lines[0].trim();
-    const delim = raw.includes(';') ? ';' : ',';
+    let delim = ',';
+    if (raw.includes('\t')) delim = '\t';
+    else if (raw.includes(';')) delim = ';';
     const cleanHeader = (h) => h.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').trim();
     const rawHeaders = raw.split(delim).map(cleanHeader);
     const headerMap = { ...arcaHeaderMap, ...oldHeaderMap };
-    const mapped = rawHeaders.map((h, i) => {
-        const key = h.toLowerCase().replace(/['"]/g, '').trim();
+    const mapped = rawHeaders.map((h) => {
+        const key = normalizeKey(h);
         return headerMap[key] || null;
     });
     const required = ['tipo', 'pv', 'numero', 'cuit_cliente', 'razon_social', 'fecha_emision', 'total'];
@@ -115,17 +136,17 @@ const parseCsv = () => {
 
         return {
             tipo: tipo || 'FA',
-            pv: parseInt(r.pv, 10),
-            numero: parseInt(r.numero, 10),
+            pv: parseInt(String(r.pv).replace(/\D/g, ''), 10) || 0,
+            numero: parseInt(String(r.numero).replace(/\D/g, ''), 10) || 0,
             cuit_cliente: r.cuit_cliente || '',
             razon_social: r.razon_social || '',
-            fecha_emision: r.fecha_emision || '',
-            total: parseFloat(r.total) || 0,
+            fecha_emision: parseArDate(r.fecha_emision) || r.fecha_emision || '',
+            total: parseArNumber(r.total) ?? 0,
             moneda: moneda,
             arca_cae: r.arca_cae || null,
-            subtotal: r.subtotal ? parseFloat(r.subtotal) : 0,
-            iva_total: r.iva_total ? parseFloat(r.iva_total) : 0,
-            tributos_total: r.tributos_total ? parseFloat(r.tributos_total) : 0,
+            subtotal: parseArNumber(r.subtotal) ?? 0,
+            iva_total: parseArNumber(r.iva_total) ?? 0,
+            tributos_total: parseArNumber(r.tributos_total) ?? 0,
         };
     });
 };

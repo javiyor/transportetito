@@ -24,6 +24,9 @@ class Cheque extends Model
         'fecha_cobro',
         'fecha_rechazo',
         'estado',
+        'estado_deposito',
+        'banco_deposito_id',
+        'movimiento_bancario_id',
         'librado_por',
         'endosado_a',
         'recibo_id',
@@ -39,6 +42,8 @@ class Cheque extends Model
         'fecha_cobro' => 'date',
         'fecha_rechazo' => 'date',
         'recibo_item_id' => 'int',
+        'banco_deposito_id' => 'int',
+        'movimiento_bancario_id' => 'int',
     ];
 
     public const ESTADOS = [
@@ -61,5 +66,15 @@ class Cheque extends Model
     public function recibo(): BelongsTo
     {
         return $this->belongsTo(Recibo::class);
+    }
+
+    public function bancoDeposito(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Banco::class, 'banco_deposito_id');
+    }
+
+    public function movimientoBancario(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MovimientoBancario::class, 'movimiento_bancario_id');
     }
 }
