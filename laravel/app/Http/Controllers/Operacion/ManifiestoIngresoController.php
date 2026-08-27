@@ -26,6 +26,15 @@ class ManifiestoIngresoController extends Controller
         $orden = $request->query('orden', 'desc');
         $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
 
+        // Auto-importar de todos los depósitos cuando se entra con ?compartidos=1&orden=desc (sin duplicar)
+        if ($request->query('compartidos') === '1' && $request->query('orden') === 'desc') {
+            try {
+                $this->autoImportarTodosDepositos($request);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Auto-import manifiestos falló', ['error' => $e->getMessage()]);
+            }
+        }
+
         $empresaIds = [$empresaId];
 
         if ($empresaId > 0 && $compartidos !== '0') {
@@ -59,6 +68,39 @@ class ManifiestoIngresoController extends Controller
             'compartidos' => $compartidos,
             'orden' => $orden,
         ]);
+    }
+
+    private function autoImportarTodosDepositos(Request $request): void
+    {
+        $user = $request->user();
+        $empresa = \App\Models\Empresa::find($user->current_empresa_id);
+        if (!$empresa) return;
+
+        // Usar todos los depósitos de la empresa actual y compartidas (para no duplicar, el importer ya maneja external_carga_id)
+        $empresaIds = [$empresa->id];
+        $shared = \App\Models\TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresa) {
+            $q->select('tercero_id')->from('tercero_cuentas')->where('empresa_id', $empresa->id);
+        })->where('empresa_id', '!=', $empresa->id)->distinct()->pluck('empresa_id')->toArray();
+        $empresaIds = array_merge($empresaIds, $shared);
+
+        $depositos = \App\Models\Deposito::whereIn('empresa_id', $empresaIds)->get();
+        if ($depositos->isEmpty()) {
+            $depositos = \App\Models\Deposito::where('empresa_id', $empresa->id)->get();
+        }
+        if ($depositos->isEmpty()) return;
+
+        $importer = app(\App\Services\Import\ExternalCargaImporter::class);
+        $since = now()->subDays(30)->toDateString();
+
+        foreach ($depositos as $deposito) {
+            try {
+                // Resolver empresa efectiva para ese depósito (puede ser compartida)
+                $empresaEfectiva = \App\Models\Empresa::find($deposito->empresa_id) ?: $empresa;
+                $importer->importSince($empresaEfectiva, $deposito, $since);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Auto-import deposito falló', ['deposito_id' => $deposito->id, 'error' => $e->getMessage()]);
+            }
+        }
     }
 
     public function create()
