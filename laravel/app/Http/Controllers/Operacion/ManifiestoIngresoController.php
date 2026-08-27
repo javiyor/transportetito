@@ -22,12 +22,21 @@ class ManifiestoIngresoController extends Controller
     public function index(Request $request)
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+
+        // Siempre mostrar datos compartidos por defecto
+        if (!$request->has('compartidos') || !$request->has('orden')) {
+            $query = $request->query();
+            $query['compartidos'] = $query['compartidos'] ?? '1';
+            $query['orden'] = $query['orden'] ?? 'desc';
+            return redirect()->route('operacion.manifiestos.index', $query);
+        }
+
         $compartidos = $request->query('compartidos', '1');
         $orden = $request->query('orden', 'desc');
         $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
 
         // Auto-importar de todos los depósitos cuando se entra con ?compartidos=1&orden=desc (sin duplicar)
-        if ($request->query('compartidos') === '1' && $request->query('orden') === 'desc') {
+        if ($compartidos === '1' && $orden === 'desc') {
             try {
                 $this->autoImportarTodosDepositos($request);
             } catch (\Throwable $e) {
