@@ -22,27 +22,9 @@ class ManifiestoIngresoController extends Controller
     public function index(Request $request)
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-
-        // Siempre mostrar datos compartidos por defecto
-        if (!$request->has('compartidos') || !$request->has('orden')) {
-            $query = $request->query();
-            $query['compartidos'] = $query['compartidos'] ?? '1';
-            $query['orden'] = $query['orden'] ?? 'desc';
-            return redirect()->route('operacion.manifiestos.index', $query);
-        }
-
         $compartidos = $request->query('compartidos', '1');
         $orden = $request->query('orden', 'desc');
         $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
-
-        // Auto-importar de todos los depósitos cuando se entra con ?compartidos=1&orden=desc (sin duplicar)
-        if ($compartidos === '1' && $orden === 'desc') {
-            try {
-                $this->autoImportarTodosDepositos($request);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Auto-import manifiestos falló', ['error' => $e->getMessage()]);
-            }
-        }
 
         $empresaIds = [$empresaId];
 
@@ -79,13 +61,17 @@ class ManifiestoIngresoController extends Controller
         ]);
     }
 
-    private function autoImportarTodosDepositos(Request $request): void
+    public function importAuto(Request $request)
     {
         $user = $request->user();
         $empresa = \App\Models\Empresa::find($user->current_empresa_id);
-        if (!$empresa) return;
+        if (!$empresa) {
+            if ($request->wantsJson() || $request->header('X-Inertia')) {
+                return response()->json(['error' => 'Empresa no encontrada'], 422);
+            }
+            return back()->with('flash.error', 'Empresa no encontrada');
+        }
 
-        // Usar todos los depósitos de la empresa actual y compartidas (para no duplicar, el importer ya maneja external_carga_id)
         $empresaIds = [$empresa->id];
         $shared = \App\Models\TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresa) {
             $q->select('tercero_id')->from('tercero_cuentas')->where('empresa_id', $empresa->id);
@@ -96,20 +82,30 @@ class ManifiestoIngresoController extends Controller
         if ($depositos->isEmpty()) {
             $depositos = \App\Models\Deposito::where('empresa_id', $empresa->id)->get();
         }
-        if ($depositos->isEmpty()) return;
 
         $importer = app(\App\Services\Import\ExternalCargaImporter::class);
         $since = now()->subDays(30)->toDateString();
+        $resultados = [];
+        $totalCreados = 0;
 
         foreach ($depositos as $deposito) {
             try {
-                // Resolver empresa efectiva para ese depósito (puede ser compartida)
                 $empresaEfectiva = \App\Models\Empresa::find($deposito->empresa_id) ?: $empresa;
-                $importer->importSince($empresaEfectiva, $deposito, $since);
+                $res = $importer->importSince($empresaEfectiva, $deposito, $since);
+                $creados = $res['created'] ?? 0;
+                $totalCreados += $creados;
+                $resultados[] = ['deposito' => $deposito->nombre, 'creados' => $creados, 'omitidos' => $res['skipped'] ?? 0];
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Auto-import deposito falló', ['deposito_id' => $deposito->id, 'error' => $e->getMessage()]);
+                $resultados[] = ['deposito' => $deposito->nombre, 'error' => $e->getMessage()];
             }
         }
+
+        $msg = $totalCreados > 0 ? "Importados $totalCreados nuevos pedidos" : "Sin nuevos pedidos";
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['resultados' => $resultados, 'totalCreados' => $totalCreados]);
+        }
+
+        return back()->with('flash.success', $msg);
     }
 
     public function create()

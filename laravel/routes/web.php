@@ -243,6 +243,7 @@ Route::middleware([
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
         Route::get('/manifiestos', [ManifiestoIngresoController::class, 'index'])->name('manifiestos.index');
+        Route::post('/manifiestos/import-auto', [ManifiestoIngresoController::class, 'importAuto'])->name('manifiestos.import-auto');
         Route::get('/manifiestos/create', [ManifiestoIngresoController::class, 'create'])->name('manifiestos.create');
         Route::post('/manifiestos', [ManifiestoIngresoController::class, 'store'])->name('manifiestos.store');
         Route::get('/manifiestos/{manifiesto}', [ManifiestoIngresoController::class, 'show'])->name('manifiestos.show');

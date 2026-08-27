@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 const eliminar = (m) => {
     if (confirm('¿Eliminar manifiesto? Los pedidos se desasignarán.')) {
@@ -53,6 +53,21 @@ const formatFecha = (value) => {
     const d = new Date(String(value).slice(0, 10));
     return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 };
+
+const autoImportando = ref(false);
+onMounted(() => {
+    if (props.compartidos === '1' && props.orden === 'desc' && props.manifiestos.current_page === 1) {
+        autoImportando.value = true;
+        router.post(route('operacion.manifiestos.import-auto'), {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                router.reload({ only: ['manifiestos'] });
+            },
+            onFinish: () => { autoImportando.value = false; },
+        });
+    }
+});
 </script>
 
 <template>
@@ -74,6 +89,9 @@ const formatFecha = (value) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-4">
+            <div v-if="autoImportando" class="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded text-xs text-center">
+                Importando nuevos manifiestos de todos los depósitos...
+            </div>
             <div class="flex items-center gap-2">
                 <button @click="toggleCompartidos"
                     class="text-xs px-3 py-1.5 rounded border font-medium transition-colors"
