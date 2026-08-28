@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
 
 class RepararCtaCteDuplicados extends Command
 {
-    protected $signature = 'ctacte:reparar-duplicados {--empresa_id= : Filtrar por empresa} {--dry-run : Solo mostrar} {--fix : Eliminar duplicados}';
-    protected $description = 'Detecta y repara CtaCte duplicados para comprobantes importados (mantiene facturas)';
+    protected $signature = 'ctacte:reparar-duplicados {--empresa_id= : Filtrar por empresa} {--dry-run : Solo mostrar} {--fix : Eliminar duplicados y sincronizar importes}';
+    protected $description = 'Detecta y repara CtaCte duplicados y desincronizados (importes) para comprobantes importados (mantiene facturas)';
 
     public function handle(): int
     {
@@ -71,6 +71,41 @@ class RepararCtaCteDuplicados extends Command
         }
 
         $this->info("Eliminados: $eliminados movimientos duplicados. Las facturas quedan intactas.");
+
+        // Verificar importes desincronizados (CtaCte vs Factura)
+        $this->info("Verificando importes desincronizados...");
+        $desyncQuery = DB::table('cta_cte_movimientos as m')
+            ->join('comprobantes as c', function ($join) {
+                $join->on('m.referencia_id', '=', 'c.id')->where('m.referencia_tipo', '=', 'comprobante');
+            })
+            ->selectRaw('c.id as comprobante_id, c.tipo, c.total as factura_total, m.id as mov_id, m.importe_signed as mov_importe, c.empresa_id')
+            ->whereRaw('ABS(m.importe_signed - CASE WHEN c.tipo LIKE \'%nota_credito%\' THEN -ABS(c.total) WHEN c.tipo LIKE \'%nota_debito%\' THEN ABS(c.total) ELSE c.total END) > 0.01');
+
+        if ($empresaId) {
+            $desyncQuery->where('c.empresa_id', $empresaId);
+        }
+
+        $desyncs = $desyncQuery->get();
+        $this->info("Movimientos con importe desincronizado: ".$desyncs->count());
+        $sincronizados = 0;
+        foreach ($desyncs as $d) {
+            $esperado = $d->factura_total;
+            // Para NC, el movimiento debe ser negativo
+            if (str_contains($d->tipo, 'nota_credito') && $esperado > 0) $esperado = -$esperado;
+            if (str_contains($d->tipo, 'nota_debito') && $esperado < 0) $esperado = abs($esperado);
+            $this->line("  Comprobante #{$d->comprobante_id} ({$d->tipo}) Factura: {$d->factura_total} vs CtaCte #{$d->mov_id}: {$d->mov_importe} => esperado $esperado");
+            if ($fix && !$dryRun) {
+                DB::table('cta_cte_movimientos')->where('id', $d->mov_id)->update(['importe_signed' => $esperado]);
+                $sincronizados++;
+            }
+        }
+        if ($dryRun) {
+            $this->warn("Dry-run: no se sincronizaron importes. Usá --fix para corregir.");
+        } elseif ($fix) {
+            $this->info("Sincronizados: $sincronizados movimientos actualizados al importe de la factura.");
+        } else {
+            $this->warn("Usá --fix para sincronizar importes con facturas.");
+        }
 
         // Verificar también movimientos huérfanos sin comprobante (por si el comprobante fue omitido pero el movimiento se creó)
         $huerfanos = DB::table('cta_cte_movimientos as m')
