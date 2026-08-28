@@ -33,8 +33,18 @@ const arcaHeaderMap = {
     'nro. doc. receptor': 'cuit_cliente', 'denominación receptor': 'razon_social',
     'moneda': 'moneda', 'imp. total': 'total', 'tipo cambio': 'tipo_cambio',
     'importe neto gravado': 'subtotal', 'neto gravado': 'subtotal',
-    'iva total': 'iva_total',
-    'imp. tributos': 'tributos_total', 'tributos total': 'tributos_total',
+    'imp neto gravado total': 'neto_total',
+    'imp neto no gravado': 'neto_no_gravado',
+    'imp op exentas': 'op_exentas',
+    'iva total': 'iva_total', 'total iva': 'iva_total',
+    'imp tributos': 'tributos_total', 'tributos total': 'tributos_total', 'otros tributos': 'tributos_total',
+    // Detalle por alícuota
+    'imp neto gravado iva 0': 'neto_iva_0',
+    'iva 2 5': 'iva_2_5', 'imp neto gravado iva 2 5': 'neto_iva_2_5',
+    'iva 5': 'iva_5', 'imp neto gravado iva 5': 'neto_iva_5',
+    'iva 10 5': 'iva_10_5', 'imp neto gravado iva 10 5': 'neto_iva_10_5',
+    'iva 21': 'iva_21', 'imp neto gravado iva 21': 'neto_iva_21',
+    'iva 27': 'iva_27', 'imp neto gravado iva 27': 'neto_iva_27',
 };
 
 const oldHeaderMap = {
@@ -134,6 +144,30 @@ const parseCsv = () => {
         let moneda = (r.moneda || 'ARS').trim().toLowerCase().replace(/[^a-z$]/g, '');
         moneda = monedaArcaMap[moneda] || (['ars','usd','eur','brl'].includes(moneda) ? moneda.toUpperCase() : 'ARS');
 
+        // Si viene desglose por alícuota, sumar para obtener subtotal/iva
+        let subtotal = parseArNumber(r.subtotal);
+        let iva_total = parseArNumber(r.iva_total);
+        const tributos_total = parseArNumber(r.tributos_total) ?? 0;
+
+        const netoTotal = parseArNumber(r.neto_total);
+        const netoNoGrav = parseArNumber(r.neto_no_gravado) ?? 0;
+        const opEx = parseArNumber(r.op_exentas) ?? 0;
+        const perNeto = ['neto_iva_0','neto_iva_2_5','neto_iva_5','neto_iva_10_5','neto_iva_21','neto_iva_27'].reduce((s,k)=> s + (parseArNumber(r[k]) ?? 0), 0);
+        const perIva = ['iva_2_5','iva_5','iva_10_5','iva_21','iva_27'].reduce((s,k)=> s + (parseArNumber(r[k]) ?? 0), 0);
+
+        if (subtotal == null) {
+            if (netoTotal != null) subtotal = netoTotal + netoNoGrav + opEx;
+            else if (perNeto > 0) subtotal = perNeto + netoNoGrav + opEx;
+            else subtotal = 0;
+        }
+        if (iva_total == null && perIva > 0) iva_total = perIva;
+        if (iva_total == null) {
+            const totIva = parseArNumber(r['total iva'] ?? r.iva_total);
+            if (totIva != null) iva_total = totIva;
+        }
+        iva_total = iva_total ?? 0;
+        subtotal = subtotal ?? 0;
+
         return {
             tipo: tipo || 'FA',
             pv: parseInt(String(r.pv).replace(/\D/g, ''), 10) || 0,
@@ -144,9 +178,9 @@ const parseCsv = () => {
             total: parseArNumber(r.total) ?? 0,
             moneda: moneda,
             arca_cae: r.arca_cae || null,
-            subtotal: parseArNumber(r.subtotal) ?? 0,
-            iva_total: parseArNumber(r.iva_total) ?? 0,
-            tributos_total: parseArNumber(r.tributos_total) ?? 0,
+            subtotal: subtotal,
+            iva_total: iva_total,
+            tributos_total: tributos_total,
         };
     });
 };

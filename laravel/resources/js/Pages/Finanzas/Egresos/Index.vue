@@ -69,7 +69,32 @@ const submit = () => {
     form.post(route('finanzas.egresos.store'), { preserveScroll: true });
 };
 
-const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjeta' }[f] || f);
+const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjeta', cuenta_corriente: 'Cuenta corriente' }[f] || f);
+
+const cuentaSearch = ref('');
+const cuentaSearchEdit = ref('');
+const cuentasFiltradas = computed(() => {
+    if (!cuentaSearch.value) return props.cuentasContables;
+    const q = cuentaSearch.value.toLowerCase();
+    return props.cuentasContables.filter(c => (`${c.codigo} ${c.nombre}`.toLowerCase().includes(q)));
+});
+const cuentasFiltradasEdit = computed(() => {
+    if (!cuentaSearchEdit.value) return props.cuentasContables;
+    const q = cuentaSearchEdit.value.toLowerCase();
+    return props.cuentasContables.filter(c => (`${c.codigo} ${c.nombre}`.toLowerCase().includes(q)));
+});
+const pasivoSearch = ref('');
+const pasivoSearchEdit = ref('');
+const cuentasPasivoFiltradas = computed(() => {
+    if (!pasivoSearch.value) return props.cuentasPasivo || [];
+    const q = pasivoSearch.value.toLowerCase();
+    return (props.cuentasPasivo || []).filter(c => (`${c.codigo} ${c.nombre}`.toLowerCase().includes(q)));
+});
+const cuentasPasivoFiltradasEdit = computed(() => {
+    if (!pasivoSearchEdit.value) return props.cuentasPasivo || [];
+    const q = pasivoSearchEdit.value.toLowerCase();
+    return (props.cuentasPasivo || []).filter(c => (`${c.codigo} ${c.nombre}`.toLowerCase().includes(q)));
+});
 
 const editing = ref(false);
 const editId = ref(null);
@@ -187,9 +212,10 @@ const confirmDelete = (e) => {
                         </div>
                         <div v-if="form.forma_pago === 'cuenta_corriente'">
                             <InputLabel value="Cuenta pasivo a acreditar" />
+                            <input v-model="pasivoSearch" type="text" placeholder="Buscar por código o nombre..." class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
                             <select v-model="form.cuenta_pasivo_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Seleccionar cuenta pasivo...</option>
-                                <option v-for="c in cuentasPasivo" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                                <option v-for="c in cuentasPasivoFiltradas" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.cuenta_pasivo_id" />
                             <div class="text-xs text-gray-500 mt-1">Se generará asiento Debe: gasto / Haber: pasivo seleccionado</div>
@@ -255,12 +281,15 @@ const confirmDelete = (e) => {
                             <h4 class="text-sm font-semibold text-gray-900">Distribucion por cuentas contables</h4>
                             <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="agregarDistribucion">+ Agregar</SecondaryButton>
                         </div>
+                        <div class="mb-2">
+                            <input v-model="cuentaSearch" type="text" placeholder="Buscar cuenta por código o nombre para filtrar la lista..." class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
+                        </div>
                         <div v-for="(d, idx) in form.distribucion" :key="idx" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end mb-2">
                             <div>
                                 <InputLabel :value="'Cuenta ' + (idx + 1)" />
                                 <select v-model="d.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
                                     <option value="">Seleccionar...</option>
-                                    <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                                    <option v-for="c in cuentasFiltradas" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
                                 </select>
                             </div>
                             <div>
@@ -331,7 +360,7 @@ const confirmDelete = (e) => {
                         <div><InputLabel value="Moneda" class="!text-xs" /><select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select></div>
                         <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
                         <div v-if="esEditTransferencia"><InputLabel value="Banco origen" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
-                        <div v-if="editForm.forma_pago === 'cuenta_corriente'"><InputLabel value="Cuenta pasivo" class="!text-xs" /><select v-model="editForm.cuenta_pasivo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar pasivo...</option><option v-for="c in cuentasPasivo" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_pasivo_id" /></div>
+                        <div v-if="editForm.forma_pago === 'cuenta_corriente'"><InputLabel value="Cuenta pasivo" class="!text-xs" /><input v-model="pasivoSearchEdit" type="text" placeholder="Buscar..." class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" /><select v-model="editForm.cuenta_pasivo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar pasivo...</option><option v-for="c in cuentasPasivoFiltradasEdit" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_pasivo_id" /></div>
                         <div><InputLabel value="Fecha pago" class="!text-xs" /><TextInput v-model="editForm.fecha_pago" type="date" class="mt-0.5 block w-full text-sm" /></div>
                     </div>
                     <div v-if="esEditCheque" class="border border-gray-200 rounded-lg p-3">
@@ -351,8 +380,11 @@ const confirmDelete = (e) => {
                     </div>
                     <div class="border border-gray-200 rounded-lg p-3">
                         <div class="flex items-center justify-between mb-2"><span class="text-xs font-semibold text-gray-700">Distribución</span><button type="button" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" @click="agregarEditDistribucion">+ Agregar</button></div>
+                        <div class="mb-2">
+                            <input v-model="cuentaSearchEdit" type="text" placeholder="Buscar cuenta..." class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
+                        </div>
                         <div v-for="(d, idx) in editForm.distribucion" :key="idx" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end mb-2">
-                            <div><InputLabel :value="'Cuenta '+(idx+1)" class="!text-xs" /><select v-model="d.cuenta_contable_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select></div>
+                            <div><InputLabel :value="'Cuenta '+(idx+1)" class="!text-xs" /><select v-model="d.cuenta_contable_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="c in cuentasFiltradasEdit" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select></div>
                             <div><InputLabel value="Importe" class="!text-xs" /><TextInput v-model="d.importe" type="number" step="0.01" class="mt-0.5 block w-full text-sm" /></div>
                             <div class="flex items-end pb-1"><button v-if="editForm.distribucion.length>1" type="button" class="text-red-500 text-lg font-bold" @click="quitarEditDistribucion(idx)">&times;</button></div>
                         </div>

@@ -205,7 +205,6 @@ const applyPwaUpdate = () => {
                                         <template #content>
                                             <DropdownLink :href="route('compras.proveedores.comprobantes.index')">Comprobantes</DropdownLink>
                                             <DropdownLink :href="route('compras.proveedores.ctacte.index')">Cuenta Corriente</DropdownLink>
-                                            <DropdownLink :href="route('compras.gastos.index')">Gastos</DropdownLink>
                                             <DropdownLink :href="route('compras.importar.index')">Importar</DropdownLink>
                                         </template>
                                     </Dropdown>
@@ -582,13 +581,6 @@ const applyPwaUpdate = () => {
                             :active="route().current('compras.proveedores.ctacte.*')"
                         >
                             Cuenta Corriente
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="($page.props.tt?.roles || []).includes('admin')"
-                            :href="route('compras.gastos.index')"
-                            :active="route().current('compras.gastos.*')"
-                        >
-                            Gastos
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"
