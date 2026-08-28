@@ -27,11 +27,12 @@ const csvText = ref('');
 const csvPreview = ref([]);
 
 const arcaHeaderMap = {
-    'fecha de emisión': 'fecha_emision', 'tipo de comprobante': 'tipo',
-    'punto de venta': 'pv', 'número desde': 'numero',
-    'cód. autorización': 'arca_cae', 'código de autorización': 'arca_cae',
-    'nro. doc. receptor': 'cuit_cliente', 'denominación receptor': 'razon_social',
-    'moneda': 'moneda', 'imp. total': 'total', 'tipo cambio': 'tipo_cambio',
+    'fecha de emision': 'fecha_emision', 'tipo de comprobante': 'tipo',
+    'punto de venta': 'pv', 'numero desde': 'numero', 'numero hasta': 'numero',
+    'cod autorizacion': 'arca_cae', 'codigo de autorizacion': 'arca_cae',
+    'nro doc receptor': 'cuit_cliente', 'denominacion receptor': 'razon_social',
+    'nro doc emisor': 'cuit_cliente', 'denominacion emisor': 'razon_social',
+    'moneda': 'moneda', 'imp total': 'total', 'importe total': 'total', 'total': 'total', 'tipo cambio': 'tipo_cambio',
     'importe neto gravado': 'subtotal', 'neto gravado': 'subtotal',
     'imp neto gravado total': 'neto_total',
     'imp neto no gravado': 'neto_no_gravado',

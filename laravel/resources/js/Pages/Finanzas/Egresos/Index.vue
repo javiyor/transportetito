@@ -186,10 +186,10 @@ const confirmDelete = (e) => {
                 <div><div class="text-xs text-gray-500">Total estimado en ARS</div><div class="text-sm font-medium text-gray-900">$ {{ Number(totales?.importe_total_ars || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</div></div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <h3 class="text-base font-semibold text-gray-900">Nuevo egreso</h3>
-                <form class="mt-4 space-y-4" @submit.prevent="submit">
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div class="bg-white shadow sm:rounded-lg p-3">
+                <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Nuevo egreso</h3>
+                <form class="mt-3 space-y-3" @submit.prevent="submit">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
                         <div><InputLabel value="Fecha" /><TextInput v-model="form.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.fecha" /></div>
                         <div>
                             <InputLabel value="Forma de pago" />
@@ -317,34 +317,31 @@ const confirmDelete = (e) => {
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Egresos registrados</h3></div>
+                <div class="px-3 py-2 border-b border-gray-200"><h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Egresos registrados</h3></div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 text-[11px]">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Importe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Obs.</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">Categoria</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">Pago</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">Referencia</th>
+                                <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase">Importe</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">Obs.</th>
+                                <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="g in egresos.data" :key="g.id">
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ String(g.fecha || '').slice(0,10) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <div v-if="g.categorias?.length">{{ g.categorias.map(c => c.cuenta_contable?.nombre).join(', ') }}</div>
-                                    <span v-else>{{ g.cuenta_contable?.nombre || g.categoria }}</span>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ formaPagoLabel(g.forma_pago) }}<span v-if="g.banco_origen?.nombre"> / {{ g.banco_origen.nombre }}</span><span v-if="g.cheque"> / {{ g.cheque.banco }} #{{ g.cheque.numero }}</span></td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ g.referencia || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700 text-right font-mono">{{ g.moneda }} {{ Number(g.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ g.observacion || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-right whitespace-nowrap"><SecondaryButton class="!text-xs !px-2 !py-1" @click="openEdit(g)">Editar</SecondaryButton><button type="button" class="ml-1 text-xs text-red-600 hover:text-red-800" @click="confirmDelete(g)">Eliminar</button></td>
+                            <tr v-for="g in egresos.data" :key="g.id" class="hover:bg-gray-50">
+                                <td class="px-2 py-1 whitespace-nowrap">{{ String(g.fecha || '').slice(0,10) }}</td>
+                                <td class="px-2 py-1 max-w-[180px] truncate" :title="g.categorias?.length ? g.categorias.map(c => c.cuenta_contable?.nombre).join(', ') : (g.cuenta_contable?.nombre || g.categoria)">{{ g.categorias?.length ? g.categorias.map(c => c.cuenta_contable?.nombre).join(', ') : (g.cuenta_contable?.nombre || g.categoria) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap">{{ formaPagoLabel(g.forma_pago) }}<span v-if="g.banco_origen?.nombre"> / {{ g.banco_origen.nombre }}</span><span v-if="g.cheque"> / {{ g.cheque.banco }} #{{ g.cheque.numero }}</span><span v-if="g.cuenta_pasivo_id"> / Pasivo</span></td>
+                                <td class="px-2 py-1 whitespace-nowrap">{{ g.referencia || '-' }}</td>
+                                <td class="px-2 py-1 text-right font-mono whitespace-nowrap">{{ g.moneda }} {{ Number(g.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</td>
+                                <td class="px-2 py-1 max-w-[160px] truncate">{{ g.observacion || '-' }}</td>
+                                <td class="px-2 py-1 text-right whitespace-nowrap"><SecondaryButton class="!text-[10px] !px-2 !py-1" @click="openEdit(g)">Editar</SecondaryButton><button type="button" class="ml-1 text-[10px] text-red-600 hover:text-red-800" @click="confirmDelete(g)">Eliminar</button></td>
                             </tr>
-                            <tr v-if="!egresos.data.length"><td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">Sin registros.</td></tr>
+                            <tr v-if="!egresos.data.length"><td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">Sin registros.</td></tr>
                         </tbody>
                     </table>
                 </div>
