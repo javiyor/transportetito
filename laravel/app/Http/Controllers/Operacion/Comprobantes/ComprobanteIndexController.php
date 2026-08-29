@@ -40,7 +40,8 @@ class ComprobanteIndexController extends Controller
                 'notasCredito:id,comprobante_origen_id,estado,total',
             ])
             ->whereIn('empresa_id', $empresaIds)
-            ->orderByDesc('numero_interno')
+            ->orderByDesc('arca_punto_venta')
+            ->orderByDesc('arca_numero')
             ->orderByDesc('id');
 
         if (in_array($tipo, ['factura_interna', 'guia_envio', 'nota_credito_interna'], true)) {
