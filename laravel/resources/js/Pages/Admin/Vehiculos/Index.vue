@@ -79,10 +79,9 @@ const openEdit = (v) => {
 };
 
 const submitEdit = () => {
-    editForm.post(route('admin.vehiculos.update', editId.value), {
+    editForm.put(route('admin.vehiculos.update', editId.value), {
         preserveScroll: true,
         onSuccess: () => (editing.value = false),
-        _method: 'put',
     });
 };
 

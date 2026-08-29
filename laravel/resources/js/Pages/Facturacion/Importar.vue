@@ -46,6 +46,9 @@ const arcaHeaderMap = {
     'iva 10 5': 'iva_10_5', 'imp neto gravado iva 10 5': 'neto_iva_10_5',
     'iva 21': 'iva_21', 'imp neto gravado iva 21': 'neto_iva_21',
     'iva 27': 'iva_27', 'imp neto gravado iva 27': 'neto_iva_27',
+    'iva 5 10': 'iva_5_10', 'imp neto gravado iva 5 10': 'neto_iva_5_10',
+    'imp importe total iva': 'imp_total_iva',
+    'imp total importe': 'imp_total_importe',
 };
 
 const oldHeaderMap = {

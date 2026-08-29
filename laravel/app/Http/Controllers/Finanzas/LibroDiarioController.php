@@ -28,6 +28,14 @@ class LibroDiarioController extends Controller
         if ($cuentaId = $request->query('cuenta_contable_id')) {
             $query->whereHas('lineas', fn ($q) => $q->where('cuenta_contable_id', $cuentaId));
         }
+        if ($request->boolean('sin_balancear')) {
+            $query->whereIn('asiento_contables.id', function ($q) {
+                $q->from('lineas')
+                    ->select('asiento_contable_id')
+                    ->groupBy('asiento_contable_id')
+                    ->havingRaw('SUM(debe) != SUM(haber)');
+            });
+        }
 
         $asientos = $query->orderByDesc('fecha')->orderByDesc('id')->paginate(20)->withQueryString();
 

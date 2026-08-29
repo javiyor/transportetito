@@ -67,6 +67,11 @@ class EgresoIndexController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
+        $request->merge([
+            'cuenta_pasivo_id' => $request->cuenta_pasivo_id ?: null,
+            'banco_origen_id' => $request->banco_origen_id ?: null,
+        ]);
+
         $data = $request->validate([
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
@@ -182,6 +187,11 @@ class EgresoIndexController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         abort_unless($egreso->empresa_id === $empresaId, 404);
+
+        $request->merge([
+            'cuenta_pasivo_id' => $request->cuenta_pasivo_id ?: null,
+            'banco_origen_id' => $request->banco_origen_id ?: null,
+        ]);
 
         $data = $request->validate([
             'fecha' => ['required', 'date'],

@@ -117,6 +117,7 @@ const submitCreate = () => {
 };
 
 const filtroCuentaQuery = ref('');
+const sinBalancearChecked = ref(props.filtros?.sin_balancear);
 
 const cuentasFiltradasFiltro = computed(() => filteredCuentas(filtroCuentaQuery.value));
 
@@ -125,6 +126,7 @@ const applyFilters = () => {
         fecha_desde: document.getElementById('fecha_desde')?.value || '',
         fecha_hasta: document.getElementById('fecha_hasta')?.value || '',
         cuenta_contable_id: document.getElementById('cuenta_contable_id')?.value || '',
+        sin_balancear: sinBalancearChecked.value,
     }, { preserveState: true, replace: true });
 };
 
@@ -134,6 +136,7 @@ const goToPage = (page) => {
         fecha_desde: props.filtros.fecha_desde || '',
         fecha_hasta: props.filtros.fecha_hasta || '',
         cuenta_contable_id: props.filtros.cuenta_contable_id || '',
+        sin_balancear: sinBalancearChecked.value,
         page,
     }, { preserveState: true, preserveScroll: true });
 };
@@ -198,6 +201,12 @@ const fmtDesc = (d) => {
                         <button @click="applyFilters" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700">Filtrar</button>
                     </div>
                 </div>
+            </div>
+            <div class="bg-white shadow sm:rounded-lg p-4">
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input id="sin_balancear" type="checkbox" v-model="sinBalancearChecked" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-4" @change="applyFilters" />
+                    Solo sin balancear
+                </label>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

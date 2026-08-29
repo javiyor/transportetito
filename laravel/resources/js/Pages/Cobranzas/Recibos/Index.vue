@@ -105,7 +105,7 @@ const formatFecha = (value) => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ r.cuenta?.tercero?.razon_social || '-' }}</div>
-                                <div class="text-xs text-gray-500">{{ formatFecha(r.fecha) }} · {{ r.estado }}</div>
+                                <div class="text-xs text-gray-500">{{ formatFecha(r.fecha) }} · <span :class="r.estado === 'anulada' ? 'text-red-700 font-medium' : 'text-green-700 font-medium'">{{ r.estado }}</span></div>
                             </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', r.id)">Ver</Link>
                         </div>
@@ -149,7 +149,7 @@ const formatFecha = (value) => {
                                     <div class="text-xs text-gray-500">CUIT {{ r.cuenta?.tercero?.cuit || '-' }}</div>
                                     <div class="text-xs text-gray-500">{{ r.cuenta?.zona?.nombre || 'Sin zona' }} · {{ r.cuenta?.localidad || 'Sin ciudad' }} · {{ r.cuenta?.barrio || 'Sin barrio' }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ r.estado }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm" :class="r.estado === 'anulada' ? 'text-red-700 font-medium' : 'text-green-700 font-medium'">{{ r.estado }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ r.moneda }} {{ r.total }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ r.moneda === 'ARS' ? '-' : r.cotizacion_ars }}</td>
                                 <td class="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-right text-sm">
