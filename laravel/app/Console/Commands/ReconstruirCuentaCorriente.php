@@ -151,11 +151,22 @@ class ReconstruirCuentaCorriente extends Command
             }
 
             // 10. Reconstruir CtaCteMovimiento desde comprobantes limpios
-            $comprobantes = Comprobante::query()
+            // Deduplicar por fecha_emision + numero_interno para evitar facturas repetidas
+            $seen = [];
+            $rawComprobantes = Comprobante::query()
                 ->whereNotNull('facturar_cuenta_id')
                 ->orderBy('fecha_emision')
                 ->orderBy('id')
                 ->get();
+            $empresaId = $rawComprobantes->first()->empresa_id ?? 0;
+            $comprobantes = $rawComprobantes->reject(function ($c) use (&$seen) {
+                $key = $c->fecha_emision . '-' . ($c->numero_interno ?? $c->arca_punto_venta . '-' . $c->arca_numero);
+                if (isset($seen[$key])) {
+                    return true;
+                }
+                $seen[$key] = true;
+                return false;
+            });
 
             $created = 0;
             foreach ($comprobantes as $c) {
@@ -186,7 +197,7 @@ class ReconstruirCuentaCorriente extends Command
                 $created++;
             }
 
-            $this->info("  Creados {$created} CtaCteMovimiento desde " . $comprobantes->count() . " comprobantes limpios");
+            $this->info("  Creados {$created} CtaCteMovimiento desde " . $comprobantes->count() . " comprobantes limpios (dedupados por fecha + numero)");
         });
 
         $this->info('=== Reconstruccion completada ===');
