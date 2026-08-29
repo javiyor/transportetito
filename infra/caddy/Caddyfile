@@ -1,10 +1,11 @@
 transportetito.5amsoftware.com.ar {
     encode zstd gzip
 
-    handle_path /adminer {
+    handle /adminer {
         redir /adminer/
     }
-    handle_path /adminer/* {
+    handle /adminer/* {
+        uri strip_prefix /adminer
         reverse_proxy adminer:8080
     }
 
