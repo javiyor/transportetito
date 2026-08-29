@@ -160,7 +160,15 @@ class ReconstruirCuentaCorriente extends Command
                 ->get();
             $empresaId = $rawComprobantes->first()->empresa_id ?? 0;
             $comprobantes = $rawComprobantes->reject(function ($c) use (&$seen) {
-                $key = $c->fecha_emision . '-' . ($c->numero_interno ?? $c->arca_punto_venta . '-' . $c->arca_numero);
+                // Normalizar numero de comprobante para que "Factura 1-00000032" y "factura_m 1-00000032" sean iguales
+                if ($c->arca_punto_venta && $c->arca_numero) {
+                    $displayNum = ((int) $c->arca_punto_venta) . '-' . str_pad((string) $c->arca_numero, 8, '0', STR_PAD_LEFT);
+                } elseif ($c->numero_interno) {
+                    $displayNum = '#' . $c->numero_interno;
+                } else {
+                    $displayNum = '#' . $c->id;
+                }
+                $key = $c->fecha_emision . '-' . $displayNum;
                 if (isset($seen[$key])) {
                     return true;
                 }
