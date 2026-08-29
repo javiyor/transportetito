@@ -8,6 +8,7 @@ use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Arca\WsfeClient;
 use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\RedirectResponse;
@@ -40,9 +41,11 @@ class ImportarFacturasArcaStoreController extends Controller
             $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
 
             for ($num = (int) $data['numero_desde']; $num <= (int) $data['numero_hasta']; $num++) {
+                $normalizedTipoCbte = ArcaTipoComprobanteResolver::normalizeTipoCbte($data['tipo_comprobante']);
+
                 $existe = Comprobante::where('empresa_id', $empresa->id)
                     ->where('arca_punto_venta', (int) $data['punto_venta'])
-                    ->where('arca_tipo_cbte', $data['tipo_comprobante'])
+                    ->where('arca_tipo_cbte', $normalizedTipoCbte)
                     ->where('arca_numero', $num)
                     ->exists();
 
@@ -118,7 +121,7 @@ class ImportarFacturasArcaStoreController extends Controller
                     'fecha_emision' => $resultado['fecha_emision'] ?? now(),
                     'requiere_autorizacion_arca' => false,
                     'arca_punto_venta' => (int) $data['punto_venta'],
-                    'arca_tipo_cbte' => $data['tipo_comprobante'],
+                    'arca_tipo_cbte' => $normalizedTipoCbte,
                     'arca_numero' => $num,
                     'arca_cae' => $resultado['cae'] ?? null,
                     'arca_cae_vto' => ! empty($resultado['cae_vto']) ? $resultado['cae_vto'] : null,

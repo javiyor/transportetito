@@ -61,9 +61,11 @@ class ImportarFacturasCsvStoreController extends Controller
             foreach ($data['rows'] as $row) {
                 $cuit = preg_replace('/\D+/', '', $row['cuit_cliente']) ?? '';
 
+                $normalizedTipoCbte = \App\Services\Arca\ArcaTipoComprobanteResolver::normalizeTipoCbte($row['tipo']);
+
                 $existe = Comprobante::where('empresa_id', $empresa->id)
                     ->where('arca_punto_venta', (int) $row['pv'])
-                    ->where('arca_tipo_cbte', $row['tipo'])
+                    ->where('arca_tipo_cbte', $normalizedTipoCbte)
                     ->where('arca_numero', (int) $row['numero'])
                     ->exists();
 
@@ -130,14 +132,13 @@ class ImportarFacturasCsvStoreController extends Controller
                     'fecha_emision' => $row['fecha_emision'],
                     'requiere_autorizacion_arca' => false,
                     'arca_punto_venta' => (int) $row['pv'],
-                    'arca_tipo_cbte' => $row['tipo'],
+                    'arca_tipo_cbte' => $normalizedTipoCbte,
                     'arca_numero' => (int) $row['numero'],
                     'arca_cae' => $row['arca_cae'] ?? null,
                     'arca_resultado' => $row['arca_cae'] ? 'A' : 'importado',
                 ]);
 
                 if ($cuenta) {
-                    // Para notas de crédito, el movimiento debe ser negativo (reduce deuda)
                     $tipoMov = $isNotaCredito ? 'nota_credito' : ($isNotaDebito ? 'nota_debito' : 'factura');
                     CtaCteMovimiento::query()->create([
                         'empresa_id' => $empresa->id,

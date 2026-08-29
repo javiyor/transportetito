@@ -98,4 +98,17 @@ class ArcaTipoComprobanteResolver
             default => $v,
         };
     }
+
+    public static function normalizeTipoCbte(string $tipo): string
+    {
+        $map = [
+            '01' => 'FA', '02' => 'NDA', '03' => 'NCA',
+            '06' => 'FB', '07' => 'NDB', '08' => 'NCB',
+            '11' => 'FC', '12' => 'NDC', '13' => 'NCC',
+            '15' => 'FE', '16' => 'NDE', '17' => 'NCE',
+            '51' => 'FM', '52' => 'NDM', '53' => 'NCM',
+        ];
+
+        return $map[$tipo] ?? $tipo;
+    }
 }
