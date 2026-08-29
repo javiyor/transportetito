@@ -121,7 +121,7 @@ services:
   adminer:
     image: adminer:4.8.1
     restart: unless-stopped
-    command: ["php", "-d", "max_execution_time=300", "/adminer/adminer.php", "--base-path", "/adminer/"]
+    entrypoint: ["php", "/adminer/adminer.php", "--base-path", "/adminer/"]
     networks:
       ttnet:
         ipv4_address: 172.28.0.16
