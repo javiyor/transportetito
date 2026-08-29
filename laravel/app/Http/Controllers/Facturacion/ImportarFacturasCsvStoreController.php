@@ -65,7 +65,6 @@ class ImportarFacturasCsvStoreController extends Controller
 
                 $existe = Comprobante::where('empresa_id', $empresa->id)
                     ->where('arca_punto_venta', (int) $row['pv'])
-                    ->where('arca_tipo_cbte', $normalizedTipoCbte)
                     ->where('arca_numero', (int) $row['numero'])
                     ->exists();
 

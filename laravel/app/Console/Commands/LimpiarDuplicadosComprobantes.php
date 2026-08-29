@@ -11,7 +11,7 @@ class LimpiarDuplicadosComprobantes extends Command
 {
     protected $signature = 'comprobantes:limpiar-duplicados';
 
-    protected $description = 'Elimina comprobantes duplicados (mismo pv+numero con diferente arca_tipo_cbte) y sus movimientos de cuenta corriente asociados';
+    protected $description = 'Elimina comprobantes duplicados (mismo pv+numero) y sus movimientos de cuenta corriente asociados, conservando factura_m';
 
     public function handle(): int
     {
@@ -32,17 +32,11 @@ class LimpiarDuplicadosComprobantes extends Command
                 ->where('empresa_id', $dup->empresa_id)
                 ->where('arca_punto_venta', $dup->arca_punto_venta)
                 ->where('arca_numero', $dup->arca_numero)
+                ->orderByDesc('tipo')
                 ->orderBy('id')
                 ->get();
 
-            $canonical = null;
-            foreach ($group as $c) {
-                if (\App\Services\Arca\ArcaTipoComprobanteResolver::normalizeTipoCbte($c->arca_tipo_cbte) === $c->arca_tipo_cbte) {
-                    $canonical = $c;
-                    break;
-                }
-            }
-            $canonical ??= $group->first();
+            $canonical = $group->firstWhere('tipo', 'factura_m') ?? $group->first();
             $duplicates = $group->where('id', '<>', $canonical->id);
 
             foreach ($duplicates as $duplicate) {
@@ -58,7 +52,7 @@ class LimpiarDuplicadosComprobantes extends Command
 
                 $duplicate->delete();
 
-                $this->line("  Eliminado comprobante #{$duplicate->id} (pv={$duplicate->arca_punto_venta}, num={$duplicate->arca_numero}, tipo={$duplicate->arca_tipo_cbte}) - {$movCount} movimientos eliminados");
+                $this->line("  Eliminado comprobante #{$duplicate->id} (pv={$duplicate->arca_punto_venta}, num={$duplicate->arca_numero}, tipo={$duplicate->tipo}) - {$movCount} movimientos eliminados");
                 $totalDeleted++;
             }
         }
