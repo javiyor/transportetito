@@ -4,8 +4,7 @@ transportetito.5amsoftware.com.ar {
     handle /adminer {
         redir /adminer/
     }
-    handle /adminer/* {
-        uri strip_prefix /adminer
+    handle_path /adminer/* {
         reverse_proxy adminer:8080
     }
 
