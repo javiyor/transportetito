@@ -63,10 +63,62 @@ class BlanqueoController extends Controller
         try {
             DB::transaction(function () use ($tipo, $empresaId) {
                 if ($tipo === 'ventas') {
+                    $comprobanteIds = DB::table('comprobantes')->where('empresa_id', $empresaId)->pluck('id');
+
+                    // 1. Cta cte: por empresa y también huérfanos que referencian comprobantes de esta empresa
                     DB::table('cta_cte_movimientos')->where('empresa_id', $empresaId)->delete();
-                    DB::table('pre_recibos')->where('empresa_id', $empresaId)->delete();
+                    if ($comprobanteIds->isNotEmpty()) {
+                        DB::table('cta_cte_movimientos')
+                            ->where('referencia_tipo', 'comprobante')
+                            ->whereIn('referencia_id', $comprobanteIds)
+                            ->delete();
+                    }
+
+                    // 2. Recibos y pre-recibos (cascada borra items/aplicaciones por FK)
                     DB::table('recibos')->where('empresa_id', $empresaId)->delete();
-                    DB::table('comprobante_pedido')->whereIn('comprobante_id', fn($q) => $q->select('id')->from('comprobantes')->where('empresa_id', $empresaId))->delete();
+                    DB::table('pre_recibos')->where('empresa_id', $empresaId)->delete();
+
+                    // 3. Aplicaciones huérfanas que aún referencian comprobantes de esta empresa (de otra empresa)
+                    if ($comprobanteIds->isNotEmpty()) {
+                        DB::table('recibo_aplicaciones')->whereIn('comprobante_id', $comprobanteIds)->delete();
+                        DB::table('pre_recibo_aplicaciones')->whereIn('comprobante_id', $comprobanteIds)->delete();
+                    }
+
+                    // 4. Hoja de ruta items sin cascade
+                    if ($comprobanteIds->isNotEmpty()) {
+                        DB::table('hoja_ruta_items')->whereIn('comprobante_id', $comprobanteIds)->delete();
+                    }
+
+                    // 5. Asientos contables (referencia polimórfica, no FK pero limpiar huérfanos)
+                    if ($comprobanteIds->isNotEmpty()) {
+                        $asientoIds = DB::table('asientos_contables')
+                            ->where('referencia_tipo', 'comprobante')
+                            ->whereIn('referencia_id', $comprobanteIds)
+                            ->pluck('id');
+                        if ($asientoIds->isNotEmpty()) {
+                            DB::table('asiento_lineas')->whereIn('asiento_id', $asientoIds)->delete();
+                            DB::table('asientos_contables')->whereIn('id', $asientoIds)->delete();
+                        }
+                        // recibos ya borrados, pero también limpiar asientos de recibos
+                        $reciboAsientoIds = DB::table('asientos_contables')
+                            ->where('empresa_id', $empresaId)
+                            ->where('referencia_tipo', 'recibo')
+                            ->pluck('id');
+                        if ($reciboAsientoIds->isNotEmpty()) {
+                            DB::table('asiento_lineas')->whereIn('asiento_id', $reciboAsientoIds)->delete();
+                            DB::table('asientos_contables')->whereIn('id', $reciboAsientoIds)->delete();
+                        }
+                    }
+
+                    // 6. Pivot comprobante_pedido (cascade, pero explícito por si acaso)
+                    if ($comprobanteIds->isNotEmpty()) {
+                        DB::table('comprobante_pedido')->whereIn('comprobante_id', $comprobanteIds)->delete();
+                    }
+
+                    // 7. Self-reference comprobante_origen_id
+                    DB::table('comprobantes')->where('empresa_id', $empresaId)->whereNotNull('comprobante_origen_id')->update(['comprobante_origen_id' => null]);
+
+                    // 8. Finalmente comprobantes
                     DB::table('comprobantes')->where('empresa_id', $empresaId)->delete();
                 } elseif ($tipo === 'compras') {
                     DB::table('cta_cte_movimientos')->where('empresa_id', $empresaId)->whereIn('tipo', ['factura_proveedor', 'pago_proveedor'])->delete();
@@ -75,7 +127,9 @@ class BlanqueoController extends Controller
                     DB::table('pago_cuenta_combustibles')->where('empresa_id', $empresaId)->delete();
                     DB::table('proveedor_comprobantes')->where('empresa_id', $empresaId)->delete();
                 } else {
-                    DB::table('comprobante_pedido')->whereIn('pedido_id', fn($q) => $q->select('id')->from('pedidos')->where('empresa_id', $empresaId))->delete();
+                    DB::table('comprobante_pedido')->whereIn('pedido_id', function ($q) use ($empresaId) {
+                        $q->select('id')->from('pedidos')->where('empresa_id', $empresaId);
+                    })->delete();
                     DB::table('pedidos')->where('empresa_id', $empresaId)->delete();
                     DB::table('envios_consolidados')->where('empresa_id', $empresaId)->delete();
                     DB::table('manifiestos_ingreso')->where('empresa_id', $empresaId)->delete();
@@ -84,6 +138,7 @@ class BlanqueoController extends Controller
 
             return back()->with('tt.import_result', ['type' => 'success', 'message' => "Blanqueo de {$tipo} completado."]);
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Blanqueo fallido', ['tipo' => $tipo, 'empresa_id' => $empresaId, 'error' => $e->getMessage()]);
             return back()->with('tt.import_result', ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()]);
         }
     }

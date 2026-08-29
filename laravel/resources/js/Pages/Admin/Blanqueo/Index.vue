@@ -1,9 +1,9 @@
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     tipo: String,
@@ -12,6 +12,9 @@ const props = defineProps({
     tablas: Array,
     empresas: Array,
 });
+
+const page = usePage();
+const importResult = computed(() => page.props.tt?.flash?.importResult || null);
 
 const empresaId = ref('');
 const confirmando = ref(false);
@@ -38,6 +41,10 @@ const ejecutar = () => {
         </template>
 
         <div class="max-w-3xl mx-auto py-3 sm:px-4 lg:px-6 space-y-4">
+            <div v-if="importResult" :class="importResult.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'" class="border rounded-lg p-3 text-sm">
+                {{ typeof importResult === 'string' ? importResult : (importResult.message || JSON.stringify(importResult)) }}
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <p class="text-sm text-gray-600 mb-4">{{ descripcion }}</p>
 
