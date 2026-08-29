@@ -21,8 +21,6 @@ class ReconstruirCuentaCorriente extends Command
 
     public function handle(): int
     {
-        $empresaId = (int) ($this->option('empresa') ?: 0);
-
         $this->info('=== Reconstruccion de Cuenta Corriente ===');
 
         // 1. Identificar duplicados
@@ -54,7 +52,7 @@ class ReconstruirCuentaCorriente extends Command
 
         $this->info("Duplicados a eliminar: {$totalDup}");
 
-        DB::transaction(function () use ($empresaId, &$totalDup, $dupIds) {
+        DB::transaction(function () use (&$totalDup, $dupIds) {
             // 2. Eliminar CtaCteMovimiento que referencian comprobantes duplicados
             $movDupCount = CtaCteMovimiento::query()
                 ->where('referencia_tipo', 'comprobante')
@@ -154,7 +152,6 @@ class ReconstruirCuentaCorriente extends Command
 
             // 10. Reconstruir CtaCteMovimiento desde comprobantes limpios
             $comprobantes = Comprobante::query()
-                ->where('empresa_id', $empresaId)
                 ->whereNotNull('facturar_cuenta_id')
                 ->orderBy('fecha_emision')
                 ->orderBy('id')
