@@ -118,6 +118,15 @@ services:
       ttnet:
         ipv4_address: 172.28.0.3
 
+  adminer:
+    image: adminer:4.8.1
+    restart: unless-stopped
+    networks:
+      ttnet:
+        ipv4_address: 172.28.0.16
+    extra_hosts:
+      - "postgres:172.28.0.3"
+
   redis:
     image: redis:7-alpine
     mem_limit: 256m
