@@ -77,8 +77,8 @@ class CuentaCorrienteShowController extends Controller
             ->orderByDesc('id')
             ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
 
-        // Para documentos a cancelar (pendientes) ordenar asc por fecha+numero
-        $comprobantesRaw = $comprobantesRawDesc->sortBy([['fecha_emision','asc'],['numero_interno','asc'],['id','asc']])->values();
+        // Para documentos a cancelar (pendientes) ordenar por tipo + numero de comprobante
+        $comprobantesRaw = $comprobantesRawDesc->sortBy([['tipo','asc'],['arca_numero','asc'],['numero_interno','asc'],['id','asc']])->values();
 
         // Calcular pendiente real por comprobante para marcar pagadas
         $aplicacionesSum = \App\Models\ReciboAplicacion::query()
