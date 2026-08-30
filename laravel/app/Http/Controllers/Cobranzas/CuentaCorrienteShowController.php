@@ -77,8 +77,11 @@ class CuentaCorrienteShowController extends Controller
             ->orderByDesc('id')
             ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
 
-        // Para documentos a cancelar (pendientes) ordenar por tipo + numero de comprobante
-        $comprobantesRaw = $comprobantesRawDesc->sortBy([['tipo','asc'],['arca_numero','asc'],['numero_interno','asc'],['id','asc']])->values();
+        // Para documentos a cancelar (pendientes) ordenar por tipo + numero, con notas arriba
+        $comprobantesRaw = $comprobantesRawDesc->sortBy(function ($c) {
+            $p = (str_contains($c->tipo ?? '', 'nota_credito') || str_contains($c->tipo ?? '', 'nota_debito')) ? 0 : 1;
+            return sprintf('%d-%s-%08d-%08d', $p, $c->tipo ?? '', (int)($c->arca_numero ?? 0), (int)($c->numero_interno ?? 0));
+        })->values();
 
         // Calcular pendiente real por comprobante para marcar pagadas
         $aplicacionesSum = \App\Models\ReciboAplicacion::query()
@@ -136,7 +139,15 @@ class CuentaCorrienteShowController extends Controller
                 ];
             });
 
-        $comprobantes = $comprobantes->concat($reciboCredits);
+        $comprobantes = $comprobantes->concat($reciboCredits)->sortBy(function ($c) {
+            $t = is_array($c) ? ($c['tipo'] ?? '') : ($c->tipo ?? '');
+            $num = is_array($c) ? ($c['arca_numero'] ?? $c['numero_interno'] ?? 0) : ($c->arca_numero ?? $c->numero_interno ?? 0);
+            if (is_string($num)) $num = (int) filter_var($num, FILTER_SANITIZE_NUMBER_INT);
+            if ($t === 'pago_a_cuenta') $p = 0;
+            elseif (str_contains($t, 'nota_credito') || str_contains($t, 'nota_debito')) $p = 1;
+            else $p = 2;
+            return sprintf('%d-%s-%08d', $p, $t, (int)$num);
+        })->values();
 
         return Inertia::render('Cobranzas/CuentaCorriente/Show', [
             'cuenta' => $cuenta,
