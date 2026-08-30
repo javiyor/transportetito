@@ -64,34 +64,41 @@ class ReconstruirCuentaCorriente extends Command
                 ->delete();
             $this->info("  Eliminados {$movDupCount} CtaCteMovimiento (duplicados comprobante)");
 
-            // 3. Eliminar todos los Recibos (cascade: recibo_items, recibo_aplicaciones)
+            // 3. Desvincular cheques de recibos (FK cheques.recibo_id)
+            $chequeCount = DB::table('cheques')->whereNotNull('recibo_id')->count();
+            if ($chequeCount) {
+                DB::table('cheques')->whereNotNull('recibo_id')->update(['recibo_id' => null]);
+                $this->info("  Desvinculados {$chequeCount} cheques de recibos");
+            }
+
+            // 4. Eliminar todos los Recibos (cascade: recibo_items, recibo_aplicaciones)
             $reciboCount = Recibo::query()->count();
             Recibo::query()->delete();
             $this->info("  Eliminados {$reciboCount} Recibos (y items/aplicaciones asociados)");
 
-            // 4. Eliminar ReciboAplicacion manual (por si queda alguna)
+            // 5. Eliminar ReciboAplicacion manual (por si queda alguna huérfana)
             $raCount = ReciboAplicacion::query()->count();
             ReciboAplicacion::query()->delete();
             if ($raCount) {
-                $this->info("  Eliminados {$raCount} ReciboAplicacion");
+                $this->info("  Eliminados {$raCount} ReciboAplicacion huérfanas");
             }
 
-            // 5. Eliminar PreReciboAplicacion que referencien comprobantes
+            // 6. Eliminar PreReciboAplicacion
             $preRaCount = PreReciboAplicacion::query()->count();
             PreReciboAplicacion::query()->delete();
             if ($preRaCount) {
                 $this->info("  Eliminados {$preRaCount} PreReciboAplicacion");
             }
 
-            // 6. Eliminar HojaRutaItem que referencien comprobantes duplicados
+            // 7. Eliminar HojaRutaItem que referencien comprobantes duplicados (FK sin cascade)
             $hrCount = HojaRutaItem::query()
                 ->whereIn('comprobante_id', $dupIds)
                 ->count();
             HojaRutaItem::query()
                 ->whereIn('comprobante_id', $dupIds)
-                ->update(['comprobante_id' => null]);
+                ->delete();
             if ($hrCount) {
-                $this->info("  Desvinculados {$hrCount} HojaRutaItem de comprobantes duplicados");
+                $this->info("  Eliminados {$hrCount} HojaRutaItem de comprobantes duplicados");
             }
 
             // 7. Eliminar AsientoContable que referencien comprobantes duplicados

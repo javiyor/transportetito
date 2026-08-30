@@ -74,7 +74,13 @@ class BlanqueoController extends Controller
                             ->delete();
                     }
 
-                    // 2. Recibos y pre-recibos (cascada borra items/aplicaciones por FK)
+                    // 2. Cheques que referencian recibos de esta empresa
+                    $reciboIds = DB::table('recibos')->where('empresa_id', $empresaId)->pluck('id');
+                    if ($reciboIds->isNotEmpty()) {
+                        DB::table('cheques')->whereIn('recibo_id', $reciboIds)->update(['recibo_id' => null]);
+                    }
+
+                    // 3. Recibos y pre-recibos (cascada borra items/aplicaciones por FK)
                     DB::table('recibos')->where('empresa_id', $empresaId)->delete();
                     DB::table('pre_recibos')->where('empresa_id', $empresaId)->delete();
 

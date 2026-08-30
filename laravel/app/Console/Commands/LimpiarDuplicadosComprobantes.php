@@ -47,6 +47,18 @@ class LimpiarDuplicadosComprobantes extends Command
                     ->where('referencia_id', $c->id)
                     ->delete();
 
+                // FKs que bloquean borrado de comprobante
+                DB::table('hoja_ruta_items')->where('comprobante_id', $c->id)->delete();
+                DB::table('recibo_aplicaciones')->where('comprobante_id', $c->id)->delete();
+                DB::table('pre_recibo_aplicaciones')->where('comprobante_id', $c->id)->delete();
+                DB::table('comprobante_pedido')->where('comprobante_id', $c->id)->delete();
+                DB::table('comprobantes')->where('comprobante_origen_id', $c->id)->update(['comprobante_origen_id' => null]);
+                $asientoIds = DB::table('asientos_contables')->where('referencia_tipo', 'comprobante')->where('referencia_id', $c->id)->pluck('id');
+                if ($asientoIds->isNotEmpty()) {
+                    DB::table('asiento_lineas')->whereIn('asiento_id', $asientoIds)->delete();
+                    DB::table('asientos_contables')->whereIn('id', $asientoIds)->delete();
+                }
+
                 $c->delete();
                 $this->line("  Eliminado comprobante #{$c->id} (display={$displayNum}, tipo={$c->tipo}) - {$movCount} movimientos eliminados");
                 $deleted++;
