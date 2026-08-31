@@ -34,24 +34,20 @@ class ImportarFacturasArcaStoreController extends Controller
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
 
         $importados = 0;
+        $actualizados = 0;
         $omitidos = 0;
         $errores = [];
 
-        DB::transaction(function () use ($data, $empresa, $request, $wsfe, &$importados, &$omitidos, &$errores) {
+        DB::transaction(function () use ($data, $empresa, $request, $wsfe, &$importados, &$actualizados, &$omitidos, &$errores) {
             $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
 
             for ($num = (int) $data['numero_desde']; $num <= (int) $data['numero_hasta']; $num++) {
                 $normalizedTipoCbte = ArcaTipoComprobanteResolver::normalizeTipoCbte($data['tipo_comprobante']);
 
-                $existe = Comprobante::where('empresa_id', $empresa->id)
+                $existing = Comprobante::where('empresa_id', $empresa->id)
                     ->where('arca_punto_venta', (int) $data['punto_venta'])
                     ->where('arca_numero', $num)
-                    ->exists();
-
-                if ($existe) {
-                    $omitidos++;
-                    continue;
-                }
+                    ->first();
 
                 try {
                     $resultado = $wsfe->consultarComprobante($empresa, [
@@ -66,6 +62,38 @@ class ImportarFacturasArcaStoreController extends Controller
 
                 if (! $resultado || ($resultado['resultado'] ?? '') !== 'A') {
                     $omitidos++;
+                    continue;
+                }
+
+                if ($existing) {
+                    $existing->update([
+                        'subtotal' => (float) ($resultado['subtotal'] ?? 0),
+                        'iva_total' => (float) ($resultado['iva_total'] ?? 0),
+                        'tributos_total' => (float) ($resultado['tributos_total'] ?? 0),
+                        'total' => (float) ($resultado['total'] ?? 0),
+                        'moneda' => $resultado['moneda'] ?? 'ARS',
+                    ]);
+                    $updated = CtaCteMovimiento::where('referencia_tipo', 'comprobante')
+                        ->where('referencia_id', $existing->id)
+                        ->update([
+                            'importe_signed' => (float) ($resultado['total'] ?? 0),
+                            'moneda' => $resultado['moneda'] ?? 'ARS',
+                        ]);
+                    if (!$updated && $existing->facturar_cuenta_id) {
+                        CtaCteMovimiento::query()->create([
+                            'empresa_id' => $empresa->id,
+                            'tercero_cuenta_id' => $existing->facturar_cuenta_id,
+                            'fecha' => $resultado['fecha_emision'] ?? now()->toDateString(),
+                            'tipo' => 'factura',
+                            'moneda' => $resultado['moneda'] ?? 'ARS',
+                            'cotizacion_ars' => 1,
+                            'importe_signed' => (float) ($resultado['total'] ?? 0),
+                            'referencia_tipo' => 'comprobante',
+                            'referencia_id' => $existing->id,
+                            'observacion' => 'Actualizacion ARCA factura #'.$existing->id,
+                        ]);
+                    }
+                    $actualizados++;
                     continue;
                 }
 
@@ -160,7 +188,7 @@ class ImportarFacturasArcaStoreController extends Controller
             }
         });
 
-        $msg = "Importados: $importados, omitidos (duplicados/no emitidos): $omitidos.";
+        $msg = "Importados: $importados, actualizados: $actualizados, omitidos: $omitidos.";
         if (! empty($errores)) {
             $msg .= ' Errores: '.implode('; ', array_slice($errores, 0, 10));
         }

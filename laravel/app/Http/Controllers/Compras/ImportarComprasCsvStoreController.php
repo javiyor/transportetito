@@ -50,10 +50,11 @@ class ImportarComprasCsvStoreController extends Controller
         }
 
         $importados = 0;
+        $actualizados = 0;
         $omitidos = 0;
         $errores = [];
 
-        DB::transaction(function () use ($data, $empresa, $request, &$importados, &$omitidos, &$errores) {
+        DB::transaction(function () use ($data, $empresa, $request, &$importados, &$actualizados, &$omitidos, &$errores) {
             foreach ($data['rows'] as $row) {
                 $cuit = preg_replace('/\D+/', '', $row['proveedor_cuit']) ?? '';
 
@@ -82,14 +83,41 @@ class ImportarComprasCsvStoreController extends Controller
                     $numero = sprintf('%04d-%s', $row['pv'], $numero);
                 }
 
-                $existe = ProveedorComprobante::where('empresa_id', $empresa->id)
+                $existing = ProveedorComprobante::where('empresa_id', $empresa->id)
                     ->where('tercero_cuenta_id', $cuenta->id)
                     ->where('numero', $numero)
                     ->where('tipo', $row['tipo'] ?? 'FA')
-                    ->exists();
+                    ->first();
 
-                if ($existe) {
-                    $omitidos++;
+                if ($existing) {
+                    $existing->update([
+                        'subtotal' => $row['subtotal'] ?? $existing->subtotal,
+                        'iva_total' => $row['iva_total'] ?? $existing->iva_total,
+                        'tributos_total' => $row['tributos_total'] ?? $existing->tributos_total,
+                        'total' => $row['total'],
+                        'moneda' => $row['moneda'],
+                    ]);
+                    $updated = CtaCteMovimiento::where('referencia_tipo', 'proveedor_comprobante')
+                        ->where('referencia_id', $existing->id)
+                        ->update([
+                            'importe_signed' => (float) $row['total'],
+                            'moneda' => $row['moneda'],
+                        ]);
+                    if (!$updated) {
+                        CtaCteMovimiento::query()->create([
+                            'empresa_id' => $empresa->id,
+                            'tercero_cuenta_id' => $cuenta->id,
+                            'fecha' => $row['fecha_emision'],
+                            'tipo' => 'factura_proveedor',
+                            'moneda' => $row['moneda'],
+                            'cotizacion_ars' => 1,
+                            'importe_signed' => (float) $row['total'],
+                            'referencia_tipo' => 'proveedor_comprobante',
+                            'referencia_id' => $existing->id,
+                            'observacion' => 'Actualizacion CSV comprobante #'.$existing->id,
+                        ]);
+                    }
+                    $actualizados++;
                     continue;
                 }
 
@@ -136,7 +164,7 @@ class ImportarComprasCsvStoreController extends Controller
             }
         });
 
-        $msg = "Importados: $importados, omitidos (duplicados): $omitidos.";
+        $msg = "Importados: $importados, actualizados: $actualizados, omitidos: $omitidos.";
         if (! empty($errores)) {
             $msg .= ' Errores: '.implode(', ', $errores);
         }

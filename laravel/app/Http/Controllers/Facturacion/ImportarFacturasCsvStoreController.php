@@ -52,10 +52,11 @@ class ImportarFacturasCsvStoreController extends Controller
         }
 
         $importados = 0;
+        $actualizados = 0;
         $omitidos = 0;
         $errores = [];
 
-        DB::transaction(function () use ($data, $empresa, $request, &$importados, &$omitidos, &$errores) {
+        DB::transaction(function () use ($data, $empresa, $request, &$importados, &$actualizados, &$omitidos, &$errores) {
             $maxInterno = Comprobante::where('empresa_id', $empresa->id)->max('numero_interno') ?? 0;
 
             foreach ($data['rows'] as $row) {
@@ -63,13 +64,71 @@ class ImportarFacturasCsvStoreController extends Controller
 
                 $normalizedTipoCbte = \App\Services\Arca\ArcaTipoComprobanteResolver::normalizeTipoCbte($row['tipo']);
 
-                $existe = Comprobante::where('empresa_id', $empresa->id)
+                $existing = Comprobante::where('empresa_id', $empresa->id)
                     ->where('arca_punto_venta', (int) $row['pv'])
                     ->where('arca_numero', (int) $row['numero'])
-                    ->exists();
+                    ->first();
 
-                if ($existe) {
-                    $omitidos++;
+                // Pre-calcular tipo para manejo de signo
+                $terceroTmp = Tercero::where('cuit', $cuit)->first();
+                $tipoFinalTmp = $row['tipo'];
+                if ($terceroTmp && $terceroTmp->condicion_iva) {
+                    $tipoFinalTmp = $this->arcaTipoResolver->corregirTipo(
+                        $empresa->condicion_iva,
+                        $terceroTmp->condicion_iva,
+                        $row['tipo']
+                    );
+                }
+                $arcaTipoMapTmp = [
+                    'FA' => 'factura_a', 'FB' => 'factura_b', 'FC' => 'factura_c',
+                    'FCA' => 'factura_credito_a', 'FCB' => 'factura_credito_b', 'FCC' => 'factura_credito_c',
+                    'NDA' => 'nota_debito_a', 'NDB' => 'nota_debito_b', 'NDC' => 'nota_debito_c',
+                    'NCA' => 'nota_credito_a', 'NCB' => 'nota_credito_b', 'NCC' => 'nota_credito_c',
+                    'FE' => 'factura_e', 'NDE' => 'nota_debito_e', 'NCE' => 'nota_credito_e',
+                    'FM' => 'factura_m', 'NDM' => 'nota_debito_m', 'NCM' => 'nota_credito_m',
+                    '01' => 'factura_a', '02' => 'nota_debito_a', '03' => 'nota_credito_a',
+                    '06' => 'factura_b', '07' => 'nota_debito_b', '08' => 'nota_credito_b',
+                    '11' => 'factura_c', '12' => 'nota_debito_c', '13' => 'nota_credito_c',
+                    '15' => 'factura_e', '16' => 'nota_debito_e', '17' => 'nota_credito_e',
+                    '51' => 'factura_m', '52' => 'nota_debito_m', '53' => 'nota_credito_m',
+                ];
+                $tipoTmp = $arcaTipoMapTmp[$tipoFinalTmp] ?? 'factura_interna';
+                $isNotaCreditoTmp = str_contains($tipoTmp, 'nota_credito');
+                $isNotaDebitoTmp = str_contains($tipoTmp, 'nota_debito');
+                $totalBrutoTmp = (float) $row['total'];
+                $totalParaComprobanteTmp = $isNotaCreditoTmp ? -1 * abs($totalBrutoTmp) : $totalBrutoTmp;
+                $totalParaCtaCteTmp = $isNotaCreditoTmp ? -1 * abs($totalBrutoTmp) : ($isNotaDebitoTmp ? abs($totalBrutoTmp) : $totalBrutoTmp);
+
+                if ($existing) {
+                    $existing->update([
+                        'subtotal' => $row['subtotal'] ?? $existing->subtotal,
+                        'iva_total' => $row['iva_total'] ?? $existing->iva_total,
+                        'tributos_total' => $row['tributos_total'] ?? $existing->tributos_total,
+                        'total' => $totalParaComprobanteTmp,
+                        'moneda' => $row['moneda'],
+                    ]);
+                    $updated = CtaCteMovimiento::where('referencia_tipo', 'comprobante')
+                        ->where('referencia_id', $existing->id)
+                        ->update([
+                            'importe_signed' => $totalParaCtaCteTmp,
+                            'moneda' => $row['moneda'],
+                        ]);
+                    if (!$updated && $existing->facturar_cuenta_id) {
+                        $tipoMovTmp = $isNotaCreditoTmp ? 'nota_credito' : ($isNotaDebitoTmp ? 'nota_debito' : 'factura');
+                        CtaCteMovimiento::query()->create([
+                            'empresa_id' => $empresa->id,
+                            'tercero_cuenta_id' => $existing->facturar_cuenta_id,
+                            'fecha' => $existing->fecha_emision,
+                            'tipo' => $tipoMovTmp,
+                            'moneda' => $row['moneda'],
+                            'cotizacion_ars' => 1,
+                            'importe_signed' => $totalParaCtaCteTmp,
+                            'referencia_tipo' => 'comprobante',
+                            'referencia_id' => $existing->id,
+                            'observacion' => 'Actualizacion CSV '.($isNotaCreditoTmp ? 'NC' : ($isNotaDebitoTmp ? 'ND' : 'factura')).' #'.$existing->id,
+                        ]);
+                    }
+                    $actualizados++;
                     continue;
                 }
 
@@ -171,7 +230,7 @@ class ImportarFacturasCsvStoreController extends Controller
             }
         });
 
-        $msg = "Importados: $importados, omitidos (duplicados): $omitidos.";
+        $msg = "Importados: $importados, actualizados: $actualizados, omitidos: $omitidos.";
         if (! empty($errores)) {
             $msg .= ' Errores: '.implode(', ', $errores);
         }
