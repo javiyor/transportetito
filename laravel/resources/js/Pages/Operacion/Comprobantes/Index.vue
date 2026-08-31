@@ -75,7 +75,32 @@ const formatFecha = (v) => {
 
 const goToPage = (url) => {
     if (!url) return;
-    router.get(url, {}, { preserveState: true, preserveScroll: true });
+    try {
+        const u = new URL(url, window.location.origin);
+        const page = u.searchParams.get('page');
+        router.get(route('operacion.comprobantes.index'), {
+            page: page || 1,
+            tipo: form.tipo || 'todos',
+            estado: form.estado || 'todos',
+            compartidos: form.compartidos || '1',
+        }, { preserveState: true, preserveScroll: true });
+    } catch {
+        router.get(url, {}, { preserveState: true, preserveScroll: true });
+    }
+};
+
+const goToPageNum = (page) => {
+    router.get(route('operacion.comprobantes.index'), {
+        page,
+        tipo: form.tipo || 'todos',
+        estado: form.estado || 'todos',
+        compartidos: form.compartidos || '1',
+    }, { preserveState: true, preserveScroll: true });
+};
+
+const translateLabel = (label) => {
+    if (!label) return '';
+    return label.replace(/&laquo;\s*Previous/g, '« Anterior').replace(/Next\s*&raquo;/g, 'Siguiente »').replace(/Previous/g, 'Anterior').replace(/Next/g, 'Siguiente').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»');
 };
 </script>
 
@@ -224,11 +249,11 @@ const goToPage = (url) => {
                     <div class="text-xs text-gray-500">Mostrando {{ comprobantes.from ?? comprobantes.data.length }}-{{ comprobantes.to ?? comprobantes.data.length }} de {{ comprobantes.total ?? comprobantes.data.length }} (pág. {{ comprobantes.current_page ?? 1 }} de {{ comprobantes.last_page ?? 1 }})</div>
                     <div class="flex flex-wrap gap-1">
                         <template v-if="comprobantes.links?.length">
-                            <button v-for="link in comprobantes.links" :key="link.label" :disabled="!link.url" @click="goToPage(link.url)" v-html="link.label" :class="['px-3 py-1 text-xs rounded border', link.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50', !link.url ? 'opacity-50 cursor-not-allowed' : '']" />
+                            <button v-for="link in comprobantes.links" :key="link.label" :disabled="!link.url" @click="goToPage(link.url)" v-html="translateLabel(link.label)" :class="['px-3 py-1 text-xs rounded border', link.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50', !link.url ? 'opacity-50 cursor-not-allowed' : '']" />
                         </template>
                         <template v-else>
-                            <button :disabled="!(comprobantes.current_page > 1)" @click="goToPage(route('operacion.comprobantes.index', {page: comprobantes.current_page - 1, tipo: filters.tipo, estado: filters.estado}))" class="px-3 py-1 text-xs rounded border bg-white hover:bg-gray-50 disabled:opacity-50">Anterior</button>
-                            <button :disabled="!(comprobantes.current_page < comprobantes.last_page)" @click="goToPage(route('operacion.comprobantes.index', {page: comprobantes.current_page + 1, tipo: filters.tipo, estado: filters.estado}))" class="px-3 py-1 text-xs rounded border bg-white hover:bg-gray-50 disabled:opacity-50">Siguiente</button>
+                            <button :disabled="!(comprobantes.current_page > 1)" @click="goToPageNum(comprobantes.current_page - 1)" class="px-3 py-1 text-xs rounded border bg-white hover:bg-gray-50 disabled:opacity-50">Anterior</button>
+                            <button :disabled="!(comprobantes.current_page < comprobantes.last_page)" @click="goToPageNum(comprobantes.current_page + 1)" class="px-3 py-1 text-xs rounded border bg-white hover:bg-gray-50 disabled:opacity-50">Siguiente</button>
                         </template>
                     </div>
                 </div>
