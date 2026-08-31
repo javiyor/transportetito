@@ -220,10 +220,16 @@ const goToPage = (url) => {
                         </tbody>
                     </table>
                 </div>
-                <div v-if="comprobantes.last_page > 1" class="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div class="text-xs text-gray-500">Mostrando {{ comprobantes.from }}-{{ comprobantes.to }} de {{ comprobantes.total }}</div>
+                <div class="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="text-xs text-gray-500">Mostrando {{ comprobantes.from ?? comprobantes.data.length }}-{{ comprobantes.to ?? comprobantes.data.length }} de {{ comprobantes.total ?? comprobantes.data.length }} (pág. {{ comprobantes.current_page ?? 1 }} de {{ comprobantes.last_page ?? 1 }})</div>
                     <div class="flex flex-wrap gap-1">
-                        <button v-for="link in comprobantes.links" :key="link.label" :disabled="!link.url" @click="goToPage(link.url)" v-html="link.label" :class="['px-3 py-1 text-xs rounded border', link.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50', !link.url ? 'opacity-50 cursor-not-allowed' : '']" />
+                        <template v-if="comprobantes.links?.length">
+                            <button v-for="link in comprobantes.links" :key="link.label" :disabled="!link.url" @click="goToPage(link.url)" v-html="link.label" :class="['px-3 py-1 text-xs rounded border', link.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50', !link.url ? 'opacity-50 cursor-not-allowed' : '']" />
+                        </template>
+                        <template v-else>
+                            <button :disabled="!(comprobantes.current_page > 1)" @click="goToPage(route('operacion.comprobantes.index', {page: comprobantes.current_page - 1, tipo: filters.tipo, estado: filters.estado}))" class="px-3 py-1 text-xs rounded border bg-white hover:bg-gray-50 disabled:opacity-50">Anterior</button>
+                            <button :disabled="!(comprobantes.current_page < comprobantes.last_page)" @click="goToPage(route('operacion.comprobantes.index', {page: comprobantes.current_page + 1, tipo: filters.tipo, estado: filters.estado}))" class="px-3 py-1 text-xs rounded border bg-white hover:bg-gray-50 disabled:opacity-50">Siguiente</button>
+                        </template>
                     </div>
                 </div>
             </div>
