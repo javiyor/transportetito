@@ -72,6 +72,11 @@ const formatFecha = (v) => {
     if (isNaN(d.getTime())) return String(v).slice(0, 10);
     return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 };
+
+const goToPage = (url) => {
+    if (!url) return;
+    router.get(url, {}, { preserveState: true, preserveScroll: true });
+};
 </script>
 
 <template>
@@ -214,6 +219,12 @@ const formatFecha = (v) => {
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                <div v-if="comprobantes.last_page > 1" class="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="text-xs text-gray-500">Mostrando {{ comprobantes.from }}-{{ comprobantes.to }} de {{ comprobantes.total }}</div>
+                    <div class="flex flex-wrap gap-1">
+                        <button v-for="link in comprobantes.links" :key="link.label" :disabled="!link.url" @click="goToPage(link.url)" v-html="link.label" :class="['px-3 py-1 text-xs rounded border', link.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50', !link.url ? 'opacity-50 cursor-not-allowed' : '']" />
+                    </div>
                 </div>
             </div>
         </div>
