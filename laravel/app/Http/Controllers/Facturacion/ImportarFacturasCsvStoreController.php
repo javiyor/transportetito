@@ -128,6 +128,8 @@ class ImportarFacturasCsvStoreController extends Controller
                             'observacion' => 'Actualizacion CSV '.($isNotaCreditoTmp ? 'NC' : ($isNotaDebitoTmp ? 'ND' : 'factura')).' #'.$existing->id,
                         ]);
                     }
+                    // Sincronizar recibos aplicados a este comprobante
+                    DB::table('recibo_aplicaciones')->where('comprobante_id', $existing->id)->update(['importe' => abs($totalParaComprobanteTmp)]);
                     $actualizados++;
                     continue;
                 }

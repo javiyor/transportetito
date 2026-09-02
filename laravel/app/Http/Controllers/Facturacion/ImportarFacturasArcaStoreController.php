@@ -93,6 +93,7 @@ class ImportarFacturasArcaStoreController extends Controller
                             'observacion' => 'Actualizacion ARCA factura #'.$existing->id,
                         ]);
                     }
+                    DB::table('recibo_aplicaciones')->where('comprobante_id', $existing->id)->update(['importe' => abs((float)($resultado['total'] ?? 0))]);
                     $actualizados++;
                     continue;
                 }
