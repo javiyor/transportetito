@@ -114,9 +114,38 @@ class CuentaCorrienteShowController extends Controller
             return $c;
         });
 
-        $reciboCredits = Recibo::query()
+        // Créditos a cuenta: recibos con sobrante (modo a_cuenta) + recibos sin aplicar (legado)
+        $acuentaAplicaciones = \App\Models\ReciboAplicacion::query()
+            ->where('modo', 'a_cuenta')
+            ->whereHas('recibo', fn($q) => $q->where('empresa_id', $empresaId)->where('tercero_cuenta_id', $cuenta->id)->where('estado', '!=', 'anulada'))
+            ->with('recibo:id,moneda,fecha,numero_interno')
+            ->get()
+            ->groupBy('recibo_id');
+
+        $reciboCreditsAcuenta = $acuentaAplicaciones->map(function ($group) {
+            $rec = $group->first()->recibo;
+            $totalAcuenta = round((float) $group->sum('importe'), 2);
+            return (object) [
+                'id' => 'rec_credit_'.$rec->id,
+                'tipo' => 'pago_a_cuenta',
+                'estado' => 'emitido',
+                'moneda' => $rec->moneda,
+                'total' => round(-1 * $totalAcuenta, 2),
+                'fecha_emision' => $rec->fecha,
+                'arca_cae' => null,
+                'arca_punto_venta' => null,
+                'arca_numero' => null,
+                'numero_interno' => '#R-'.$rec->id,
+                'is_credit' => true,
+                'pendiente' => round(-1 * $totalAcuenta, 2),
+                'is_pagada' => false,
+            ];
+        })->values();
+
+        $reciboCreditsLegacy = Recibo::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)
+            ->where('estado', '!=', 'anulada')
             ->doesntHave('aplicaciones')
             ->orderByDesc('fecha')
             ->orderByDesc('id')
@@ -138,6 +167,8 @@ class CuentaCorrienteShowController extends Controller
                     'is_pagada' => false,
                 ];
             });
+
+        $reciboCredits = $reciboCreditsAcuenta->concat($reciboCreditsLegacy);
 
         $comprobantes = $comprobantes->concat($reciboCredits)->sortBy(function ($c) {
             $t = is_array($c) ? ($c['tipo'] ?? '') : ($c->tipo ?? '');
