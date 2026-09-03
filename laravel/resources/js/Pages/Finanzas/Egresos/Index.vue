@@ -161,6 +161,21 @@ const confirmDelete = (e) => {
         router.delete(route('finanzas.egresos.destroy', e.id), { preserveScroll: true });
     }
 };
+
+const goToPage = (url) => {
+    if (!url) return;
+    try {
+        const u = new URL(url, window.location.origin);
+        const page = u.searchParams.get('page');
+        router.get(route('finanzas.egresos.index'), { page: page || 1 }, { preserveState: true, preserveScroll: true });
+    } catch {
+        router.get(url, {}, { preserveState: true, preserveScroll: true });
+    }
+};
+const translateLabel = (label) => {
+    if (!label) return '';
+    return label.replace(/&laquo;\s*Previous/g, '« Anterior').replace(/Next\s*&raquo;/g, 'Siguiente »').replace(/Previous/g, 'Anterior').replace(/Next/g, 'Siguiente').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»');
+};
 </script>
 
 <template>
@@ -344,6 +359,14 @@ const confirmDelete = (e) => {
                             <tr v-if="!egresos.data.length"><td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">Sin registros.</td></tr>
                         </tbody>
                     </table>
+                </div>
+                <div class="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="text-xs text-gray-500">Mostrando {{ egresos.from ?? egresos.data.length }}-{{ egresos.to ?? egresos.data.length }} de {{ egresos.total ?? egresos.data.length }} (pág. {{ egresos.current_page ?? 1 }} de {{ egresos.last_page ?? 1 }})</div>
+                    <div class="flex flex-wrap gap-1">
+                        <template v-if="egresos.links?.length">
+                            <button v-for="link in egresos.links" :key="link.label" :disabled="!link.url" @click="goToPage(link.url)" v-html="translateLabel(link.label)" :class="['px-3 py-1 text-xs rounded border', link.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50', !link.url ? 'opacity-50 cursor-not-allowed' : '']" />
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
