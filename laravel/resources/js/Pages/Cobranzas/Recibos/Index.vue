@@ -104,7 +104,7 @@ const formatFecha = (value) => {
                     <div v-for="r in recibos.data" :key="r.id" class="rounded-lg border border-gray-200 bg-white p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">{{ r.cuenta?.tercero?.razon_social || '-' }}</div>
+                                <div class="text-sm font-semibold text-gray-900">#{{ r.numero_interno || r.id }} · {{ r.cuenta?.tercero?.razon_social || '-' }}</div>
                                 <div class="text-xs text-gray-500">{{ formatFecha(r.fecha) }} · <span :class="r.estado === 'anulada' ? 'text-red-700 font-medium' : 'text-green-700 font-medium'">{{ r.estado }}</span></div>
                             </div>
                             <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', r.id)">Ver</Link>
@@ -133,6 +133,7 @@ const formatFecha = (value) => {
                     <table class="min-w-[1200px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -143,6 +144,7 @@ const formatFecha = (value) => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="r in recibos.data" :key="r.id">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">#{{ r.numero_interno || r.id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatFecha(r.fecha) }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ r.cuenta?.tercero?.razon_social || '-' }}</div>
@@ -157,7 +159,7 @@ const formatFecha = (value) => {
                                 </td>
                             </tr>
                             <tr v-if="!recibos.data.length">
-                                <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No hay recibos.</td>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">No hay recibos.</td>
                             </tr>
                         </tbody>
                     </table>
