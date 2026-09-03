@@ -187,6 +187,7 @@ const translateLabel = (label) => {
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Finanzas / Egresos varios</h2>
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('finanzas.egresos.export')">Exportar CSV</a>
+                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('finanzas.pasivos.index')">Pasivos pendientes</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.ingresos.index')">Ingresos varios</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.resumen-arca')">Resumen ARCA</Link>
                 </div>

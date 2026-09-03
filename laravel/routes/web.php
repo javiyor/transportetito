@@ -382,10 +382,11 @@ Route::middleware([
         Route::post('/movimientos-bancarios/gasto', [MovimientoBancarioIndexController::class, 'storeGasto'])->name('movimientos-bancarios.gasto');
 
         Route::get('/libro-diario', [\App\Http\Controllers\Finanzas\LibroDiarioController::class, 'index'])->name('libro-diario');
-        Route::post('/libro-diario', \App\Http\Controllers\Finanzas\AsientoStoreController::class)->name('libro-diario.store');
+        Route::post('/libro-diario', [\App\Http\Controllers\Finanzas\AsientoStoreController::class, 'store')->name('libro-diario.store');
         Route::get('/libro-mayor', [\App\Http\Controllers\Finanzas\LibroMayorController::class, 'index'])->name('libro-mayor');
         Route::get('/balance', [\App\Http\Controllers\Finanzas\BalanceController::class, 'index'])->name('balance');
         Route::get('/balance/export', [\App\Http\Controllers\Finanzas\BalanceController::class, 'export'])->name('balance.export');
+        Route::get('/pasivos', [\App\Http\Controllers\Finanzas\PasivoPendienteController::class, 'index'])->name('pasivos.index');
     });
 
     Route::middleware(['role:cobranzas|cobranzas_admin|cobrador'])->prefix('cobranzas')->name('cobranzas.')->group(function () {
