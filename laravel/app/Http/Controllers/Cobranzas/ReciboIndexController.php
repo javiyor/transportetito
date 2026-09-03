@@ -18,15 +18,20 @@ class ReciboIndexController extends Controller
         $zonaId = (int) ($request->get('zona_id') ?: 0);
         $localidad = trim((string) ($request->get('localidad') ?: ''));
         $barrio = trim((string) ($request->get('barrio') ?: ''));
+        $orden = $request->get('orden', 'numero');
 
         $query = Recibo::query()
             ->where('empresa_id', $empresaId)
             ->with([
                 'cuenta.tercero:id,razon_social,cuit',
                 'cuenta.zona:id,nombre',
-            ])
-            ->orderByDesc('fecha')
-            ->orderByDesc('id');
+            ]);
+
+        if ($orden === 'fecha') {
+            $query->orderByDesc('fecha')->orderByDesc('id');
+        } else {
+            $query->orderByDesc('numero_interno')->orderByDesc('id');
+        }
 
         if ($zonaId > 0) {
             $query->whereHas('cuenta', fn ($q) => $q->where('zona_id', $zonaId));
@@ -87,6 +92,7 @@ class ReciboIndexController extends Controller
                 'zona_id' => $zonaId ?: null,
                 'localidad' => $localidad !== '' ? $localidad : null,
                 'barrio' => $barrio !== '' ? $barrio : null,
+                'orden' => $orden,
             ],
         ]);
     }

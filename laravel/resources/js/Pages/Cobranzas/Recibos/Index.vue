@@ -22,6 +22,16 @@ const applyFilters = () => {
         zona_id: form.zona_id || null,
         localidad: form.localidad || null,
         barrio: form.barrio || null,
+        orden: props.filters?.orden || 'numero',
+    }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const setOrden = (orden) => {
+    router.get(route('cobranzas.recibos.index'), {
+        zona_id: form.zona_id || null,
+        localidad: form.localidad || null,
+        barrio: form.barrio || null,
+        orden,
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
@@ -41,6 +51,7 @@ const goToPage = (url) => {
             zona_id: form.zona_id || null,
             localidad: form.localidad || null,
             barrio: form.barrio || null,
+            orden: props.filters?.orden || 'numero',
         }, { preserveState: true, preserveScroll: true });
     } catch {
         router.get(url, {}, { preserveState: true, preserveScroll: true });
@@ -59,7 +70,14 @@ const translateLabel = (label) => {
 
         <template #header>
             <div class="flex items-center justify-between gap-4">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Recibos</h2>
+                <div class="flex items-center gap-3">
+                    <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Recibos</h2>
+                    <div class="flex items-center gap-1 text-xs">
+                        <span class="text-gray-500">Orden:</span>
+                        <button @click="setOrden('numero')" :class="['px-2 py-1 rounded', (props.filters?.orden || 'numero') === 'numero' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-100']">Número ↓</button>
+                        <button @click="setOrden('fecha')" :class="['px-2 py-1 rounded', props.filters?.orden === 'fecha' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-100']">Fecha</button>
+                    </div>
+                </div>
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.export', { zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null })">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.index')">Ctas. ctes.</Link>
