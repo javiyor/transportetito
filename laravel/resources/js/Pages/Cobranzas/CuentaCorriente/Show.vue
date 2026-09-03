@@ -49,7 +49,7 @@ const esCredito = (tipo) => {
 };
 
 const comprobantesPendientes = computed(() => {
-    return props.comprobantes || [];
+    return (props.comprobantes || []).filter(c => !c.is_pagada && !c.is_credit && (c.pendiente ?? parseFloat(c.total)) > 0.01);
 });
 
 const selectedComprobantesTotal = computed(() => {
