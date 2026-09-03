@@ -1,13 +1,43 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
+import { ref } from 'vue';
 
 const props = defineProps({
     pasivos: Array,
     totalPendiente: Number,
+    bancos: Array,
 });
 
 const formatNum = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const showPagar = ref(false);
+const pagarCuenta = ref(null);
+const pagarForm = useForm({ importe: '', fecha: new Date().toISOString().slice(0,10), banco_id: '', observacion: '' });
+
+const openPagar = (p) => {
+    pagarCuenta.value = p;
+    pagarForm.importe = p.saldo;
+    pagarForm.fecha = new Date().toISOString().slice(0,10);
+    pagarForm.banco_id = '';
+    pagarForm.observacion = '';
+    pagarForm.clearErrors();
+    showPagar.value = true;
+};
+
+const submitPagar = () => {
+    if (!pagarCuenta.value) return;
+    pagarForm.post(route('finanzas.pasivos.pagar', pagarCuenta.value.id), {
+        preserveScroll: true,
+        onSuccess: () => { showPagar.value = false; },
+    });
+};
 </script>
 
 <template>
@@ -44,6 +74,7 @@ const formatNum = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractio
                                 <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ formatNum(p.saldo) }}</td>
                                 <td class="px-2 py-1 text-right whitespace-nowrap">
                                     <Link :href="route('finanzas.libro-mayor', { cuenta_contable_id: p.id })" class="text-indigo-600 hover:text-indigo-800">Ver mayor</Link>
+                                    <button @click="openPagar(p)" class="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700">Pagar</button>
                                 </td>
                             </tr>
                             <tr v-if="!pasivos.length"><td colspan="5" class="px-2 py-4 text-center text-xs text-gray-500">Sin pasivos pendientes.</td></tr>
@@ -53,5 +84,21 @@ const formatNum = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractio
                 <div class="px-4 py-3 border-t border-gray-200 text-xs text-gray-500">Saldo = Haber - Debe. Solo cuentas <b>pasivo</b> con saldo &gt; 0.01. Detalle de movimientos en Libro Mayor.</div>
             </div>
         </div>
+
+        <DialogModal :show="showPagar" max-width="lg" @close="showPagar = false">
+            <template #title>Pagar pasivo {{ pagarCuenta?.codigo }} - {{ pagarCuenta?.nombre }}</template>
+            <template #content>
+                <div class="space-y-3">
+                    <div><InputLabel value="Importe" /><TextInput v-model="pagarForm.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full" /><InputError class="mt-1" :message="pagarForm.errors.importe" /></div>
+                    <div><InputLabel value="Fecha" /><TextInput v-model="pagarForm.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-1" :message="pagarForm.errors.fecha" /></div>
+                    <div><InputLabel value="Banco (opcional)" /><select v-model="pagarForm.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Sin banco (caja)</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select><InputError class="mt-1" :message="pagarForm.errors.banco_id" /></div>
+                    <div><InputLabel value="Observación" /><TextInput v-model="pagarForm.observacion" type="text" class="mt-1 block w-full" placeholder="Pago pasivo" /><InputError class="mt-1" :message="pagarForm.errors.observacion" /></div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="showPagar = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="pagarForm.processing" @click="submitPagar">Confirmar pago</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

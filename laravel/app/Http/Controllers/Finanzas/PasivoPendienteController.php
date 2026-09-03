@@ -42,6 +42,7 @@ class PasivoPendienteController extends Controller
         return Inertia::render('Finanzas/Pasivos/Index', [
             'pasivos' => $pasivos,
             'totalPendiente' => $totalPendiente,
+            'bancos' => \App\Models\Banco::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }
