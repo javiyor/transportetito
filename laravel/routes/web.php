@@ -401,6 +401,7 @@ Route::middleware([
         Route::get('/recibos/{recibo}/print', ReciboPrintController::class)->name('recibos.print');
         Route::get('/recibos/{recibo}', ReciboShowController::class)->name('recibos.show');
         Route::put('/recibos/{recibo}/retenciones', ReciboRetencionesUpdateController::class)->name('recibos.retenciones.update');
+        Route::put('/recibos/{recibo}/fecha', \App\Http\Controllers\Cobranzas\ReciboFechaUpdateController::class)->name('recibos.fecha.update');
         Route::post('/recibos/{recibo}/anular', ReciboAnularController::class)->name('recibos.anular');
         Route::get('/cuentas-corrientes', CuentaCorrienteIndexController::class)->name('ctacte.index');
         Route::get('/cuentas-corrientes/export', CuentaCorrienteExportController::class)->name('ctacte.export');

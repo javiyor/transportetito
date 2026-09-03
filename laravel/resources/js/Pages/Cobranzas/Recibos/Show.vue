@@ -14,6 +14,7 @@ const props = defineProps({
 
 const page = usePage();
 const flashSuccess = computed(() => page.props.tt?.flash?.success);
+const isAdmin = computed(() => (page.props.tt?.roles || []).includes('admin'));
 
 const normalizarRet = (v) => {
     if (!v || typeof v === 'number' || typeof v === 'string') return { descripcion: '', importe: Number(v || 0) || '' };
@@ -80,6 +81,11 @@ const formatChequeDetalle = (detalle) => {
     return parts.length ? parts : null;
 };
 
+const fechaForm = useForm({ fecha: props.recibo.fecha ? String(props.recibo.fecha).slice(0,10) : '' });
+const guardarFecha = () => {
+    fechaForm.put(route('cobranzas.recibos.fecha.update', props.recibo.id), { preserveScroll: true });
+};
+
 const anularForm = useForm({ motivo: '' });
 const submitAnular = () => {
     if (!confirm('¿Estas seguro de anular este recibo? Se revertiran los movimientos de cuenta corriente.')) return;
@@ -136,6 +142,10 @@ const submitAnular = () => {
                         <div class="text-xs text-gray-500">Retenciones</div>
                         <div class="text-sm font-medium text-amber-700">{{ recibo.moneda }} {{ formatNum(totalRetenciones) }}</div>
                     </div>
+                </div>
+                <div v-if="isAdmin && recibo.estado !== 'anulada'" class="mt-3 flex items-end gap-2">
+                    <div><InputLabel value="Editar fecha (admin)" class="!text-xs" /><TextInput v-model="fechaForm.fecha" type="date" class="mt-1 block w-full text-sm" /><InputError class="mt-1 text-xs" :message="fechaForm.errors.fecha" /></div>
+                    <PrimaryButton class="!text-xs" :disabled="fechaForm.processing" @click="guardarFecha">Guardar fecha</PrimaryButton>
                 </div>
             </div>
 
