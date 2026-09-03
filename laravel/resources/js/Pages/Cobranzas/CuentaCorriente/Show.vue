@@ -49,15 +49,21 @@ const esCredito = (tipo) => {
 };
 
 const comprobantesPendientes = computed(() => {
-    return (props.comprobantes || []).filter(c => !c.is_pagada && !c.is_credit && (c.pendiente ?? parseFloat(c.total)) > 0.01);
+    return (props.comprobantes || []).filter(c => {
+        if (c.is_pagada) return false;
+        const pend = parseFloat(c.pendiente ?? c.total);
+        return Math.abs(pend) > 0.01;
+    });
 });
 
 const selectedComprobantesTotal = computed(() => {
     return (reciboForm.comprobante_ids || []).reduce((sum, id) => {
         const c = props.comprobantes.find(c => c.id === id);
         if (!c) return sum;
-        const signo = esCredito(c.tipo) ? -1 : 1;
-        return sum + (parseFloat(c.total) * signo);
+        const pendiente = parseFloat(c.pendiente ?? c.total);
+        // Para pago_a_cuenta y notas, usar pendiente directo (ya con signo)
+        if (c.is_credit || c.tipo === 'pago_a_cuenta') return sum + pendiente;
+        return sum + pendiente;
     }, 0);
 });
 
@@ -159,7 +165,7 @@ const formatNum = (n) => {
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
                                 <span class="text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</span>
                                 <span class="text-xs text-gray-400">{{ formatFecha(c.fecha_emision) }}</span>
-                                <span class="text-xs" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.total) }}</span>
+                                <span class="text-xs" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
                             </div>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                         </fieldset>
