@@ -27,6 +27,8 @@ const form = useForm({
     facturar_a_destino: true,
     fecha_emision: new Date().toISOString().slice(0, 10),
     observacion: '',
+    servicio_minimo: '',
+    servicio_retiro: '',
     items: [],
 });
 
@@ -479,6 +481,24 @@ const submit = () => {
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <InputLabel value="Servicio mínimo" />
+                            <TextInput v-model="form.servicio_minimo" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                            <div class="text-xs text-gray-500 mt-1">Se aplica a todas las relaciones</div>
+                        </div>
+                        <div>
+                            <InputLabel value="Servicio de retiro" />
+                            <TextInput v-model="form.servicio_retiro" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
+                            <div class="text-xs text-gray-500 mt-1">Costo retiro</div>
+                        </div>
+                        <div>
+                            <InputLabel value="Valor neto total" />
+                            <div class="mt-1 text-sm font-semibold text-gray-900">${{ formatNum(totales.subtotal) }}</div>
+                            <div class="text-xs text-gray-500">Subtotal sin IVA</div>
                         </div>
                     </div>
 
