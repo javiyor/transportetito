@@ -12,6 +12,7 @@ import { ref, computed } from 'vue';
 const props = defineProps({
     empleados: Object,
     empresaId: Number,
+    verTodos: Boolean,
     puestos: Array,
 });
 
@@ -97,6 +98,10 @@ const confirmDelete = (e) => {
     }
 };
 
+const toggleVerTodos = () => {
+    router.get(route('admin.empleados.index'), { ver_todos: props.verTodos ? 0 : 1 }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
 const calcularAntiguedad = (fechaIngreso) => {
     if (!fechaIngreso) return '-';
     const desde = new Date(fechaIngreso);
@@ -125,6 +130,10 @@ const puestoOptionsFor = (current) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Empleados</h2>
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" :checked="!!verTodos" @change="toggleVerTodos" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                    Ver todos (todas las empresas)
+                </label>
             </div>
         </template>
 
@@ -180,6 +189,7 @@ const puestoOptionsFor = (current) => {
                     <table class="min-w-full divide-y divide-gray-200 text-xs">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th v-if="verTodos" class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Empresa</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Nombre</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">DNI</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Puesto</th>
@@ -193,6 +203,7 @@ const puestoOptionsFor = (current) => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="e in empleados.data" :key="e.id">
+                                <td v-if="verTodos" class="px-3 py-2 text-sm text-gray-700">{{ e.empresa?.razon_social || '-' }}</td>
                                 <td class="px-3 py-2">
                                     <div class="font-medium text-gray-900">{{ e.apellido }}, {{ e.nombre }}</div>
                                     <div class="text-[11px] text-gray-500">{{ e.razon_social || '-' }}</div>

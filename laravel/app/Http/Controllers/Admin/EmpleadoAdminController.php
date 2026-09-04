@@ -15,24 +15,24 @@ class EmpleadoAdminController extends Controller
     public function index(Request $request): Response
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+        $verTodos = $request->boolean('ver_todos');
 
-        $puestos = EmpleadoPuesto::query()
-            ->where('empresa_id', $empresaId)
-            ->where('activo', true)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre']);
+        $puestosQuery = EmpleadoPuesto::query()->where('activo', true)->orderBy('nombre');
+        if (!$verTodos && $empresaId) {
+            $puestosQuery->where('empresa_id', $empresaId);
+        }
+        $puestos = $puestosQuery->get(['id', 'nombre', 'empresa_id']);
 
-        $empleados = Empleado::query()
-            ->with('telefonos')
-            ->where('empresa_id', $empresaId)
-            ->orderBy('apellido')
-            ->orderBy('nombre')
-            ->paginate(40)
-            ->withQueryString();
+        $empleadosQuery = Empleado::query()->with(['telefonos', 'empresa:id,razon_social'])->orderBy('apellido')->orderBy('nombre');
+        if (!$verTodos && $empresaId) {
+            $empleadosQuery->where('empresa_id', $empresaId);
+        }
+        $empleados = $empleadosQuery->paginate(40)->withQueryString();
 
         return Inertia::render('Admin/Empleados/Index', [
             'empleados' => $empleados,
             'empresaId' => $empresaId,
+            'verTodos' => $verTodos,
             'puestos' => $puestos,
         ]);
     }
