@@ -674,10 +674,6 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.03" />
                                     </div>
                                     <div>
-                                        <InputLabel value="Flete minimo" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
-                                    </div>
-                                    <div>
                                         <InputLabel value="% seguro" />
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.007" />
                                     </div>
