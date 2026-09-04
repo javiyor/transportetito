@@ -15,6 +15,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    tercerosBuscador: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const page = usePage();
@@ -25,6 +29,31 @@ const showAddForm = reactive({ value: false });
 
 const filtroTexto = reactive({ remitente: '', destinatario: '' });
 const sortDest = reactive({ field: 'none' });
+
+const remitenteSearch = reactive({ query: '', show: false });
+const destinatarioSearch = reactive({ query: '', show: false });
+const remitenteFiltrados = computed(() => {
+    if (!remitenteSearch.query) return [];
+    const q = remitenteSearch.query.toLowerCase();
+    return (props.tercerosBuscador || []).filter(t => String(t.cuit).includes(q) || String(t.razon_social).toLowerCase().includes(q)).slice(0, 10);
+});
+const destinatarioFiltrados = computed(() => {
+    if (!destinatarioSearch.query) return [];
+    const q = destinatarioSearch.query.toLowerCase();
+    return (props.tercerosBuscador || []).filter(t => String(t.cuit).includes(q) || String(t.razon_social).toLowerCase().includes(q)).slice(0, 10);
+});
+const selectRemitente = (t) => {
+    pedidoForm.remitente.cuit = t.cuit;
+    pedidoForm.remitente.razon_social = t.razon_social;
+    remitenteSearch.show = false;
+    remitenteSearch.query = '';
+};
+const selectDestinatario = (t) => {
+    pedidoForm.destinatario.cuit = t.cuit;
+    pedidoForm.destinatario.razon_social = t.razon_social;
+    destinatarioSearch.show = false;
+    destinatarioSearch.query = '';
+};
 
 const corrigiendoPedidoId = reactive({ value: null });
 const correccionForm = reactive({
@@ -242,6 +271,24 @@ const formatFecha = (value) => {
                 </div>
 
                 <form v-show="showAddForm.value" class="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitPedido">
+                    <div class="sm:col-span-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div class="relative">
+                                <InputLabel value="Buscar remitente (CUIT/nombre)" />
+                                <TextInput v-model="remitenteSearch.query" @focus="remitenteSearch.show = true" @input="remitenteSearch.show = true" type="text" class="mt-1 block w-full text-sm" placeholder="Buscar..." />
+                                <div v-if="remitenteSearch.show && remitenteFiltrados.length" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow max-h-40 overflow-y-auto">
+                                    <button v-for="t in remitenteFiltrados" :key="t.id" type="button" @click="selectRemitente(t)" class="block w-full text-left px-2 py-1 text-xs hover:bg-gray-100">{{ t.razon_social }} · {{ t.cuit }}</button>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <InputLabel value="Buscar destinatario (CUIT/nombre)" />
+                                <TextInput v-model="destinatarioSearch.query" @focus="destinatarioSearch.show = true" @input="destinatarioSearch.show = true" type="text" class="mt-1 block w-full text-sm" placeholder="Buscar..." />
+                                <div v-if="destinatarioSearch.show && destinatarioFiltrados.length" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow max-h-40 overflow-y-auto">
+                                    <button v-for="t in destinatarioFiltrados" :key="t.id" type="button" @click="selectDestinatario(t)" class="block w-full text-left px-2 py-1 text-xs hover:bg-gray-100">{{ t.razon_social }} · {{ t.cuit }}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="sm:col-span-2">
                         <div class="text-sm font-medium text-gray-900">Remitente</div>
                         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">

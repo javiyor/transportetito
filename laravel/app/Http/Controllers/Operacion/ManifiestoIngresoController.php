@@ -44,6 +44,7 @@ class ManifiestoIngresoController extends Controller
 
         $query = ManifiestoIngreso::query()
             ->with(['deposito:id,nombre'])
+            ->withCount(['pedidos', 'pedidos as pedidos_con_error_count' => function($q){ $q->where('recepcion_estado','con_error'); }])
             ->whereIn('empresa_id', $empresaIds);
 
         if ($orden === 'asc') {
@@ -208,6 +209,8 @@ class ManifiestoIngresoController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        $tercerosBuscador = \App\Models\Tercero::query()->orderBy('razon_social')->limit(500)->get(['id', 'cuit', 'razon_social']);
+
         $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']);
 
         return Inertia::render('Operacion/Manifiestos/Show', [
@@ -216,6 +219,7 @@ class ManifiestoIngresoController extends Controller
             'tarifas' => $tarifas,
             'cotizacionesReferencia' => $cotizacionesReferencia,
             'pedidosPendientes' => $pedidosPendientes,
+            'tercerosBuscador' => $tercerosBuscador,
             'empresas' => $empresas,
         ]);
     }

@@ -110,7 +110,7 @@ onMounted(() => {
                 </div>
 
                 <div class="sm:hidden space-y-3 p-3">
-                    <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border border-gray-200 bg-white p-3">
+                    <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border p-3" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
@@ -138,7 +138,7 @@ onMounted(() => {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="m in manifiestos.data" :key="m.id" class="hover:bg-gray-50">
+                            <tr v-for="m in manifiestos.data" :key="m.id" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'">
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
