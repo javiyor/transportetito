@@ -57,7 +57,13 @@ class CuentaCorrienteReciboStoreController extends Controller
         ]);
 
         $empresa = $cuenta->empresa()->firstOrFail();
-        $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
+        $empresaReciboIdTmp = $cuenta->empresa_id;
+        if (!empty($data['comprobante_ids'])) {
+            $tmpComp = Comprobante::whereIn('id', $data['comprobante_ids'])->first(['empresa_id']);
+            if ($tmpComp) $empresaReciboIdTmp = $tmpComp->empresa_id;
+        }
+        $empresaCotizacion = $empresaReciboIdTmp !== $empresa->id ? (Empresa::find($empresaReciboIdTmp) ?: $empresa) : $empresa;
+        $cotizacion = $tipoCambioResolver->resolver($empresaCotizacion, $data['moneda'], $data['fecha']);
 
         $total = collect($data['items'])->sum(fn ($i) => (float) $i['importe']);
         $retencionesSum = 0;
@@ -68,10 +74,13 @@ class CuentaCorrienteReciboStoreController extends Controller
         }
         $totalAplicar = $total + $retencionesSum;
 
-        $maxInterno = Recibo::query()->where('empresa_id', $cuenta->empresa_id)->max('numero_interno') ?? 0;
+        $empresaReciboId = $empresaReciboIdTmp;
+        $empresaRecibo = $empresaCotizacion;
+
+        $maxInterno = Recibo::query()->where('empresa_id', $empresaReciboId)->max('numero_interno') ?? 0;
 
         $recibo = Recibo::query()->create([
-            'empresa_id' => $cuenta->empresa_id,
+            'empresa_id' => $empresaReciboId,
             'deposito_id' => null,
             'tercero_cuenta_id' => $cuenta->id,
             'pre_recibo_id' => null,
