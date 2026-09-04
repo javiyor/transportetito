@@ -62,11 +62,11 @@ class ManifiestoShowController extends Controller
         ]);
 
         $tarifas = TarifaRelacion::query()
-            ->where('empresa_id', $manifiesto->empresa_id)
             ->where('activo', true)
             ->with([
                 'remitente:id,razon_social,cuit',
                 'destinatario:id,razon_social,cuit',
+                'empresa:id,razon_social',
             ])
             ->orderByDesc('id')
             ->get();

@@ -11,14 +11,11 @@ class ManifiestoIndexController extends Controller
 {
     public function __invoke(Request $request)
     {
-        $empresaId = (int) $request->user()->current_empresa_id ?: 0;
-
         $manifiestos = ManifiestoIngreso::query()
-            ->where('empresa_id', $empresaId)
             ->whereHas('pedidos', function ($q) {
                 $q->whereDoesntHave('comprobantes');
             })
-            ->with(['deposito:id,nombre'])
+            ->with(['deposito:id,nombre', 'empresa:id,razon_social'])
             ->withCount(['pedidos as pendientes_count' => function ($q) {
                 $q->whereDoesntHave('comprobantes');
             }])
