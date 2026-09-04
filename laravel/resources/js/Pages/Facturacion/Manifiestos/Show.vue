@@ -355,6 +355,29 @@ const faltanSelecciones = computed(() => {
     return false;
 });
 
+const facturarSolo = (entregaId) => {
+    const g = gruposFacturacion.value.find(x => x.entregaId === entregaId);
+    if (!g || !facturarPorEntrega.facturar_por_entrega?.[entregaId]) {
+        alert('Seleccioná a quién facturar');
+        return;
+    }
+    const singleData = {
+        facturar_por_entrega: { [entregaId]: facturarPorEntrega.facturar_por_entrega[entregaId] },
+        detalles_por_entrega: { [entregaId]: facturarPorEntrega.detalles_por_entrega[entregaId] },
+        empresa_por_entrega: { [entregaId]: facturarPorEntrega.empresa_por_entrega[entregaId] },
+    };
+    const keysToNull = ['tarifa_bulto','tarifa_palet','tarifa_valor_declarado_pct','flete_minimo','seguro_pct','seguro_minimo','seguro_tope','cr_comision_pct','cr_comision_minimo','cr_comision_tope','cr_importe_manual','comision_cr_manual','iva_pct'];
+    const det = {};
+    for (const [eid, v] of Object.entries(singleData.detalles_por_entrega || {})) {
+        const x = { ...(v || {}) };
+        delete x.editar;
+        for (const k of keysToNull) if (x[k] === '') x[k] = null;
+        det[eid] = x;
+    }
+    singleData.detalles_por_entrega = det;
+    facturarPorEntrega.transform(() => singleData).post(route('operacion.manifiestos.facturar', props.manifiesto.id), { preserveScroll: true });
+};
+
 const facturarSeleccionado = () => {
     facturarPorEntrega
         .transform((data) => {
@@ -559,24 +582,27 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                         {{ splitRelaciones[g.relKey] ? 'Unificar' : 'Separar' }}
                                     </label>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <select
-                                        v-model="facturarPorEntrega.facturar_por_entrega[g.entregaId]"
-                                        class="border-gray-300 rounded text-xs py-1 px-1 w-44 focus:border-indigo-500 focus:ring-indigo-500"
-                                    >
-                                        <option value="">(facturar a)</option>
-                                        <option v-for="c in g.cuentas" :key="c.id" :value="String(c.id)">
-                                            {{ c.label }}{{ c.cuit ? ' CUIT ' + c.cuit : '' }}
-                                        </option>
-                                    </select>
-                                    <select
-                                        v-model="facturarPorEntrega.empresa_por_entrega[g.entregaId]"
-                                        class="border-gray-300 rounded text-xs py-1 px-1 w-36 focus:border-indigo-500 focus:ring-indigo-500"
-                                    >
-                                        <option v-for="emp in empresas" :key="emp.id" :value="String(emp.id)">
-                                            {{ emp.razon_social }}
-                                        </option>
-                                    </select>
+                                <div class="flex flex-col gap-1">
+                                    <div class="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider">A quién facturar</div>
+                                    <div class="flex items-center gap-2">
+                                        <select
+                                            v-model="facturarPorEntrega.facturar_por_entrega[g.entregaId]"
+                                            class="border-gray-300 rounded text-xs py-1 px-1 w-44 focus:border-indigo-500 focus:ring-indigo-500"
+                                        >
+                                            <option value="">(facturar a)</option>
+                                            <option v-for="c in g.cuentas" :key="c.id" :value="String(c.id)">
+                                                {{ c.label }}{{ c.cuit ? ' CUIT ' + c.cuit : '' }}
+                                            </option>
+                                        </select>
+                                        <select
+                                            v-model="facturarPorEntrega.empresa_por_entrega[g.entregaId]"
+                                            class="border-gray-300 rounded text-xs py-1 px-1 w-36 focus:border-indigo-500 focus:ring-indigo-500"
+                                        >
+                                            <option v-for="emp in empresas" :key="emp.id" :value="String(emp.id)">
+                                                {{ emp.razon_social }}
+                                            </option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -609,6 +635,14 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                     · Flete: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).flete) }} · IVA: {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).iva) }}
                                 </div>
                                 <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700"
+                                        :disabled="!facturarPorEntrega.facturar_por_entrega[g.entregaId]"
+                                        @click.prevent="facturarSolo(g.entregaId)"
+                                    >
+                                        Facturar este
+                                    </button>
                                     <button
                                         type="button"
                                         class="text-xs text-gray-700 underline"
