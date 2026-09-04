@@ -585,25 +585,19 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                     <thead class="bg-gray-50">
                                         <tr>
                                             <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
-                                            <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
-                                            <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
                                             <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
                                             <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
+                                            <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor decl.</th>
+                                            <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         <tr v-for="p in g.pedidos" :key="p.id" class="hover:bg-gray-50">
                                             <td class="px-3 py-1.5 whitespace-nowrap font-mono text-gray-900">{{ p.remito_numero || '-' }}</td>
-                                            <td class="px-3 py-1.5 whitespace-nowrap">
-                                                <div class="text-gray-900">{{ p.remitente?.razon_social || '-' }}</div>
-                                                <div class="text-gray-500">{{ p.remitente?.cuit || '' }}</div>
-                                            </td>
-                                            <td class="px-3 py-1.5 whitespace-nowrap">
-                                                <div class="text-gray-900">{{ p.destinatario?.razon_social || '-' }}</div>
-                                                <div class="text-gray-500">{{ p.destinatario?.cuit || '' }}</div>
-                                            </td>
                                             <td class="px-3 py-1.5 whitespace-nowrap text-center text-gray-700">{{ p.bultos }}</td>
                                             <td class="px-3 py-1.5 whitespace-nowrap text-center text-gray-700">{{ p.palets }}</td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap text-right font-mono text-gray-700">${{ formatMoney(p.valor_declarado) }}</td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap text-right font-mono text-gray-700">{{ p.cr_importe ? '$' + formatMoney(p.cr_importe) : '-' }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
