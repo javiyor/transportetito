@@ -191,6 +191,9 @@ Route::middleware([
         Route::get('/tarifas', [TarifaRelacionAdminController::class, 'index'])->name('tarifas.index');
         Route::post('/tarifas', [TarifaRelacionAdminController::class, 'store'])->name('tarifas.store');
         Route::put('/tarifas/{tarifa}', [TarifaRelacionAdminController::class, 'update'])->name('tarifas.update');
+        Route::get('/tarifas-escalas', [\App\Http\Controllers\Admin\TarifaEscalaController::class, 'index'])->name('tarifas.escalas.index');
+        Route::post('/tarifas-escalas', [\App\Http\Controllers\Admin\TarifaEscalaController::class, 'store'])->name('tarifas.escalas.store');
+        Route::put('/tarifas-escalas/{escala}', [\App\Http\Controllers\Admin\TarifaEscalaController::class, 'update'])->name('tarifas.escalas.update');
 
         Route::get('/cotizaciones', [CotizacionAdminController::class, 'index'])->name('cotizaciones.index');
         Route::post('/cotizaciones/oficial', [CotizacionAdminController::class, 'storeOficial'])->name('cotizaciones.oficial.store');
