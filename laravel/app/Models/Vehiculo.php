@@ -12,6 +12,7 @@ class Vehiculo extends Model
 
     protected $fillable = [
         'empresa_id',
+        'tipo_unidad_id',
         'patente',
         'marca',
         'modelo',
@@ -44,6 +45,11 @@ class Vehiculo extends Model
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+    public function tipoUnidad(): BelongsTo
+    {
+        return $this->belongsTo(TipoUnidad::class);
     }
 
     public function controles(): HasMany

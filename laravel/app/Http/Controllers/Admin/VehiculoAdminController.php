@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
+use App\Models\TipoUnidad;
 use App\Models\Vehiculo;
 use App\Models\VehiculoControl;
 use Illuminate\Http\RedirectResponse;
@@ -17,12 +18,12 @@ class VehiculoAdminController extends Controller
     {
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
-        $query = Vehiculo::query()->with(['empresa:id,razon_social', 'controles'])->orderBy('patente');
+        $query = Vehiculo::query()->with(['empresa:id,razon_social', 'tipoUnidad:id,nombre', 'controles'])->orderBy('patente');
         if ($empresaId > 0) {
             $query->where('empresa_id', $empresaId);
         }
 
-        $vehiculos = $query->get(['id', 'empresa_id', 'patente', 'marca', 'modelo', 'activo', 'titulo_archivo', 'rto_archivo', 'seguro_archivo', 'observaciones']);
+        $vehiculos = $query->get(['id', 'empresa_id', 'tipo_unidad_id', 'patente', 'marca', 'modelo', 'activo', 'titulo_archivo', 'rto_archivo', 'seguro_archivo', 'observaciones']);
 
         $alertasCount = VehiculoControl::query()
             ->whereHas('vehiculo', fn($q) => $empresaId > 0 ? $q->where('empresa_id', $empresaId) : $q)
@@ -33,6 +34,7 @@ class VehiculoAdminController extends Controller
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
             'vehiculos' => $vehiculos,
+            'tiposUnidad' => TipoUnidad::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
             'alertasCount' => $alertasCount,
         ]);
     }
@@ -41,6 +43,7 @@ class VehiculoAdminController extends Controller
     {
         $data = $request->validate([
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
+            'tipo_unidad_id' => ['nullable', 'integer', 'exists:tipos_unidad,id'],
             'patente' => ['required', 'string', 'max:20'],
             'marca' => ['nullable', 'string', 'max:255'],
             'modelo' => ['nullable', 'string', 'max:255'],
@@ -80,6 +83,7 @@ class VehiculoAdminController extends Controller
     {
         $data = $request->validate([
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
+            'tipo_unidad_id' => ['nullable', 'integer', 'exists:tipos_unidad,id'],
             'patente' => ['required', 'string', 'max:20'],
             'marca' => ['nullable', 'string', 'max:255'],
             'modelo' => ['nullable', 'string', 'max:255'],

@@ -14,11 +14,13 @@ const props = defineProps({
     empresas: Array,
     empresaId: [Number, null],
     vehiculos: Array,
+    tiposUnidad: Array,
     alertasCount: Number,
 });
 
 const createForm = useForm({
     empresa_id: props.empresaId || props.empresas?.[0]?.id || null,
+    tipo_unidad_id: '',
     patente: '',
     marca: '',
     modelo: '',
@@ -41,6 +43,7 @@ const editing = ref(false);
 const editId = ref(null);
 const editForm = useForm({
     empresa_id: null,
+    tipo_unidad_id: '',
     patente: '',
     marca: '',
     modelo: '',
@@ -56,6 +59,7 @@ const editExistingFiles = ref({});
 const openEdit = (v) => {
     editId.value = v.id;
     editForm.empresa_id = v.empresa_id;
+    editForm.tipo_unidad_id = v.tipo_unidad_id || '';
     editForm.patente = v.patente;
     editForm.marca = v.marca || '';
     editForm.modelo = v.modelo || '';
@@ -182,6 +186,14 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                         <TextInput v-model="createForm.modelo" type="text" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="createForm.errors.modelo" />
                     </div>
+                    <div>
+                        <InputLabel value="Tipo de unidad" />
+                        <select v-model="createForm.tipo_unidad_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="t in tiposUnidad" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="createForm.errors.tipo_unidad_id" />
+                    </div>
 
                     <div>
                         <InputLabel value="Titulo (PDF)" />
@@ -227,6 +239,7 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Alertas</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Empresa</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Patente</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo unidad</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Marca</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Modelo</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Documentos</th>
@@ -245,6 +258,7 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                                 </td>
                                 <td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap">{{ v.empresa?.razon_social || '-' }}</td>
                                 <td class="px-4 py-2 text-sm font-mono text-gray-900 font-semibold">{{ v.patente }}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">{{ v.tipo_unidad?.nombre || '-' }}</td>
                                 <td class="px-4 py-2 text-sm text-gray-700">{{ v.marca || '-' }}</td>
                                 <td class="px-4 py-2 text-sm text-gray-700">{{ v.modelo || '-' }}</td>
                                 <td class="px-4 py-2 text-sm text-gray-700">
@@ -268,7 +282,7 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                                 </td>
                             </tr>
                             <tr v-if="!vehiculos.length">
-                                <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">Sin vehiculos.</td>
+                                <td colspan="11" class="px-6 py-4 text-center text-sm text-gray-500">Sin vehiculos.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -301,6 +315,14 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                         <InputLabel value="Modelo" />
                         <TextInput v-model="editForm.modelo" type="text" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="editForm.errors.modelo" />
+                    </div>
+                    <div>
+                        <InputLabel value="Tipo de unidad" />
+                        <select v-model="editForm.tipo_unidad_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="t in tiposUnidad" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+                        </select>
+                        <InputError class="mt-2" :message="editForm.errors.tipo_unidad_id" />
                     </div>
 
                     <div>

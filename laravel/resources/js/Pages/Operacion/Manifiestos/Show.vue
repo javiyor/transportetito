@@ -461,7 +461,6 @@ const formatFecha = (value) => {
                                 <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cant</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
                                 <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor declarado</th>
-                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depósito destino</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observación</th>
                              </tr>
@@ -484,6 +483,12 @@ const formatFecha = (value) => {
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor</label>
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
+                                        <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full mt-1 text-[10px]" placeholder="Observacion adicional" />
+                                        <div class="pt-1">
+                                            <label class="text-[10px] text-gray-500">Foto del bulto:</label>
+                                            <input type="file" accept="image/*" class="block w-full text-[10px] mt-0.5" @change="onRecepcionFotoChange(p.id, $event)" />
+                                        </div>
+                                        <div v-if="p.recepcion_fotos?.length" class="text-[10px] text-green-600">Fotos: {{ p.recepcion_fotos.length }}</div>
                                     </div>
                                     <div class="text-[10px] font-medium mt-0.5">
                                         <span v-if="p.recepcion_controlado_at" class="text-green-600">{{ String(p.recepcion_controlado_at).replace('T', ' ').slice(0, 10) }}</span>
@@ -501,14 +506,13 @@ const formatFecha = (value) => {
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700 text-center">{{ p.bultos }}b / {{ p.palets }}p</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700 font-mono">{{ p.remito_numero || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs font-mono text-gray-700 text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>
-                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ manifiesto.depositoDestino?.nombre || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ String(p.created_at || '').slice(0, 10) }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700 max-w-[120px] truncate">{{ p.observacion || '-' }}</td>
                              </tr>
 
-                             <tr v-if="!pedidosVisibles.length">
-                                 <td colspan="9" class="px-4 py-4 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
-                             </tr>
+                              <tr v-if="!pedidosVisibles.length">
+                                  <td colspan="8" class="px-4 py-4 text-center text-sm text-gray-500">Todavia no hay pedidos cargados.</td>
+                              </tr>
                         </tbody>
                     </table>
                 </div>
