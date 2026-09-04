@@ -172,8 +172,8 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Zona / Ciudad / Barrio</div>
-                                <div class="font-medium text-gray-900">{{ c.zona || 'Sin zona' }} · {{ c.localidad || 'Sin ciudad' }} · {{ c.barrio || 'Sin barrio' }}</div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Ciudad</div>
+                                <div class="font-medium text-gray-900">{{ c.localidad || 'Sin ciudad' }}</div>
                             </div>
                             <div v-if="c.cobrador" class="text-xs text-gray-500">Cobrador: <span class="font-medium text-gray-900">{{ c.cobrador }}</span></div>
                             <div class="grid grid-cols-2 gap-3">
@@ -201,16 +201,14 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
-                    <table class="min-w-[1450px] w-full divide-y divide-gray-200">
+                    <table class="min-w-[1100px] w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <input type="checkbox" :checked="selectedIds.size === cuentas.length && cuentas.length > 0" :indeterminate="selectedIds.size > 0 && selectedIds.size < cuentas.length" @change="selectAll" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zona</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrador</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo total</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencido +30</th>
@@ -228,9 +226,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                         <div class="font-medium text-gray-900">{{ c.razon_social || '-' }}</div>
                                         <div class="text-xs text-gray-500">CUIT {{ c.cuit || '-' }} · Nro {{ c.numero_cliente || '-' }}</div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-700">{{ c.zona || 'Sin zona' }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ c.localidad || 'Sin ciudad' }}</td>
-                                    <td class="px-6 py-4 text-sm text-gray-700">{{ c.barrio || 'Sin barrio' }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ c.cobrador || '-' }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700 font-mono">${{ formatNum(c.saldo) }}</td>
                                     <td class="px-6 py-4 text-sm font-mono font-medium" :class="c.vencido_30 > 0 ? 'text-red-700' : 'text-gray-700'">
@@ -246,7 +242,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                     </td>
                                 </tr>
                                 <tr v-if="expandedRows[c.id] && c.docs_pendientes?.length" :class="c.resaltar ? 'bg-red-50/50' : 'bg-gray-50'">
-                                    <td colspan="10" class="px-6 py-3">
+                                    <td colspan="8" class="px-6 py-3">
                                         <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Documentos pendientes</div>
                                         <table class="w-full text-xs">
                                             <thead>
@@ -274,7 +270,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                 </tr>
                             </template>
                             <tr v-if="!cuentas.length">
-                                <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>

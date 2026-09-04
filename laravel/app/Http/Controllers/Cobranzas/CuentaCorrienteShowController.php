@@ -180,13 +180,22 @@ class CuentaCorrienteShowController extends Controller
             return sprintf('%d-%s-%08d', $p, $t, (int)$num);
         })->values();
 
+        $cutoff30 = now()->subDays(30)->toDateString();
+        $vencido30 = round($comprobantes->filter(fn($c) => ($c->fecha_emision ? $c->fecha_emision->format('Y-m-d') : '') <= $cutoff30 && !$c->is_pagada)->sum(function($c){
+            $pend = (float)($c->pendiente ?? $c->total);
+            // pendiente ya tiene signo (negativo para NC/pago_a_cuenta), sumar directo descuenta créditos y suma débitos
+            return $pend;
+        }), 2);
+        // Incluir también créditos a cuenta / NC vencidos como descuento
+        $vencido30 = round(max(0, $vencido30), 2);
+
         return Inertia::render('Cobranzas/CuentaCorriente/Show', [
             'cuenta' => $cuenta,
             'movimientos' => $movimientos,
             'comprobantes' => $comprobantes,
             'saldos' => [
                 'saldo_total' => $saldoTotal,
-                'vencido_30' => round(max(0, (float) $movimientos->where('fecha', '<=', now()->subDays(30)->toDateString())->sum('importe_signed')), 2),
+                'vencido_30' => $vencido30,
                 'retenciones' => $retencionesSum,
                 'saldo_a_cancelar' => round($saldoTotal - $retencionesSum, 2),
             ],

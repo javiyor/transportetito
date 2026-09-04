@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Cobranzas;
 use App\Http\Controllers\Controller;
 use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
+use App\Models\Banco;
+use App\Models\CajaTraspaso;
+use App\Models\CierreCaja;
 use App\Models\CuentaContable;
 use App\Models\HojaRuta;
 use App\Models\OrdenPago;
@@ -139,6 +142,10 @@ class CierreCajaController extends Controller
 
         $totalGeneralHojas = round($hojasData->sum('total_general'), 2);
 
+        $cierreInicial = CierreCaja::where('empresa_id', $empresaId)->where('fecha', $desde)->first();
+        $traspasos = CajaTraspaso::where('empresa_id', $empresaId)->whereBetween('fecha', [$desde, $hasta])->with(['bancoOrigen', 'bancoDestino'])->orderBy('fecha')->get();
+        $totalTraspasos = round($traspasos->sum('importe'), 2);
+
         return Inertia::render('Cobranzas/Cierre/Index', [
             'desde' => $desde,
             'hasta' => $hasta,
@@ -160,6 +167,11 @@ class CierreCajaController extends Controller
             'hojas' => $hojasData,
             'cantidadHojas' => $hojas->count(),
             'totalGeneralHojas' => $totalGeneralHojas,
+            'cajaInicial' => $cierreInicial ? (float) $cierreInicial->caja_inicial : 0,
+            'cajaChicaInicial' => $cierreInicial ? (float) $cierreInicial->caja_chica_inicial : 0,
+            'traspasos' => $traspasos,
+            'totalTraspasos' => $totalTraspasos,
+            'bancos' => Banco::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }

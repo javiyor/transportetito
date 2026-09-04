@@ -24,6 +24,11 @@ const props = defineProps({
     hojas: Array,
     cantidadHojas: Number,
     totalGeneralHojas: Number,
+    cajaInicial: Number,
+    cajaChicaInicial: Number,
+    traspasos: Array,
+    totalTraspasos: Number,
+    bancos: Array,
 });
 
 const form = useForm({
@@ -36,6 +41,28 @@ const applyFilters = () => {
         desde: form.desde || null,
         hasta: form.hasta || null,
     }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const cajaForm = useForm({
+    fecha: props.desde || new Date().toISOString().slice(0,10),
+    caja_inicial: props.cajaInicial ?? 0,
+    caja_chica_inicial: props.cajaChicaInicial ?? 0,
+});
+const guardarCajaInicial = () => {
+    cajaForm.post(route('cobranzas.cierre.caja-inicial.store'), { preserveScroll: true });
+};
+
+const traspasoForm = useForm({
+    fecha: new Date().toISOString().slice(0,10),
+    origen_tipo: 'caja_general',
+    origen_id: '',
+    destino_tipo: 'banco',
+    destino_id: '',
+    importe: '',
+    observacion: '',
+});
+const guardarTraspaso = () => {
+    traspasoForm.post(route('cobranzas.cierre.traspaso.store'), { preserveScroll: true, onSuccess: () => traspasoForm.reset('importe','observacion') });
 };
 
 const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0);
@@ -123,6 +150,72 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                             <span class="font-mono text-lg" :class="saldoNeto >= 0 ? 'text-green-700' : 'text-red-700'">${{ Number(saldoNeto).toFixed(2) }}</span>
                         </div>
                         <div class="text-xs text-gray-500 mt-1">Ingresos - Egresos</div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow sm:rounded-lg p-4">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3">Caja inicial y traspasos</h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700">Caja general inicial ({{ desde }})</label>
+                                <input v-model="cajaForm.caja_inicial" type="number" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700">Caja chica inicial</label>
+                                <input v-model="cajaForm.caja_chica_inicial" type="number" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" />
+                            </div>
+                        </div>
+                        <button type="button" @click="guardarCajaInicial" class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700" :disabled="cajaForm.processing">Guardar caja inicial</button>
+                        <div class="border-t border-gray-200 pt-3">
+                            <h4 class="text-xs font-semibold text-gray-700 mb-2">Nuevo traspaso</h4>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700">Origen</label>
+                                    <select v-model="traspasoForm.origen_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                        <option value="caja_general">Caja general</option>
+                                        <option value="caja_chica">Caja chica</option>
+                                        <option value="banco">Banco</option>
+                                    </select>
+                                    <select v-if="traspasoForm.origen_tipo==='banco'" v-model="traspasoForm.origen_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                        <option value="">Banco origen</option>
+                                        <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700">Destino</label>
+                                    <select v-model="traspasoForm.destino_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                        <option value="caja_general">Caja general</option>
+                                        <option value="caja_chica">Caja chica</option>
+                                        <option value="banco">Banco</option>
+                                    </select>
+                                    <select v-if="traspasoForm.destino_tipo==='banco'" v-model="traspasoForm.destino_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                        <option value="">Banco destino</option>
+                                        <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700">Importe</label>
+                                    <input v-model="traspasoForm.importe" type="number" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700">Fecha</label>
+                                    <input v-model="traspasoForm.fecha" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" />
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-xs font-medium text-gray-700">Observación</label>
+                                    <input v-model="traspasoForm.observacion" type="text" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="Traspaso caja a banco..." />
+                                </div>
+                            </div>
+                            <button type="button" @click="guardarTraspaso" class="mt-2 inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700" :disabled="traspasoForm.processing">Registrar traspaso</button>
+                        </div>
+                        <div v-if="traspasos?.length" class="border-t border-gray-200 pt-2 max-h-40 overflow-y-auto">
+                            <div v-for="t in traspasos" :key="t.id" class="flex items-center justify-between text-xs py-1 border-b border-gray-100">
+                                <span>{{ t.fecha }} {{ t.origen_tipo }} → {{ t.destino_tipo }} {{ t.bancoOrigen?.nombre || t.bancoDestino?.nombre || ''}}</span>
+                                <span class="font-mono font-medium">${{ formatNum(t.importe) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs font-bold pt-1"><span>Total traspasos</span><span>${{ formatNum(totalTraspasos) }}</span></div>
+                        </div>
                     </div>
                 </div>
 

@@ -416,6 +416,8 @@ Route::middleware([
 
         Route::get('/cierre', CierreCajaController::class)->name('cierre.index');
         Route::get('/cierre/print', CierreCajaPrintController::class)->name('cierre.print');
+        Route::post('/cierre/caja-inicial', \App\Http\Controllers\Cobranzas\CierreCajaInicialStoreController::class)->name('cierre.caja-inicial.store');
+        Route::post('/cierre/traspaso', \App\Http\Controllers\Cobranzas\CajaTraspasoStoreController::class)->name('cierre.traspaso.store');
         Route::get('/resumen-arca', [ResumenArcaController::class, 'index'])->name('resumen-arca');
         Route::get('/resumen-arca/export', [ResumenArcaController::class, 'exportCsv'])->name('resumen-arca.export');
     });

@@ -136,10 +136,29 @@ class CuentaCorrienteIndexController extends Controller
 
         $cobradores = User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']);
 
-        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $aplicacionesSum, $notasSum) {
+        // Para vencido incluir pagos a cuenta / NC como descuento
+        $reciboAcuentaPorCuenta = \App\Models\ReciboAplicacion::query()
+            ->where('modo', 'a_cuenta')
+            ->whereHas('recibo', fn($q) => $q->where('empresa_id', $empresaId)->where('estado', '!=', 'anulada'))
+            ->with('recibo:id,tercero_cuenta_id,fecha')
+            ->get()
+            ->groupBy(fn($a) => $a->recibo->tercero_cuenta_id);
+
+        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $aplicacionesSum, $notasSum, $reciboAcuentaPorCuenta) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
-            $vencido30 = round(max(0, (float) $items->where('fecha', '<=', $cutoff)->sum('importe_signed')), 2);
+            // vencido = suma de pendientes vencidos (factura/ND positivo, NC/pago_a_cuenta negativo)
+            $pendientesVencidos = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
+                ->filter(fn($c) => ($c->fecha_emision?->format('Y-m-d') ?? '') <= $cutoff)
+                ->map(function($c) use ($aplicacionesSum, $notasSum) {
+                    $aplicado = (float)($aplicacionesSum[$c->id] ?? 0);
+                    $notas = (float)($notasSum[$c->id] ?? 0);
+                    return round((float)$c->total - $aplicado - $notas, 2);
+                })->filter(fn($p) => $p > 0.01)->sum();
+            $creditosVencidos = $reciboAcuentaPorCuenta->get($cuenta->id, collect())
+                ->filter(fn($a) => $a->recibo->fecha <= $cutoff)
+                ->sum('importe');
+            $vencido30 = round(max(0, $pendientesVencidos - $creditosVencidos), 2);
 
             $docsPendientes = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
                 ->map(function (Comprobante $c) use ($aplicacionesSum, $notasSum) {
