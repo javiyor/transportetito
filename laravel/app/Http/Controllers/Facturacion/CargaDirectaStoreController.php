@@ -44,6 +44,8 @@ class CargaDirectaStoreController extends Controller
             'items.*.cr' => ['required', 'numeric', 'min:0'],
             'items.*.remito' => ['nullable', 'string', 'max:100'],
             'observacion' => ['nullable', 'string', 'max:2000'],
+            'servicio_minimo' => ['nullable', 'numeric', 'min:0'],
+            'servicio_retiro' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $cuentaOrigen = TerceroCuenta::query()->findOrFail($data['origen_cuenta_id']);
@@ -146,6 +148,23 @@ class CargaDirectaStoreController extends Controller
             'cotizacion' => ['tasa_ars' => 1],
         ];
 
+        // Propagar servicio minimo/retiro a tarifa si se especifica
+        if (isset($data['servicio_minimo']) && $data['servicio_minimo'] !== '' && $data['servicio_minimo'] !== null) {
+            $tarifa['servicio_minimo'] = (float) $data['servicio_minimo'];
+            // Actualizar tarifa existente para esta relacion
+            \App\Models\TarifaRelacion::where('empresa_id', $empresaId)
+                ->where('remitente_tercero_id', $cuentaOrigen->tercero_id)
+                ->where('destinatario_tercero_id', $cuentaDestino->tercero_id)
+                ->update(['servicio_minimo' => (float) $data['servicio_minimo']]);
+        }
+        if (isset($data['servicio_retiro']) && $data['servicio_retiro'] !== '' && $data['servicio_retiro'] !== null) {
+            $tarifa['servicio_retiro'] = (float) $data['servicio_retiro'];
+            \App\Models\TarifaRelacion::where('empresa_id', $empresaId)
+                ->where('remitente_tercero_id', $cuentaOrigen->tercero_id)
+                ->where('destinatario_tercero_id', $cuentaDestino->tercero_id)
+                ->update(['servicio_retiro' => (float) $data['servicio_retiro']]);
+        }
+
         $detalleFacturacion = [
             'version' => 'v2',
             'carga_directa' => true,
@@ -155,6 +174,8 @@ class CargaDirectaStoreController extends Controller
             'items' => $itemsData,
             'calculo' => $calc,
             'observacion' => $data['observacion'] ?? null,
+            'servicio_minimo' => $data['servicio_minimo'] ?? null,
+            'servicio_retiro' => $data['servicio_retiro'] ?? null,
         ];
 
         $maxInterno = Comprobante::query()
