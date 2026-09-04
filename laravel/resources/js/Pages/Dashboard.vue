@@ -1,8 +1,11 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { Link } from '@inertiajs/vue3';
 
 defineProps({
     empresa: Object,
+    topVisits: Array,
+    alertas: Object,
 });
 
 const formatCuit = (value) => {
@@ -44,6 +47,31 @@ const formatCuit = (value) => {
                             <span class="text-gray-300">|</span>
                             <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('admin.users.index')" v-if="($page.props.tt?.roles || []).includes('admin')">Admin</a>
                         </div>
+                    </div>
+                </div>
+
+                <div v-if="topVisits?.length" class="bg-white shadow sm:rounded-lg p-4">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3">Accesos frecuentes (Top 10)</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        <Link v-for="v in topVisits" :key="v.route" :href="'/' + v.path" class="block rounded-lg border p-3 hover:bg-gray-50 transition-colors" :class="(alertas?.cotizaciones_pendientes > 0 && v.route === 'facturacion.cotizaciones.pendientes') || (alertas?.vehiculos_vencimientos > 0 && v.route === 'admin.vehiculos.index') ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'">
+                            <div class="text-sm font-medium text-gray-900 truncate">{{ v.title }}</div>
+                            <div class="text-xs text-gray-500">{{ v.visits }} visitas</div>
+                            <div v-if="v.route === 'facturacion.cotizaciones.pendientes' && alertas?.cotizaciones_pendientes > 0" class="mt-1 text-xs font-bold text-amber-700">{{ alertas.cotizaciones_pendientes }} pendientes</div>
+                            <div v-if="v.route === 'admin.vehiculos.index' && alertas?.vehiculos_vencimientos > 0" class="mt-1 text-xs font-bold text-amber-700">{{ alertas.vehiculos_vencimientos }} vencimientos</div>
+                        </Link>
+                    </div>
+                </div>
+
+                <div v-if="alertas && (alertas.cotizaciones_pendientes > 0 || alertas.vehiculos_vencimientos > 0)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div v-if="alertas.cotizaciones_pendientes > 0" class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div class="text-sm font-semibold text-amber-800">Cotizaciones pendientes</div>
+                        <div class="text-2xl font-bold text-amber-900">{{ alertas.cotizaciones_pendientes }}</div>
+                        <Link :href="route('facturacion.cotizaciones.pendientes')" class="text-xs text-amber-700 hover:text-amber-900 underline">Ver pendientes</Link>
+                    </div>
+                    <div v-if="alertas.vehiculos_vencimientos > 0" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="text-sm font-semibold text-red-800">Vencimientos vehículos</div>
+                        <div class="text-2xl font-bold text-red-900">{{ alertas.vehiculos_vencimientos }}</div>
+                        <Link :href="route('admin.vehiculos.index')" class="text-xs text-red-700 hover:text-red-900 underline">Ver vehículos</Link>
                     </div>
                 </div>
 
