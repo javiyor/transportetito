@@ -13,20 +13,11 @@ const eliminar = (m) => {
 
 const props = defineProps({
     manifiestos: Object,
-    compartidos: { type: String, default: '1' },
     orden: { type: String, default: 'desc' },
 });
 
-const toggleCompartidos = () => {
-    router.get(route('operacion.manifiestos.index'), {
-        compartidos: props.compartidos === '1' ? '0' : '1',
-        orden: props.orden || 'desc',
-    }, { preserveState: true, preserveScroll: true, replace: true });
-};
-
 const toggleOrden = () => {
     router.get(route('operacion.manifiestos.index'), {
-        compartidos: props.compartidos || '1',
         orden: props.orden === 'asc' ? 'desc' : 'asc',
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
@@ -34,7 +25,6 @@ const toggleOrden = () => {
 const goToPage = (page) => {
     if (!page || page < 1 || page > props.manifiestos.last_page) return;
     router.get(route('operacion.manifiestos.index'), {
-        compartidos: props.compartidos || '1',
         orden: props.orden || 'desc',
         page,
     }, { preserveState: true, preserveScroll: true });
@@ -93,11 +83,7 @@ onMounted(() => {
                 Importando nuevos manifiestos de todos los depósitos...
             </div>
             <div class="flex items-center gap-2">
-                <button @click="toggleCompartidos"
-                    class="text-xs px-3 py-1.5 rounded border font-medium transition-colors"
-                    :class="compartidos === '1' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
-                    {{ compartidos === '1' ? 'Mostrando datos compartidos' : 'Solo esta empresa' }}
-                </button>
+                <span class="text-xs text-gray-500">Mostrando todos los manifiestos de todas las empresas</span>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
@@ -114,7 +100,7 @@ onMounted(() => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
-                                <div class="text-xs text-gray-500">{{ m.chofer || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ m.empresa?.razon_social || '-' }} · {{ m.chofer || '-' }}</div>
                                 <div class="text-xs text-gray-500">{{ m.deposito?.nombre || '-' }}</div>
                             </div>
                             <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
@@ -132,6 +118,7 @@ onMounted(() => {
                                         <span class="text-[10px]">{{ orden === 'asc' ? '▲' : '▼' }}</span>
                                     </button>
                                 </th>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
                                 <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -140,6 +127,7 @@ onMounted(() => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="m in manifiestos.data" :key="m.id" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'">
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.empresa?.razon_social || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs space-x-2">

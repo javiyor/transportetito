@@ -21,31 +21,12 @@ class ManifiestoIngresoController extends Controller
 {
     public function index(Request $request)
     {
-        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        $compartidos = $request->query('compartidos', '1');
         $orden = $request->query('orden', 'desc');
         $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
 
-        $empresaIds = [$empresaId];
-
-        if ($empresaId > 0 && $compartidos !== '0') {
-            $shared = TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresaId) {
-                $q->select('tercero_id')
-                    ->from('tercero_cuentas')
-                    ->where('empresa_id', $empresaId);
-            })
-                ->where('empresa_id', '!=', $empresaId)
-                ->distinct()
-                ->pluck('empresa_id')
-                ->toArray();
-
-            $empresaIds = array_merge([$empresaId], $shared);
-        }
-
         $query = ManifiestoIngreso::query()
-            ->with(['deposito:id,nombre'])
-            ->withCount(['pedidos', 'pedidos as pedidos_con_error_count' => function($q){ $q->where('recepcion_estado','con_error'); }])
-            ->whereIn('empresa_id', $empresaIds);
+            ->with(['deposito:id,nombre', 'empresa:id,razon_social'])
+            ->withCount(['pedidos', 'pedidos as pedidos_con_error_count' => function($q){ $q->where('recepcion_estado','con_error'); }]);
 
         if ($orden === 'asc') {
             $query->orderBy('fecha')->orderBy('id');
@@ -57,7 +38,6 @@ class ManifiestoIngresoController extends Controller
 
         return Inertia::render('Operacion/Manifiestos/Index', [
             'manifiestos' => $manifiestos,
-            'compartidos' => $compartidos,
             'orden' => $orden,
         ]);
     }
