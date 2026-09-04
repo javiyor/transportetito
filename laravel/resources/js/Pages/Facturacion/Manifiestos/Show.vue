@@ -658,13 +658,8 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                 <div class="text-xs font-medium text-gray-900 mb-2">Editar tarifa</div>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                                     <div>
-                                        <InputLabel value="Moneda" />
-                                        <select v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].moneda" class="mt-0.5 block w-full border-gray-300 rounded text-xs py-1 px-1">
-                                            <option value="ARS">ARS</option>
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="BRL">BRL</option>
-                                        </select>
+                                        <InputLabel value="Valor declarado total" />
+                                        <TextInput :value="formatMoney(detalleGrupo(g).valorDeclarado)" type="text" class="mt-0.5 block w-full text-xs bg-gray-100" disabled />
                                     </div>
                                     <div>
                                         <InputLabel value="Tarifa bulto" />
@@ -687,16 +682,16 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.007" />
                                     </div>
                                     <div>
-                                        <InputLabel value="% CR" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_comision_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.025" />
+                                        <InputLabel value="Servicio mínimo" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
                                     </div>
                                     <div>
-                                        <InputLabel value="CR manual" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].cr_importe_manual" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa CR pedidos)" />
+                                        <InputLabel value="Servicio retiro" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].servicio_retiro" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="0.00" />
                                     </div>
                                     <div>
-                                        <InputLabel value="Comision CR manual" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].comision_cr_manual" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(calcula automatica)" />
+                                        <InputLabel value="Valor neto total" />
+                                        <TextInput :value="formatMoney(detalleGrupo(g).subtotalGravado)" type="text" class="mt-0.5 block w-full text-xs bg-gray-100" disabled />
                                     </div>
                                     <div>
                                         <InputLabel value="% IVA" />
