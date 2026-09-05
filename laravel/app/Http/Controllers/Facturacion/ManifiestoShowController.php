@@ -61,6 +61,22 @@ class ManifiestoShowController extends Controller
             },
         ]);
 
+        if (empty($manifiesto->chofer)) {
+            try {
+                $pedidoExternalIds = $manifiesto->pedidos->pluck('external_carga_id')->filter()->toArray();
+                if (!empty($pedidoExternalIds)) {
+                    $row = \Illuminate\Support\Facades\DB::connection('mysql_external')->selectOne(
+                        "select cd.nomchof as chofer from carga c left join cargaporenvio cpe on cpe.idcarga = c.id left join hojaderuta hr on cpe.idenvio = hr.id left join conductores cd on hr.idchofer = cd.nrochof where c.id in (".implode(',', array_fill(0, count($pedidoExternalIds), '?')).") and cd.nomchof is not null limit 1",
+                        $pedidoExternalIds
+                    );
+                    if ($row && !empty($row->chofer)) {
+                        $manifiesto->chofer = $row->chofer;
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
         $tarifas = TarifaRelacion::query()
             ->where('activo', true)
             ->with([
