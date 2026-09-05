@@ -95,10 +95,10 @@ const exportCsv = () => {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Origen</th>
-                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Destino</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Bult</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Pal</th>
                                 <th class="px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Val.Decl</th>
@@ -112,10 +112,10 @@ const exportCsv = () => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="p in pedidos.data" :key="p.id" class="hover:bg-gray-50 leading-none">
                                 <td class="px-1 py-0.5 text-[10px] font-mono text-gray-900 whitespace-nowrap">#{{ p.id }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[90px] truncate" :title="p.empresa">{{ p.empresa || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.remitente">{{ p.remitente || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.destinatario">{{ p.destinatario || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.origen || '—' }}</td>
-                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.destino || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.bultos }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.palets }}</td>
                                 <td class="px-1 py-0.5 text-[10px] font-mono text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>

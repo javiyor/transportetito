@@ -18,13 +18,13 @@ class FleteIndexController extends Controller
         $query = Pedido::query()
             ->with([
                 'manifiestoIngreso',
+                'manifiestoIngreso.empresa:id,razon_social',
                 'remitente',
                 'destinatario',
                 'comprobantes' => fn ($q) => $q->select('comprobantes.id', 'comprobantes.numero_interno', 'comprobantes.tipo', 'comprobantes.estado', 'comprobantes.total', 'comprobantes.fecha_emision'),
                 'comprobantes.hojaRutaItems' => fn ($q) => $q->select('hoja_ruta_items.id', 'hoja_ruta_items.comprobante_id', 'hoja_ruta_items.hoja_ruta_id'),
                 'comprobantes.hojaRutaItems.hojaRuta' => fn ($q) => $q->select('hojas_ruta.id', 'hojas_ruta.fecha', 'hojas_ruta.estado'),
-            ])
-            ->where('empresa_id', $empresaId);
+            ]);
 
         if ($desde = $request->query('desde')) {
             $query->whereDate('created_at', '>=', $desde);
@@ -51,7 +51,6 @@ class FleteIndexController extends Controller
         $pedidos->through(fn ($pedido) => $this->mapFlete($pedido));
 
         $estados = Pedido::query()
-            ->where('empresa_id', $empresaId)
             ->select('estado')
             ->distinct()
             ->orderBy('estado')
@@ -83,6 +82,7 @@ class FleteIndexController extends Controller
 
         return [
             'id' => $pedido->id,
+            'empresa' => $manifiesto?->empresa?->razon_social ?? $pedido->empresa_id,
             'remitente' => $pedido->remitente?->razon_social,
             'destinatario' => $pedido->destinatario?->razon_social,
             'origen' => $manifiesto?->ciudad_origen,
