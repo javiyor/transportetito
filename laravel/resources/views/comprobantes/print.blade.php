@@ -714,12 +714,21 @@
                         $descripcion = $base.': '.($pedido->remitente?->razon_social ?? '?').' → '.($pedido->destinatario?->razon_social ?? '?');
                         if ($pedido->remito_numero) $descripcion .= ' (Remito: '.$pedido->remito_numero.')';
                         $descripcion .= ' ['.($pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino').']';
+                        // Importe neto sin IVA por pedido (proporcional al valor neto total)
+                        $pedidoImporteNeto = 0;
+                        if (!empty($calculo['valor_neto_total']) && ($calculo['valor_declarado'] ?? 0) > 0) {
+                            $pedidoImporteNeto = (float)$pedido->valor_declarado / (float)$calculo['valor_declarado'] * (float)$calculo['valor_neto_total'];
+                        } elseif (!empty($calculo['subtotal_gravado']) && count($comprobante->pedidos) > 0) {
+                            $pedidoImporteNeto = (float)$calculo['subtotal_gravado'] / count($comprobante->pedidos);
+                        } else {
+                            $pedidoImporteNeto = (float)($pedido->cr_importe ?? 0);
+                        }
                     @endphp
                     <tr>
                         <td style="text-align:center;">{{ $pedido->bultos }}</td>
                         <td>{{ $descripcion }}</td>
                         <td style="text-align:right;">{{ $fmtNum($pedido->valor_declarado) }}</td>
-                        <td style="text-align:right;">{{ $fmtNum($pedido->cr_importe ?? 0) }}</td>
+                        <td style="text-align:right;">{{ $fmtNum($pedidoImporteNeto) }}</td>
                     </tr>
                 @empty
                     <tr>
