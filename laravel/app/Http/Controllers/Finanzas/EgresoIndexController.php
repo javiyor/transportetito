@@ -12,7 +12,6 @@ use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -48,8 +47,6 @@ class EgresoIndexController extends Controller
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
             'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
-            'tarjetas' => $this->getTarjetas(),
-            'equipos' => $this->getEquipos(),
             'chequesDisponibles' => Cheque::query()
                 ->where('empresa_id', $empresaId)
                 ->where('origen', 'tercero')
@@ -73,8 +70,6 @@ class EgresoIndexController extends Controller
         $request->merge([
             'cuenta_pasivo_id' => $request->cuenta_pasivo_id ?: null,
             'banco_origen_id' => $request->banco_origen_id ?: null,
-            'tarjeta_id' => $request->tarjeta_id ?: null,
-            'equipo_id' => $request->equipo_id ?: null,
         ]);
 
         $data = $request->validate([
@@ -92,12 +87,6 @@ class EgresoIndexController extends Controller
             'cheque_titular' => ['nullable', 'string', 'max:255'],
             'fecha_pago' => ['nullable', 'date'],
             'cuenta_pasivo_id' => ['nullable', 'exists:cuentas_contables,id', 'required_if:forma_pago,cuenta_corriente'],
-            'tarjeta_id' => ['nullable', 'string', 'max:64', 'required_if:forma_pago,tarjeta'],
-            'tarjeta_nombre' => ['nullable', 'string', 'max:255'],
-            'equipo_empresa' => ['nullable', 'string', 'max:64', 'required_if:forma_pago,tarjeta'],
-            'equipo_id' => ['nullable', 'string', 'max:64', 'required_if:forma_pago,tarjeta'],
-            'equipo_sucursal_id' => ['nullable', 'string', 'max:64'],
-            'banco_destino_nombre' => ['nullable', 'string', 'max:255'],
             'distribucion' => ['required', 'array', 'min:1'],
             'distribucion.*.cuenta_contable_id' => ['required', 'exists:cuentas_contables,id'],
             'distribucion.*.importe' => ['required', 'numeric', 'gt:0'],
@@ -144,12 +133,6 @@ class EgresoIndexController extends Controller
             'cheque_id' => $data['cheque_id'] ?: null,
             'cuenta_pasivo_id' => $data['cuenta_pasivo_id'] ?? null,
             'fecha_pago' => $data['fecha_pago'] ?: null,
-            'tarjeta_id' => $data['tarjeta_id'] ?? null,
-            'tarjeta_nombre' => $data['tarjeta_nombre'] ?? null,
-            'equipo_empresa' => $data['equipo_empresa'] ?? null,
-            'equipo_id' => $data['equipo_id'] ?? null,
-            'equipo_sucursal_id' => $data['equipo_sucursal_id'] ?? null,
-            'banco_destino_nombre' => $data['banco_destino_nombre'] ?? null,
         ]);
 
         foreach ($data['distribucion'] as $item) {
@@ -208,8 +191,6 @@ class EgresoIndexController extends Controller
         $request->merge([
             'cuenta_pasivo_id' => $request->cuenta_pasivo_id ?: null,
             'banco_origen_id' => $request->banco_origen_id ?: null,
-            'tarjeta_id' => $request->tarjeta_id ?: null,
-            'equipo_id' => $request->equipo_id ?: null,
         ]);
 
         $data = $request->validate([
@@ -227,12 +208,6 @@ class EgresoIndexController extends Controller
             'cheque_titular' => ['nullable', 'string', 'max:255'],
             'fecha_pago' => ['nullable', 'date'],
             'cuenta_pasivo_id' => ['nullable', 'exists:cuentas_contables,id', 'required_if:forma_pago,cuenta_corriente'],
-            'tarjeta_id' => ['nullable', 'string', 'max:64', 'required_if:forma_pago,tarjeta'],
-            'tarjeta_nombre' => ['nullable', 'string', 'max:255'],
-            'equipo_empresa' => ['nullable', 'string', 'max:64', 'required_if:forma_pago,tarjeta'],
-            'equipo_id' => ['nullable', 'string', 'max:64', 'required_if:forma_pago,tarjeta'],
-            'equipo_sucursal_id' => ['nullable', 'string', 'max:64'],
-            'banco_destino_nombre' => ['nullable', 'string', 'max:255'],
             'distribucion' => ['required', 'array', 'min:1'],
             'distribucion.*.cuenta_contable_id' => ['required', 'exists:cuentas_contables,id'],
             'distribucion.*.importe' => ['required', 'numeric', 'gt:0'],
@@ -282,12 +257,6 @@ class EgresoIndexController extends Controller
             'cheque_id' => $data['cheque_id'] ?? null,
             'cuenta_pasivo_id' => $data['cuenta_pasivo_id'] ?? null,
             'fecha_pago' => $data['fecha_pago'] ?? null,
-            'tarjeta_id' => $data['tarjeta_id'] ?? null,
-            'tarjeta_nombre' => $data['tarjeta_nombre'] ?? null,
-            'equipo_empresa' => $data['equipo_empresa'] ?? null,
-            'equipo_id' => $data['equipo_id'] ?? null,
-            'equipo_sucursal_id' => $data['equipo_sucursal_id'] ?? null,
-            'banco_destino_nombre' => $data['banco_destino_nombre'] ?? null,
         ]);
 
         $egreso->categorias()->delete();
@@ -346,33 +315,5 @@ class EgresoIndexController extends Controller
         $egreso->categorias()->delete();
         $egreso->delete();
         return back()->with('flash.success', 'Egreso eliminado.');
-    }
-
-    private function getTarjetas(): array
-    {
-        try {
-            return DB::connection('mysql_external')->table('tarjeta')->select('idtarje as id', 'nomtar as nombre')->orderBy('nomtar')->get()->toArray();
-        } catch (\Throwable $e) {
-            Log::info('No se pudo cargar tarjetas externas', ['error' => $e->getMessage()]);
-            return [];
-        }
-    }
-
-    private function getEquipos(): array
-    {
-        try {
-            return DB::connection('mysql_external')->table('equipotar')->select('empresa', 'idequipo', 'idsucemp')->orderBy('empresa')->orderBy('idequipo')->get()->map(function ($r) {
-                return [
-                    'id' => $r->empresa . '-' . $r->idequipo . '-' . $r->idsucemp,
-                    'label' => "Emp {$r->empresa} - Equipo {$r->idequipo} - Suc {$r->idsucemp}",
-                    'empresa' => $r->empresa,
-                    'idequipo' => $r->idequipo,
-                    'idsucemp' => $r->idsucemp,
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            Log::info('No se pudo cargar equipotar externo', ['error' => $e->getMessage()]);
-            return [];
-        }
     }
 }

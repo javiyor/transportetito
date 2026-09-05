@@ -18,8 +18,6 @@ const props = defineProps({
     cuentasContables: Array,
     cuentasPasivo: Array,
     bancos: Array,
-    tarjetas: Array,
-    equipos: Array,
     chequesDisponibles: Array,
     totales: Object,
 });
@@ -38,11 +36,6 @@ const form = useForm({
     cheque_titular: '',
     fecha_pago: '',
     cuenta_pasivo_id: '',
-    tarjeta_id: '',
-    tarjeta_nombre: '',
-    equipo_empresa: '',
-    equipo_id: '',
-    equipo_sucursal_id: '',
     distribucion: [{ cuenta_contable_id: '', importe: '' }],
     referencia: '',
     observacion: '',
@@ -52,7 +45,6 @@ const esTransferencia = computed(() => form.forma_pago === 'transferencia');
 const esCheque = computed(() => form.forma_pago === 'cheque');
 const esChequePropio = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'propio');
 const esChequeTercero = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'tercero');
-const esTarjeta = computed(() => form.forma_pago === 'tarjeta');
 
 const sumaDistribucion = computed(() => {
     return form.distribucion.reduce((s, d) => s + (parseFloat(d.importe) || 0), 0);
@@ -74,15 +66,6 @@ const quitarDistribucion = (idx) => {
 
 const submit = () => {
     form.importe = sumaDistribucion.value;
-    if (form.tarjeta_id) {
-        const t = (props.tarjetas || []).find(x => String(x.id) === String(form.tarjeta_id));
-        form.tarjeta_nombre = t ? t.nombre : '';
-        const eq = (props.equipos || []).find(x => String(x.idequipo) === String(form.equipo_id));
-        if (eq) {
-            form.equipo_empresa = eq.empresa;
-            form.equipo_sucursal_id = eq.idsucemp;
-        }
-    }
     form.post(route('finanzas.egresos.store'), { preserveScroll: true });
 };
 
@@ -129,11 +112,6 @@ const editForm = useForm({
     cheque_titular: '',
     fecha_pago: '',
     cuenta_pasivo_id: '',
-    tarjeta_id: '',
-    tarjeta_nombre: '',
-    equipo_empresa: '',
-    equipo_id: '',
-    equipo_sucursal_id: '',
     distribucion: [{ cuenta_contable_id: '', importe: '' }],
     referencia: '',
     observacion: '',
@@ -142,7 +120,6 @@ const esEditTransferencia = computed(() => editForm.forma_pago === 'transferenci
 const esEditCheque = computed(() => editForm.forma_pago === 'cheque');
 const esEditChequePropio = computed(() => editForm.forma_pago === 'cheque' && editForm.tipo_cheque === 'propio');
 const esEditChequeTercero = computed(() => editForm.forma_pago === 'cheque' && editForm.tipo_cheque === 'tercero');
-const esEditTarjeta = computed(() => editForm.forma_pago === 'tarjeta');
 const sumaEditDistribucion = computed(() => editForm.distribucion.reduce((s,d)=> s + (parseFloat(d.importe)||0),0));
 const distribucionEditOk = computed(() => editForm.distribucion.every(d=> d.cuenta_contable_id && parseFloat(d.importe)>0));
 const agregarEditDistribucion = () => editForm.distribucion.push({ cuenta_contable_id: '', importe: '' });
@@ -163,11 +140,6 @@ const openEdit = (e) => {
     editForm.cheque_titular = '';
     editForm.fecha_pago = e.fecha_pago ? String(e.fecha_pago).slice(0,10) : '';
     editForm.cuenta_pasivo_id = e.cuenta_pasivo_id || '';
-    editForm.tarjeta_id = e.tarjeta_id || '';
-    editForm.tarjeta_nombre = e.tarjeta_nombre || '';
-    editForm.equipo_empresa = e.equipo_empresa || '';
-    editForm.equipo_id = e.equipo_id || '';
-    editForm.equipo_sucursal_id = e.equipo_sucursal_id || '';
     editForm.referencia = e.referencia || '';
     editForm.observacion = e.observacion || '';
     if (e.categorias && e.categorias.length) {
@@ -182,15 +154,6 @@ const openEdit = (e) => {
 };
 const submitEdit = () => {
     editForm.importe = sumaEditDistribucion.value;
-    if (editForm.tarjeta_id) {
-        const t = (props.tarjetas || []).find(x => String(x.id) === String(editForm.tarjeta_id));
-        editForm.tarjeta_nombre = t ? t.nombre : '';
-        const eq = (props.equipos || []).find(x => String(x.idequipo) === String(editForm.equipo_id));
-        if (eq) {
-            editForm.equipo_empresa = eq.empresa;
-            editForm.equipo_sucursal_id = eq.idsucemp;
-        }
-    }
     editForm.put(route('finanzas.egresos.update', editId.value), { preserveScroll: true, onSuccess: () => editing.value=false });
 };
 const confirmDelete = (e) => {
@@ -272,45 +235,6 @@ const translateLabel = (label) => {
                             </select>
                             <InputError class="mt-2" :message="form.errors.cuenta_pasivo_id" />
                             <div class="text-xs text-gray-500 mt-1">Se generará asiento Debe: gasto / Haber: pasivo seleccionado</div>
-                        </div>
-                        <div v-if="esTarjeta" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-4">
-                            <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle tarjeta</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <InputLabel value="Tarjeta" />
-                                    <select v-model="form.tarjeta_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                        <option value="">Seleccionar tarjeta...</option>
-                                        <option v-for="t in tarjetas" :key="t.id" :value="t.id">{{ t.nombre }} ({{ t.id }})</option>
-                                    </select>
-                                    <InputError class="mt-2" :message="form.errors.tarjeta_id" />
-                                </div>
-                                <div>
-                                    <InputLabel value="Equipo (dónde se cobra)" />
-                                    <select v-model="form.equipo_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                        <option value="">Seleccionar equipo...</option>
-                                        <option v-for="e in equipos" :key="e.id" :value="e.idequipo">{{ e.label }}</option>
-                                    </select>
-                                    <InputError class="mt-2" :message="form.errors.equipo_id" />
-                                </div>
-                                <div>
-                                    <InputLabel value="Empresa equipo" />
-                                    <TextInput v-model="form.equipo_empresa" type="text" class="mt-1 block w-full text-sm" placeholder="Empresa" />
-                                    <InputError class="mt-2" :message="form.errors.equipo_empresa" />
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                <div>
-                                    <InputLabel value="Sucursal equipo" />
-                                    <TextInput v-model="form.equipo_sucursal_id" type="text" class="mt-1 block w-full text-sm" placeholder="IDsucemp" />
-                                </div>
-                                <div>
-                                    <InputLabel value="Banco destino (si aplica)" />
-                                    <select v-model="form.banco_destino_nombre" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                        <option value="">Seleccionar...</option>
-                                        <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
-                                    </select>
-                                </div>
-                            </div>
                         </div>
                         <div v-if="esCheque" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-4">
                             <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle del cheque</h4>
@@ -458,14 +382,6 @@ const translateLabel = (label) => {
                         <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
                         <div v-if="esEditTransferencia"><InputLabel value="Banco origen" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
                         <div v-if="editForm.forma_pago === 'cuenta_corriente'"><InputLabel value="Cuenta pasivo" class="!text-xs" /><input v-model="pasivoSearchEdit" type="text" placeholder="Buscar..." class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" /><select v-model="editForm.cuenta_pasivo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar pasivo...</option><option v-for="c in cuentasPasivoFiltradasEdit" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_pasivo_id" /></div>
-                        <div v-if="esEditTarjeta" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-3">
-                            <h4 class="text-xs font-semibold text-gray-900 mb-2">Detalle tarjeta</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div><InputLabel value="Tarjeta" class="!text-xs" /><select v-model="editForm.tarjeta_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="t in tarjetas" :key="t.id" :value="t.id">{{ t.nombre }} ({{ t.id }})</option></select><InputError class="mt-1" :message="editForm.errors.tarjeta_id" /></div>
-                                <div><InputLabel value="Equipo" class="!text-xs" /><select v-model="editForm.equipo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="e in equipos" :key="e.id" :value="e.idequipo">{{ e.label }}</option></select></div>
-                                <div><InputLabel value="Sucursal equipo" class="!text-xs" /><TextInput v-model="editForm.equipo_sucursal_id" type="text" class="mt-0.5 block w-full text-sm" placeholder="IDsucemp" /><InputError class="mt-1" :message="editForm.errors.equipo_sucursal_id" /></div>
-                            </div>
-                        </div>
                         <div><InputLabel value="Fecha pago" class="!text-xs" /><TextInput v-model="editForm.fecha_pago" type="date" class="mt-0.5 block w-full text-sm" /></div>
                     </div>
                     <div v-if="esEditCheque" class="border border-gray-200 rounded-lg p-3">

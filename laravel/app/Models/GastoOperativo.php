@@ -26,12 +26,6 @@ class GastoOperativo extends Model
         'banco_origen_id',
         'cheque_id',
         'fecha_pago',
-        'tarjeta_id',
-        'tarjeta_nombre',
-        'equipo_empresa',
-        'equipo_id',
-        'equipo_sucursal_id',
-        'banco_destino_nombre',
     ];
 
     protected $casts = [
