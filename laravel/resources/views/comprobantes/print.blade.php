@@ -503,8 +503,16 @@
             @if(!empty($calculo['comision_cr']) && (float)$calculo['comision_cr'] > 0)
             <tr><td>Comisión CR</td><td class="derecha">{{ $fmtMoneda($calculo['comision_cr']) }}</td></tr>
             @endif
+            @if(isset($calculo['valor_neto_total']))
+            <tr><td>Valor neto total (valor * %)</td><td class="derecha">{{ $fmtMoneda($calculo['valor_neto_total']) }}</td></tr>
+            @endif
             <tr class="total-row"><td><strong>Total</strong></td><td class="derecha"><strong>{{ $fmtMoneda($calculo['total'] ?? 0) }}</strong></td></tr>
         </table>
+        @if(!empty($calculo['seleccion']) || !empty($calculo['por_relacion'][0]['seleccion'] ?? null))
+        <div style="font-size:7pt; color:#555; margin-top:4pt;">
+            Cálculo: {{ ($calculo['seleccion']['usar_bulto'] ?? true) ? 'bulto' : '' }} {{ ($calculo['seleccion']['usar_palet'] ?? true) ? 'palet' : '' }} {{ ($calculo['seleccion']['usar_valor'] ?? true) ? '%valor' : '' }} {{ ($calculo['seleccion']['usar_servicio_minimo'] ?? true) ? 'mínimo' : '' }}
+        </div>
+        @endif
         @endif
 
         <h3 style="font-size:8pt;margin:4pt 0 2pt;">Pedidos incluidos</h3>

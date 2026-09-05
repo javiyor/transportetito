@@ -137,6 +137,10 @@ const applyOverride = (tarifa, override) => {
 
 const calcFactura = (pedidos, tarifa, override) => {
     const t = applyOverride(tarifa, override);
+    const usarBulto = override?.usar_bulto !== false;
+    const usarPalet = override?.usar_palet !== false;
+    const usarValor = override?.usar_valor !== false;
+    const usarMinimo = override?.usar_servicio_minimo !== false;
     const bultos = pedidos.reduce((acc, p) => acc + Number(p.bultos || 0), 0);
     const palets = pedidos.reduce((acc, p) => acc + Number(p.palets || 0), 0);
     const valorDeclaradoOrigen = pedidos.reduce((acc, p) => acc + Number(p.valor_declarado || 0), 0);
@@ -147,9 +151,14 @@ const calcFactura = (pedidos, tarifa, override) => {
         ? Number(override.cr_importe_manual)
         : crImporteCalculado;
 
-    const fletePorUnidad = bultos * t.tarifa_bulto + palets * t.tarifa_palet;
-    const fletePorValor = valorDeclarado * t.tarifa_valor_declarado_pct;
-    const flete = Math.max(t.flete_minimo, fletePorUnidad, fletePorValor);
+    const tarifaBultoEff = usarBulto ? t.tarifa_bulto : 0;
+    const tarifaPaletEff = usarPalet ? t.tarifa_palet : 0;
+    const pctValorEff = usarValor ? t.tarifa_valor_declarado_pct : 0;
+    const fleteMinEff = usarMinimo ? t.flete_minimo : 0;
+    const fletePorUnidad = bultos * tarifaBultoEff + palets * tarifaPaletEff;
+    const fletePorValor = valorDeclarado * pctValorEff;
+    const valorNetoTotal = valorDeclarado * pctValorEff;
+    const flete = Math.max(fleteMinEff, fletePorUnidad, fletePorValor);
 
     let seguro = valorDeclarado * t.seguro_pct;
     if (t.seguro_minimo !== null) seguro = Math.max(Number(t.seguro_minimo), seguro);
@@ -179,7 +188,9 @@ const calcFactura = (pedidos, tarifa, override) => {
         subtotalGravado: round2(subtotalGravado),
         iva: round2(iva),
         total: round2(total),
+        valorNetoTotal: round2(valorNetoTotal),
         parametros: t,
+        seleccion: { usar_bulto: usarBulto, usar_palet: usarPalet, usar_valor: usarValor, usar_servicio_minimo: usarMinimo },
     };
 };
 
@@ -232,8 +243,17 @@ const gruposFacturacion = computed(() => {
                 cr_importe_manual: null,
                 comision_cr_manual: null,
                 iva_pct: null,
+                usar_bulto: true,
+                usar_palet: true,
+                usar_valor: true,
+                usar_servicio_minimo: true,
             };
         }
+        const d = facturarPorEntrega.detalles_por_entrega[entregaId];
+        if (d.usar_bulto === undefined) d.usar_bulto = true;
+        if (d.usar_palet === undefined) d.usar_palet = true;
+        if (d.usar_valor === undefined) d.usar_valor = true;
+        if (d.usar_servicio_minimo === undefined) d.usar_servicio_minimo = true;
     };
 
     const grouped = new Map();
@@ -338,6 +358,10 @@ const initFacturarMap = () => {
             cr_importe_manual: null,
             comision_cr_manual: null,
             iva_pct: null,
+            usar_bulto: true,
+            usar_palet: true,
+            usar_valor: true,
+            usar_servicio_minimo: true,
         };
     }
     facturarPorEntrega.facturar_por_entrega = map;
@@ -366,7 +390,7 @@ const facturarSolo = (entregaId) => {
         detalles_por_entrega: { [entregaId]: facturarPorEntrega.detalles_por_entrega[entregaId] },
         empresa_por_entrega: { [entregaId]: facturarPorEntrega.empresa_por_entrega[entregaId] },
     };
-    const keysToNull = ['tarifa_bulto','tarifa_palet','tarifa_valor_declarado_pct','flete_minimo','seguro_pct','seguro_minimo','seguro_tope','cr_comision_pct','cr_comision_minimo','cr_comision_tope','cr_importe_manual','comision_cr_manual','iva_pct'];
+    const keysToNull = ['tarifa_bulto','tarifa_palet','tarifa_valor_declarado_pct','flete_minimo','seguro_pct','seguro_minimo','seguro_tope','cr_comision_pct','cr_comision_minimo','cr_comision_tope','cr_importe_manual','comision_cr_manual','iva_pct','usar_bulto','usar_palet','usar_valor','usar_servicio_minimo','servicio_retiro'];
     const det = {};
     for (const [eid, v] of Object.entries(singleData.detalles_por_entrega || {})) {
         const x = { ...(v || {}) };
@@ -375,7 +399,21 @@ const facturarSolo = (entregaId) => {
         det[eid] = x;
     }
     singleData.detalles_por_entrega = det;
-    facturarPorEntrega.transform(() => singleData).post(route('operacion.manifiestos.facturar', props.manifiesto.id), { preserveScroll: true });
+    const oldIds = (props.comprobantes || []).map(c => c.id);
+    facturarPorEntrega.transform(() => singleData).post(route('operacion.manifiestos.facturar', props.manifiesto.id), {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            const creados = page.props.flash?.comprobantes_creados || page.props.tt?.flash?.comprobantes_creados || page.props.comprobantes_creados || [];
+            let ids = Array.isArray(creados) ? creados : [];
+            if (!ids.length) {
+                const newComps = (page.props.comprobantes || props.comprobantes || []).filter(c => !oldIds.includes(c.id));
+                ids = newComps.map(c => c.id);
+            }
+            ids.forEach(id => {
+                window.open(route('operacion.comprobantes.print', id), '_blank');
+            });
+        },
+    });
 };
 
 const facturarSeleccionado = () => {
@@ -661,24 +699,36 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                         <TextInput :value="formatMoney(detalleGrupo(g).valorDeclarado)" type="text" class="mt-0.5 block w-full text-xs bg-gray-100" disabled />
                                     </div>
                                     <div>
-                                        <InputLabel value="Tarifa bulto" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
+                                        <div class="flex items-center gap-1">
+                                            <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_bulto" class="rounded border-gray-300" />
+                                            <InputLabel value="Tarifa bulto" class="!mb-0" />
+                                        </div>
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_bulto === false" />
                                     </div>
                                     <div>
-                                        <InputLabel value="Tarifa palet" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
+                                        <div class="flex items-center gap-1">
+                                            <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_palet" class="rounded border-gray-300" />
+                                            <InputLabel value="Tarifa palet" class="!mb-0" />
+                                        </div>
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_palet === false" />
                                     </div>
                                     <div>
-                                        <InputLabel value="% valor declarado" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.03" />
+                                        <div class="flex items-center gap-1">
+                                            <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_valor" class="rounded border-gray-300" />
+                                            <InputLabel value="% valor declarado" class="!mb-0" />
+                                        </div>
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.03" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_valor === false" />
                                     </div>
                                     <div>
                                         <InputLabel value="% seguro" />
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.007" />
                                     </div>
                                     <div>
-                                        <InputLabel value="Servicio mínimo" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" />
+                                        <div class="flex items-center gap-1">
+                                            <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_servicio_minimo" class="rounded border-gray-300" />
+                                            <InputLabel value="Servicio mínimo" class="!mb-0" />
+                                        </div>
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].flete_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_servicio_minimo === false" />
                                     </div>
                                     <div>
                                         <InputLabel value="Servicio retiro" />

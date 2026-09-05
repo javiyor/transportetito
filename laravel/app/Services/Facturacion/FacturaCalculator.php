@@ -41,13 +41,18 @@ class FacturaCalculator
             $crImporte = (float) $tarifa['cr_importe_manual'];
         }
 
-        $tarifaBulto = (float) ($tarifa['tarifa_bulto'] ?? 0);
-        $tarifaPalet = (float) ($tarifa['tarifa_palet'] ?? 0);
-        $pctValor = (float) ($tarifa['tarifa_valor_declarado_pct'] ?? 0);
-        $fleteMin = (float) ($tarifa['flete_minimo'] ?? 0);
+        $usarBulto = ($tarifa['usar_bulto'] ?? true) !== false;
+        $usarPalet = ($tarifa['usar_palet'] ?? true) !== false;
+        $usarValor = ($tarifa['usar_valor'] ?? true) !== false;
+        $usarMinimo = ($tarifa['usar_servicio_minimo'] ?? true) !== false;
+        $tarifaBulto = $usarBulto ? (float) ($tarifa['tarifa_bulto'] ?? 0) : 0;
+        $tarifaPalet = $usarPalet ? (float) ($tarifa['tarifa_palet'] ?? 0) : 0;
+        $pctValor = $usarValor ? (float) ($tarifa['tarifa_valor_declarado_pct'] ?? 0) : 0;
+        $fleteMin = $usarMinimo ? (float) ($tarifa['flete_minimo'] ?? 0) : 0;
 
         $fletePorUnidad = $bultos * $tarifaBulto + $palets * $tarifaPalet;
         $fletePorValor = $valorDeclarado * $pctValor;
+        $valorNetoTotal = $valorDeclarado * $pctValor;
         $flete = max($fleteMin, $fletePorUnidad, $fletePorValor);
 
         $seguroPct = (float) ($tarifa['seguro_pct'] ?? 0);
@@ -93,6 +98,7 @@ class FacturaCalculator
             'subtotal_gravado' => round($subtotalGravado, 2),
             'iva' => round($iva, 2),
             'total' => round($total, 2),
+            'valor_neto_total' => round($valorNetoTotal, 2),
             'parametros' => [
                 'tarifa_bulto' => $tarifaBulto,
                 'tarifa_palet' => $tarifaPalet,

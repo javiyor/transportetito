@@ -63,6 +63,11 @@ class ManifiestoFacturarController extends Controller
             'detalles_por_entrega.*.iva_pct' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.persistir_tarifa' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.moneda' => ['nullable', 'in:ARS,USD,EUR,BRL'],
+            'detalles_por_entrega.*.usar_bulto' => ['nullable', 'boolean'],
+            'detalles_por_entrega.*.usar_palet' => ['nullable', 'boolean'],
+            'detalles_por_entrega.*.usar_valor' => ['nullable', 'boolean'],
+            'detalles_por_entrega.*.usar_servicio_minimo' => ['nullable', 'boolean'],
+            'detalles_por_entrega.*.servicio_retiro' => ['nullable', 'numeric', 'min:0'],
             'empresa_por_entrega' => ['nullable', 'array'],
             'empresa_por_entrega.*' => ['nullable', 'integer', 'exists:empresas,id'],
         ]);
@@ -193,12 +198,20 @@ class ManifiestoFacturarController extends Controller
                         'cr_comision_pct',
                         'cr_comision_minimo',
                         'cr_comision_tope',
-                        'cr_importe_manual',
+                    'cr_importe_manual',
                         'comision_cr_manual',
                         'iva_pct',
-                    ] as $k) {
+                        'usar_bulto',
+                        'usar_palet',
+                        'usar_valor',
+                        'usar_servicio_minimo',
+                        'servicio_retiro',
+                     ] as $k) {
                             if (array_key_exists($k, $override) && $override[$k] !== null && $override[$k] !== '') {
-                                $tarifa[$k] = (float) $override[$k];
+                                $tarifa[$k] = is_bool($override[$k]) ? $override[$k] : (float) $override[$k];
+                                if (in_array($k, ['usar_bulto','usar_palet','usar_valor','usar_servicio_minimo'])) {
+                                    $tarifa[$k] = (bool) $override[$k];
+                                }
                             }
                         }
                     }
@@ -239,6 +252,7 @@ class ManifiestoFacturarController extends Controller
                     'bultos' => $bultos,
                     'palets' => $palets,
                     'valor_declarado' => round($valorDeclarado, 2),
+                    'valor_neto_total' => round($valorDeclarado * (float)($tarifa['tarifa_valor_declarado_pct'] ?? 0), 2),
                     'cr_importe' => round($crImporte, 2),
                     'flete' => round($flete, 2),
                     'seguro' => round($seguro, 2),
@@ -247,6 +261,12 @@ class ManifiestoFacturarController extends Controller
                     'iva' => round($iva, 2),
                     'total' => $total,
                     'por_relacion' => $detallesPorRelacion,
+                    'seleccion' => [
+                        'usar_bulto' => $tarifa['usar_bulto'] ?? true,
+                        'usar_palet' => $tarifa['usar_palet'] ?? true,
+                        'usar_valor' => $tarifa['usar_valor'] ?? true,
+                        'usar_servicio_minimo' => $tarifa['usar_servicio_minimo'] ?? true,
+                    ],
                     'override' => is_array($override) ? array_intersect_key($override, array_flip([
                         'tarifa_bulto',
                         'tarifa_palet',
@@ -261,6 +281,11 @@ class ManifiestoFacturarController extends Controller
                         'cr_importe_manual',
                         'comision_cr_manual',
                         'iva_pct',
+                        'usar_bulto',
+                        'usar_palet',
+                        'usar_valor',
+                        'usar_servicio_minimo',
+                        'servicio_retiro',
                     ])) : null,
                 ];
 
@@ -375,6 +400,7 @@ class ManifiestoFacturarController extends Controller
 
         return redirect()
             ->route('operacion.manifiestos.show', $manifiesto)
-            ->with('success', "Facturacion minima: $created comprobante(s) creados. Omitidos: $skipped. Sin entrega: $missingCuentas. Sin seleccion: $missingSelection.");
+            ->with('success', "Facturacion minima: $created comprobante(s) creados. Omitidos: $skipped. Sin entrega: $missingCuentas. Sin seleccion: $missingSelection.")
+            ->with('comprobantes_creados', $comprobanteIds);
     }
 }
