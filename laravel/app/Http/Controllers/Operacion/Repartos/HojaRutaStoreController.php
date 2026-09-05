@@ -35,9 +35,12 @@ class HojaRutaStoreController extends Controller
             'estado' => 'borrador',
         ]);
 
-        $comprobantes = Comprobante::query()
-            ->whereIn('id', $data['comprobante_ids'])
-            ->get();
+        $orderedIds = array_values($data['comprobante_ids']);
+        $comprobantesById = Comprobante::query()
+            ->whereIn('id', $orderedIds)
+            ->get()
+            ->keyBy('id');
+        $comprobantes = collect($orderedIds)->map(fn($id) => $comprobantesById->get($id))->filter()->values();
 
         $invalidos = $comprobantes->filter(function (Comprobante $c) {
             $tienePedidos = $c->pedidos()->exists();

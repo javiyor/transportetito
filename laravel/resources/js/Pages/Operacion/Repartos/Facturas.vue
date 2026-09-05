@@ -7,7 +7,7 @@ import Checkbox from '@/Components/Checkbox.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     zonas: Array,
@@ -25,8 +25,20 @@ const filterForm = useForm({
     localidad: props.filters?.localidad || '',
     fecha: props.filters?.fecha || '',
     tipo: props.filters?.tipo || 'todos',
-    empresa_id: props.filters?.empresa_id || '',
     comprobante_ids: [],
+});
+
+const entregaSearch = ref('');
+
+const filteredFacturas = computed(() => {
+    if (!entregaSearch.value) return props.facturas;
+    const q = entregaSearch.value.toLowerCase();
+    return props.facturas.filter(f => {
+        const rs = (f.entrega_cuenta?.tercero?.razon_social || '').toLowerCase();
+        const cuit = (f.entrega_cuenta?.tercero?.cuit || '').toLowerCase();
+        const id = String(f.id);
+        return rs.includes(q) || cuit.includes(q) || id.includes(q);
+    });
 });
 
 const createForm = useForm({
@@ -63,7 +75,7 @@ const submitCreate = () => {
 const applyFilters = () => {
     router.get(
         route('operacion.repartos.facturas'),
-        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos', empresa_id: filterForm.empresa_id || null },
+        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos' },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -76,6 +88,11 @@ const tipoLabel = (tipo) => {
 
 const toggleAll = (checked) => {
     filterForm.comprobante_ids = checked ? props.facturas.map((f) => f.id) : [];
+};
+
+const ordenDe = (id) => {
+    const idx = filterForm.comprobante_ids.indexOf(id);
+    return idx >= 0 ? idx + 1 : null;
 };
 </script>
 
@@ -92,61 +109,59 @@ const toggleAll = (checked) => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
+        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-2">
+            <div class="bg-white shadow sm:rounded-lg p-2">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
                     <div>
-                        <div class="text-sm font-medium text-gray-900">Zona</div>
-                        <select v-model="filterForm.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Zona</div>
+                        <select v-model="filterForm.zona_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
                             <option value="">Todos</option>
                             <option v-for="z in zonas" :key="z.id" :value="z.id">{{ z.nombre }}</option>
                         </select>
                     </div>
                     <div>
-                        <div class="text-sm font-medium text-gray-900">Ciudad</div>
-                        <select v-model="filterForm.localidad" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Ciudad</div>
+                        <select v-model="filterForm.localidad" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
                             <option value="">Todas</option>
                             <option v-for="loc in localidades" :key="loc" :value="loc">{{ loc }}</option>
                         </select>
                     </div>
                     <div>
-                        <div class="text-sm font-medium text-gray-900">Fecha</div>
-                        <input v-model="filterForm.fecha" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Fecha</div>
+                        <input v-model="filterForm.fecha" type="date" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
                     </div>
                     <div>
-                        <div class="text-sm font-medium text-gray-900">Tipo</div>
-                        <select v-model="filterForm.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Tipo</div>
+                        <select v-model="filterForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
                             <option value="todos">Todos</option>
                             <option value="factura_interna">Facturas</option>
                             <option value="guia_envio">Guias</option>
                         </select>
                     </div>
                     <div>
-                        <div class="text-sm font-medium text-gray-900">Empresa</div>
-                        <select v-model="filterForm.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                            <option value="">Todas</option>
-                            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
-                        </select>
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Entrega</div>
+                        <input v-model="entregaSearch" type="text" placeholder="CUIT/nombre/ID" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
                     </div>
                     <div class="flex items-end justify-end">
-                        <SecondaryButton type="button" @click="applyFilters">Aplicar</SecondaryButton>
+                        <SecondaryButton type="button" class="!text-xs !py-1" @click="applyFilters">Aplicar</SecondaryButton>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200 flex items-center justify-between gap-4">
+                <div class="p-2 border-b border-gray-200 flex items-center justify-between gap-4">
                     <div>
-                        <h3 class="text-base font-semibold text-gray-900">Comprobantes emitidos (listas)</h3>
-                        <p class="mt-1 text-sm text-gray-600">Selecciona facturas o guias para armar hoja de ruta.</p>
+                        <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Comprobantes emitidos (listas) — {{ filteredFacturas.length }} de {{ facturas.length }}</h3>
+                        <p class="text-[11px] text-gray-500">Selecciona para armar hoja de ruta.</p>
                     </div>
-                    <PrimaryButton :disabled="filterForm.processing || !filterForm.comprobante_ids.length" @click.prevent="openCreateModal">
+                    <PrimaryButton class="!text-xs !py-1" :disabled="filterForm.processing || !filterForm.comprobante_ids.length" @click.prevent="openCreateModal">
                         Crear hoja
                     </PrimaryButton>
                 </div>
 
-                <div class="space-y-4 p-4 sm:hidden">
-                    <div v-for="f in facturas" :key="f.id" class="rounded-lg border border-gray-200 bg-white p-4">
+                <div class="space-y-1 p-1 sm:hidden">
+                    <div v-for="f in filteredFacturas" :key="f.id" class="rounded-lg border border-gray-200 bg-white p-1.5 relative">
+                        <div v-if="ordenDe(f.id)" class="absolute -top-1 -left-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{{ ordenDe(f.id) }}</div>
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">#{{ f.id }}</div>
@@ -177,40 +192,37 @@ const toggleAll = (checked) => {
                 </div>
 
                 <div class="hidden sm:block overflow-x-auto">
-                    <table class="min-w-[1200px] w-full divide-y divide-gray-200">
+                    <table class="min-w-full w-full divide-y divide-gray-200 text-[10px] leading-none">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <input type="checkbox" :checked="filterForm.comprobante_ids.length === facturas.length && facturas.length" @change="toggleAll($event.target.checked)" />
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                    <input type="checkbox" :checked="filterForm.comprobante_ids.length === filteredFacturas.length && filteredFacturas.length" @change="toggleAll($event.target.checked)" />
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotizacion</th>
-                                <th class="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
+                                <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="sticky right-0 bg-gray-50 px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="f in facturas" :key="f.id">
-                                <td class="px-6 py-4 whitespace-nowrap">
+                            <tr v-for="f in filteredFacturas" :key="f.id" class="hover:bg-gray-50 leading-none">
+                                <td class="px-1 py-0.5 whitespace-nowrap">
                                     <Checkbox v-model:checked="filterForm.comprobante_ids" :value="f.id" />
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ f.id }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ tipoLabel(f.tipo) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ f.empresa?.razon_social || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <div class="font-medium text-gray-900">{{ f.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
-                                    <div class="text-xs text-gray-500">CUIT {{ f.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ f.entrega_cuenta?.numero_cliente || '-' }}</div>
-                                    <div class="text-xs text-gray-500">{{ f.entrega_cuenta?.direccion || '' }} {{ f.entrega_cuenta?.localidad ? '· ' + f.entrega_cuenta.localidad : '' }}</div>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-bold text-center" :class="ordenDe(f.id) ? 'text-indigo-700' : 'text-gray-300'">{{ ordenDe(f.id) || '-' }}</td>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-mono text-gray-900">{{ f.id }}</td>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700">{{ tipoLabel(f.tipo) }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700">
+                                    <div class="font-medium text-gray-900 truncate max-w-[200px] leading-none">{{ f.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
+                                    <div class="text-[9px] text-gray-500 leading-none">CUIT {{ f.entrega_cuenta?.tercero?.cuit || '-' }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ f.moneda }} {{ f.total }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ f.moneda === 'ARS' ? '-' : (f.detalle_facturacion?.calculo?.cotizacion?.tasa_ars || f.detalle_facturacion?.cotizacion?.tasa_ars || '-') }}</td>
-                                <td class="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">Seleccionar</td>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700 font-mono">{{ f.moneda }} {{ f.total }}</td>
+                                <td class="sticky right-0 bg-white px-1 py-0.5 whitespace-nowrap text-right text-[10px] text-gray-500">{{ ordenDe(f.id) ? '#' + ordenDe(f.id) : 'Seleccionar' }}</td>
                             </tr>
-                            <tr v-if="!facturas.length">
-                                <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
+                            <tr v-if="!filteredFacturas.length">
+                                <td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>

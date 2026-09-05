@@ -57,101 +57,96 @@ const formatFecha = (v) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
+            <div class="bg-white shadow sm:rounded-lg p-2">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end">
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
-                        <TextInput v-model="filterForm.desde" type="date" class="block w-full" />
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Desde</div>
+                        <TextInput v-model="filterForm.desde" type="date" class="block w-full text-xs py-1" />
                     </div>
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Hasta</div>
-                        <TextInput v-model="filterForm.hasta" type="date" class="block w-full" />
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Hasta</div>
+                        <TextInput v-model="filterForm.hasta" type="date" class="block w-full text-xs py-1" />
                     </div>
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
-                        <select v-model="filterForm.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Estado</div>
+                        <select v-model="filterForm.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
                             <option value="">Todos</option>
                             <option value="borrador">Borrador</option>
                             <option value="cerrada">Cerrada</option>
                         </select>
                     </div>
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Depósito</div>
-                        <select v-model="filterForm.deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Depósito</div>
+                        <select v-model="filterForm.deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
                             <option value="">Todos</option>
                             <option v-for="d in depositos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
                         </select>
                     </div>
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Empresa</div>
-                        <select v-model="filterForm.empresa_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Empresa</div>
+                        <select v-model="filterForm.empresa_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
                             <option value="">Todas</option>
                             <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
                         </select>
                     </div>
                     <div>
-                        <PrimaryButton @click="applyFilters">Filtrar</PrimaryButton>
+                        <PrimaryButton class="!text-xs !py-1" @click="applyFilters">Filtrar</PrimaryButton>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Resumen</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                        <div class="text-xs text-gray-500">Hojas</div>
-                        <div class="text-lg font-semibold text-gray-900">{{ resumen.total_hojas }}</div>
+            <div class="bg-white shadow sm:rounded-lg p-2">
+                <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2">Resumen</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-gray-50 rounded p-2">
+                        <div class="text-[11px] text-gray-500">Hojas</div>
+                        <div class="text-sm font-semibold text-gray-900">{{ resumen.total_hojas }}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Items</div>
-                        <div class="text-lg font-semibold text-gray-900">{{ resumen.total_items }}</div>
+                    <div class="bg-gray-50 rounded p-2">
+                        <div class="text-[11px] text-gray-500">Items</div>
+                        <div class="text-sm font-semibold text-gray-900">{{ resumen.total_items }}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Total cobrado</div>
-                        <div class="text-lg font-semibold text-gray-900">$ {{ resumen.total_cobrado }}</div>
+                    <div class="bg-gray-50 rounded p-2">
+                        <div class="text-[11px] text-gray-500">Total cobrado</div>
+                        <div class="text-sm font-semibold text-gray-900">$ {{ resumen.total_cobrado }}</div>
                     </div>
-                </div>
-                <div v-if="Object.keys(resumen.por_medio).length" class="mt-4 border-t border-gray-100 pt-4">
-                    <div class="text-xs font-medium text-gray-700 mb-2">Por medio de cobro</div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div v-for="(total, medio) in resumen.por_medio" :key="medio" class="bg-gray-50 rounded p-3">
-                            <div class="text-xs text-gray-500">{{ medioLabel(medio) }}</div>
-                            <div class="text-sm font-semibold text-gray-900">$ {{ total }}</div>
-                        </div>
+                    <div v-for="(total, medio) in resumen.por_medio" :key="medio" class="bg-gray-50 rounded p-2">
+                        <div class="text-[11px] text-gray-500">{{ medioLabel(medio) }}</div>
+                        <div class="text-xs font-semibold text-gray-900">$ {{ total }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 text-[11px]">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Depósito</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empresa</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Depósito</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Empresa</th>
+                                <th class="px-2 py-1.5 text-center text-[11px] font-medium text-gray-500 uppercase">Items</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Estado</th>
+                                <th class="px-2 py-1.5 text-right text-[11px] font-medium text-gray-500 uppercase">Acción</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="h in hojas.data" :key="h.id">
-                                <td class="px-6 py-4 text-sm font-mono text-gray-900">#{{ h.id }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ formatFecha(h.fecha) }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ h.deposito?.nombre || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">{{ h.empresa?.razon_social || '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ h.items?.length || 0 }}</td>
-                                <td class="px-6 py-4 text-sm">
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="h.estado === 'cerrada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">{{ h.estado }}</span>
+                            <tr v-for="h in hojas.data" :key="h.id" class="hover:bg-gray-50">
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ h.id }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFecha(h.fecha) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ h.deposito?.nombre || '-' }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-600 truncate max-w-[150px]">{{ h.empresa?.razon_social || '-' }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 text-center">{{ h.items?.length || 0 }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px]">
+                                    <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium" :class="h.estado === 'cerrada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">{{ h.estado }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-right text-sm">
+                                <td class="px-2 py-1 whitespace-nowrap text-right text-[11px]">
                                     <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.repartos.hojas.show', h.id)">Ver</Link>
                                 </td>
                             </tr>
                             <tr v-if="!hojas.data.length">
-                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Sin hojas de ruta.</td>
+                                <td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">Sin hojas de ruta.</td>
                             </tr>
                         </tbody>
                     </table>

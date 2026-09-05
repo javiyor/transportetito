@@ -188,43 +188,43 @@ const vehiculoLabel = computed(() => {
                 </div>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg p-4 mb-6">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                        <div class="text-xs text-gray-500">Items</div>
-                        <div class="text-sm font-medium text-gray-900">{{ stats.count }}</div>
+            <div class="bg-white shadow sm:rounded-lg p-2 mb-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-gray-50 rounded p-1.5">
+                        <div class="text-[10px] text-gray-500">Items</div>
+                        <div class="text-xs font-medium text-gray-900">{{ stats.count }}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Pendientes</div>
-                        <div class="text-sm font-medium text-gray-900">{{ stats.pendientes }}</div>
+                    <div class="bg-gray-50 rounded p-1.5">
+                        <div class="text-[10px] text-gray-500">Pendientes</div>
+                        <div class="text-xs font-medium text-gray-900">{{ stats.pendientes }}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Entregados</div>
-                        <div class="text-sm font-medium text-gray-900">{{ stats.entregados }}</div>
+                    <div class="bg-gray-50 rounded p-1.5">
+                        <div class="text-[10px] text-gray-500">Entregados</div>
+                        <div class="text-xs font-medium text-gray-900">{{ stats.entregados }}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Total</div>
-                        <div class="text-sm font-medium text-gray-900">{{ hoja.items?.[0]?.comprobante?.moneda || 'ARS' }} {{ stats.total }}</div>
+                    <div class="bg-gray-50 rounded p-1.5">
+                        <div class="text-[10px] text-gray-500">Total</div>
+                        <div class="text-xs font-medium text-gray-900">{{ hoja.items?.[0]?.comprobante?.moneda || 'ARS' }} {{ stats.total }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 text-[11px]">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orden</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factura</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Orden</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Factura</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Obs</th>
+                                <th class="px-2 py-1.5 text-right text-[11px] font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="it in hoja.items" :key="it.id">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{{ it.orden }}</td>
+                            <tr v-for="it in hoja.items" :key="it.id" class="hover:bg-gray-50">
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">{{ it.orden }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <div class="font-medium text-gray-900">{{ it.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                     <div class="text-xs text-gray-500">CUIT {{ it.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ it.entrega_cuenta?.numero_cliente || '-' }}</div>
