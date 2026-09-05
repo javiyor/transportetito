@@ -46,7 +46,7 @@ const formatFecha = (value) => {
 
 const autoImportando = ref(false);
 onMounted(() => {
-    if (props.compartidos === '1' && props.orden === 'desc' && props.manifiestos.current_page === 1) {
+    if (props.orden === 'desc' && props.manifiestos.current_page === 1) {
         autoImportando.value = true;
         router.post(route('operacion.manifiestos.import-auto'), {}, {
             preserveScroll: true,
@@ -100,8 +100,7 @@ onMounted(() => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
-                                <div class="text-xs text-gray-500">{{ m.empresa?.razon_social || '-' }} · {{ m.chofer || '-' }}</div>
-                                <div class="text-xs text-gray-500">{{ m.deposito?.nombre || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ m.chofer || '-' }} · {{ m.deposito?.nombre || '-' }}</div>
                             </div>
                             <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
                         </div>
@@ -118,7 +117,6 @@ onMounted(() => {
                                         <span class="text-[10px]">{{ orden === 'asc' ? '▲' : '▼' }}</span>
                                     </button>
                                 </th>
-                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
                                 <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -127,7 +125,6 @@ onMounted(() => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="m in manifiestos.data" :key="m.id" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'">
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
-                                <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.empresa?.razon_social || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs space-x-2">
