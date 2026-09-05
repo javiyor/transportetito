@@ -31,6 +31,24 @@ const clearFilters = () => {
     router.get(route('operacion.fletes.index'), {}, { preserveState: true, preserveScroll: true, replace: true });
 };
 
+const goToPage = (url) => {
+    if (!url) return;
+    try {
+        const u = new URL(url, window.location.origin);
+        const page = u.searchParams.get('page');
+        router.get(route('operacion.fletes.index'), {
+            ...(form.desde && { desde: form.desde }),
+            ...(form.hasta && { hasta: form.hasta }),
+            ...(form.estado && { estado: form.estado }),
+            ...(form.remitente && { remitente: form.remitente }),
+            ...(form.destinatario && { destinatario: form.destinatario }),
+            ...(page && { page }),
+        }, { preserveState: true, preserveScroll: true });
+    } catch {
+        router.get(url, {}, { preserveState: true, preserveScroll: true });
+    }
+};
+
 const exportCsv = () => {
     const params = new URLSearchParams();
     if (props.filtros.desde) params.set('desde', props.filtros.desde);
@@ -143,13 +161,13 @@ const exportCsv = () => {
                     </table>
                 </div>
 
-                <div v-if="pedidos.total > pedidos.per_page" class="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                    <div class="text-sm text-gray-600">
-                        Mostrando {{ pedidos.from }}–{{ pedidos.to }} de {{ pedidos.total }} resultados
+                <div v-if="pedidos.total > pedidos.per_page" class="px-2 py-1 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-[11px] text-gray-600">
+                        Mostrando {{ pedidos.from }}–{{ pedidos.to }} de {{ pedidos.total }} (pág. {{ pedidos.current_page }} de {{ pedidos.last_page }})
                     </div>
-                    <div class="flex gap-2">
-                        <button v-if="pedidos.prev_page_url" type="button" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50" @click="router.get(pedidos.prev_page_url, {}, { preserveState: true, preserveScroll: true })">Anterior</button>
-                        <button v-if="pedidos.next_page_url" type="button" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50" @click="router.get(pedidos.next_page_url, {}, { preserveState: true, preserveScroll: true })">Siguiente</button>
+                    <div class="flex gap-1">
+                        <button :disabled="!pedidos.prev_page_url" type="button" class="inline-flex items-center px-2 py-1 bg-white border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" @click="goToPage(pedidos.prev_page_url)">Anterior</button>
+                        <button :disabled="!pedidos.next_page_url" type="button" class="inline-flex items-center px-2 py-1 bg-white border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" @click="goToPage(pedidos.next_page_url)">Siguiente</button>
                     </div>
                 </div>
             </div>
