@@ -86,7 +86,7 @@ const submit = () => {
     form.post(route('finanzas.egresos.store'), { preserveScroll: true });
 };
 
-const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjetas', cuenta_corriente: 'Cuenta corriente' }[f] || f);
+const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjeta', cuenta_corriente: 'Cuenta corriente' }[f] || f);
 
 const cuentaSearch = ref('');
 const cuentaSearchEdit = ref('');
@@ -250,7 +250,7 @@ const translateLabel = (label) => {
                                 <option value="efectivo">Efectivo</option>
                                 <option value="transferencia">Transferencia</option>
                                 <option value="cheque">Cheque</option>
-                                <option value="tarjeta">Tarjetas</option>
+                                <option value="tarjeta">Tarjeta</option>
                                 <option value="cuenta_corriente">Cuenta corriente</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.forma_pago" />
@@ -274,7 +274,7 @@ const translateLabel = (label) => {
                             <div class="text-xs text-gray-500 mt-1">Se generará asiento Debe: gasto / Haber: pasivo seleccionado</div>
                         </div>
                         <div v-if="esTarjeta" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-4">
-                            <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle tarjetas</h4>
+                            <h4 class="text-sm font-semibold text-gray-900 mb-2">Detalle tarjeta</h4>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
                                     <InputLabel value="Tarjeta" />
@@ -455,11 +455,11 @@ const translateLabel = (label) => {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div><InputLabel value="Fecha" class="!text-xs" /><TextInput v-model="editForm.fecha" type="date" class="mt-0.5 block w-full text-sm" /><InputError class="mt-1 text-xs" :message="editForm.errors.fecha" /></div>
                         <div><InputLabel value="Moneda" class="!text-xs" /><select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select></div>
-                        <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjetas</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
+                        <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
                         <div v-if="esEditTransferencia"><InputLabel value="Banco origen" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
                         <div v-if="editForm.forma_pago === 'cuenta_corriente'"><InputLabel value="Cuenta pasivo" class="!text-xs" /><input v-model="pasivoSearchEdit" type="text" placeholder="Buscar..." class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" /><select v-model="editForm.cuenta_pasivo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar pasivo...</option><option v-for="c in cuentasPasivoFiltradasEdit" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_pasivo_id" /></div>
                         <div v-if="esEditTarjeta" class="border border-gray-200 rounded-lg p-3 col-span-1 sm:col-span-3">
-                            <h4 class="text-xs font-semibold text-gray-900 mb-2">Detalle tarjetas</h4>
+                            <h4 class="text-xs font-semibold text-gray-900 mb-2">Detalle tarjeta</h4>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div><InputLabel value="Tarjeta" class="!text-xs" /><select v-model="editForm.tarjeta_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="t in tarjetas" :key="t.id" :value="t.id">{{ t.nombre }} ({{ t.id }})</option></select><InputError class="mt-1" :message="editForm.errors.tarjeta_id" /></div>
                                 <div><InputLabel value="Equipo" class="!text-xs" /><select v-model="editForm.equipo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="e in equipos" :key="e.id" :value="e.idequipo">{{ e.label }}</option></select></div>
