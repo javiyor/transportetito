@@ -704,7 +704,14 @@
             <tbody>
                 @forelse($comprobante->pedidos as $pedido)
                     @php
-                        $descripcion = 'Flete: '.($pedido->remitente?->razon_social ?? '?').' → '.($pedido->destinatario?->razon_social ?? '?');
+                        $sel = $calculo['seleccion'] ?? $detalle['seleccion'] ?? [];
+                        $partes = [];
+                        if (($sel['usar_bulto'] ?? true) && ($pedido->bultos ?? 0) > 0) $partes[] = $pedido->bultos.' bulto'.($pedido->bultos>1?'s':'');
+                        if (($sel['usar_palet'] ?? true) && ($pedido->palets ?? 0) > 0) $partes[] = $pedido->palets.' palet'.($pedido->palets>1?'s':'');
+                        if (($sel['usar_valor'] ?? true) && ($pedido->valor_declarado ?? 0) > 0) $partes[] = 'valor $'.$fmtNum($pedido->valor_declarado);
+                        if (($sel['usar_servicio_minimo'] ?? false)) $partes[] = 'mínimo';
+                        $base = $partes ? implode(' + ', $partes) : 'Flete';
+                        $descripcion = $base.': '.($pedido->remitente?->razon_social ?? '?').' → '.($pedido->destinatario?->razon_social ?? '?');
                         if ($pedido->remito_numero) $descripcion .= ' (Remito: '.$pedido->remito_numero.')';
                         $descripcion .= ' ['.($pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino').']';
                     @endphp
