@@ -687,7 +687,7 @@ const applyPwaUpdate = () => {
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <div v-if="($page.props.tt?.roles || []).includes('admin')" class="px-4 pb-2">
+                            <div v-if="($page.props.tt?.roles || []).some((r) => ['finanzas','compras','admin'].includes(r))" class="px-4 pb-2">
                                 <div class="text-xs text-gray-400">Empresa activa</div>
                                 <select
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
@@ -717,7 +717,7 @@ const applyPwaUpdate = () => {
                 </div>
             </nav>
 
-            <div v-if="($page.props.tt?.roles || []).includes('admin') && $page.props.tt?.empresasDisponibles?.length" class="hidden sm:block bg-white border-b border-gray-200">
+            <div v-if="($page.props.tt?.roles || []).some((r) => ['finanzas','compras','admin'].includes(r)) && $page.props.tt?.empresasDisponibles?.length" class="hidden sm:block bg-white border-b border-gray-200">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center gap-3 h-10">
                         <span class="text-xs text-gray-500 shrink-0">Empresa:</span>

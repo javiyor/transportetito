@@ -243,17 +243,17 @@ const gruposFacturacion = computed(() => {
                 cr_importe_manual: null,
                 comision_cr_manual: null,
                 iva_pct: null,
-                usar_bulto: true,
-                usar_palet: true,
+                usar_bulto: false,
+                usar_palet: false,
                 usar_valor: true,
-                usar_servicio_minimo: true,
+                usar_servicio_minimo: false,
             };
         }
         const d = facturarPorEntrega.detalles_por_entrega[entregaId];
-        if (d.usar_bulto === undefined) d.usar_bulto = true;
-        if (d.usar_palet === undefined) d.usar_palet = true;
+        if (d.usar_bulto === undefined) d.usar_bulto = false;
+        if (d.usar_palet === undefined) d.usar_palet = false;
         if (d.usar_valor === undefined) d.usar_valor = true;
-        if (d.usar_servicio_minimo === undefined) d.usar_servicio_minimo = true;
+        if (d.usar_servicio_minimo === undefined) d.usar_servicio_minimo = false;
     };
 
     const grouped = new Map();
@@ -358,10 +358,10 @@ const initFacturarMap = () => {
             cr_importe_manual: null,
             comision_cr_manual: null,
             iva_pct: null,
-            usar_bulto: true,
-            usar_palet: true,
+            usar_bulto: false,
+            usar_palet: false,
             usar_valor: true,
-            usar_servicio_minimo: true,
+            usar_servicio_minimo: false,
         };
     }
     facturarPorEntrega.facturar_por_entrega = map;
@@ -385,6 +385,7 @@ const facturarSolo = (entregaId) => {
         alert('Seleccioná a quién facturar');
         return;
     }
+    if (!confirm('¿Confirmar facturación de este grupo?')) return;
     const singleData = {
         facturar_por_entrega: { [entregaId]: facturarPorEntrega.facturar_por_entrega[entregaId] },
         detalles_por_entrega: { [entregaId]: facturarPorEntrega.detalles_por_entrega[entregaId] },
@@ -678,7 +679,7 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                         :disabled="!facturarPorEntrega.facturar_por_entrega[g.entregaId]"
                                         @click.prevent="facturarSolo(g.entregaId)"
                                     >
-                                        Facturar este
+                                        Facturar
                                     </button>
                                     <button
                                         type="button"
