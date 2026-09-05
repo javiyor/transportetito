@@ -38,7 +38,7 @@ const guardarRetenciones = () => {
 const formatFecha = (value) => {
     if (!value) return '-';
     const d = new Date(String(value).slice(0, 10));
-    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
 };
 
 const formatNum = (n) => {

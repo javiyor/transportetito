@@ -115,8 +115,13 @@ const toggleChofer = (key) => {
 const choferKey = (r) => `${r.nummovil}|${r.nomchof || 'sin-chofer'}`;
 const formatFecha = (v) => {
     if (!v) return '-';
-    const d = new Date(String(v).slice(0, 10) + 'T12:00:00');
-    return isNaN(d.getTime()) ? String(v).slice(0, 10) : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const s = String(v).slice(0, 10);
+    const d = new Date(s + 'T12:00:00');
+    if (isNaN(d.getTime())) return s.split('-').reverse().join('-');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
 };
 </script>
 
