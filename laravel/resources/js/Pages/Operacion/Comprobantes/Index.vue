@@ -159,7 +159,7 @@ const translateLabel = (label) => {
                                 <div class="text-sm font-semibold text-gray-900">#{{ c.id }} <span class="text-xs font-normal text-gray-500">· {{ formatFecha(c.fecha_emision) }}</span></div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.estado }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
                             </div>
-                            <Link :href="route('operacion.comprobantes.show', c.id)" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</Link>
+                            <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</a>
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
@@ -236,7 +236,7 @@ const translateLabel = (label) => {
                                     <span v-else>-</span>
                                 </td>
                                 <td class="px-2 py-1 text-right whitespace-nowrap">
-                                    <Link :href="route('operacion.comprobantes.show', c.id)" class="text-indigo-600 hover:text-indigo-800">Ver</Link>
+                                    <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
