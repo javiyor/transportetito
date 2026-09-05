@@ -524,7 +524,6 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                         <p class="mt-1 text-sm text-gray-600">{{ statsFacturacion.total }} cargados · {{ statsFacturacion.pendientes }} pendientes · {{ statsFacturacion.emitidos }} comprobantes</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <PrimaryButton :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="facturarSeleccionado">Emitir facturas</PrimaryButton>
                         <SecondaryButton v-if="permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
@@ -570,9 +569,9 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                         <PrimaryButton :disabled="backfillForm.processing" @click.prevent="completarCuentas">Completar cuentas</PrimaryButton>
                     </div>
 
-                    <div class="mt-4 space-y-2">
-                        <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border border-gray-200">
-                            <div class="flex items-center justify-between gap-2 px-4 py-2 border-b border-gray-100 bg-gray-50">
+                    <div class="mt-4 space-y-3">
+                        <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border-2 border-gray-300 shadow-sm">
+                            <div class="flex items-center justify-between gap-2 px-4 py-2 border-b-2 border-gray-300 bg-gray-100">
                                 <div class="text-xs font-medium text-gray-700 flex items-center gap-2">
                                     <span>{{ g.pedidos[0]?.remitente?.razon_social || '-' }} → {{ g.pedidos[0]?.destinatario?.razon_social || '-' }}</span>
                                     <span class="text-gray-400">·</span>

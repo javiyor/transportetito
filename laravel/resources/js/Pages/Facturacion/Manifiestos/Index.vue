@@ -45,28 +45,28 @@ const monedaSymbol = (moneda) => {
                 </div>
 
                 <div v-else class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 text-[11px]">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pendientes</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
+                                <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                                <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-2 py-1 text-center text-[11px] font-medium text-gray-500 uppercase tracking-wider">Pend.</th>
+                                <th class="px-2 py-1 text-right text-[11px] font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="m in manifiestos.data" :key="m.id" class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">#{{ m.id }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.empresa?.razon_social || '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ m.chofer || '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ m.pendientes_count }}</span>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ m.id }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFecha(m.fecha) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 truncate max-w-[150px]">{{ m.empresa?.razon_social || '-' }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 truncate max-w-[120px]">{{ m.chofer || '-' }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-center">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">{{ m.pendientes_count }}</span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <Link :href="route('facturacion.manifiestos.show', m.id)" class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700">
+                                <td class="px-2 py-1 whitespace-nowrap text-right">
+                                    <Link :href="route('facturacion.manifiestos.show', m.id)" class="inline-flex items-center px-2 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-[11px] text-white uppercase tracking-widest hover:bg-indigo-700">
                                         Facturar
                                     </Link>
                                 </td>
