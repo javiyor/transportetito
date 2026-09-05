@@ -47,7 +47,7 @@ const esChequeTercero = computed(() => form.forma_pago === 'cheque' && form.tipo
 
 const submit = () => form.post(route('compras.gastos.store'), { preserveScroll: true });
 
-const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjeta', cuenta_corriente: 'Cuenta corriente' }[f] || f);
+const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjetas', cuenta_corriente: 'Cuenta corriente' }[f] || f);
 
 // Editar / Eliminar
 const editing = ref(false);
@@ -150,7 +150,7 @@ const confirmDelete = (g) => {
                                 <option value="efectivo">Efectivo</option>
                                 <option value="transferencia">Transferencia</option>
                                 <option value="cheque">Cheque</option>
-                                <option value="tarjeta">Tarjeta</option>
+                                <option value="tarjeta">Tarjetas</option>
                                 <option value="cuenta_corriente">Cuenta corriente</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.forma_pago" />
@@ -226,7 +226,7 @@ const confirmDelete = (g) => {
                         <div><InputLabel value="Categoria" class="!text-xs" /><select v-model="editForm.cuenta_contable_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_contable_id" /></div>
                         <div><InputLabel value="Moneda" class="!text-xs" /><select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select></div>
                         <div><InputLabel value="Importe" class="!text-xs" /><TextInput v-model="editForm.importe" type="number" step="0.01" class="mt-0.5 block w-full text-sm" /><InputError class="mt-1 text-xs" :message="editForm.errors.importe" /></div>
-                        <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
+                        <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjetas</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
                         <div v-if="esEditTransferencia"><InputLabel value="Banco origen" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
                         <div><InputLabel value="Fecha pago" class="!text-xs" /><TextInput v-model="editForm.fecha_pago" type="date" class="mt-0.5 block w-full text-sm" /></div>
                     </div>
