@@ -50,7 +50,6 @@ const monedaSymbol = (moneda) => {
                             <tr>
                                 <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">#</th>
                                 <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-2 py-1 text-center text-[11px] font-medium text-gray-500 uppercase tracking-wider">Pend.</th>
                                 <th class="px-2 py-1 text-right text-[11px] font-medium text-gray-500 uppercase tracking-wider">Accion</th>
@@ -60,7 +59,6 @@ const monedaSymbol = (moneda) => {
                             <tr v-for="m in manifiestos.data" :key="m.id" class="hover:bg-gray-50">
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ m.id }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFecha(m.fecha) }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 truncate max-w-[150px]">{{ m.empresa?.razon_social || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 truncate max-w-[120px]">{{ m.chofer || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-center">
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">{{ m.pendientes_count }}</span>
