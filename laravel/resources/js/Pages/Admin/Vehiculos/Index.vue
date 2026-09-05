@@ -6,6 +6,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import DangerButton from '@/Components/DangerButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import { ref } from 'vue';
@@ -89,6 +90,14 @@ const submitEdit = () => {
     });
 };
 
+const eliminarVehiculo = () => {
+    if (!confirm('¿Eliminar este camión? Esta acción no se puede deshacer.')) return;
+    router.delete(route('admin.vehiculos.destroy', editId.value), {
+        preserveScroll: true,
+        onSuccess: () => (editing.value = false),
+    });
+};
+
 const agregarControl = (form) => {
     form.controles.push({ tipo: '', fecha_vencimiento: '', observacion: '' });
 };
@@ -149,12 +158,6 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                     <span v-if="alertasCount > 0" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">
                         {{ alertasCount }} alerta{{ alertasCount > 1 ? 's' : '' }}
                     </span>
-                    <div class="w-72">
-                        <select class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" :value="empresaId || ''" @change="changeEmpresa($event.target.value ? parseInt($event.target.value, 10) : null)">
-                            <option value="">Todas las empresas</option>
-                            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
-                        </select>
-                    </div>
                 </div>
             </div>
         </template>
@@ -384,8 +387,13 @@ const tiposControl = ['RTO', 'VTV', 'Matafuegos', 'Seguro', 'Carga térmica', 'L
                 </form>
             </template>
             <template #footer>
-                <SecondaryButton @click="editing = false">Cancelar</SecondaryButton>
-                <PrimaryButton class="ms-3" :disabled="editForm.processing" @click="submitEdit">Guardar</PrimaryButton>
+                <div class="flex items-center justify-between w-full">
+                    <DangerButton @click="eliminarVehiculo" class="!text-xs">Eliminar camión</DangerButton>
+                    <div class="flex items-center gap-2">
+                        <SecondaryButton @click="editing = false">Cancelar</SecondaryButton>
+                        <PrimaryButton class="ms-3" :disabled="editForm.processing" @click="submitEdit">Guardar</PrimaryButton>
+                    </div>
+                </div>
             </template>
         </DialogModal>
     </AppLayout>

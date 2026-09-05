@@ -16,23 +16,20 @@ class VehiculoAdminController extends Controller
 {
     public function index(Request $request)
     {
-        $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
+        $empresaId = (int) ($request->query('empresa_id') ?: 0);
 
-        $query = Vehiculo::query()->with(['empresa:id,razon_social', 'tipoUnidad:id,nombre', 'controles'])->orderBy('patente');
-        if ($empresaId > 0) {
-            $query->where('empresa_id', $empresaId);
-        }
+        $query = Vehiculo::query()->with(['empresa:id,razon_social', 'tipoUnidad:id,nombre', 'controles'])->orderBy('empresa_id')->orderBy('patente');
 
         $vehiculos = $query->get(['id', 'empresa_id', 'tipo_unidad_id', 'patente', 'marca', 'modelo', 'activo', 'titulo_archivo', 'rto_archivo', 'seguro_archivo', 'observaciones']);
 
         $alertasCount = VehiculoControl::query()
-            ->whereHas('vehiculo', fn($q) => $empresaId > 0 ? $q->where('empresa_id', $empresaId) : $q)
+            ->whereHas('vehiculo', fn($q) => $q)
             ->whereBetween('fecha_vencimiento', [now()->toDateString(), now()->addDays(10)->toDateString()])
             ->count();
 
         return Inertia::render('Admin/Vehiculos/Index', [
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
-            'empresaId' => $empresaId > 0 ? $empresaId : null,
+            'empresaId' => null,
             'vehiculos' => $vehiculos,
             'tiposUnidad' => TipoUnidad::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
             'alertasCount' => $alertasCount,
@@ -145,5 +142,12 @@ class VehiculoAdminController extends Controller
         }
 
         return back();
+    }
+
+    public function destroy(Vehiculo $vehiculo): RedirectResponse
+    {
+        $vehiculo->controles()->delete();
+        $vehiculo->delete();
+        return back()->with('success', 'Vehículo eliminado.');
     }
 }
