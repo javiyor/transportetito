@@ -56,88 +56,88 @@ const exportCsv = () => {
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
+        <div class="max-w-7xl mx-auto py-2 sm:px-6 lg:px-8 space-y-1">
+            <div class="bg-white shadow sm:rounded-lg p-2">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-1.5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Desde</label>
-                        <input v-model="form.desde" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <label class="block text-[11px] font-medium text-gray-700">Desde</label>
+                        <input v-model="form.desde" type="date" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Hasta</label>
-                        <input v-model="form.hasta" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <label class="block text-[11px] font-medium text-gray-700">Hasta</label>
+                        <input v-model="form.hasta" type="date" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Estado</label>
-                        <select v-model="form.estado" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <label class="block text-[11px] font-medium text-gray-700">Estado</label>
+                        <select v-model="form.estado" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1">
                             <option value="">Todos</option>
                             <option v-for="e in estados" :key="e" :value="e">{{ e }}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Remitente</label>
-                        <input v-model="form.remitente" type="text" placeholder="Buscar..." class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <label class="block text-[11px] font-medium text-gray-700">Remitente</label>
+                        <input v-model="form.remitente" type="text" placeholder="Buscar..." class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Destinatario</label>
-                        <input v-model="form.destinatario" type="text" placeholder="Buscar..." class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
+                        <label class="block text-[11px] font-medium text-gray-700">Destinatario</label>
+                        <input v-model="form.destinatario" type="text" placeholder="Buscar..." class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1" />
                     </div>
-                    <div class="flex gap-2">
-                        <button type="button" class="inline-flex items-center px-4 py-2 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-800 hover:bg-gray-200" @click="applyFilters">Aplicar</button>
-                        <button type="button" class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-600 hover:bg-gray-50" @click="clearFilters">Limpiar</button>
+                    <div class="flex gap-1 items-end">
+                        <button type="button" class="inline-flex items-center px-3 py-1 bg-gray-100 border border-gray-200 rounded-md text-xs text-gray-800 hover:bg-gray-200" @click="applyFilters">Aplicar</button>
+                        <button type="button" class="inline-flex items-center px-3 py-1 bg-white border border-gray-200 rounded-md text-xs text-gray-600 hover:bg-gray-50" @click="clearFilters">Limpiar</button>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 text-[10px] leading-none">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destino</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bultos</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Declarado</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hoja Ruta</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Origen</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Destino</th>
+                                <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Bult</th>
+                                <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Pal</th>
+                                <th class="px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Val.Decl</th>
+                                <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Manif</th>
+                                <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Hoja</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Comprob</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="p in pedidos.data" :key="p.id" class="hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm font-mono text-gray-900 whitespace-nowrap">#{{ p.id }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 max-w-48 truncate" :title="p.remitente">{{ p.remitente || '—' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 max-w-48 truncate" :title="p.destinatario">{{ p.destinatario || '—' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ p.origen || '—' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ p.destino || '—' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 text-center">{{ p.bultos }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 text-center">{{ p.palets }}</td>
-                                <td class="px-4 py-3 text-sm font-mono text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>
-                                <td class="px-4 py-3 text-sm text-center">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="estadoClass(p.estado)">{{ p.estado }}</span>
+                            <tr v-for="p in pedidos.data" :key="p.id" class="hover:bg-gray-50 leading-none">
+                                <td class="px-1 py-0.5 text-[10px] font-mono text-gray-900 whitespace-nowrap">#{{ p.id }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.remitente">{{ p.remitente || '—' }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.destinatario">{{ p.destinatario || '—' }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.origen || '—' }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.destino || '—' }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.bultos }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.palets }}</td>
+                                <td class="px-1 py-0.5 text-[10px] font-mono text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-center">
+                                    <span class="inline-flex items-center px-1 py-0 rounded-full text-[9px] font-medium" :class="estadoClass(p.estado)">{{ p.estado }}</span>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{{ p.fecha }}</td>
-                                <td class="px-4 py-3 text-sm text-center">
+                                <td class="px-1 py-0.5 text-[10px] text-gray-600 whitespace-nowrap">{{ p.fecha }}</td>
+                                <td class="px-1 py-0.5 text-[10px] text-center">
                                     <Link v-if="p.manifiesto_id" :href="route('operacion.manifiestos.show', p.manifiesto_id)" class="text-indigo-600 hover:text-indigo-800">#{{ p.manifiesto_id }}</Link>
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-center">
+                                <td class="px-1 py-0.5 text-[10px] text-center">
                                     <Link v-if="p.hoja_ruta_id" :href="route('operacion.repartos.hojas.show', p.hoja_ruta_id)" class="text-indigo-600 hover:text-indigo-800">#{{ p.hoja_ruta_id }}</Link>
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-1 py-0.5 text-[10px]">
                                     <Link v-if="p.comprobante_id" :href="route('operacion.comprobantes.show', p.comprobante_id)" class="text-indigo-600 hover:text-indigo-800 whitespace-nowrap">{{ p.comprobante_tipo }} {{ p.comprobante_numero || '#' + p.comprobante_id }}</Link>
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
                             </tr>
                             <tr v-if="!pedidos.data?.length">
-                                <td colspan="13" class="px-4 py-8 text-sm text-gray-400 text-center">No se encontraron fletes en el periodo.</td>
+                                <td colspan="13" class="px-1 py-4 text-[10px] text-gray-400 text-center">No se encontraron fletes en el periodo.</td>
                             </tr>
                         </tbody>
                     </table>
