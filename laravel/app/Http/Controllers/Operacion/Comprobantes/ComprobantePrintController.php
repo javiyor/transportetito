@@ -12,7 +12,15 @@ class ComprobantePrintController extends Controller
     public function __invoke(Request $request, Comprobante $comprobante, ArcaQrService $qrService)
     {
         if (! $request->hasValidSignature()) {
-            abort_unless((int) $comprobante->empresa_id === (int) ($request->user()?->current_empresa_id ?: 0), 404);
+            $currentEmpresaId = (int) ($request->user()?->current_empresa_id ?: 0);
+            $allowedEmpresaIds = [$currentEmpresaId];
+            if ($currentEmpresaId > 0) {
+                $shared = \App\Models\TerceroCuenta::whereIn('tercero_id', function ($q) use ($currentEmpresaId) {
+                    $q->select('tercero_id')->from('tercero_cuentas')->where('empresa_id', $currentEmpresaId);
+                })->where('empresa_id', '!=', $currentEmpresaId)->distinct()->pluck('empresa_id')->toArray();
+                $allowedEmpresaIds = array_merge($allowedEmpresaIds, $shared);
+            }
+            abort_unless(in_array((int) $comprobante->empresa_id, $allowedEmpresaIds, true), 404);
         }
 
         $comprobante->load([
