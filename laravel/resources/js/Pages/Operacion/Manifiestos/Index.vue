@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 
 const eliminar = (m) => {
     if (confirm('¿Eliminar manifiesto? Los pedidos se desasignarán.')) {
@@ -44,20 +44,16 @@ const formatFecha = (value) => {
     const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
 };
 
-const autoImportando = ref(false);
-onMounted(() => {
-    if (props.orden === 'desc' && props.manifiestos.current_page === 1) {
-        autoImportando.value = true;
-        router.post(route('operacion.manifiestos.import-auto'), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                router.reload({ only: ['manifiestos'] });
-            },
-            onFinish: () => { autoImportando.value = false; },
-        });
-    }
-});
+const importando = ref(false);
+const importarManifiestos = () => {
+    importando.value = true;
+    router.post(route('operacion.manifiestos.import-auto'), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => router.reload({ only: ['manifiestos'] }),
+        onFinish: () => importando.value = false,
+    });
+};
 </script>
 
 <template>
@@ -79,11 +75,9 @@ onMounted(() => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-4">
-            <div v-if="autoImportando" class="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded text-xs text-center">
-                Importando nuevos manifiestos de todos los depósitos...
-            </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between gap-2">
                 <span class="text-xs text-gray-500">Mostrando todos los manifiestos de todas las empresas</span>
+                <SecondaryButton :disabled="importando" @click="importarManifiestos" class="!text-xs !py-1">{{ importando ? 'Importando...' : 'Importar últimos 6 días' }}</SecondaryButton>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
