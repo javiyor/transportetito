@@ -8,11 +8,21 @@ use Illuminate\Console\Command;
 
 class RepararPlanCuentas extends Command
 {
-    protected $signature = 'cuentas:reparar-plan {empresa_id?}';
+    protected $signature = 'cuentas:reparar-plan {empresa_id?} {--all : Repara todas las empresas}';
     protected $description = 'Inserta capitulos 1 (ACTIVO) y 2 (PASIVO) faltantes del plan de cuentas';
 
     public function handle(): int
     {
+        if ($this->option('all')) {
+            $empresas = Empresa::pluck('id');
+            foreach ($empresas as $id) {
+                $this->line("Reparando empresa {$id}...");
+                $this->repararEmpresa((int) $id);
+            }
+            $this->info('Reparación de todas las empresas completada.');
+            return 0;
+        }
+
         $empresaId = (int) ($this->argument('empresa_id') ?: $this->ask('ID de empresa'));
         $empresa = Empresa::find($empresaId);
         if (! $empresa) {

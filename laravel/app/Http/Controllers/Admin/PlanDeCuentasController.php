@@ -111,6 +111,32 @@ class PlanDeCuentasController extends Controller
 
     public function destroy(CuentaContable $cuentaContable): RedirectResponse
     {
+        // No permitir borrar capitulos sistema
+        if ($cuentaContable->nivel === 'capitulo') {
+            return back()->withErrors(['codigo' => 'No se puede eliminar un capítulo del plan de cuentas.']);
+        }
+
+        // No permitir borrar si tiene hijos
+        $hasChildren = CuentaContable::where('parent_id', $cuentaContable->id)->exists();
+        if ($hasChildren) {
+            return back()->withErrors(['codigo' => 'No se puede eliminar: tiene subcuentas. Elimine primero las subcuentas.']);
+        }
+
+        // No permitir borrar si tiene movimientos contables
+        $hasMovimientos = \App\Models\AsientoLinea::where('cuenta_contable_id', $cuentaContable->id)->exists();
+        if ($hasMovimientos) {
+            return back()->withErrors(['codigo' => 'No se puede eliminar: la cuenta tiene asientos contables.']);
+        }
+
+        $hasGastosPasivo = \App\Models\GastoOperativo::where('cuenta_pasivo_id', $cuentaContable->id)->exists();
+        $hasCategorias = \Illuminate\Support\Facades\DB::table('gasto_operativo_categorias')->where('cuenta_contable_id', $cuentaContable->id)->exists()
+            || \Illuminate\Support\Facades\DB::table('ingreso_operativo_categorias')->where('cuenta_contable_id', $cuentaContable->id)->exists();
+        $hasConfig = \App\Models\ConfiguracionContable::where('cuenta_contable_id', $cuentaContable->id)->exists();
+
+        if ($hasGastosPasivo || $hasCategorias || $hasConfig) {
+            return back()->withErrors(['codigo' => 'No se puede eliminar: la cuenta está en uso (gastos, categorías o configuración).']);
+        }
+
         $cuentaContable->delete();
         return back()->with('success', 'Cuenta eliminada.');
     }
