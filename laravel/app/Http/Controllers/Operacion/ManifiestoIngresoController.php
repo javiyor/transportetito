@@ -36,6 +36,45 @@ class ManifiestoIngresoController extends Controller
 
         $manifiestos = $query->paginate(20)->withQueryString();
 
+        // Enriquecer chofer desde mysql_external como en admin/reportes/seguro - query única para la página
+        try {
+            $manifiestoIds = $manifiestos->getCollection()->pluck('id')->toArray();
+            if (!empty($manifiestoIds)) {
+                $pedidosExternalMap = \App\Models\Pedido::whereIn('manifiesto_ingreso_id', $manifiestoIds)
+                    ->whereNotNull('external_carga_id')
+                    ->pluck('external_carga_id', 'manifiesto_ingreso_id')
+                    ->groupBy('manifiesto_ingreso_id');
+                // Aplanar external_ids únicos de la página
+                $allExternalIds = \App\Models\Pedido::whereIn('manifiesto_ingreso_id', $manifiestoIds)
+                    ->whereNotNull('external_carga_id')
+                    ->pluck('external_carga_id')->unique()->toArray();
+                if (!empty($allExternalIds)) {
+                    $choferesMap = \Illuminate\Support\Facades\DB::connection('mysql_external')
+                        ->table('carga as c')
+                        ->leftJoin('cargaporenvio as cpe', 'cpe.idcarga', '=', 'c.id')
+                        ->leftJoin('hojaderuta as hr', 'hr.id', '=', 'cpe.idenvio')
+                        ->leftJoin('conductores as cd', 'cd.nrochof', '=', 'hr.idchofer')
+                        ->whereIn('c.id', $allExternalIds)
+                        ->whereNotNull('cd.nomchof')
+                        ->select('c.id as carga_id', 'cd.nomchof')
+                        ->get()
+                        ->groupBy('carga_id');
+                    $manifiestos->getCollection()->transform(function ($m) use ($choferesMap) {
+                        if (!empty($m->chofer)) return $m;
+                        $pedidoCargaIds = \App\Models\Pedido::where('manifiesto_ingreso_id', $m->id)->whereNotNull('external_carga_id')->pluck('external_carga_id')->toArray();
+                        foreach ($pedidoCargaIds as $cid) {
+                            if (isset($choferesMap[$cid]) && !empty($choferesMap[$cid][0]->nomchof)) {
+                                $m->chofer = $choferesMap[$cid][0]->nomchof;
+                                break;
+                            }
+                        }
+                        return $m;
+                    });
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
         return Inertia::render('Operacion/Manifiestos/Index', [
             'manifiestos' => $manifiestos,
             'orden' => $orden,
