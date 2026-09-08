@@ -76,6 +76,8 @@ const tipoArcaMap = {
     '11': 'FC', '12': 'NDC', '13': 'NCC',
     '15': 'FE', '16': 'NDE', '17': 'NCE',
     '51': 'FM', '52': 'NDM', '53': 'NCM',
+    '32': 'FA', '33': 'NDA', '34': 'NCA',
+    '63': 'LB', '64': 'LNDB', '65': 'LNCB',
     'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC', 'factura e': 'FE', 'factura m': 'FM',
     'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
     'nota de debito a': 'NDA', 'nota de debito b': 'NDB', 'nota de debito c': 'NDC',
