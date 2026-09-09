@@ -336,13 +336,15 @@ const translateLabel = (label) => {
                     </div>
 
                     <div class="flex flex-col items-end gap-2">
-                        <div v-if="!distribucionOk" class="text-xs text-red-600">
+                        <div v-if="!distribucionOk" class="text-xs text-red-600 font-semibold">
                             Faltan datos en la distribución: cada fila necesita una cuenta contable y un importe mayor a 0.
                         </div>
-                        <div v-if="form.processing" class="text-xs text-indigo-600">
+                        <div v-if="form.processing" class="text-xs text-indigo-600 font-semibold">
                             Guardando...
                         </div>
-                        <PrimaryButton :disabled="form.processing || !distribucionOk">Guardar y contabilizar</PrimaryButton>
+                        <button type="submit" :disabled="form.processing || !distribucionOk" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 transition ease-in-out duration-150">
+                            {{ form.processing ? 'Guardando...' : 'Guardar y contabilizar' }}
+                        </button>
                     </div>
                 </form>
             </div>
