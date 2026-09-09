@@ -13,6 +13,7 @@ use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -80,10 +81,10 @@ class EgresoIndexController extends Controller
             'banco_origen_id' => ['nullable', 'exists:bancos,id', 'required_if:forma_pago,transferencia'],
             'tipo_cheque' => ['nullable', 'required_if:forma_pago,cheque', 'in:propio,tercero'],
             'cheque_id' => ['nullable', 'exists:cheques,id'],
-            'cheque_banco_id' => ['nullable', 'exists:bancos,id', 'required_if:tipo_cheque,propio'],
+            'cheque_banco_id' => ['nullable', 'exists:bancos,id', Rule::requiredIf(fn () => $request->input('forma_pago') === 'cheque' && $request->input('tipo_cheque') === 'propio')],
             'cheque_numero' => ['nullable', 'string', 'max:64'],
-            'cheque_importe' => ['nullable', 'numeric', 'gt:0', 'required_if:tipo_cheque,propio'],
-            'cheque_fecha_vencimiento' => ['nullable', 'date', 'required_if:tipo_cheque,propio'],
+            'cheque_importe' => ['nullable', 'numeric', 'gt:0', Rule::requiredIf(fn () => $request->input('forma_pago') === 'cheque' && $request->input('tipo_cheque') === 'propio')],
+            'cheque_fecha_vencimiento' => ['nullable', 'date', Rule::requiredIf(fn () => $request->input('forma_pago') === 'cheque' && $request->input('tipo_cheque') === 'propio')],
             'cheque_titular' => ['nullable', 'string', 'max:255'],
             'fecha_pago' => ['nullable', 'date'],
             'cuenta_pasivo_id' => ['nullable', 'exists:cuentas_contables,id', 'required_if:forma_pago,cuenta_corriente'],
@@ -201,10 +202,10 @@ class EgresoIndexController extends Controller
             'banco_origen_id' => ['nullable', 'exists:bancos,id', 'required_if:forma_pago,transferencia'],
             'tipo_cheque' => ['nullable', 'required_if:forma_pago,cheque', 'in:propio,tercero'],
             'cheque_id' => ['nullable', 'exists:cheques,id'],
-            'cheque_banco_id' => ['nullable', 'exists:bancos,id', 'required_if:tipo_cheque,propio'],
+            'cheque_banco_id' => ['nullable', 'exists:bancos,id', Rule::requiredIf(fn () => $request->input('forma_pago') === 'cheque' && $request->input('tipo_cheque') === 'propio')],
             'cheque_numero' => ['nullable', 'string', 'max:64'],
-            'cheque_importe' => ['nullable', 'numeric', 'gt:0', 'required_if:tipo_cheque,propio'],
-            'cheque_fecha_vencimiento' => ['nullable', 'date', 'required_if:tipo_cheque,propio'],
+            'cheque_importe' => ['nullable', 'numeric', 'gt:0', Rule::requiredIf(fn () => $request->input('forma_pago') === 'cheque' && $request->input('tipo_cheque') === 'propio')],
+            'cheque_fecha_vencimiento' => ['nullable', 'date', Rule::requiredIf(fn () => $request->input('forma_pago') === 'cheque' && $request->input('tipo_cheque') === 'propio')],
             'cheque_titular' => ['nullable', 'string', 'max:255'],
             'fecha_pago' => ['nullable', 'date'],
             'cuenta_pasivo_id' => ['nullable', 'exists:cuentas_contables,id', 'required_if:forma_pago,cuenta_corriente'],

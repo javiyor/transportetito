@@ -25,6 +25,7 @@ const props = defineProps({
 const form = useForm({
     fecha: new Date().toISOString().slice(0, 10),
     moneda: 'ARS',
+    importe: '',
     forma_pago: 'efectivo',
     banco_origen_id: '',
     tipo_cheque: 'propio',
@@ -107,6 +108,7 @@ const editId = ref(null);
 const editForm = useForm({
     fecha: '',
     moneda: 'ARS',
+    importe: '',
     forma_pago: 'efectivo',
     banco_origen_id: '',
     tipo_cheque: 'propio',
