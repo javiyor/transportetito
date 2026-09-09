@@ -9,27 +9,44 @@ use Illuminate\Console\Command;
 class RepararPlanCuentas extends Command
 {
     protected $signature = 'cuentas:reparar-plan {empresa_id?} {--all : Repara todas las empresas}';
-    protected $description = 'Inserta capitulos 1 (ACTIVO) y 2 (PASIVO) faltantes del plan de cuentas';
+    protected $description = 'Inserta capitulos 1 (ACTIVO) y 2 (PASIVO) faltantes del plan de cuentas y corrige niveles/ordenes';
 
     public function handle(): int
     {
-        if ($this->option('all')) {
-            $empresas = Empresa::pluck('id');
-            foreach ($empresas as $id) {
-                $this->line("Reparando empresa {$id}...");
-                $this->repararEmpresa((int) $id);
-            }
-            $this->info('Reparación de todas las empresas completada.');
+        if ($this->option('all') || ! $this->argument('empresa_id')) {
+            $this->repararTodas();
             return 0;
         }
 
-        $empresaId = (int) ($this->argument('empresa_id') ?: $this->ask('ID de empresa'));
+        $empresaId = (int) $this->argument('empresa_id');
         $empresa = Empresa::find($empresaId);
         if (! $empresa) {
             $this->error("Empresa {$empresaId} no encontrada.");
             return 1;
         }
 
+        $this->repararEmpresa($empresaId);
+        return 0;
+    }
+
+    private function repararTodas(): void
+    {
+        $empresas = Empresa::pluck('id');
+        if ($empresas->isEmpty()) {
+            $this->warn('No hay empresas para reparar.');
+            return;
+        }
+
+        foreach ($empresas as $id) {
+            $this->line("Reparando empresa {$id}...");
+            $this->repararEmpresa((int) $id);
+        }
+
+        $this->info('Reparación de todas las empresas completada.');
+    }
+
+    private function repararEmpresa(int $empresaId): void
+    {
         $existing = CuentaContable::where('empresa_id', $empresaId)
             ->pluck('codigo')
             ->map(fn ($c) => trim($c))
@@ -38,7 +55,7 @@ class RepararPlanCuentas extends Command
 
         $this->info("Empresa {$empresaId} tiene ".count($existing)." cuentas existentes.");
 
-        $stats = ['created' => 0, 'skipped' => 0];
+        $stats = ['created' => 0, 'skipped' => 0, 'fixed' => 0];
 
         $capitulos = $this->getCapitulos();
         $rubros = $this->getRubros();
@@ -49,12 +66,32 @@ class RepararPlanCuentas extends Command
         $capituloIds = [];
 
         foreach ($capitulos as $def) {
-            if (in_array($def['codigo'], $existing)) {
-                $capituloIds[$def['codigo']] = CuentaContable::where('empresa_id', $empresaId)
-                    ->where('codigo', $def['codigo'])->value('id');
-                $stats['skipped']++;
+            $cuenta = CuentaContable::where('empresa_id', $empresaId)
+                ->where('codigo', $def['codigo'])
+                ->first();
+
+            if ($cuenta) {
+                $updates = [];
+                if ($cuenta->nivel !== 'capitulo') {
+                    $updates['nivel'] = 'capitulo';
+                }
+                if ((int) $cuenta->orden !== (int) $def['orden']) {
+                    $updates['orden'] = $def['orden'];
+                }
+                if ($cuenta->parent_id !== null) {
+                    $updates['parent_id'] = null;
+                }
+                if (! empty($updates)) {
+                    $cuenta->update($updates);
+                    $stats['fixed']++;
+                    $this->line("  Corregido capitulo: {$def['codigo']} {$def['nombre']}");
+                } else {
+                    $stats['skipped']++;
+                }
+                $capituloIds[$def['codigo']] = $cuenta->id;
                 continue;
             }
+
             $capituloIds[$def['codigo']] = CuentaContable::create([
                 'empresa_id' => $empresaId,
                 'parent_id' => null,
@@ -202,8 +239,7 @@ class RepararPlanCuentas extends Command
             $this->info("Reparadas: {$repaired} cuentas con codigo incorrecto.");
         }
 
-        $this->info("Completado. Creadas: {$stats['created']}, omitidas: {$stats['skipped']}");
-        return 0;
+        $this->info("Completado. Creadas: {$stats['created']}, omitidas: {$stats['skipped']}, corregidas: {$stats['fixed']}");
     }
 
     private function repairExisting(int $empresaId): int
