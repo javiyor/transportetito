@@ -65,8 +65,14 @@ const quitarDistribucion = (idx) => {
 };
 
 const submit = () => {
+    console.log('[Egresos] submit iniciado', { importe: sumaDistribucion.value, distribucion: form.distribucion, processing: form.processing });
     form.importe = sumaDistribucion.value;
-    form.post(route('finanzas.egresos.store'), { preserveScroll: true });
+    form.post(route('finanzas.egresos.store'), {
+        preserveScroll: true,
+        onStart: () => console.log('[Egresos] request iniciado'),
+        onError: (errors) => console.log('[Egresos] errores', errors),
+        onFinish: () => console.log('[Egresos] request finalizado'),
+    });
 };
 
 const formaPagoLabel = (f) => ({ efectivo: 'Efectivo', transferencia: 'Transferencia', cheque: 'Cheque', tarjeta: 'Tarjeta', cuenta_corriente: 'Cuenta corriente' }[f] || f);
@@ -307,10 +313,12 @@ const translateLabel = (label) => {
                                     <option value="">Seleccionar...</option>
                                     <option v-for="c in cuentasFiltradas" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
                                 </select>
+                                <InputError class="mt-1" :message="form.errors['distribucion.' + idx + '.cuenta_contable_id']" />
                             </div>
                             <div>
                                 <InputLabel value="Importe" />
                                 <TextInput v-model="d.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full text-sm" />
+                                <InputError class="mt-1" :message="form.errors['distribucion.' + idx + '.importe']" />
                             </div>
                             <div class="flex items-end pb-1">
                                 <button v-if="form.distribucion.length > 1" type="button" class="text-red-500 text-lg font-bold" @click="quitarDistribucion(idx)">&times;</button>
@@ -319,6 +327,7 @@ const translateLabel = (label) => {
                         <div class="text-sm font-semibold text-gray-700 mt-2">
                             Total distribuido: {{ sumaDistribucion.toFixed(2) }}
                         </div>
+                        <div v-if="form.errors.distribucion" class="mt-2 text-xs text-red-600">{{ form.errors.distribucion }}</div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -326,7 +335,13 @@ const translateLabel = (label) => {
                         <div><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full" /><InputError class="mt-2" :message="form.errors.observacion" /></div>
                     </div>
 
-                    <div class="flex justify-end">
+                    <div class="flex flex-col items-end gap-2">
+                        <div v-if="!distribucionOk" class="text-xs text-red-600">
+                            Faltan datos en la distribución: cada fila necesita una cuenta contable y un importe mayor a 0.
+                        </div>
+                        <div v-if="form.processing" class="text-xs text-indigo-600">
+                            Guardando...
+                        </div>
                         <PrimaryButton :disabled="form.processing || !distribucionOk">Guardar y contabilizar</PrimaryButton>
                     </div>
                 </form>
