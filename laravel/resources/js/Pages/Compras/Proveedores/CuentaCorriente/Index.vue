@@ -62,18 +62,18 @@ const applyFilters = () => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200"><p class="text-sm text-gray-600">Saldos de proveedores listos para futuras ordenes de pago.</p></div>
-                <div class="space-y-4 p-4 sm:hidden">
-                    <div v-for="c in cuentas" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-4">
-                        <div class="text-sm font-semibold text-gray-900">{{ c.razon_social || '-' }}</div>
-                        <div class="mt-1 text-xs text-gray-500">CUIT {{ c.cuit || '-' }}</div>
-                        <div class="mt-3 text-sm font-medium text-gray-900">Saldo {{ formatNum(c.saldo) }}</div>
-                        <div class="mt-3"><Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.show', c.id)">Consultar</Link></div>
+                <div class="space-y-2 p-3 sm:hidden">
+                    <div v-for="c in cuentas" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-3">
+                        <div class="text-xs font-semibold text-gray-900">{{ c.razon_social || '-' }}</div>
+                        <div class="text-[10px] text-gray-500">CUIT {{ c.cuit || '-' }}</div>
+                        <div class="mt-1 text-xs font-medium text-gray-900 font-mono">Saldo {{ formatNum(c.saldo) }}</div>
+                        <div class="mt-1"><Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.show', c.id)">Consultar</Link></div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in cuentas" :key="c.id"><td class="px-6 py-4 text-sm text-gray-700">{{ c.razon_social || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ c.cuit || '-' }}</td><td class="px-6 py-4 text-sm text-gray-700">{{ formatNum(c.saldo) }}</td><td class="px-6 py-4 text-right text-sm"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.show', c.id)">Consultar</Link></td></tr></tbody>
+                    <table class="min-w-full divide-y divide-gray-200 text-xs">
+                        <thead class="bg-gray-50"><tr><th class="px-3 py-1.5 text-left font-medium text-gray-500 uppercase">Proveedor</th><th class="px-3 py-1.5 text-left font-medium text-gray-500 uppercase">CUIT</th><th class="px-3 py-1.5 text-left font-medium text-gray-500 uppercase">Saldo</th><th class="px-3 py-1.5 text-right font-medium text-gray-500 uppercase">Acciones</th></tr></thead>
+                        <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in cuentas" :key="c.id"><td class="px-3 py-1.5 text-gray-700">{{ c.razon_social || '-' }}</td><td class="px-3 py-1.5 text-gray-700">{{ c.cuit || '-' }}</td><td class="px-3 py-1.5 text-gray-700 font-mono">{{ formatNum(c.saldo) }}</td><td class="px-3 py-1.5 text-right"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.show', c.id)">Consultar</Link></td></tr></tbody>
                     </table>
                 </div>
             </div>
