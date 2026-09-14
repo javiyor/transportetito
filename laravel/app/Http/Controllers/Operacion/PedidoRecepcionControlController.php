@@ -16,7 +16,7 @@ class PedidoRecepcionControlController extends Controller
         // Control sin restricción de empresa (pedido puede ser de cualquier empresa)
         // Se mantiene el log por auditoría pero no se bloquea
 
-        $camposError = ['remitente', 'destinatario', 'valor_declarado', 'bultos', 'palets'];
+        $camposError = ['bultos', 'palets', 'roturas', 'bultos_abiertos'];
 
         $data = $request->validate([
             'recepcion_estado' => ['required', 'in:recibido,correcto,con_error'],

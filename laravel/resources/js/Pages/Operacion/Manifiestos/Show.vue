@@ -468,11 +468,10 @@ const formatFecha = (value) => {
                             </select>
                             <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="space-y-1 pt-1">
                                 <div class="text-xs font-medium text-red-700">Campos con error:</div>
-                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="remitente" :checked="recepcionForms[p.id].recepcion_errores?.includes('remitente')" @change="toggleError(p.id, 'remitente')" class="rounded border-gray-300" /> Remitente</label>
-                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="destinatario" :checked="recepcionForms[p.id].recepcion_errores?.includes('destinatario')" @change="toggleError(p.id, 'destinatario')" class="rounded border-gray-300" /> Destinatario</label>
-                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor declarado</label>
                                 <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
                                 <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="roturas" :checked="recepcionForms[p.id].recepcion_errores?.includes('roturas')" @change="toggleError(p.id, 'roturas')" class="rounded border-gray-300" /> Con roturas o daños</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" value="bultos_abiertos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos_abiertos')" @change="toggleError(p.id, 'bultos_abiertos')" class="rounded border-gray-300" /> Bultos abiertos</label>
                                 <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full" placeholder="Observacion adicional" />
                                 <InputError class="mt-1" :message="recepcionForms[p.id].errors.recepcion_errores" />
                                 <div class="pt-1">
@@ -525,11 +524,10 @@ const formatFecha = (value) => {
                                     </div>
                                     <div v-if="recepcionForms[p.id].recepcion_estado === 'con_error'" class="mt-1 space-y-0.5">
                                         <div class="text-[10px] font-medium text-red-700">Errores:</div>
-                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="remitente" :checked="recepcionForms[p.id].recepcion_errores?.includes('remitente')" @change="toggleError(p.id, 'remitente')" class="rounded border-gray-300" /> Remitente</label>
-                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="destinatario" :checked="recepcionForms[p.id].recepcion_errores?.includes('destinatario')" @change="toggleError(p.id, 'destinatario')" class="rounded border-gray-300" /> Destinatario</label>
-                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="valor_declarado" :checked="recepcionForms[p.id].recepcion_errores?.includes('valor_declarado')" @change="toggleError(p.id, 'valor_declarado')" class="rounded border-gray-300" /> Valor</label>
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="bultos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos')" @change="toggleError(p.id, 'bultos')" class="rounded border-gray-300" /> Bultos</label>
                                         <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="palets" :checked="recepcionForms[p.id].recepcion_errores?.includes('palets')" @change="toggleError(p.id, 'palets')" class="rounded border-gray-300" /> Palets</label>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="roturas" :checked="recepcionForms[p.id].recepcion_errores?.includes('roturas')" @change="toggleError(p.id, 'roturas')" class="rounded border-gray-300" /> Con roturas o daños</label>
+                                        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" value="bultos_abiertos" :checked="recepcionForms[p.id].recepcion_errores?.includes('bultos_abiertos')" @change="toggleError(p.id, 'bultos_abiertos')" class="rounded border-gray-300" /> Bultos abiertos</label>
                                         <TextInput v-model="recepcionForms[p.id].recepcion_observacion" type="text" class="block w-full mt-1 text-[10px]" placeholder="Observacion adicional" />
                                         <div class="pt-1">
                                             <label class="text-[10px] text-gray-500">Foto del bulto:</label>
