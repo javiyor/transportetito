@@ -173,13 +173,7 @@ const confirmDelete = (e) => {
 
 const goToPage = (url) => {
     if (!url) return;
-    try {
-        const u = new URL(url, window.location.origin);
-        const page = u.searchParams.get('page');
-        router.get(route('finanzas.egresos.index'), { page: page || 1 }, { preserveState: true, preserveScroll: true });
-    } catch {
-        router.get(url, {}, { preserveState: true, preserveScroll: true });
-    }
+    router.get(url, {}, { preserveState: true, preserveScroll: true });
 };
 const filtros = useForm({
     buscar: props.filtros?.buscar || '',
@@ -226,28 +220,6 @@ const translateLabel = (label) => {
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><div class="text-xs text-gray-500">Registros</div><div class="text-sm font-medium text-gray-900">{{ totales?.cantidad || 0 }}</div></div>
                 <div><div class="text-xs text-gray-500">Total estimado en ARS</div><div class="text-sm font-medium text-gray-900">$ {{ Number(totales?.importe_total_ars || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</div></div>
-            </div>
-
-            <div class="bg-white shadow sm:rounded-lg p-3">
-                <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Filtros</h3>
-                <form class="mt-2 grid grid-cols-1 sm:grid-cols-4 gap-2 items-end" @submit.prevent="aplicarFiltros">
-                    <div>
-                        <InputLabel value="Buscar en observación / referencia" class="!text-xs" />
-                        <TextInput v-model="filtros.buscar" type="text" placeholder="Palabra clave..." class="mt-1 block w-full text-sm" />
-                    </div>
-                    <div>
-                        <InputLabel value="Fecha desde" class="!text-xs" />
-                        <TextInput v-model="filtros.fecha_desde" type="date" class="mt-1 block w-full text-sm" />
-                    </div>
-                    <div>
-                        <InputLabel value="Fecha hasta" class="!text-xs" />
-                        <TextInput v-model="filtros.fecha_hasta" type="date" class="mt-1 block w-full text-sm" />
-                    </div>
-                    <div class="flex gap-2">
-                        <PrimaryButton type="submit" class="!text-xs !px-3 !py-1.5" :disabled="filtros.processing">Buscar</PrimaryButton>
-                        <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="limpiarFiltros">Limpiar</SecondaryButton>
-                    </div>
-                </form>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg p-3">
@@ -387,6 +359,27 @@ const translateLabel = (label) => {
                         <button type="submit" :disabled="form.processing || !distribucionOk" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 transition ease-in-out duration-150">
                             {{ form.processing ? 'Guardando...' : 'Guardar y contabilizar' }}
                         </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg p-2">
+                <form class="flex flex-wrap items-end gap-2 text-[11px]" @submit.prevent="aplicarFiltros">
+                    <div>
+                        <label class="block text-[10px] text-gray-500 uppercase">Buscar obs./ref.</label>
+                        <input v-model="filtros.buscar" type="text" placeholder="Palabra clave..." class="mt-0.5 block w-40 border-gray-300 rounded-md shadow-sm text-[11px] py-1 px-1.5" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-500 uppercase">Desde</label>
+                        <input v-model="filtros.fecha_desde" type="date" class="mt-0.5 block w-32 border-gray-300 rounded-md shadow-sm text-[11px] py-1 px-1.5" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-500 uppercase">Hasta</label>
+                        <input v-model="filtros.fecha_hasta" type="date" class="mt-0.5 block w-32 border-gray-300 rounded-md shadow-sm text-[11px] py-1 px-1.5" />
+                    </div>
+                    <div class="flex gap-1 pb-0.5">
+                        <button type="submit" :disabled="filtros.processing" class="px-2 py-1 bg-indigo-600 text-white rounded text-[11px] hover:bg-indigo-700 disabled:opacity-50">Buscar</button>
+                        <button type="button" class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-[11px] hover:bg-gray-300" @click="limpiarFiltros">Limpiar</button>
                     </div>
                 </form>
             </div>
