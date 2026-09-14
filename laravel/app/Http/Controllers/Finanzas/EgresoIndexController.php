@@ -23,9 +23,22 @@ class EgresoIndexController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
+        $buscar = trim((string) $request->query('buscar', ''));
+        $fechaDesde = $request->query('fecha_desde');
+        $fechaHasta = $request->query('fecha_hasta');
+
         $egresos = GastoOperativo::query()
             ->with(['cuentaContable', 'categorias.cuentaContable', 'bancoOrigen:id,nombre', 'cheque'])
             ->where('empresa_id', $empresaId)
+            ->when($buscar !== '', function ($q) use ($buscar) {
+                $q->where(function ($sq) use ($buscar) {
+                    $sq->where('observacion', 'ilike', '%'.$buscar.'%')
+                        ->orWhere('referencia', 'ilike', '%'.$buscar.'%')
+                        ->orWhere('categoria', 'ilike', '%'.$buscar.'%');
+                });
+            })
+            ->when($fechaDesde, fn ($q) => $q->whereDate('fecha', '>=', $fechaDesde))
+            ->when($fechaHasta, fn ($q) => $q->whereDate('fecha', '<=', $fechaHasta))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate(30)
@@ -33,6 +46,11 @@ class EgresoIndexController extends Controller
 
         return Inertia::render('Finanzas/Egresos/Index', [
             'egresos' => $egresos,
+            'filtros' => [
+                'buscar' => $buscar,
+                'fecha_desde' => $fechaDesde ?: '',
+                'fecha_hasta' => $fechaHasta ?: '',
+            ],
             'cuentasContables' => CuentaContable::query()
                 ->where('empresa_id', $empresaId)
                 ->where('tipo', 'egreso')

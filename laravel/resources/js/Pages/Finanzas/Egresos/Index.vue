@@ -20,6 +20,7 @@ const props = defineProps({
     bancos: Array,
     chequesDisponibles: Array,
     totales: Object,
+    filtros: Object,
 });
 
 const form = useForm({
@@ -180,6 +181,23 @@ const goToPage = (url) => {
         router.get(url, {}, { preserveState: true, preserveScroll: true });
     }
 };
+const filtros = useForm({
+    buscar: props.filtros?.buscar || '',
+    fecha_desde: props.filtros?.fecha_desde || '',
+    fecha_hasta: props.filtros?.fecha_hasta || '',
+});
+
+const aplicarFiltros = () => {
+    filtros.get(route('finanzas.egresos.index'), { preserveState: true });
+};
+
+const limpiarFiltros = () => {
+    filtros.buscar = '';
+    filtros.fecha_desde = '';
+    filtros.fecha_hasta = '';
+    filtros.get(route('finanzas.egresos.index'), { preserveState: true });
+};
+
 const translateLabel = (label) => {
     if (!label) return '';
     return label.replace(/&laquo;\s*Previous/g, '« Anterior').replace(/Next\s*&raquo;/g, 'Siguiente »').replace(/Previous/g, 'Anterior').replace(/Next/g, 'Siguiente').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»');
@@ -208,6 +226,28 @@ const translateLabel = (label) => {
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><div class="text-xs text-gray-500">Registros</div><div class="text-sm font-medium text-gray-900">{{ totales?.cantidad || 0 }}</div></div>
                 <div><div class="text-xs text-gray-500">Total estimado en ARS</div><div class="text-sm font-medium text-gray-900">$ {{ Number(totales?.importe_total_ars || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</div></div>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg p-3">
+                <h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Filtros</h3>
+                <form class="mt-2 grid grid-cols-1 sm:grid-cols-4 gap-2 items-end" @submit.prevent="aplicarFiltros">
+                    <div>
+                        <InputLabel value="Buscar en observación / referencia" class="!text-xs" />
+                        <TextInput v-model="filtros.buscar" type="text" placeholder="Palabra clave..." class="mt-1 block w-full text-sm" />
+                    </div>
+                    <div>
+                        <InputLabel value="Fecha desde" class="!text-xs" />
+                        <TextInput v-model="filtros.fecha_desde" type="date" class="mt-1 block w-full text-sm" />
+                    </div>
+                    <div>
+                        <InputLabel value="Fecha hasta" class="!text-xs" />
+                        <TextInput v-model="filtros.fecha_hasta" type="date" class="mt-1 block w-full text-sm" />
+                    </div>
+                    <div class="flex gap-2">
+                        <PrimaryButton type="submit" class="!text-xs !px-3 !py-1.5" :disabled="filtros.processing">Buscar</PrimaryButton>
+                        <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="limpiarFiltros">Limpiar</SecondaryButton>
+                    </div>
+                </form>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg p-3">
