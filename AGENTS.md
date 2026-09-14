@@ -397,6 +397,7 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - **Órdenes de pago anuladas generaban residuos**: el movimiento de anulación ahora guarda `referencia_tipo='orden_pago'` y `referencia_id`, permitiendo limpiar movimientos huérfanos.
 - **Créditos de OP en cuenta corriente**: se excluyen las órdenes de pago con estado `anulada` y las de total 0; notas de crédito se muestran en rojo con importe negativo.
 - **Libro Diario no listaba cuentas del PASIVO**: el filtro de cuenta ahora devuelve todas las cuentas reales (`cuenta`, `subcuenta`, `cuenta_madre`) en lugar de depender únicamente del flag `contabilizable`.
+- **Opciones de error en recepción de pedidos**: en la pantalla de manifiesto se dejan solo `bultos`, `palets`, `roturas` y `bultos_abiertos`; se quitan `remitente`, `destinatario` y `valor_declarado`. El backend valida el nuevo set de valores.
 
 #### Commands / tools
 - `proveedores:reparar-op [cuenta_id] [--dry-run]` — elimina movimientos de cuenta corriente huérfanos de órdenes de pago eliminadas/anuladas.
@@ -408,6 +409,8 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/app/Http/Controllers/Finanzas/LibroDiarioController.php`
 - `laravel/resources/js/Pages/Compras/Proveedores/CuentaCorriente/Show.vue`
 - `laravel/app/Console/Commands/RepararOrdenesPagoProveedores.php`
+- `laravel/resources/js/Pages/Operacion/Manifiestos/Show.vue` — opciones de error en recepción de pedidos
+- `laravel/app/Http/Controllers/Operacion/PedidoRecepcionControlController.php` — validación de opciones de error
 
 ### Pending / Known issues
 
