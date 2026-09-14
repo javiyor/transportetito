@@ -390,6 +390,25 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 6. $mailer->enviarSiCorresponde
 7. Redirect a facturacion.manifiestos.index
 
+### Session log (Sep 2026)
+
+#### Bugs found and fixed
+- **Comprobantes de proveedor pagos seguían visibles**: el cálculo de `pagado_total` ahora usa las `aplicaciones` de las órdenes de pago emitidas en lugar del formato antiguo de `detalle->proveedor_comprobante_id`/`comprobante_ids`. Los comprobantes con saldo 0 se filtran de la tabla de cuenta corriente.
+- **Órdenes de pago anuladas generaban residuos**: el movimiento de anulación ahora guarda `referencia_tipo='orden_pago'` y `referencia_id`, permitiendo limpiar movimientos huérfanos.
+- **Créditos de OP en cuenta corriente**: se excluyen las órdenes de pago con estado `anulada` y las de total 0; notas de crédito se muestran en rojo con importe negativo.
+- **Libro Diario no listaba cuentas del PASIVO**: el filtro de cuenta ahora devuelve todas las cuentas reales (`cuenta`, `subcuenta`, `cuenta_madre`) en lugar de depender únicamente del flag `contabilizable`.
+
+#### Commands / tools
+- `proveedores:reparar-op [cuenta_id] [--dry-run]` — elimina movimientos de cuenta corriente huérfanos de órdenes de pago eliminadas/anuladas.
+
+#### Relevant files (new / modified)
+- `laravel/app/Http/Controllers/Compras/ProveedorCuentaCorrienteShowController.php`
+- `laravel/app/Http/Controllers/Compras/ProveedorOrdenPagoStoreController.php`
+- `laravel/app/Http/Controllers/Compras/ProveedorOrdenPagoAnularController.php`
+- `laravel/app/Http/Controllers/Finanzas/LibroDiarioController.php`
+- `laravel/resources/js/Pages/Compras/Proveedores/CuentaCorriente/Show.vue`
+- `laravel/app/Console/Commands/RepararOrdenesPagoProveedores.php`
+
 ### Pending / Known issues
 
 - Delivery.vue muestra `saldo_pendiente` pero falta verificar con datos reales.
