@@ -40,21 +40,19 @@ class ProveedorCuentaCorrienteShowController extends Controller
                 return $m;
             });
 
+        $ordenesPagoEmitidas = OrdenPago::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'emitida')
+            ->get(['id', 'detalle', 'estado']);
+
         $comprobantes = ProveedorComprobante::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)
             ->orderByDesc('fecha_emision')
             ->orderByDesc('id')
             ->get()
-            ->map(function (ProveedorComprobante $comprobante) use ($empresaId) {
-                $pagado = (float) OrdenPago::query()
-                    ->where('empresa_id', $empresaId)
-                    ->where('estado', 'emitida')
-                    ->where(function ($q) use ($comprobante) {
-                        $q->whereJsonContains('detalle->proveedor_comprobante_id', $comprobante->id)
-                            ->orWhereJsonContains('detalle->comprobante_ids', $comprobante->id);
-                    })
-                    ->get()
+            ->map(function (ProveedorComprobante $comprobante) use ($ordenesPagoEmitidas) {
+                $pagado = (float) $ordenesPagoEmitidas
                     ->sum(fn (OrdenPago $op) => collect($op->detalle['aplicaciones'] ?? [])
                         ->where('proveedor_comprobante_id', (int) $comprobante->id)
                         ->sum('importe'));
@@ -65,15 +63,19 @@ class ProveedorCuentaCorrienteShowController extends Controller
 
                 $comprobante->setAttribute('pagado_total', round($pagado, 2));
                 $comprobante->setAttribute('saldo_pendiente', $esCredito ? (-1 * abs($saldo)) : $saldo);
+                $comprobante->setAttribute('total_signed', $esCredito ? (-1 * abs((float) $comprobante->total)) : (float) $comprobante->total);
 
                 return $comprobante;
-            });
+            })
+            ->filter(fn (ProveedorComprobante $c) => (float) $c->saldo_pendiente !== 0.0)
+            ->values();
 
         $opCredits = OrdenPago::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)
+            ->where('estado', '!=', 'anulada')
             ->get()
-            ->filter(fn (OrdenPago $op) => empty($op->detalle['comprobante_ids'] ?? []))
+            ->filter(fn (OrdenPago $op) => empty($op->detalle['comprobante_ids'] ?? []) && (float) $op->total !== 0.0)
             ->map(function (OrdenPago $op) {
                 return (object) [
                     'id' => 'op_credit_'.$op->id,

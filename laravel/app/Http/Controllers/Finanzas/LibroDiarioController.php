@@ -49,9 +49,9 @@ class LibroDiarioController extends Controller
             'cuentasContables' => CuentaContable::query()
                 ->where('empresa_id', $empresaId)
                 ->where('activo', true)
-                ->where('contabilizable', true)
+                ->whereIn('nivel', ['cuenta', 'subcuenta', 'cuenta_madre'])
                 ->orderBy('codigo')
-                ->get(['id', 'codigo', 'codigo_completo', 'nombre']),
+                ->get(['id', 'codigo', 'codigo_completo', 'nombre', 'nivel']),
             'filtros' => [
                 'fecha_desde' => $request->query('fecha_desde', now()->startOfMonth()->toDateString()),
                 'fecha_hasta' => $request->query('fecha_hasta', now()->toDateString()),

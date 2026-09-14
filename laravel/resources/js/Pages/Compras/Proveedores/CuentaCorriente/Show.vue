@@ -119,6 +119,22 @@ const chequesFiltrados = computed(() => {
         .map(i => Number(i.cheque_id));
     return (props.chequesDisponibles || []).filter(ch => !usadoIds.includes(ch.id));
 });
+
+const esNotaCredito = (c) => {
+    const t = String(c.tipo || '').toLowerCase();
+    return t.startsWith('nc') || t.startsWith('nota_credito') || t.startsWith('ajuste_credito');
+};
+
+const claseMonto = (c, base = 'text-gray-900') => {
+    if (c.is_credit) return 'text-green-600';
+    if (esNotaCredito(c)) return 'text-red-600';
+    return base;
+};
+
+const totalConSigno = (c) => {
+    const t = parseFloat(c.total) || 0;
+    return esNotaCredito(c) ? -Math.abs(t) : t;
+};
 </script>
 
 <template>
@@ -157,7 +173,16 @@ const chequesFiltrados = computed(() => {
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a pagar / creditos (opcional)</legend>
                             <table v-if="comprobantesPendientes.length" class="w-full text-xs">
                                 <thead><tr class="text-gray-500"><th class="text-left pr-2 py-0.5">Fecha</th><th class="text-left pr-2 py-0.5">Tipo</th><th class="text-left pr-2 py-0.5">Numero</th><th class="text-right pr-2 py-0.5">Total</th><th class="text-right py-0.5">Saldo</th><th class="w-4 py-0.5"></th></tr></thead>
-                                <tbody><tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50"><td class="pr-2 py-0.5 text-gray-500">{{ formatFecha(c.fecha_emision) }}</td><td class="pr-2 py-0.5" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td><td class="pr-2 py-0.5 font-mono" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ c.numero || '-' }}</td><td class="pr-2 py-0.5 text-right" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="pr-2 py-0.5 text-right font-semibold" :class="c.is_credit ? 'text-green-600' : 'text-gray-900'">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td></tr></tbody>
+                                <tbody>
+                                    <tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50">
+                                        <td class="pr-2 py-0.5 text-gray-500">{{ formatFecha(c.fecha_emision) }}</td>
+                                        <td class="pr-2 py-0.5" :class="claseMonto(c, 'text-gray-700') + ' font-medium'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td>
+                                        <td class="pr-2 py-0.5 font-mono" :class="claseMonto(c, 'text-gray-700')">{{ c.numero || '-' }}</td>
+                                        <td class="pr-2 py-0.5 text-right" :class="claseMonto(c, 'text-gray-700')">{{ c.moneda }} {{ formatNum(totalConSigno(c)) }}</td>
+                                        <td class="pr-2 py-0.5 text-right font-semibold" :class="claseMonto(c, 'text-gray-900')">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td>
+                                        <td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td>
+                                    </tr>
+                                </tbody>
                             </table>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-1">Sin comprobantes ni creditos disponibles</div>
                         <div v-if="form.comprobante_ids.length" class="mt-1 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-1">
@@ -245,7 +270,35 @@ const chequesFiltrados = computed(() => {
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
                 <div class="p-3 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Comprobantes proveedor</h3></div>
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pagado</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id" :class="{'bg-green-50': c.is_credit}"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-4 py-2 text-sm" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td><td class="px-4 py-2 text-sm text-gray-700 font-mono">{{ c.numero || '-' }}</td><td class="px-4 py-2 text-sm text-right font-semibold" :class="c.is_credit ? 'text-green-600' : 'text-gray-900'">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-4 py-2 text-sm text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.pagado_total) }}</td><td class="px-4 py-2 text-sm text-right font-semibold" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table></div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pagado</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="c in comprobantes" :key="c.id" :class="{'bg-green-50': c.is_credit}">
+                                <td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
+                                <td class="px-4 py-2 text-sm" :class="claseMonto(c, 'text-gray-700') + ' font-medium'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td>
+                                <td class="px-4 py-2 text-sm font-mono" :class="claseMonto(c, 'text-gray-700')">{{ c.numero || '-' }}</td>
+                                <td class="px-4 py-2 text-sm text-right font-semibold" :class="claseMonto(c, 'text-gray-900')">{{ c.moneda }} {{ formatNum(totalConSigno(c)) }}</td>
+                                <td class="px-4 py-2 text-sm text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.pagado_total) }}</td>
+                                <td class="px-4 py-2 text-sm text-right font-semibold" :class="claseMonto(c, 'text-gray-700')">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td>
+                                <td class="px-4 py-2 text-right text-sm">
+                                    <Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.show', c.id)">Ver</Link>
+                                    <span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">

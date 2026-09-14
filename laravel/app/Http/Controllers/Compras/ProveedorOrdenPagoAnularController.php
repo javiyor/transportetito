@@ -46,6 +46,8 @@ class ProveedorOrdenPagoAnularController extends Controller
                     'moneda' => $m->moneda,
                     'cotizacion_ars' => $m->cotizacion_ars,
                     'importe_signed' => (-1 * (float) $m->importe_signed),
+                    'referencia_tipo' => 'orden_pago',
+                    'referencia_id' => $ordenPago->id,
                     'observacion' => 'Anulacion OP #'.$ordenPago->id.': '.$request->motivo,
                 ]);
             }
