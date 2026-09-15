@@ -398,6 +398,8 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - **Créditos de OP en cuenta corriente**: se excluyen las órdenes de pago con estado `anulada` y las de total 0; notas de crédito se muestran en rojo con importe negativo.
 - **Libro Diario no listaba cuentas del PASIVO**: el filtro de cuenta ahora devuelve todas las cuentas reales (`cuenta`, `subcuenta`, `cuenta_madre`) en lugar de depender únicamente del flag `contabilizable`.
 - **Opciones de error en recepción de pedidos**: en la pantalla de manifiesto se dejan solo `bultos`, `palets`, `roturas` y `bultos_abiertos`; se quitan `remitente`, `destinatario` y `valor_declarado`. El backend valida el nuevo set de valores.
+- **Importador de envíos por hojaderuta**: el importador ya no agrupa por fecha/deposito, sino que crea un manifiesto por cada envío (`hojaderuta`) con origen/destino reales (Santa Fe, Buenos Aires, etc.). Se agregó `external_envio_id` a `manifiestos_ingreso` y se filtra el listado por empresa.
+- **Command `manifiestos:migrar-a-envios`**: reorganiza pedidos ya importados bajo manifiestos por envío y borra manifiestos vacíos.
 
 #### Commands / tools
 - `proveedores:reparar-op [cuenta_id] [--dry-run]` — elimina movimientos de cuenta corriente huérfanos de órdenes de pago eliminadas/anuladas.
@@ -411,6 +413,9 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/app/Console/Commands/RepararOrdenesPagoProveedores.php`
 - `laravel/resources/js/Pages/Operacion/Manifiestos/Show.vue` — opciones de error en recepción de pedidos
 - `laravel/app/Http/Controllers/Operacion/PedidoRecepcionControlController.php` — validación de opciones de error
+- `laravel/app/Services/Import/ExternalCargaImporter.php` — importa envíos desde `hojaderuta`
+- `laravel/app/Http/Controllers/Operacion/ManifiestoIngresoController.php` — listado filtra por empresa
+- `laravel/app/Console/Commands/MigrarManifiestosAEnvios.php` — migración a manifiestos por envío
 
 ### Pending / Known issues
 
