@@ -123,8 +123,8 @@ const applyFilters = () => {
                     <div class="flex items-center justify-between text-sm">
                         <span class="text-gray-500">Pág. {{ movimientos.current_page }} de {{ movimientos.last_page }} ({{ movimientos.total }} movs.)</span>
                         <div class="flex gap-2">
-                            <Link v-if="movimientos.prev_page_url" :href="movimientos.prev_page_url" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50">Anterior</Link>
-                            <Link v-if="movimientos.next_page_url" :href="movimientos.next_page_url" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50">Siguiente</Link>
+                            <a v-if="movimientos.prev_page_url" :href="movimientos.prev_page_url" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50">Anterior</a>
+                            <a v-if="movimientos.next_page_url" :href="movimientos.next_page_url" class="px-3 py-1 bg-white border rounded-md hover:bg-gray-50">Siguiente</a>
                         </div>
                     </div>
                 </div>
