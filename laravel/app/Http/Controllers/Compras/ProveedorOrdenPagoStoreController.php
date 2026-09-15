@@ -151,18 +151,25 @@ class ProveedorOrdenPagoStoreController extends Controller
                 }
             }
 
-            // Total a aplicar: ítems de pago + créditos disponibles
-            $total = round($totalItems + min($saldoComprobantesTotal, $creditoTotalDisponible), 2);
+            // Calcular cuánto crédito se necesita para cubrir lo que no cubren los ítems de pago
+            $saldoRestante = max(0, round($saldoComprobantesTotal - $totalItems, 2));
+            $creditoAUsar = min($saldoRestante, $creditoTotalDisponible);
+            $total = round($totalItems + $creditoAUsar, 2);
 
-            // Crear aplicaciones para comprobantes (hasta el total disponible)
+            // Crear aplicaciones para comprobantes
+            // Si el total es 0 (compensación entre comprobantes), se aplican los saldos completos.
             $aplicaciones = [];
             $aplicadoTotal = 0.0;
             foreach ($comprobantesPendientes as $pend) {
-                $restante = round($total - $aplicadoTotal, 2);
-                if ($restante <= 0) {
-                    break;
+                if ($total > 0) {
+                    $restante = round($total - $aplicadoTotal, 2);
+                    if ($restante <= 0) {
+                        break;
+                    }
+                    $aplicar = min($pend['saldo'], $restante);
+                } else {
+                    $aplicar = $pend['saldo'];
                 }
-                $aplicar = min($pend['saldo'], $restante);
                 $aplicaciones[] = [
                     'proveedor_comprobante_id' => $pend['comp']->id,
                     'importe' => $aplicar,

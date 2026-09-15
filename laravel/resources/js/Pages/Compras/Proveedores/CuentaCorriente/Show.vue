@@ -77,7 +77,12 @@ const submit = () => {
     } else if (selectedComprobantesTotal.value < 0) {
         if (!confirm('El total seleccionado es negativo (créditos mayores a facturas). Se aplicarán parcialmente los créditos. ¿Confirmar?')) return;
     }
-    form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), { preserveScroll: true });
+    form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), {
+        preserveScroll: true,
+        onError: () => {
+            // Los errores quedan en form.errors y se muestran en la UI
+        },
+    });
 };
 
 const eliminarOrdenPago = (o) => {
@@ -259,9 +264,14 @@ const saldoPendienteTotal = computed(() => {
                         <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="agregarItem">+ Agregar medio</SecondaryButton>
                     </div>
 
-                    <div class="flex items-center justify-between">
-                        <div class="text-sm font-semibold text-gray-900">Total: {{ formatNum(totalPago) }}</div>
-                        <PrimaryButton :disabled="form.processing" @click="submit">Guardar orden de pago</PrimaryButton>
+                    <div class="space-y-2">
+                        <div v-if="form.errors.comprobante_ids" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ form.errors.comprobante_ids }}</div>
+                        <div v-if="form.errors.items" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ form.errors.items }}</div>
+                        <div v-if="form.errors['items.0.importe']" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ form.errors['items.0.importe'] }}</div>
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm font-semibold text-gray-900">Total: {{ formatNum(totalPago) }}</div>
+                            <PrimaryButton :disabled="form.processing" @click="submit">Guardar orden de pago</PrimaryButton>
+                        </div>
                     </div>
                 </div>
             </div>
