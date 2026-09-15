@@ -35,6 +35,11 @@ const secciones = [
     },
 ];
 
+const filtrosPorSeccion = {
+    propio: filtrosPropios,
+    tercero: filtrosTerceros,
+};
+
 const showForm = ref(false);
 const createForm = useForm({
     tipo: 'fisico',
@@ -171,80 +176,6 @@ const formatFecha = (v) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
-            <div class="bg-white shadow sm:rounded-lg p-4 space-y-3">
-                <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Propios</div>
-                <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
-                    <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
-                        <select v-model="filtrosPropios.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                            <option value="">Todos</option>
-                            <option value="en_cartera">En cartera</option>
-                            <option value="depositado">Depositado</option>
-                            <option value="cobrado">Cobrado</option>
-                            <option value="rechazado">Rechazado</option>
-                            <option value="endosado">Endosado</option>
-                            <option value="anulado">Anulado</option>
-                        </select>
-                    </div>
-                    <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Tipo</div>
-                        <select v-model="filtrosPropios.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                            <option value="">Todos</option>
-                            <option value="fisico">Físico</option>
-                            <option value="echeq">E-Cheq</option>
-                        </select>
-                    </div>
-                    <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
-                        <TextInput v-model="filtrosPropios.desde" type="date" class="block w-full" />
-                    </div>
-                    <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Hasta</div>
-                        <TextInput v-model="filtrosPropios.hasta" type="date" class="block w-full" />
-                    </div>
-                    <div>
-                        <PrimaryButton class="w-full sm:w-auto" @click="applyFilters">Filtrar</PrimaryButton>
-                    </div>
-                </div>
-
-                <div class="border-t border-gray-100 pt-3">
-                    <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Terceros</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end mt-1">
-                        <div>
-                            <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
-                            <select v-model="filtrosTerceros.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                <option value="">Todos</option>
-                                <option value="en_cartera">En cartera</option>
-                                <option value="depositado">Depositado</option>
-                                <option value="cobrado">Cobrado</option>
-                                <option value="rechazado">Rechazado</option>
-                                <option value="endosado">Endosado</option>
-                                <option value="anulado">Anulado</option>
-                            </select>
-                        </div>
-                        <div>
-                            <div class="text-xs font-medium text-gray-700 mb-1">Tipo</div>
-                            <select v-model="filtrosTerceros.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                <option value="">Todos</option>
-                                <option value="fisico">Físico</option>
-                                <option value="echeq">E-Cheq</option>
-                            </select>
-                        </div>
-                        <div>
-                            <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
-                            <TextInput v-model="filtrosTerceros.desde" type="date" class="block w-full" />
-                        </div>
-                        <div>
-                            <div class="text-xs font-medium text-gray-700 mb-1">Hasta</div>
-                            <TextInput v-model="filtrosTerceros.hasta" type="date" class="block w-full" />
-                        </div>
-                        <div>
-                            <PrimaryButton class="w-full sm:w-auto" @click="applyFilters">Filtrar</PrimaryButton>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="flex justify-end">
                 <PrimaryButton @click="showForm = !showForm">{{ showForm ? 'Cancelar' : '+ Nuevo cheque' }}</PrimaryButton>
             </div>
@@ -329,12 +260,34 @@ const formatFecha = (v) => {
             </div>
 
             <div v-for="seccion in secciones" :key="seccion.key" class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="px-4 py-2 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                    <h3 class="font-semibold text-sm text-gray-900">{{ seccion.titulo }}</h3>
-                    <div class="flex gap-3 text-xs">
-                        <span class="font-medium text-gray-700">Físico: <span class="font-mono">{{ seccion.totales.fisico.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
-                        <span class="font-medium text-gray-700">E-Cheq: <span class="font-mono">{{ seccion.totales.echeq.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
-                        <span class="font-medium text-gray-900">Total: <span class="font-mono">{{ (seccion.totales.fisico + seccion.totales.echeq).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                <div class="px-3 py-2 border-b border-gray-200 space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="font-semibold text-sm text-gray-900">{{ seccion.titulo }}</h3>
+                        <div class="flex gap-2 text-xs">
+                            <span class="font-medium text-gray-700">Físico: <span class="font-mono">{{ seccion.totales.fisico.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                            <span class="font-medium text-gray-700">E-Cheq: <span class="font-mono">{{ seccion.totales.echeq.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                            <span class="font-medium text-gray-900">Total: <span class="font-mono">{{ (seccion.totales.fisico + seccion.totales.echeq).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[10px] font-medium text-gray-500 uppercase">Filtro</span>
+                        <select v-model="filtrosPorSeccion[seccion.key].estado" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
+                            <option value="">Estado</option>
+                            <option value="en_cartera">En cartera</option>
+                            <option value="depositado">Depositado</option>
+                            <option value="cobrado">Cobrado</option>
+                            <option value="rechazado">Rechazado</option>
+                            <option value="endosado">Endosado</option>
+                            <option value="anulado">Anulado</option>
+                        </select>
+                        <select v-model="filtrosPorSeccion[seccion.key].tipo" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
+                            <option value="">Tipo</option>
+                            <option value="fisico">Físico</option>
+                            <option value="echeq">E-Cheq</option>
+                        </select>
+                        <input v-model="filtrosPorSeccion[seccion.key].desde" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                        <input v-model="filtrosPorSeccion[seccion.key].hasta" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                        <SecondaryButton class="!text-[10px] !px-2 !py-0.5" @click="applyFilters">Filtrar</SecondaryButton>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
