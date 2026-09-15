@@ -23,25 +23,26 @@ class ChequeController extends Controller
             $baseQuery->where('empresa_id', $empresaId);
         }
 
-        if ($estado = $request->query('estado')) {
-            $baseQuery->where('estado', $estado);
-        }
-
-        if ($tipo = $request->query('tipo')) {
-            $baseQuery->where('tipo', $tipo);
-        }
-
-        // El origen ya no se filtra acá porque se muestran listas separadas.
-        if ($desde = $request->query('desde')) {
-            $baseQuery->whereDate('fecha_emision', '>=', $desde);
-        }
-
-        if ($hasta = $request->query('hasta')) {
-            $baseQuery->whereDate('fecha_emision', '<=', $hasta);
-        }
+        $aplicarFiltros = function ($query, $prefijo) use ($request) {
+            if ($estado = $request->query($prefijo.'_estado')) {
+                $query->where('estado', $estado);
+            }
+            if ($tipo = $request->query($prefijo.'_tipo')) {
+                $query->where('tipo', $tipo);
+            }
+            if ($desde = $request->query($prefijo.'_desde')) {
+                $query->whereDate('fecha_emision', '>=', $desde);
+            }
+            if ($hasta = $request->query($prefijo.'_hasta')) {
+                $query->whereDate('fecha_emision', '<=', $hasta);
+            }
+        };
 
         $queryPropios = (clone $baseQuery)->where('origen', 'propio');
+        $aplicarFiltros($queryPropios, 'p');
+
         $queryTerceros = (clone $baseQuery)->where('origen', 'tercero');
+        $aplicarFiltros($queryTerceros, 't');
 
         $totalesPropios = [
             'fisico' => round((float) (clone $queryPropios)->where('tipo', 'fisico')->sum('importe'), 2),
@@ -63,10 +64,18 @@ class ChequeController extends Controller
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
             'filtros' => [
-                'estado' => $request->query('estado') ?: '',
-                'tipo' => $request->query('tipo') ?: '',
-                'desde' => $request->query('desde') ?: '',
-                'hasta' => $request->query('hasta') ?: '',
+                'propios' => [
+                    'estado' => $request->query('p_estado') ?: '',
+                    'tipo' => $request->query('p_tipo') ?: '',
+                    'desde' => $request->query('p_desde') ?: '',
+                    'hasta' => $request->query('p_hasta') ?: '',
+                ],
+                'terceros' => [
+                    'estado' => $request->query('t_estado') ?: '',
+                    'tipo' => $request->query('t_tipo') ?: '',
+                    'desde' => $request->query('t_desde') ?: '',
+                    'hasta' => $request->query('t_hasta') ?: '',
+                ],
             ],
             'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);

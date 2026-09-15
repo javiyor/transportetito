@@ -96,19 +96,30 @@ const submitEdit = () => {
     });
 };
 
-const filterForm = useForm({
-    estado: props.filtros.estado,
-    tipo: props.filtros.tipo,
-    desde: props.filtros.desde,
-    hasta: props.filtros.hasta,
+const filtrosPropios = useForm({
+    estado: props.filtros.propios.estado,
+    tipo: props.filtros.propios.tipo,
+    desde: props.filtros.propios.desde,
+    hasta: props.filtros.propios.hasta,
+});
+
+const filtrosTerceros = useForm({
+    estado: props.filtros.terceros.estado,
+    tipo: props.filtros.terceros.tipo,
+    desde: props.filtros.terceros.desde,
+    hasta: props.filtros.terceros.hasta,
 });
 
 const applyFilters = () => {
     router.get(route('admin.cheques.index'), {
-        ...(filterForm.estado && { estado: filterForm.estado }),
-        ...(filterForm.tipo && { tipo: filterForm.tipo }),
-        ...(filterForm.desde && { desde: filterForm.desde }),
-        ...(filterForm.hasta && { hasta: filterForm.hasta }),
+        ...(filtrosPropios.estado && { p_estado: filtrosPropios.estado }),
+        ...(filtrosPropios.tipo && { p_tipo: filtrosPropios.tipo }),
+        ...(filtrosPropios.desde && { p_desde: filtrosPropios.desde }),
+        ...(filtrosPropios.hasta && { p_hasta: filtrosPropios.hasta }),
+        ...(filtrosTerceros.estado && { t_estado: filtrosTerceros.estado }),
+        ...(filtrosTerceros.tipo && { t_tipo: filtrosTerceros.tipo }),
+        ...(filtrosTerceros.desde && { t_desde: filtrosTerceros.desde }),
+        ...(filtrosTerceros.hasta && { t_hasta: filtrosTerceros.hasta }),
         ...(props.empresaId && { empresa_id: props.empresaId }),
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
@@ -160,11 +171,12 @@ const formatFecha = (v) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
+            <div class="bg-white shadow sm:rounded-lg p-4 space-y-3">
+                <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Propios</div>
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
-                        <select v-model="filterForm.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <select v-model="filtrosPropios.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">Todos</option>
                             <option value="en_cartera">En cartera</option>
                             <option value="depositado">Depositado</option>
@@ -176,7 +188,7 @@ const formatFecha = (v) => {
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Tipo</div>
-                        <select v-model="filterForm.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <select v-model="filtrosPropios.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">Todos</option>
                             <option value="fisico">Físico</option>
                             <option value="echeq">E-Cheq</option>
@@ -184,14 +196,51 @@ const formatFecha = (v) => {
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
-                        <TextInput v-model="filterForm.desde" type="date" class="block w-full" />
+                        <TextInput v-model="filtrosPropios.desde" type="date" class="block w-full" />
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Hasta</div>
-                        <TextInput v-model="filterForm.hasta" type="date" class="block w-full" />
+                        <TextInput v-model="filtrosPropios.hasta" type="date" class="block w-full" />
                     </div>
                     <div>
-                        <PrimaryButton @click="applyFilters">Filtrar</PrimaryButton>
+                        <PrimaryButton class="w-full sm:w-auto" @click="applyFilters">Filtrar</PrimaryButton>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-3">
+                    <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Terceros</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end mt-1">
+                        <div>
+                            <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
+                            <select v-model="filtrosTerceros.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                <option value="">Todos</option>
+                                <option value="en_cartera">En cartera</option>
+                                <option value="depositado">Depositado</option>
+                                <option value="cobrado">Cobrado</option>
+                                <option value="rechazado">Rechazado</option>
+                                <option value="endosado">Endosado</option>
+                                <option value="anulado">Anulado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-700 mb-1">Tipo</div>
+                            <select v-model="filtrosTerceros.tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                <option value="">Todos</option>
+                                <option value="fisico">Físico</option>
+                                <option value="echeq">E-Cheq</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-700 mb-1">Desde</div>
+                            <TextInput v-model="filtrosTerceros.desde" type="date" class="block w-full" />
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-700 mb-1">Hasta</div>
+                            <TextInput v-model="filtrosTerceros.hasta" type="date" class="block w-full" />
+                        </div>
+                        <div>
+                            <PrimaryButton class="w-full sm:w-auto" @click="applyFilters">Filtrar</PrimaryButton>
+                        </div>
                     </div>
                 </div>
             </div>
