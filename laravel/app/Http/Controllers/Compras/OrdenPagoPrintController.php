@@ -17,15 +17,21 @@ class OrdenPagoPrintController extends Controller
 
         $ordenPago->load('cuenta.tercero:id,cuit,razon_social');
 
-        $comprobante = null;
-        $compId = $ordenPago->detalle['proveedor_comprobante_id'] ?? null;
-        if ($compId) {
-            $comprobante = ProveedorComprobante::query()->find($compId);
-        }
+        $aplicaciones = collect($ordenPago->detalle['aplicaciones'] ?? []);
+        $comprobanteIds = $aplicaciones->pluck('proveedor_comprobante_id')->filter()->unique()->values()->all();
+        $comprobantes = $comprobanteIds
+            ? ProveedorComprobante::query()->whereIn('id', $comprobanteIds)->get()->keyBy('id')
+            : collect();
+
+        $aplicacionesConComprobante = $aplicaciones->map(function ($a) use ($comprobantes) {
+            $a['comprobante'] = $comprobantes[$a['proveedor_comprobante_id']] ?? null;
+            return $a;
+        });
 
         return response()->view('compras.proveedores.ordenes_pago.print', [
             'ordenPago' => $ordenPago,
-            'comprobante' => $comprobante,
+            'aplicaciones' => $aplicacionesConComprobante,
+            'items' => collect($ordenPago->detalle['items'] ?? []),
             'empresa' => Empresa::query()->find($empresaId),
         ]);
     }
