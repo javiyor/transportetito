@@ -46,6 +46,12 @@ class ProveedorOrdenPagoStoreController extends Controller
         $empresa = $cuenta->empresa()->firstOrFail();
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
 
+        Log::info('OP proveedor store inicio', [
+            'cuenta_id' => $cuenta->id,
+            'comprobante_ids' => $data['comprobante_ids'] ?? [],
+            'items' => $data['items'] ?? [],
+        ]);
+
         // Separar comprobantes reales de créditos de OP
         $comprobanteIds = [];
         $creditOpIds = [];
@@ -265,6 +271,13 @@ class ProveedorOrdenPagoStoreController extends Controller
                 'referencia_tipo' => 'orden_pago',
                 'referencia_id' => $orden->id,
                 'observacion' => $data['observacion'] ?: 'Orden de pago '.$orden->id,
+            ]);
+
+            Log::info('OP proveedor store creada', [
+                'orden_pago_id' => $orden->id,
+                'total' => $total,
+                'aplicaciones' => $aplicaciones,
+                'compensaciones' => $compensaciones,
             ]);
 
             try {
