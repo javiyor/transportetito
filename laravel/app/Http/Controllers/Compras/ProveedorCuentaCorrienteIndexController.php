@@ -43,7 +43,7 @@ class ProveedorCuentaCorrienteIndexController extends Controller
         $movs = CtaCteMovimiento::query()
             ->where('empresa_id', $empresaId)
             ->whereIn('tercero_cuenta_id', $cuentas->pluck('id'))
-            ->whereIn('tipo', ['factura_proveedor', 'pago_proveedor'])
+            ->whereIn('tipo', ['factura_proveedor', 'pago_proveedor', 'anulacion_op'])
             ->get()
             ->groupBy('tercero_cuenta_id');
 
