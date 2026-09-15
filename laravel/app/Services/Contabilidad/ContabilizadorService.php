@@ -249,13 +249,40 @@ class ContabilizadorService
                 'descripcion' => 'Pago a proveedor: OP #'.$ordenPago->numero_interno,
             ]);
 
+            $mapaClaveMedio = [
+                'efectivo' => 'medio_pago.efectivo',
+                'cheque_propio' => 'medio_pago.cheque_propio',
+                'cheque_tercero' => 'medio_pago.cheque_tercero',
+                'transferencia' => 'medio_pago.transferencia',
+                'echeq' => 'medio_pago.echeq',
+                'tarjeta' => 'medio_pago.tarjeta',
+            ];
+
             foreach ($itemsEfectivos as $item) {
-                $claveMedio = 'medio_pago.'.$item['medio'];
-                $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+                $medio = $item['medio'] ?? '';
+                $claveMedio = $mapaClaveMedio[$medio] ?? null;
+
+                if (! $claveMedio) {
+                    Log::warning("OP #{$ordenPago->id}: medio de pago '{$medio}' sin mapeo contable.");
+                    continue;
+                }
+
+                $cuentaMedio = $empresa->getCuentaContable($claveMedio);
+
+                // Solo efectivo puede caer en caja_default como fallback; cheques/transferencias deben tener su cuenta configurada.
+                if (! $cuentaMedio && $medio === 'efectivo') {
+                    $cuentaMedio = $empresa->getCuentaContable('caja_default');
+                }
+
+                if (! $cuentaMedio) {
+                    Log::warning("OP #{$ordenPago->id}: no se encontró cuenta contable para medio '{$medio}' (clave {$claveMedio}).");
+                    continue;
+                }
+
                 $importe = (float) $item['importe'];
 
                 $this->addLinea($asiento, $cuentaProveedores, $ordenPago->cuenta, $importe, 0, 'Cancelacion deuda proveedor');
-                $this->addLinea($asiento, $cuentaMedio, null, 0, $importe, 'Pago via '.$item['medio']);
+                $this->addLinea($asiento, $cuentaMedio, null, 0, $importe, 'Pago via '.$medio);
             }
 
             return $asiento;
