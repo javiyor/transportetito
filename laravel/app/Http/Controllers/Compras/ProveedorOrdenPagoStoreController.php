@@ -160,15 +160,19 @@ class ProveedorOrdenPagoStoreController extends Controller
             // Calcular cuánto crédito se necesita para cubrir lo que no cubren los ítems de pago
             $saldoRestante = max(0, round($saldoComprobantesTotal - $totalItems, 2));
             $creditoAUsar = min($saldoRestante, $creditoTotalDisponible);
-            $total = round($totalItems + $creditoAUsar, 2);
+
+            // $totalAplicar: todo lo que se imputa a facturas (efectivo + crédito)
+            // $total: solo el efectivo que sale (lo que se muestra en la OP y en CtaCte)
+            $totalAplicar = round($totalItems + $creditoAUsar, 2);
+            $total = round($totalItems, 2);
 
             // Crear aplicaciones para comprobantes
-            // Si el total es 0 (compensación entre comprobantes), se aplican los saldos completos.
+            // Si no hay efectivo ni crédito (compensación entre comprobantes), se aplican los saldos completos.
             $aplicaciones = [];
             $aplicadoTotal = 0.0;
             foreach ($comprobantesPendientes as $pend) {
-                if ($total > 0) {
-                    $restante = round($total - $aplicadoTotal, 2);
+                if ($totalAplicar > 0) {
+                    $restante = round($totalAplicar - $aplicadoTotal, 2);
                     if ($restante <= 0) {
                         break;
                     }
