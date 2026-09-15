@@ -69,6 +69,12 @@ const quitarItem = (idx) => {
 const esChequeTercero = (medio) => medio === 'cheque_tercero';
 const esChequePropio = (medio) => medio === 'cheque_propio';
 
+const comprobanteIdsErrors = computed(() => {
+    return Object.entries(form.errors || {})
+        .filter(([key]) => key.startsWith('comprobante_ids'))
+        .map(([, msg]) => msg);
+});
+
 const submit = () => {
     if (!form.comprobante_ids?.length) {
         if (!confirm('No seleccionaste comprobantes a pagar. ¿Emitir orden de pago igual?')) return;
@@ -77,6 +83,14 @@ const submit = () => {
     } else if (selectedComprobantesTotal.value < 0) {
         if (!confirm('El total seleccionado es negativo (créditos mayores a facturas). Se aplicarán parcialmente los créditos. ¿Confirmar?')) return;
     }
+
+    // Normalizar IDs a string y descartar ítems de pago vacíos
+    form.transform((data) => ({
+        ...data,
+        comprobante_ids: (data.comprobante_ids || []).map(id => String(id)),
+        items: (data.items || []).filter(i => i.importe !== '' && i.importe !== null && parseFloat(i.importe) > 0),
+    }));
+
     console.log('Enviando OP', form.data());
     form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), {
         preserveScroll: true,
@@ -218,7 +232,7 @@ const saldoPendienteTotal = computed(() => {
                                         <td class="pr-2 py-0.5 font-mono" :class="claseMonto(c, 'text-gray-700')">{{ c.numero || '-' }}</td>
                                         <td class="pr-2 py-0.5 text-right" :class="claseMonto(c, 'text-gray-700')">{{ c.moneda }} {{ formatNum(totalConSigno(c)) }}</td>
                                         <td class="pr-2 py-0.5 text-right font-semibold" :class="claseMonto(c, 'text-gray-900')">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td>
-                                        <td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td>
+                                        <td class="py-0.5"><input type="checkbox" :value="String(c.id)" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td>
                                     </tr>
                                 </tbody>
                                 <tfoot class="border-t border-gray-200">
@@ -270,6 +284,7 @@ const saldoPendienteTotal = computed(() => {
 
                     <div class="space-y-2">
                         <div v-if="form.errors.comprobante_ids" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ form.errors.comprobante_ids }}</div>
+                        <div v-for="(err, idx) in comprobanteIdsErrors" :key="idx" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ err }}</div>
                         <div v-if="form.errors.items" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ form.errors.items }}</div>
                         <div v-if="form.errors['items.0.importe']" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{{ form.errors['items.0.importe'] }}</div>
                         <div class="flex items-center justify-between">
