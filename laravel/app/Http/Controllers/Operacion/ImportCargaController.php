@@ -36,7 +36,7 @@ class ImportCargaController extends Controller
         abort_unless((int) $deposito->empresa_id === (int) $empresa->id, 422);
 
         try {
-            $result = $importer->importSince($empresa, $deposito, $request->validated('since'));
+            $result = $importer->importSince($empresa, $request->validated('since'), $deposito);
             $request->session()->flash('tt.import_result', $result);
         } catch (Throwable $e) {
             $request->session()->flash('tt.import_error', $e->getMessage());
