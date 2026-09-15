@@ -108,6 +108,7 @@ const importarManifiestos = () => {
                     <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border p-3" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'">
                         <div class="flex items-start justify-between gap-3">
                             <div>
+                                <div class="text-sm font-mono font-bold text-indigo-700">#{{ m.external_envio_id || m.id }}</div>
                                 <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
                                 <div class="text-xs text-gray-500">{{ m.chofer || '-' }} · {{ m.deposito?.nombre || '-' }}</div>
                             </div>
@@ -120,6 +121,7 @@ const importarManifiestos = () => {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Viaje</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <button @click="toggleOrden" class="inline-flex items-center gap-1 hover:text-gray-700">
                                         Fecha
@@ -133,6 +135,7 @@ const importarManifiestos = () => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="m in manifiestos.data" :key="m.id" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'">
+                                <td class="px-3 py-1.5 whitespace-nowrap font-mono text-xs text-indigo-700 font-bold">#{{ m.external_envio_id || m.id }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>

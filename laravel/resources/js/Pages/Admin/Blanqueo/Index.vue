@@ -52,6 +52,7 @@ const ejecutar = () => {
                     <label class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
                     <select v-model="empresaId" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" required>
                         <option value="">Seleccionar empresa...</option>
+                        <option value="all">Todas las empresas</option>
                         <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
                     </select>
                 </div>
@@ -64,7 +65,7 @@ const ejecutar = () => {
                 </div>
 
                 <div v-if="confirmando" class="border border-red-300 bg-red-50 rounded-lg p-4 mb-4">
-                    <p class="text-sm font-medium text-red-800 mb-3">Esta accion es irreversible. Confirma que deseas eliminar todos los datos de la empresa seleccionada?</p>
+                    <p class="text-sm font-medium text-red-800 mb-3">Esta accion es irreversible. Confirma que deseas eliminar todos los datos {{ empresaId === 'all' ? 'de TODAS las empresas' : 'de la empresa seleccionada' }}?</p>
                     <div class="flex gap-2">
                         <PrimaryButton class="!bg-red-600 hover:!bg-red-700" :disabled="procesando" @click="ejecutar">{{ procesando ? 'Blanqueando...' : 'Confirmar blanqueo' }}</PrimaryButton>
                         <SecondaryButton :disabled="procesando" @click="confirmando = false">Cancelar</SecondaryButton>
