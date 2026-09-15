@@ -31,10 +31,7 @@ class ChequeController extends Controller
             $baseQuery->where('tipo', $tipo);
         }
 
-        if ($origen = $request->query('origen')) {
-            $baseQuery->where('origen', $origen);
-        }
-
+        // El origen ya no se filtra acá porque se muestran listas separadas.
         if ($desde = $request->query('desde')) {
             $baseQuery->whereDate('fecha_emision', '>=', $desde);
         }
@@ -68,7 +65,6 @@ class ChequeController extends Controller
             'filtros' => [
                 'estado' => $request->query('estado') ?: '',
                 'tipo' => $request->query('tipo') ?: '',
-                'origen' => $request->query('origen') ?: '',
                 'desde' => $request->query('desde') ?: '',
                 'hasta' => $request->query('hasta') ?: '',
             ],

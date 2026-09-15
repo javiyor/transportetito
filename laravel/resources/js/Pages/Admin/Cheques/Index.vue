@@ -99,7 +99,6 @@ const submitEdit = () => {
 const filterForm = useForm({
     estado: props.filtros.estado,
     tipo: props.filtros.tipo,
-    origen: props.filtros.origen,
     desde: props.filtros.desde,
     hasta: props.filtros.hasta,
 });
@@ -108,7 +107,6 @@ const applyFilters = () => {
     router.get(route('admin.cheques.index'), {
         ...(filterForm.estado && { estado: filterForm.estado }),
         ...(filterForm.tipo && { tipo: filterForm.tipo }),
-        ...(filterForm.origen && { origen: filterForm.origen }),
         ...(filterForm.desde && { desde: filterForm.desde }),
         ...(filterForm.hasta && { hasta: filterForm.hasta }),
         ...(props.empresaId && { empresa_id: props.empresaId }),
@@ -182,14 +180,6 @@ const formatFecha = (v) => {
                             <option value="">Todos</option>
                             <option value="fisico">Físico</option>
                             <option value="echeq">E-Cheq</option>
-                        </select>
-                    </div>
-                    <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Origen</div>
-                        <select v-model="filterForm.origen" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                            <option value="">Todos</option>
-                            <option value="propio">Propio</option>
-                            <option value="tercero">Tercero</option>
                         </select>
                     </div>
                     <div>

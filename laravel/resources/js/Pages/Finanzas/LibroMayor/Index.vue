@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     cuentas: Array,
@@ -8,6 +9,16 @@ const props = defineProps({
     movimientos: Object,
     saldo: Object,
     filtros: Object,
+});
+
+const buscarCuenta = ref('');
+const cuentasFiltradas = computed(() => {
+    const q = buscarCuenta.value.trim().toLowerCase();
+    if (!q) return props.cuentas;
+    return props.cuentas.filter(c =>
+        (c.nombre || '').toLowerCase().includes(q) ||
+        (c.codigo_completo || c.codigo || '').toLowerCase().includes(q)
+    );
 });
 
 const applyFilters = () => {
@@ -29,12 +40,16 @@ const applyFilters = () => {
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="bg-white shadow sm:rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Buscar cuenta</label>
+                        <input v-model="buscarCuenta" type="text" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="Código o nombre" />
+                    </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Cuenta contable</label>
                         <select id="cuenta_id" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                             <option value="">Seleccionar...</option>
-                            <option v-for="c in cuentas" :key="c.id" :value="c.id" :selected="filtros.cuenta_contable_id == c.id">{{ c.codigo_completo || c.codigo }} - {{ c.nombre }}</option>
+                            <option v-for="c in cuentasFiltradas" :key="c.id" :value="c.id" :selected="filtros.cuenta_contable_id == c.id">{{ c.codigo_completo || c.codigo }} - {{ c.nombre }}</option>
                         </select>
                     </div>
                     <div>
