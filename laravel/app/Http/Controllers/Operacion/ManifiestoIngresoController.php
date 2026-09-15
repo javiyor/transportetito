@@ -21,12 +21,10 @@ class ManifiestoIngresoController extends Controller
 {
     public function index(Request $request)
     {
-        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $orden = $request->query('orden', 'desc');
         $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
 
         $query = ManifiestoIngreso::query()
-            ->where('empresa_id', $empresaId)
             ->with(['deposito:id,nombre', 'empresa:id,razon_social'])
             ->withCount(['pedidos', 'pedidos as pedidos_con_error_count' => function($q){ $q->where('recepcion_estado','con_error'); }]);
 
