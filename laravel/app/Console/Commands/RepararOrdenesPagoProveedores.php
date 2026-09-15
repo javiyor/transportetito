@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\OrdenPago;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -55,6 +56,27 @@ class RepararOrdenesPagoProveedores extends Command
             }
         }
         $this->info(($dry ? 'Anulaciones huerfanas a eliminar: ' : 'Anulaciones huerfanas eliminadas: ') . $deleted);
+
+        // 3. Eliminar compensaciones de OP crédito cuya OP consumidora ya no existe
+        $limpiados = 0;
+        $creditosConCompensaciones = OrdenPago::query()
+            ->whereRaw("detalle->'compensado_en' is not null")
+            ->get();
+        foreach ($creditosConCompensaciones as $opCredito) {
+            $compensadoEn = collect($opCredito->detalle['compensado_en'] ?? []);
+            $origCount = $compensadoEn->count();
+            $valid = $compensadoEn
+                ->filter(fn ($c) => ! empty($c['orden_pago_id']) && DB::table('ordenes_pago')->where('id', $c['orden_pago_id'])->exists())
+                ->values()
+                ->all();
+            if (count($valid) < $origCount) {
+                if (! $dry) {
+                    $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $valid])]);
+                }
+                $limpiados++;
+            }
+        }
+        $this->info(($dry ? 'Creditos OP con compensaciones huérfanas a limpiar: ' : 'Creditos OP con compensaciones huérfanas limpiados: ') . $limpiados);
 
         return 0;
     }

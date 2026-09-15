@@ -32,6 +32,18 @@ class ProveedorOrdenPagoAnularController extends Controller
                 $ordenPago->cheque()->update(['estado' => 'en_cartera']);
             }
 
+            // Revertir consumos de créditos de OP utilizados en esta orden
+            foreach ($ordenPago->detalle['compensaciones'] ?? [] as $comp) {
+                $opCredito = OrdenPago::query()->find($comp['op_credito_id'] ?? null);
+                if ($opCredito) {
+                    $compensadoEn = collect($opCredito->detalle['compensado_en'] ?? [])
+                        ->reject(fn ($c) => ($c['orden_pago_id'] ?? null) === $ordenPago->id)
+                        ->values()
+                        ->all();
+                    $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);
+                }
+            }
+
             $movimientos = CtaCteMovimiento::query()
                 ->where('referencia_tipo', 'orden_pago')
                 ->where('referencia_id', $ordenPago->id)

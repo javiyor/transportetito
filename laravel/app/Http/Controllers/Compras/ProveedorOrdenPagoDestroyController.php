@@ -30,6 +30,18 @@ class ProveedorOrdenPagoDestroyController extends Controller
             ->where('referencia_id', $ordenPago->id)
             ->delete();
 
+        // Revertir consumos de créditos de OP utilizados en esta orden
+        foreach ($ordenPago->detalle['compensaciones'] ?? [] as $comp) {
+            $opCredito = OrdenPago::query()->find($comp['op_credito_id'] ?? null);
+            if ($opCredito) {
+                $compensadoEn = collect($opCredito->detalle['compensado_en'] ?? [])
+                    ->reject(fn ($c) => ($c['orden_pago_id'] ?? null) === $ordenPago->id)
+                    ->values()
+                    ->all();
+                $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);
+            }
+        }
+
         $ordenPago->delete();
 
         return back()->with('success', 'Orden de pago eliminada.');
