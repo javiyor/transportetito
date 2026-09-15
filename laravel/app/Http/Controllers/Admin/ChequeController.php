@@ -17,36 +17,52 @@ class ChequeController extends Controller
     {
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
-        $query = Cheque::query()->with(['recibo.cuenta.tercero', 'bancoDeposito', 'movimientoBancario']);
+        $baseQuery = Cheque::query()->with(['recibo.cuenta.tercero', 'bancoDeposito', 'movimientoBancario']);
 
         if ($empresaId > 0) {
-            $query->where('empresa_id', $empresaId);
+            $baseQuery->where('empresa_id', $empresaId);
         }
 
         if ($estado = $request->query('estado')) {
-            $query->where('estado', $estado);
+            $baseQuery->where('estado', $estado);
         }
 
         if ($tipo = $request->query('tipo')) {
-            $query->where('tipo', $tipo);
+            $baseQuery->where('tipo', $tipo);
         }
 
         if ($origen = $request->query('origen')) {
-            $query->where('origen', $origen);
+            $baseQuery->where('origen', $origen);
         }
 
         if ($desde = $request->query('desde')) {
-            $query->whereDate('fecha_emision', '>=', $desde);
+            $baseQuery->whereDate('fecha_emision', '>=', $desde);
         }
 
         if ($hasta = $request->query('hasta')) {
-            $query->whereDate('fecha_emision', '<=', $hasta);
+            $baseQuery->whereDate('fecha_emision', '<=', $hasta);
         }
 
-        $cheques = $query->orderByDesc('created_at')->paginate(30);
+        $queryPropios = (clone $baseQuery)->where('origen', 'propio');
+        $queryTerceros = (clone $baseQuery)->where('origen', 'tercero');
+
+        $totalesPropios = [
+            'fisico' => round((float) (clone $queryPropios)->where('tipo', 'fisico')->sum('importe'), 2),
+            'echeq' => round((float) (clone $queryPropios)->where('tipo', 'echeq')->sum('importe'), 2),
+        ];
+        $totalesTerceros = [
+            'fisico' => round((float) (clone $queryTerceros)->where('tipo', 'fisico')->sum('importe'), 2),
+            'echeq' => round((float) (clone $queryTerceros)->where('tipo', 'echeq')->sum('importe'), 2),
+        ];
+
+        $chequesPropios = $queryPropios->orderByDesc('created_at')->paginate(30, ['*'], 'propios_page')->withQueryString();
+        $chequesTerceros = $queryTerceros->orderByDesc('created_at')->paginate(30, ['*'], 'terceros_page')->withQueryString();
 
         return Inertia::render('Admin/Cheques/Index', [
-            'cheques' => $cheques,
+            'chequesPropios' => $chequesPropios,
+            'chequesTerceros' => $chequesTerceros,
+            'totalesPropios' => $totalesPropios,
+            'totalesTerceros' => $totalesTerceros,
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
             'filtros' => [

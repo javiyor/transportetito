@@ -95,6 +95,13 @@ const applyFilters = () => {
                                 <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Sin movimientos.</td>
                             </tr>
                         </tbody>
+                        <tfoot class="bg-gray-50 font-semibold text-gray-900">
+                            <tr>
+                                <td class="px-4 py-3 text-right" colspan="4">Totales</td>
+                                <td class="px-4 py-3 text-right font-mono">$ {{ parseFloat(saldo.debe).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</td>
+                                <td class="px-4 py-3 text-right font-mono">$ {{ parseFloat(saldo.haber).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
                 <div class="p-4 border-t border-gray-200" v-if="movimientos.total > movimientos.per_page">

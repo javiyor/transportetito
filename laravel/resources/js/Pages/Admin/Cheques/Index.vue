@@ -8,12 +8,32 @@ import InputError from '@/Components/InputError.vue';
 import { ref } from 'vue';
 
 const props = defineProps({
-    cheques: Object,
+    chequesPropios: Object,
+    chequesTerceros: Object,
+    totalesPropios: Object,
+    totalesTerceros: Object,
     empresas: Array,
     empresaId: [Number, null],
     filtros: Object,
     bancos: Array,
 });
+
+const secciones = [
+    {
+        key: 'propio',
+        titulo: 'Cheques propios',
+        cheques: props.chequesPropios,
+        totales: props.totalesPropios,
+        pageParam: 'propios_page',
+    },
+    {
+        key: 'tercero',
+        titulo: 'Cheques de terceros',
+        cheques: props.chequesTerceros,
+        totales: props.totalesTerceros,
+        pageParam: 'terceros_page',
+    },
+];
 
 const showForm = ref(false);
 const createForm = useForm({
@@ -269,14 +289,21 @@ const formatFecha = (v) => {
                 </form>
             </div>
 
-            <div class="bg-white shadow sm:rounded-lg overflow-hidden">
+            <div v-for="seccion in secciones" :key="seccion.key" class="bg-white shadow sm:rounded-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="font-semibold text-gray-900">{{ seccion.titulo }}</h3>
+                    <div class="flex gap-3 text-xs">
+                        <span class="font-medium text-gray-700">Físico: <span class="font-mono">{{ seccion.totales.fisico.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                        <span class="font-medium text-gray-700">E-Cheq: <span class="font-mono">{{ seccion.totales.echeq.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                        <span class="font-medium text-gray-900">Total: <span class="font-mono">{{ (seccion.totales.fisico + seccion.totales.echeq).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origen</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nro</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Banco</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Importe</th>
@@ -292,10 +319,9 @@ const formatFecha = (v) => {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="c in cheques.data" :key="c.id">
+                            <tr v-for="c in seccion.cheques.data" :key="c.id">
                                 <td class="px-4 py-3 text-sm font-mono text-gray-900">#{{ c.id }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-700">{{ tipoLabel(c.tipo) }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ origenLabel(c.origen) }}</td>
                                 <td class="px-4 py-3 text-sm font-mono text-gray-900">{{ c.numero || '-' }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-700">{{ c.banco || '-' }}</td>
                                 <td class="px-4 py-3 text-sm font-mono text-gray-900">{{ c.moneda }} {{ c.importe }}</td>
@@ -313,17 +339,17 @@ const formatFecha = (v) => {
                                     <SecondaryButton class="text-xs" @click="openEdit(c)">Editar</SecondaryButton>
                                 </td>
                             </tr>
-                            <tr v-if="!cheques.data.length">
-                                <td colspan="15" class="px-6 py-4 text-center text-sm text-gray-500">Sin cheques.</td>
+                            <tr v-if="!seccion.cheques.data.length">
+                                <td colspan="14" class="px-6 py-4 text-center text-sm text-gray-500">Sin cheques.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div v-if="cheques.total > cheques.per_page" class="p-4 border-t border-gray-200 flex items-center justify-between text-sm">
-                    <div>Página {{ cheques.current_page }} de {{ cheques.last_page }} ({{ cheques.total }} cheques)</div>
+                <div v-if="seccion.cheques.total > seccion.cheques.per_page" class="p-4 border-t border-gray-200 flex items-center justify-between text-sm">
+                    <div>Página {{ seccion.cheques.current_page }} de {{ seccion.cheques.last_page }} ({{ seccion.cheques.total }} cheques)</div>
                     <div class="flex gap-2">
-                        <SecondaryButton v-if="cheques.prev_page_url" @click="router.get(cheques.prev_page_url, {}, { preserveState: true, preserveScroll: true })">Anterior</SecondaryButton>
-                        <SecondaryButton v-if="cheques.next_page_url" @click="router.get(cheques.next_page_url, {}, { preserveState: true, preserveScroll: true })">Siguiente</SecondaryButton>
+                        <SecondaryButton v-if="seccion.cheques.prev_page_url" @click="router.get(seccion.cheques.prev_page_url, {}, { preserveState: true, preserveScroll: true })">Anterior</SecondaryButton>
+                        <SecondaryButton v-if="seccion.cheques.next_page_url" @click="router.get(seccion.cheques.next_page_url, {}, { preserveState: true, preserveScroll: true })">Siguiente</SecondaryButton>
                     </div>
                 </div>
             </div>

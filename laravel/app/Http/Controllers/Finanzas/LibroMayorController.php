@@ -41,20 +41,20 @@ class LibroMayorController extends Controller
                 $query->whereHas('asiento', fn ($q) => $q->whereDate('fecha', '<=', $fechaHasta));
             }
 
+            $totalDebe = round((float) (clone $query)->sum('debe'), 2);
+            $totalHaber = round((float) (clone $query)->sum('haber'), 2);
+
             $movimientos = $query->orderBy('id')->paginate(30)->withQueryString();
 
-            $totalDebe = round((float) $movimientos->sum('debe'), 2);
-            $totalHaber = round((float) $movimientos->sum('haber'), 2);
-
             $esDeudora = $cuentaSeleccionada->naturaleza === 'deudor';
-            $saldo = $esDeudora
+            $saldoNeto = $esDeudora
                 ? round($totalDebe - $totalHaber, 2)
                 : round($totalHaber - $totalDebe, 2);
 
             $saldo = [
                 'debe' => $totalDebe,
                 'haber' => $totalHaber,
-                'saldo' => $saldo,
+                'saldo' => $saldoNeto,
                 'naturaleza' => $esDeudora ? 'Deudor' : 'Acreedor',
             ];
         }

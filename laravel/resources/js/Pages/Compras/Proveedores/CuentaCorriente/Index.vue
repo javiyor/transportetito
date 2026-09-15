@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
     cuentas: Array,
+    totalAdeudado: Number,
     filters: Object,
 });
 
@@ -74,6 +75,13 @@ const applyFilters = () => {
                     <table class="min-w-full divide-y divide-gray-200 text-xs">
                         <thead class="bg-gray-50"><tr><th class="px-3 py-1.5 text-left font-medium text-gray-500 uppercase">Proveedor</th><th class="px-3 py-1.5 text-left font-medium text-gray-500 uppercase">CUIT</th><th class="px-3 py-1.5 text-left font-medium text-gray-500 uppercase">Saldo</th><th class="px-3 py-1.5 text-right font-medium text-gray-500 uppercase">Acciones</th></tr></thead>
                         <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in cuentas" :key="c.id"><td class="px-3 py-1.5 text-gray-700">{{ c.razon_social || '-' }}</td><td class="px-3 py-1.5 text-gray-700">{{ c.cuit || '-' }}</td><td class="px-3 py-1.5 text-gray-700 font-mono">{{ formatNum(c.saldo) }}</td><td class="px-3 py-1.5 text-right"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.ctacte.show', c.id)">Consultar</Link></td></tr></tbody>
+                        <tfoot class="bg-gray-50 font-semibold text-gray-900">
+                            <tr>
+                                <td class="px-3 py-2 text-right" colspan="2">Total adeudado</td>
+                                <td class="px-3 py-2 font-mono">{{ formatNum(totalAdeudado) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

@@ -64,8 +64,11 @@ class ProveedorCuentaCorrienteIndexController extends Controller
             };
         })->values();
 
+        $totalAdeudado = round((float) $rows->sum('saldo'), 2);
+
         return Inertia::render('Compras/Proveedores/CuentaCorriente/Index', [
             'cuentas' => $rows,
+            'totalAdeudado' => $totalAdeudado,
             'filters' => [
                 'filtro' => $filtro,
                 'buscar' => $buscar !== '' ? $buscar : null,
