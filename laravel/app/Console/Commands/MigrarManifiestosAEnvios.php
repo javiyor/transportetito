@@ -16,16 +16,18 @@ class MigrarManifiestosAEnvios extends Command
 
     public function handle(): int
     {
-        $since = (string) ($this->option('since') ?: CarbonImmutable::now()->subDays(30)->toDateString());
+        $since = $this->option('since');
         $dry = $this->option('dry-run');
 
-        $this->info("Buscando pedidos desde {$since}...");
+        $query = Pedido::query()->whereNotNull('external_carga_id')->orderBy('id');
+        if ($since) {
+            $this->info("Buscando pedidos desde {$since}...");
+            $query->where('created_at', '>=', $since . ' 00:00:00');
+        } else {
+            $this->info('Buscando todos los pedidos importados...');
+        }
 
-        $pedidos = Pedido::query()
-            ->whereNotNull('external_carga_id')
-            ->where('created_at', '>=', $since . ' 00:00:00')
-            ->orderBy('id')
-            ->get(['id', 'external_carga_id', 'empresa_id', 'manifiesto_ingreso_id']);
+        $pedidos = $query->get(['id', 'external_carga_id', 'empresa_id', 'manifiesto_ingreso_id']);
 
         $total = $pedidos->count();
         $this->info("Pedidos a procesar: {$total}");
