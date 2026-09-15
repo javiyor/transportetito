@@ -30,8 +30,8 @@ class ProveedorOrdenPagoStoreController extends Controller
             'fecha' => ['required', 'date'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'comprobante_ids' => ['nullable', 'array'],
-            'comprobante_ids.*' => ['integer', 'exists:proveedor_comprobantes,id'],
-            'items' => ['required', 'array', 'min:1'],
+            'comprobante_ids.*' => ['string'],
+            'items' => ['nullable', 'array'],
             'items.*.medio' => ['required', 'string', 'max:64'],
             'items.*.importe' => ['required', 'numeric', 'gte:0'],
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
@@ -45,13 +45,23 @@ class ProveedorOrdenPagoStoreController extends Controller
 
         $empresa = $cuenta->empresa()->firstOrFail();
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
-        $total = collect($data['items'])->sum(fn ($i) => (float) $i['importe']);
+
+        // Separar comprobantes reales de créditos de OP
+        $comprobanteIds = [];
+        $creditOpIds = [];
+        foreach ($data['comprobante_ids'] ?? [] as $id) {
+            if (is_string($id) && str_starts_with($id, 'op_credit_')) {
+                $creditOpIds[] = (int) substr($id, 10);
+            } else {
+                $comprobanteIds[] = (int) $id;
+            }
+        }
 
         $itemsData = [];
         $chequesCreados = [];
 
-        DB::transaction(function () use ($data, $cuenta, $empresaId, $empresa, $cotizacion, $total, $request, &$itemsData, &$chequesCreados) {
-            foreach ($data['items'] as $item) {
+        DB::transaction(function () use ($data, $cuenta, $empresaId, $empresa, $cotizacion, $comprobanteIds, $creditOpIds, $request, &$itemsData, &$chequesCreados) {
+            foreach ($data['items'] ?? [] as $item) {
                 $itemData = [
                     'medio' => $item['medio'],
                     'importe' => $item['importe'],
@@ -101,39 +111,104 @@ class ProveedorOrdenPagoStoreController extends Controller
                 $itemsData[] = $itemData;
             }
 
-            $aplicaciones = [];
-            $aplicadoTotal = 0;
+            $totalItems = collect($itemsData)->sum(fn ($i) => (float) $i['importe']);
 
-            if (! empty($data['comprobante_ids'])) {
-                $comprobantes = ProveedorComprobante::query()->whereIn('id', $data['comprobante_ids'])->get();
+            // Calcular saldo disponible de créditos de OP seleccionados
+            $creditosDisponibles = collect();
+            $creditoTotalDisponible = 0.0;
+            if (! empty($creditOpIds)) {
+                $creditOps = OrdenPago::query()
+                    ->where('empresa_id', $empresaId)
+                    ->where('tercero_cuenta_id', $cuenta->id)
+                    ->where('estado', '!=', 'anulada')
+                    ->whereIn('id', $creditOpIds)
+                    ->get();
 
+                foreach ($creditOps as $opCredito) {
+                    abort_unless((int) $opCredito->tercero_cuenta_id === (int) $cuenta->id, 422, "Crédito OP #{$opCredito->id} no pertenece a esta cuenta.");
+                    $usado = collect($opCredito->detalle['compensado_en'] ?? [])->sum('importe');
+                    $disponible = round((float) $opCredito->total - (float) $usado, 2);
+                    if ($disponible > 0) {
+                        $creditosDisponibles->push(['op' => $opCredito, 'disponible' => $disponible]);
+                        $creditoTotalDisponible += $disponible;
+                    }
+                }
+            }
+
+            // Calcular saldo pendiente de comprobantes seleccionados
+            $comprobantesPendientes = collect();
+            $saldoComprobantesTotal = 0.0;
+            if (! empty($comprobanteIds)) {
+                $comprobantes = ProveedorComprobante::query()->whereIn('id', $comprobanteIds)->get();
                 foreach ($comprobantes as $comp) {
                     abort_unless((int) $comp->tercero_cuenta_id === (int) $cuenta->id, 422, "Comprobante #{$comp->id} no pertenece a esta cuenta.");
-                }
-
-                foreach ($comprobantes as $comp) {
                     $pagadoPrev = $this->pagadoPrevio($empresaId, (int) $comp->id);
-
                     $saldo = round((float) $comp->total - $pagadoPrev, 2);
-                    if ($saldo <= 0) {
+                    if ($saldo > 0) {
+                        $comprobantesPendientes->push(['comp' => $comp, 'saldo' => $saldo]);
+                        $saldoComprobantesTotal += $saldo;
+                    }
+                }
+            }
+
+            // Total a aplicar: ítems de pago + créditos disponibles
+            $total = round($totalItems + min($saldoComprobantesTotal, $creditoTotalDisponible), 2);
+
+            // Crear aplicaciones para comprobantes (hasta el total disponible)
+            $aplicaciones = [];
+            $aplicadoTotal = 0.0;
+            foreach ($comprobantesPendientes as $pend) {
+                $restante = round($total - $aplicadoTotal, 2);
+                if ($restante <= 0) {
+                    break;
+                }
+                $aplicar = min($pend['saldo'], $restante);
+                $aplicaciones[] = [
+                    'proveedor_comprobante_id' => $pend['comp']->id,
+                    'importe' => $aplicar,
+                ];
+                $aplicadoTotal += $aplicar;
+            }
+
+            // Consumir créditos de OP y generar ítems de pago correspondientes
+            $creditoConsumidoTotal = 0.0;
+            $compensaciones = [];
+            $restantePorConsumir = $aplicadoTotal - $totalItems;
+            if ($restantePorConsumir > 0.0001) {
+                foreach ($creditosDisponibles as $cred) {
+                    if ($restantePorConsumir <= 0) {
+                        break;
+                    }
+                    $consumir = min($cred['disponible'], $restantePorConsumir);
+                    $consumir = round($consumir, 2);
+                    if ($consumir <= 0) {
                         continue;
                     }
 
-                    if ($total > 0) {
-                        $restante = round($total - $aplicadoTotal, 2);
-                        if ($restante <= 0) {
-                            break;
-                        }
-                        $aplicar = min($saldo, $restante);
-                    } else {
-                        $aplicar = $saldo;
-                    }
-
-                    $aplicaciones[] = [
-                        'proveedor_comprobante_id' => $comp->id,
-                        'importe' => $aplicar,
+                    $opCredito = $cred['op'];
+                    $compensadoEn = $opCredito->detalle['compensado_en'] ?? [];
+                    $compensadoEn[] = [
+                        'orden_pago_id' => null, // se completa luego de crear la orden
+                        'importe' => $consumir,
+                        'fecha' => $data['fecha'],
                     ];
-                    $aplicadoTotal += $aplicar;
+                    $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);
+
+                    $itemsData[] = [
+                        'medio' => 'pago_a_cuenta',
+                        'importe' => $consumir,
+                        'moneda' => $opCredito->moneda,
+                        'op_credito_id' => $opCredito->id,
+                        'op_credito_numero' => '#OP-'.$opCredito->id,
+                    ];
+
+                    $compensaciones[] = [
+                        'op_credito_id' => $opCredito->id,
+                        'importe' => $consumir,
+                    ];
+
+                    $creditoConsumidoTotal += $consumir;
+                    $restantePorConsumir -= $consumir;
                 }
             }
 
@@ -152,11 +227,25 @@ class ProveedorOrdenPagoStoreController extends Controller
                     'items' => $itemsData,
                     'comprobante_ids' => $data['comprobante_ids'] ?? [],
                     'aplicaciones' => $aplicaciones,
+                    'compensaciones' => $compensaciones,
                 ],
                 'cheque_id' => $primerChequeId,
                 'observacion' => $data['observacion'] ?: null,
                 'creado_por_user_id' => $request->user()->id,
             ]);
+
+            // Completar orden_pago_id en los créditos consumidos
+            foreach ($creditosDisponibles as $cred) {
+                $opCredito = $cred['op'];
+                $compensadoEn = collect($opCredito->detalle['compensado_en'] ?? [])
+                    ->map(function ($c) use ($orden) {
+                        if (empty($c['orden_pago_id'])) {
+                            $c['orden_pago_id'] = $orden->id;
+                        }
+                        return $c;
+                    })->values()->all();
+                $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);
+            }
 
             CtaCteMovimiento::query()->create([
                 'empresa_id' => $empresaId,

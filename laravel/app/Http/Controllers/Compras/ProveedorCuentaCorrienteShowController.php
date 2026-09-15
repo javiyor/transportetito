@@ -77,6 +77,9 @@ class ProveedorCuentaCorrienteShowController extends Controller
             ->get()
             ->filter(fn (OrdenPago $op) => empty($op->detalle['comprobante_ids'] ?? []) && (float) $op->total !== 0.0)
             ->map(function (OrdenPago $op) {
+                $usado = collect($op->detalle['compensado_en'] ?? [])->sum('importe');
+                $disponible = round((float) $op->total - (float) $usado, 2);
+
                 return (object) [
                     'id' => 'op_credit_'.$op->id,
                     'tipo' => 'pago_a_cuenta',
@@ -84,11 +87,13 @@ class ProveedorCuentaCorrienteShowController extends Controller
                     'total' => round((float) $op->total, 2),
                     'moneda' => $op->moneda,
                     'fecha_emision' => $op->fecha,
-                    'pagado_total' => 0,
-                    'saldo_pendiente' => round(-1 * (float) $op->total, 2),
+                    'pagado_total' => round((float) $usado, 2),
+                    'saldo_pendiente' => round(-1 * $disponible, 2),
                     'is_credit' => true,
                 ];
-            });
+            })
+            ->filter(fn ($op) => abs((float) $op->saldo_pendiente) > 0.005)
+            ->values();
 
         $comprobantes = $comprobantes->concat($opCredits);
 

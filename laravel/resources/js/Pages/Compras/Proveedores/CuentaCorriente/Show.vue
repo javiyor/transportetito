@@ -70,12 +70,12 @@ const esChequeTercero = (medio) => medio === 'cheque_tercero';
 const esChequePropio = (medio) => medio === 'cheque_propio';
 
 const submit = () => {
-    const realIds = form.comprobante_ids.filter(id => Number.isInteger(Number(id)));
-    form.comprobante_ids = realIds;
     if (!form.comprobante_ids?.length) {
         if (!confirm('No seleccionaste comprobantes a pagar. ¿Emitir orden de pago igual?')) return;
     } else if (selectedComprobantesTotal.value === 0) {
         if (!confirm('Los comprobantes seleccionados se cancelan entre si (total=0). ¿Confirmar compensación?')) return;
+    } else if (selectedComprobantesTotal.value < 0) {
+        if (!confirm('El total seleccionado es negativo (créditos mayores a facturas). Se aplicarán parcialmente los créditos. ¿Confirmar?')) return;
     }
     form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), { preserveScroll: true });
 };
