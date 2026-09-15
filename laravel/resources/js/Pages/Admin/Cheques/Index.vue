@@ -280,8 +280,8 @@ const formatFecha = (v) => {
             </div>
 
             <div v-for="seccion in secciones" :key="seccion.key" class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                    <h3 class="font-semibold text-gray-900">{{ seccion.titulo }}</h3>
+                <div class="px-4 py-2 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="font-semibold text-sm text-gray-900">{{ seccion.titulo }}</h3>
                     <div class="flex gap-3 text-xs">
                         <span class="font-medium text-gray-700">Físico: <span class="font-mono">{{ seccion.totales.fisico.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
                         <span class="font-medium text-gray-700">E-Cheq: <span class="font-mono">{{ seccion.totales.echeq.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
@@ -292,54 +292,54 @@ const formatFecha = (v) => {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nro</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Banco</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Importe</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Venc.</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Librado por</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Endosado a</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Depósito</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cobro</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Banco depósito</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mov. bancario</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Tipo</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Nro</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Banco</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Importe</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Venc.</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Librado por</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Endosado a</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Depósito</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Cobro</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Banco depósito</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Mov. bancario</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Estado</th>
+                                <th class="px-2 py-1 text-right text-[10px] font-medium text-gray-500 uppercase">Acción</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in seccion.cheques.data" :key="c.id">
-                                <td class="px-4 py-3 text-sm font-mono text-gray-900">#{{ c.id }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ tipoLabel(c.tipo) }}</td>
-                                <td class="px-4 py-3 text-sm font-mono text-gray-900">{{ c.numero || '-' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ c.banco || '-' }}</td>
-                                <td class="px-4 py-3 text-sm font-mono text-gray-900">{{ c.moneda }} {{ c.importe }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ formatFecha(c.fecha_vencimiento) }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ c.librado_por || '-' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ c.endosado_a || '-' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ formatFecha(c.fecha_deposito) }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ formatFecha(c.fecha_cobro) }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">{{ c.banco_deposito?.nombre || c.bancoDeposito?.nombre || '-' }}<span v-if="c.estado_deposito" class="ml-1 text-xs" :class="c.estado_deposito === 'pendiente' ? 'text-blue-600' : 'text-green-600'">({{ c.estado_deposito }})</span></td>
-                                <td class="px-4 py-3 text-sm text-gray-700"><span v-if="c.movimiento_bancario_id" class="text-xs text-indigo-600">#{{ c.movimiento_bancario_id }}<span v-if="c.movimientoBancario?.contabilizado" class="text-green-600"> ✓</span><span v-else class="text-amber-600"> ⏳</span></span><span v-else class="text-gray-400">-</span></td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" :class="estadoBadgeClass(c.estado)">{{ estadoLabel(c.estado) }}</span>
+                                <td class="px-2 py-0.5 text-xs font-mono text-gray-900">#{{ c.id }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ tipoLabel(c.tipo) }}</td>
+                                <td class="px-2 py-0.5 text-xs font-mono text-gray-900">{{ c.numero || '-' }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.banco || '-' }}</td>
+                                <td class="px-2 py-0.5 text-xs font-mono text-gray-900">{{ c.moneda }} {{ c.importe }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ formatFecha(c.fecha_vencimiento) }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.librado_por || '-' }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.endosado_a || '-' }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ formatFecha(c.fecha_deposito) }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ formatFecha(c.fecha_cobro) }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.banco_deposito?.nombre || c.bancoDeposito?.nombre || '-' }}<span v-if="c.estado_deposito" class="ml-1 text-[10px]" :class="c.estado_deposito === 'pendiente' ? 'text-blue-600' : 'text-green-600'">({{ c.estado_deposito }})</span></td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700"><span v-if="c.movimiento_bancario_id" class="text-[10px] text-indigo-600">#{{ c.movimiento_bancario_id }}<span v-if="c.movimientoBancario?.contabilizado" class="text-green-600"> ✓</span><span v-else class="text-amber-600"> ⏳</span></span><span v-else class="text-gray-400">-</span></td>
+                                <td class="px-2 py-0.5 text-xs">
+                                    <span class="inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium" :class="estadoBadgeClass(c.estado)">{{ estadoLabel(c.estado) }}</span>
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm">
-                                    <SecondaryButton class="text-xs" @click="openEdit(c)">Editar</SecondaryButton>
+                                <td class="px-2 py-0.5 text-right text-xs">
+                                    <SecondaryButton class="!text-[10px] !px-2 !py-0.5" @click="openEdit(c)">Editar</SecondaryButton>
                                 </td>
                             </tr>
                             <tr v-if="!seccion.cheques.data.length">
-                                <td colspan="14" class="px-6 py-4 text-center text-sm text-gray-500">Sin cheques.</td>
+                                <td colspan="14" class="px-6 py-2 text-center text-xs text-gray-500">Sin cheques.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div v-if="seccion.cheques.total > seccion.cheques.per_page" class="p-4 border-t border-gray-200 flex items-center justify-between text-sm">
-                    <div>Página {{ seccion.cheques.current_page }} de {{ seccion.cheques.last_page }} ({{ seccion.cheques.total }} cheques)</div>
+                <div v-if="seccion.cheques.total > seccion.cheques.per_page" class="px-4 py-2 border-t border-gray-200 flex items-center justify-between text-xs">
+                    <div>Pág. {{ seccion.cheques.current_page }} de {{ seccion.cheques.last_page }} ({{ seccion.cheques.total }})</div>
                     <div class="flex gap-2">
-                        <SecondaryButton v-if="seccion.cheques.prev_page_url" @click="router.get(seccion.cheques.prev_page_url, {}, { preserveState: true, preserveScroll: true })">Anterior</SecondaryButton>
-                        <SecondaryButton v-if="seccion.cheques.next_page_url" @click="router.get(seccion.cheques.next_page_url, {}, { preserveState: true, preserveScroll: true })">Siguiente</SecondaryButton>
+                        <SecondaryButton v-if="seccion.cheques.prev_page_url" class="!text-[10px] !px-2 !py-0.5" @click="router.get(seccion.cheques.prev_page_url, {}, { preserveState: true, preserveScroll: true })">Anterior</SecondaryButton>
+                        <SecondaryButton v-if="seccion.cheques.next_page_url" class="!text-[10px] !px-2 !py-0.5" @click="router.get(seccion.cheques.next_page_url, {}, { preserveState: true, preserveScroll: true })">Siguiente</SecondaryButton>
                     </div>
                 </div>
             </div>

@@ -52,8 +52,8 @@ class ChequeController extends Controller
             'echeq' => round((float) (clone $queryTerceros)->where('tipo', 'echeq')->sum('importe'), 2),
         ];
 
-        $chequesPropios = $queryPropios->orderByDesc('created_at')->paginate(30, ['*'], 'propios_page')->withQueryString();
-        $chequesTerceros = $queryTerceros->orderByDesc('created_at')->paginate(30, ['*'], 'terceros_page')->withQueryString();
+        $chequesPropios = $queryPropios->orderByDesc('created_at')->paginate(50, ['*'], 'propios_page')->withQueryString();
+        $chequesTerceros = $queryTerceros->orderByDesc('created_at')->paginate(50, ['*'], 'terceros_page')->withQueryString();
 
         return Inertia::render('Admin/Cheques/Index', [
             'chequesPropios' => $chequesPropios,

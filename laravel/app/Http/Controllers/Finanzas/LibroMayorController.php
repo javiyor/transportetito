@@ -41,8 +41,16 @@ class LibroMayorController extends Controller
                 $query->whereHas('asiento', fn ($q) => $q->whereDate('fecha', '<=', $fechaHasta));
             }
 
-            $totalDebe = round((float) (clone $query)->sum('debe'), 2);
-            $totalHaber = round((float) (clone $query)->sum('haber'), 2);
+            $totalDebe = round((float) AsientoLinea::query()
+                ->where('cuenta_contable_id', $cuentaId)
+                ->when($fechaDesde, fn ($q) => $q->whereHas('asiento', fn ($qq) => $qq->whereDate('fecha', '>=', $fechaDesde)))
+                ->when($fechaHasta, fn ($q) => $q->whereHas('asiento', fn ($qq) => $qq->whereDate('fecha', '<=', $fechaHasta)))
+                ->sum('debe'), 2);
+            $totalHaber = round((float) AsientoLinea::query()
+                ->where('cuenta_contable_id', $cuentaId)
+                ->when($fechaDesde, fn ($q) => $q->whereHas('asiento', fn ($qq) => $qq->whereDate('fecha', '>=', $fechaDesde)))
+                ->when($fechaHasta, fn ($q) => $q->whereHas('asiento', fn ($qq) => $qq->whereDate('fecha', '<=', $fechaHasta)))
+                ->sum('haber'), 2);
 
             $movimientos = $query->orderBy('id')->paginate(30)->withQueryString();
 
