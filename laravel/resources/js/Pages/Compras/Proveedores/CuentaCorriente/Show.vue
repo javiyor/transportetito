@@ -48,7 +48,7 @@ const comprobantesPorId = computed(() => {
 });
 
 const comprobantesPendientes = computed(() => {
-    return (props.comprobantes || []).filter(c => parseFloat(c.saldo_pendiente) !== 0);
+    return (props.comprobantes || []).filter(c => Math.abs(parseFloat(c.saldo_pendiente) || 0) > 0.005);
 });
 
 const selectedComprobantesTotal = computed(() => {
@@ -135,6 +135,35 @@ const totalConSigno = (c) => {
     const t = parseFloat(c.total) || 0;
     return esNotaCredito(c) ? -Math.abs(t) : t;
 };
+
+const tipoLabel = (c) => {
+    if (c.is_credit) return 'Pago a cuenta';
+    const t = String(c.tipo || '').toLowerCase().trim();
+    const map = {
+        'factura_a': 'Factura A',
+        'fa': 'Factura A',
+        'factura_b': 'Factura B',
+        'fb': 'Factura B',
+        'factura_c': 'Factura C',
+        'fc': 'Factura C',
+        'factura_m': 'Factura M',
+        'fm': 'Factura M',
+        'factura_e': 'Factura E',
+        'fe': 'Factura E',
+        'nota_debito': 'Nota de débito',
+        'nd': 'Nota de débito',
+        'nota_credito': 'Nota de crédito',
+        'nc': 'Nota de crédito',
+        'ajuste_debito': 'Ajuste débito',
+        'ajuste_credito': 'Ajuste crédito',
+        'recibo': 'Recibo',
+    };
+    return map[t] || (c.tipo || '-');
+};
+
+const saldoPendienteTotal = computed(() => {
+    return (props.comprobantes || []).reduce((sum, c) => sum + (parseFloat(c.saldo_pendiente) || 0), 0);
+});
 </script>
 
 <template>
@@ -176,13 +205,20 @@ const totalConSigno = (c) => {
                                 <tbody>
                                     <tr v-for="c in comprobantesPendientes" :key="c.id" class="hover:bg-gray-50">
                                         <td class="pr-2 py-0.5 text-gray-500">{{ formatFecha(c.fecha_emision) }}</td>
-                                        <td class="pr-2 py-0.5" :class="claseMonto(c, 'text-gray-700') + ' font-medium'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td>
+                                        <td class="pr-2 py-0.5" :class="claseMonto(c, 'text-gray-700') + ' font-medium'">{{ tipoLabel(c) }}</td>
                                         <td class="pr-2 py-0.5 font-mono" :class="claseMonto(c, 'text-gray-700')">{{ c.numero || '-' }}</td>
                                         <td class="pr-2 py-0.5 text-right" :class="claseMonto(c, 'text-gray-700')">{{ c.moneda }} {{ formatNum(totalConSigno(c)) }}</td>
                                         <td class="pr-2 py-0.5 text-right font-semibold" :class="claseMonto(c, 'text-gray-900')">{{ c.moneda }} {{ formatNum(c.saldo_pendiente) }}</td>
                                         <td class="py-0.5"><input type="checkbox" :value="c.id" v-model="form.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" /></td>
                                     </tr>
                                 </tbody>
+                                <tfoot class="border-t border-gray-200">
+                                    <tr>
+                                        <td colspan="4" class="pr-2 py-0.5 text-right text-xs font-semibold text-gray-700">Saldo pendiente total</td>
+                                        <td class="pr-2 py-0.5 text-right text-xs font-semibold" :class="saldoPendienteTotal >= 0 ? 'text-gray-900' : 'text-green-600'">{{ (props.comprobantes?.[0]?.moneda || 'ARS') }} {{ formatNum(saldoPendienteTotal) }}</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-1">Sin comprobantes ni creditos disponibles</div>
                         <div v-if="form.comprobante_ids.length" class="mt-1 text-xs font-semibold text-gray-700 border-t border-gray-100 pt-1">
@@ -286,7 +322,7 @@ const totalConSigno = (c) => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in comprobantes" :key="c.id" :class="{'bg-green-50': c.is_credit}">
                                 <td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
-                                <td class="px-4 py-2 text-sm" :class="claseMonto(c, 'text-gray-700') + ' font-medium'">{{ c.is_credit ? 'Pago a cuenta' : c.tipo }}</td>
+                                <td class="px-4 py-2 text-sm" :class="claseMonto(c, 'text-gray-700') + ' font-medium'">{{ tipoLabel(c) }}</td>
                                 <td class="px-4 py-2 text-sm font-mono" :class="claseMonto(c, 'text-gray-700')">{{ c.numero || '-' }}</td>
                                 <td class="px-4 py-2 text-sm text-right font-semibold" :class="claseMonto(c, 'text-gray-900')">{{ c.moneda }} {{ formatNum(totalConSigno(c)) }}</td>
                                 <td class="px-4 py-2 text-sm text-right text-gray-700">{{ c.moneda }} {{ formatNum(c.pagado_total) }}</td>
@@ -297,6 +333,13 @@ const totalConSigno = (c) => {
                                 </td>
                             </tr>
                         </tbody>
+                        <tfoot class="bg-gray-100">
+                            <tr>
+                                <td colspan="5" class="px-4 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Saldo pendiente total</td>
+                                <td class="px-4 py-2 text-right text-xs font-semibold" :class="saldoPendienteTotal >= 0 ? 'text-gray-900' : 'text-green-600'">{{ (props.comprobantes?.[0]?.moneda || 'ARS') }} {{ formatNum(saldoPendienteTotal) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

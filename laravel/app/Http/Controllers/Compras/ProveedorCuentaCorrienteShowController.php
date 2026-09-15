@@ -67,7 +67,7 @@ class ProveedorCuentaCorrienteShowController extends Controller
 
                 return $comprobante;
             })
-            ->filter(fn (ProveedorComprobante $c) => (float) $c->saldo_pendiente !== 0.0)
+            ->filter(fn (ProveedorComprobante $c) => abs((float) $c->saldo_pendiente) > 0.005)
             ->values();
 
         $opCredits = OrdenPago::query()
