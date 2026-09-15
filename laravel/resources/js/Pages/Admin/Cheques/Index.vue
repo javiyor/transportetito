@@ -5,7 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 
 const props = defineProps({
     chequesPropios: Object,
@@ -61,7 +61,9 @@ const submitCreate = () => {
 };
 
 const editId = ref(null);
+const editFormRef = ref(null);
 const editForm = useForm({
+    origen: '',
     estado: '',
     tipo: '',
     numero: '',
@@ -76,6 +78,7 @@ const editForm = useForm({
 
 const openEdit = (c) => {
     editId.value = c.id;
+    editForm.origen = c.origen;
     editForm.estado = c.estado;
     editForm.tipo = c.tipo;
     editForm.numero = c.numero || '';
@@ -87,6 +90,9 @@ const openEdit = (c) => {
     editForm.banco_deposito_id = c.banco_deposito_id || '';
     editForm.observacion = c.observacion || '';
     editForm.clearErrors();
+    nextTick(() => {
+        editFormRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 };
 
 const submitEdit = () => {
@@ -129,6 +135,9 @@ const applyFilters = () => {
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
+const estadosPropio = ['emitido', 'pagado', 'rechazado', 'vencido', 'reemplazado'];
+const estadosTercero = ['en_cartera', 'depositado', 'cobrado', 'rechazado', 'endosado', 'anulado'];
+
 const estadoBadgeClass = (estado) => {
     const map = {
         en_cartera: 'bg-yellow-100 text-yellow-800',
@@ -137,12 +146,27 @@ const estadoBadgeClass = (estado) => {
         rechazado: 'bg-red-100 text-red-800',
         endosado: 'bg-purple-100 text-purple-800',
         anulado: 'bg-gray-100 text-gray-800',
+        emitido: 'bg-indigo-100 text-indigo-800',
+        pagado: 'bg-green-100 text-green-800',
+        vencido: 'bg-orange-100 text-orange-800',
+        reemplazado: 'bg-gray-100 text-gray-800',
     };
     return map[estado] || 'bg-gray-100 text-gray-800';
 };
 
 const estadoLabel = (e) => {
-    const map = { en_cartera: 'En cartera', depositado: 'Depositado', cobrado: 'Cobrado', rechazado: 'Rechazado', endosado: 'Endosado', anulado: 'Anulado' };
+    const map = {
+        en_cartera: 'En cartera',
+        depositado: 'Depositado',
+        cobrado: 'Cobrado',
+        rechazado: 'Rechazado',
+        endosado: 'Endosado',
+        anulado: 'Anulado',
+        emitido: 'Emitido',
+        pagado: 'Pagado',
+        vencido: 'Vencido',
+        reemplazado: 'Reemplazado',
+    };
     return map[e] || e;
 };
 
@@ -346,13 +370,13 @@ const formatFecha = (v) => {
                 </div>
             </div>
 
-            <div v-if="editId" class="bg-white shadow sm:rounded-lg p-4">
+            <div v-if="editId" ref="editFormRef" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Editar cheque #{{ editId }}</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitEdit">
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Estado</div>
                         <select v-model="editForm.estado" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                            <option v-for="e in ['en_cartera','depositado','cobrado','rechazado','endosado','anulado']" :key="e" :value="e">{{ estadoLabel(e) }}</option>
+                            <option v-for="e in (editForm.origen === 'propio' ? estadosPropio : estadosTercero)" :key="e" :value="e">{{ estadoLabel(e) }}</option>
                         </select>
                         <InputError :message="editForm.errors.estado" />
                     </div>

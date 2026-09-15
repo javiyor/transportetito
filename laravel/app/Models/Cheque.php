@@ -46,7 +46,7 @@ class Cheque extends Model
         'movimiento_bancario_id' => 'int',
     ];
 
-    public const ESTADOS = [
+    public const ESTADOS_TERCERO = [
         'en_cartera',
         'depositado',
         'cobrado',
@@ -54,6 +54,16 @@ class Cheque extends Model
         'endosado',
         'anulado',
     ];
+
+    public const ESTADOS_PROPIO = [
+        'emitido',
+        'pagado',
+        'rechazado',
+        'vencido',
+        'reemplazado',
+    ];
+
+    public const ESTADOS = ['en_cartera', 'depositado', 'cobrado', 'rechazado', 'endosado', 'anulado', 'emitido', 'pagado', 'vencido', 'reemplazado'];
 
     public const TIPOS = ['fisico', 'echeq'];
     public const ORIGENES = ['propio', 'tercero'];

@@ -122,7 +122,7 @@ class ChequeController extends Controller
     public function update(Request $request, Cheque $cheque): RedirectResponse
     {
         $data = $request->validate([
-            'estado' => ['required', 'in:' . implode(',', Cheque::ESTADOS)],
+            'estado' => ['required', 'in:' . implode(',', array_merge(Cheque::ESTADOS_PROPIO, Cheque::ESTADOS_TERCERO))],
             'fecha_deposito' => ['nullable', 'date'],
             'fecha_cobro' => ['nullable', 'date'],
             'fecha_rechazo' => ['nullable', 'date'],
