@@ -35,11 +35,6 @@ const secciones = [
     },
 ];
 
-const filtrosPorSeccion = {
-    propio: filtrosPropios,
-    tercero: filtrosTerceros,
-};
-
 const showForm = ref(false);
 const createForm = useForm({
     tipo: 'fisico',
@@ -114,6 +109,11 @@ const filtrosTerceros = useForm({
     desde: props.filtros.terceros.desde,
     hasta: props.filtros.terceros.hasta,
 });
+
+const filtrosPorSeccion = {
+    propio: filtrosPropios,
+    tercero: filtrosTerceros,
+};
 
 const applyFilters = () => {
     router.get(route('admin.cheques.index'), {
