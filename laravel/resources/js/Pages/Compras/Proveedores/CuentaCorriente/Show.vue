@@ -77,10 +77,14 @@ const submit = () => {
     } else if (selectedComprobantesTotal.value < 0) {
         if (!confirm('El total seleccionado es negativo (créditos mayores a facturas). Se aplicarán parcialmente los créditos. ¿Confirmar?')) return;
     }
+    console.log('Enviando OP', form.data());
     form.post(route('compras.proveedores.ctacte.ordenes-pago.store', props.cuenta.id), {
         preserveScroll: true,
-        onError: () => {
-            // Los errores quedan en form.errors y se muestran en la UI
+        onError: (errors) => {
+            console.error('OP store error', errors);
+        },
+        onFinish: () => {
+            console.log('OP store finish', form.errors);
         },
     });
 };
