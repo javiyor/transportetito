@@ -297,12 +297,7 @@ const formatFecha = (v) => {
                         <span class="text-[10px] font-medium text-gray-500 uppercase">Filtro</span>
                         <select v-model="filtrosPorSeccion[seccion.key].estado" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
                             <option value="">Estado</option>
-                            <option value="en_cartera">En cartera</option>
-                            <option value="depositado">Depositado</option>
-                            <option value="cobrado">Cobrado</option>
-                            <option value="rechazado">Rechazado</option>
-                            <option value="endosado">Endosado</option>
-                            <option value="anulado">Anulado</option>
+                            <option v-for="e in (seccion.key === 'propio' ? estadosPropio : estadosTercero)" :key="e" :value="e">{{ estadoLabel(e) }}</option>
                         </select>
                         <select v-model="filtrosPorSeccion[seccion.key].tipo" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
                             <option value="">Tipo</option>
