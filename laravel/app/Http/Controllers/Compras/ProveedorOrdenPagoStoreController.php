@@ -260,18 +260,25 @@ class ProveedorOrdenPagoStoreController extends Controller
                 $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);
             }
 
-            CtaCteMovimiento::query()->create([
-                'empresa_id' => $empresaId,
-                'tercero_cuenta_id' => $cuenta->id,
-                'fecha' => $data['fecha'],
-                'tipo' => 'pago_proveedor',
-                'moneda' => $data['moneda'],
-                'cotizacion_ars' => $cotizacion['tasa_ars'],
-                'importe_signed' => (-1 * $total),
-                'referencia_tipo' => 'orden_pago',
-                'referencia_id' => $orden->id,
-                'observacion' => $data['observacion'] ?: 'Orden de pago '.$orden->id,
-            ]);
+            // El movimiento de CtaCte refleja solo el efectivo nuevo; el crédito de OP ya impactó en su momento.
+            $totalEfectivo = collect($itemsData)
+                ->where('medio', '!=', 'pago_a_cuenta')
+                ->sum(fn ($i) => (float) $i['importe']);
+
+            if ($totalEfectivo > 0) {
+                CtaCteMovimiento::query()->create([
+                    'empresa_id' => $empresaId,
+                    'tercero_cuenta_id' => $cuenta->id,
+                    'fecha' => $data['fecha'],
+                    'tipo' => 'pago_proveedor',
+                    'moneda' => $data['moneda'],
+                    'cotizacion_ars' => $cotizacion['tasa_ars'],
+                    'importe_signed' => (-1 * $totalEfectivo),
+                    'referencia_tipo' => 'orden_pago',
+                    'referencia_id' => $orden->id,
+                    'observacion' => $data['observacion'] ?: 'Orden de pago '.$orden->id,
+                ]);
+            }
 
             Log::info('OP proveedor store creada', [
                 'orden_pago_id' => $orden->id,

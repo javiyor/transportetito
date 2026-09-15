@@ -225,14 +225,20 @@ class ContabilizadorService
         });
     }
 
-    public function contabilizarPagoProveedor(OrdenPago $ordenPago): AsientoContable
+    public function contabilizarPagoProveedor(OrdenPago $ordenPago): ?AsientoContable
     {
         $empresa = $ordenPago->empresa;
         $cuentaProveedores = $empresa->getCuentaContable('proveedores_default');
-        $claveMedio = 'medio_pago.'.$ordenPago->medio;
-        $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
 
-        return DB::transaction(function () use ($ordenPago, $empresa, $cuentaProveedores, $cuentaMedio) {
+        $itemsEfectivos = collect($ordenPago->detalle['items'] ?? [])
+            ->where('medio', '!=', 'pago_a_cuenta');
+
+        // Si la OP solo consume créditos de OP previos, no hay salida de efectivo nueva.
+        if ($itemsEfectivos->isEmpty()) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($ordenPago, $empresa, $cuentaProveedores, $itemsEfectivos) {
             $asiento = AsientoContable::create([
                 'empresa_id' => $empresa->id,
                 'fecha' => $ordenPago->fecha,
@@ -243,10 +249,14 @@ class ContabilizadorService
                 'descripcion' => 'Pago a proveedor: OP #'.$ordenPago->numero_interno,
             ]);
 
-            $total = (float) $ordenPago->total;
+            foreach ($itemsEfectivos as $item) {
+                $claveMedio = 'medio_pago.'.$item['medio'];
+                $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+                $importe = (float) $item['importe'];
 
-            $this->addLinea($asiento, $cuentaProveedores, $ordenPago->cuenta, $total, 0, 'Cancelacion deuda proveedor');
-            $this->addLinea($asiento, $cuentaMedio, null, 0, $total, 'Pago via '.$ordenPago->medio);
+                $this->addLinea($asiento, $cuentaProveedores, $ordenPago->cuenta, $importe, 0, 'Cancelacion deuda proveedor');
+                $this->addLinea($asiento, $cuentaMedio, null, 0, $importe, 'Pago via '.$item['medio']);
+            }
 
             return $asiento;
         });
