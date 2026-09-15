@@ -101,7 +101,7 @@ const applyPwaUpdate = () => {
                                         </template>
 
                                         <template #content>
-                                            <DropdownLink :href="route('operacion.manifiestos.index')">Manifiestos</DropdownLink>
+                                            <DropdownLink :href="route('operacion.manifiestos.index')">Recepcion viajes</DropdownLink>
                                             <DropdownLink :href="route('admin.reportes.seguro')">Informe seguro</DropdownLink>
                                         </template>
                                     </Dropdown>
@@ -119,7 +119,7 @@ const applyPwaUpdate = () => {
                                         </template>
 
                                         <template #content>
-                                            <DropdownLink :href="route('facturacion.manifiestos.index')">Manifiestos</DropdownLink>
+                                            <DropdownLink :href="route('facturacion.manifiestos.index')">Recepcion viajes</DropdownLink>
                                             <DropdownLink :href="route('facturacion.carga-directa.create')">Factura</DropdownLink>
                                             <DropdownLink :href="route('operacion.comprobantes.index')">Comprobantes</DropdownLink>
                                             <DropdownLink :href="route('facturacion.manual.create')">Cargas manuales</DropdownLink>
@@ -388,7 +388,7 @@ const applyPwaUpdate = () => {
                             :href="route('facturacion.manifiestos.index')"
                             :active="route().current('facturacion.manifiestos.*')"
                         >
-                            Manifiestos
+                            Recepcion viajes
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).some((r) => ['facturacion', 'admin'].includes(r))"
