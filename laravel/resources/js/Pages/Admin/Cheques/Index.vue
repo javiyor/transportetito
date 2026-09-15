@@ -5,7 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, computed } from 'vue';
 
 const props = defineProps({
     chequesPropios: Object,
@@ -18,7 +18,7 @@ const props = defineProps({
     bancos: Array,
 });
 
-const secciones = [
+const secciones = computed(() => [
     {
         key: 'propio',
         titulo: 'Cheques propios',
@@ -33,7 +33,7 @@ const secciones = [
         totales: props.totalesTerceros,
         pageParam: 'terceros_page',
     },
-];
+]);
 
 const showForm = ref(false);
 const createForm = useForm({
