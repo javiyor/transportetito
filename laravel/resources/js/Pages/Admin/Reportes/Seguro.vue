@@ -151,7 +151,6 @@ const formatFecha = (v) => {
                 <span class="text-xs text-gray-500">Vista:</span>
                 <button @click="vista = 'chofer'" :class="vista === 'chofer' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'" class="px-3 py-1 text-xs rounded border">Por chofer/camión</button>
                 <button @click="vista = 'viaje'" :class="vista === 'viaje' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'" class="px-3 py-1 text-xs rounded border">Por viaje (ID envío)</button>
-                <button @click="vista = 'bulto'" :class="vista === 'bulto' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'" class="px-3 py-1 text-xs rounded border">Detalle por bultos</button>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
@@ -230,43 +229,6 @@ const formatFecha = (v) => {
                                 <td colspan="7" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
                                 <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
                                 <td class="print:hidden"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <div v-else-if="vista === 'bulto'" class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 text-xs">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">ID Envío</th>
-                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Móvil</th>
-                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
-                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Depósito</th>
-                                <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Carga</th>
-                                <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Cant.</th>
-                                <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <template v-for="r in rows" :key="r.nummovil">
-                                <tr v-for="d in (props.detallesPorChofer?.[choferKey(r)] || [])" :key="d.carga_id + '-' + d.id_envio" class="hover:bg-gray-50">
-                                    <td class="px-3 py-2 whitespace-nowrap">{{ formatFecha(d.fecha_envio) }}</td>
-                                    <td class="px-3 py-2 font-mono">#{{ d.id_envio }}</td>
-                                    <td class="px-3 py-2 font-mono">{{ d.nummovil }}</td>
-                                    <td class="px-3 py-2">{{ d.nomchof || '-' }}</td>
-                                    <td class="px-3 py-2">{{ d.deposito_origen }}</td>
-                                    <td class="px-3 py-2 font-mono">#{{ d.carga_id }}</td>
-                                    <td class="px-3 py-2 text-center">{{ d.cantidad }}</td>
-                                    <td class="px-3 py-2 text-right font-mono">$ {{ Number(d.valordeclarado || 0).toLocaleString('es-AR', {minimumFractionDigits:2}) }}</td>
-                                </tr>
-                            </template>
-                        </tbody>
-                        <tfoot class="bg-gray-100">
-                            <tr>
-                                <td colspan="7" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase">Total general</td>
-                                <td class="px-3 py-2 text-right text-xs font-mono font-semibold text-gray-900">{{ formatNum(totalGeneral) }}</td>
                             </tr>
                         </tfoot>
                     </table>
