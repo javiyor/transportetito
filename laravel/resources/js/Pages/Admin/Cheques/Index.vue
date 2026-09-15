@@ -294,18 +294,34 @@ const formatFecha = (v) => {
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-[10px] font-medium text-gray-500 uppercase">Filtro</span>
-                        <select v-model="filtrosPorSeccion[seccion.key].estado" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
-                            <option value="">Estado</option>
-                            <option v-for="e in (seccion.key === 'propio' ? estadosPropio : estadosTercero)" :key="e" :value="e">{{ estadoLabel(e) }}</option>
-                        </select>
-                        <select v-model="filtrosPorSeccion[seccion.key].tipo" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
-                            <option value="">Tipo</option>
-                            <option value="fisico">Físico</option>
-                            <option value="echeq">E-Cheq</option>
-                        </select>
-                        <input v-model="filtrosPorSeccion[seccion.key].desde" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
-                        <input v-model="filtrosPorSeccion[seccion.key].hasta" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                        <template v-if="seccion.key === 'propio'">
+                            <span class="text-[10px] font-medium text-gray-500 uppercase">Filtro</span>
+                            <select v-model="filtrosPropios.estado" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
+                                <option value="">Estado</option>
+                                <option v-for="e in estadosPropio" :key="e" :value="e">{{ estadoLabel(e) }}</option>
+                            </select>
+                            <select v-model="filtrosPropios.tipo" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
+                                <option value="">Tipo</option>
+                                <option value="fisico">Físico</option>
+                                <option value="echeq">E-Cheq</option>
+                            </select>
+                            <input v-model="filtrosPropios.desde" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                            <input v-model="filtrosPropios.hasta" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                        </template>
+                        <template v-else>
+                            <span class="text-[10px] font-medium text-gray-500 uppercase">Filtro</span>
+                            <select v-model="filtrosTerceros.estado" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
+                                <option value="">Estado</option>
+                                <option v-for="e in estadosTercero" :key="e" :value="e">{{ estadoLabel(e) }}</option>
+                            </select>
+                            <select v-model="filtrosTerceros.tipo" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5">
+                                <option value="">Tipo</option>
+                                <option value="fisico">Físico</option>
+                                <option value="echeq">E-Cheq</option>
+                            </select>
+                            <input v-model="filtrosTerceros.desde" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                            <input v-model="filtrosTerceros.hasta" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                        </template>
                         <SecondaryButton class="!text-[10px] !px-2 !py-0.5" @click="applyFilters">Filtrar</SecondaryButton>
                     </div>
                 </div>
