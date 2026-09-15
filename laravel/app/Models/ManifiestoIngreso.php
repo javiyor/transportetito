@@ -14,6 +14,7 @@ class ManifiestoIngreso extends Model
     protected $table = 'manifiestos_ingreso';
 
     protected $fillable = [
+        'external_envio_id',
         'empresa_id',
         'deposito_id',
         'destino_deposito_id',

@@ -7,60 +7,161 @@ use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\Tercero;
-use App\Models\TerceroEmpresa;
 use App\Models\TerceroCuenta;
+use App\Models\TerceroEmpresa;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ExternalCargaImporter
 {
-    public function importSince(Empresa $empresa, Deposito $depositoOrigenSeleccionado, string $sinceDate): array
+    public function importSince(Empresa $empresa, string $sinceDate, ?Deposito $depositoOrigenSeleccionado = null): array
     {
         $since = CarbonImmutable::parse($sinceDate)->startOfDay();
 
-        $rows = DB::connection('mysql_external')->select(
+        $envios = DB::connection('mysql_external')->select(
             <<<'SQL'
 select
-  o.nomclie as nomorigen,
-  d.nomclie as nomdest,
-  carga.fecha as fecha,
-  carga.cantidad as cantidad,
-  carga.unidad as unidad,
-  carga.remito as remito,
-  carga.valordeclarado as valordeclarado,
-  depositos.nombre as nombre,
-  carga.estado as estado,
-  carga.observacion as observacion,
-  carga.facturado as facturado,
-  carga.retiro as retiro,
-  o.cuiclie as cuitori,
-  d.cuiclie as cuitdest,
-  o.numclie as idorigen,
-  d.numclie as iddest,
-  carga.id as id,
-  (
-    select cd.nomchof
-    from cargaporenvio cpe
-    left join hojaderuta hr on cpe.idenvio = hr.id
-    left join conductores cd on hr.idchofer = cd.nrochof
-    where cpe.idcarga = carga.id
-    limit 1
-  ) as chofer
-from carga
-inner join clientes as o on carga.idproveedor = o.numclie
-inner join clientes as d on carga.idcliente = d.numclie
-inner join depositos on carga.iddeposito = depositos.id
-where carga.fecha > ?
-order by date(carga.fecha) desc, d.nomclie asc
+  e.id as envio_id,
+  e.fecha as envio_fecha,
+  e.id_origen,
+  e.id_destino,
+  e.idchofer,
+  e.idcamion,
+  e.finalizada,
+  d_origen.nombre as origen_nombre,
+  d_destino.nombre as destino_nombre,
+  c.nomchof,
+  m.patmovil
+from hojaderuta e
+left join depositos d_origen on e.id_origen = d_origen.id
+left join depositos d_destino on e.id_destino = d_destino.id
+left join conductores c on c.nrochof = e.idchofer
+left join moviles m on m.nummovil = e.idcamion
+where e.fecha > ?
+order by e.fecha desc, e.id desc
 SQL,
             [$since->toDateString()]
         );
 
-        $ids = array_values(array_filter(array_map(static fn ($r) => (int) ($r->id ?? 0), $rows)));
-        $existing = $ids
-            ? Pedido::query()->whereIn('external_carga_id', $ids)->pluck('external_carga_id')->all()
-            : [];
-        $existingMap = array_fill_keys(array_map('intval', $existing), true);
+        $existingCargas = Pedido::query()
+            ->whereNotNull('external_carga_id')
+            ->pluck('external_carga_id')
+            ->all();
+        $existingCargaMap = array_fill_keys(array_map('intval', $existingCargas), true);
+
+        $createdEnvios = 0;
+        $createdPedidos = 0;
+        $skippedPedidos = 0;
+        $errores = [];
+
+        foreach ($envios as $envio) {
+            try {
+                $envioId = (int) $envio->envio_id;
+                if ($envioId === 0) {
+                    continue;
+                }
+
+                $depositoOrigen = $this->resolveDepositoByName(
+                    $empresa,
+                    (string) ($envio->origen_nombre ?? '')
+                );
+
+                $depositoDestino = $this->resolveDepositoDestino(
+                    $empresa,
+                    (string) ($envio->destino_nombre ?? ''),
+                    $depositoOrigen
+                );
+
+                $fecha = CarbonImmutable::parse((string) $envio->envio_fecha)->toDateString();
+
+                $manifiesto = ManifiestoIngreso::query()->firstOrCreate(
+                    ['external_envio_id' => $envioId],
+                    [
+                        'empresa_id' => $empresa->id,
+                        'deposito_id' => $depositoOrigen?->id,
+                        'destino_deposito_id' => $depositoDestino?->id,
+                        'fecha' => $fecha,
+                        'chofer' => ($envio->nomchof ?? null) !== null ? (string) $envio->nomchof : null,
+                        'patente_camion' => ($envio->patmovil ?? null) !== null ? (string) $envio->patmovil : null,
+                        'patente_acoplado' => null,
+                        'ciudad_origen' => $depositoOrigen?->nombre,
+                        'ciudad_destino' => $depositoDestino?->nombre,
+                        'valor_asegurado' => null,
+                        'gastos_envio' => null,
+                    ]
+                );
+
+                $manifiesto->update([
+                    'empresa_id' => $empresa->id,
+                    'deposito_id' => $depositoOrigen?->id,
+                    'destino_deposito_id' => $depositoDestino?->id,
+                    'fecha' => $fecha,
+                    'chofer' => ($envio->nomchof ?? null) !== null ? (string) $envio->nomchof : null,
+                    'patente_camion' => ($envio->patmovil ?? null) !== null ? (string) $envio->patmovil : null,
+                    'ciudad_origen' => $depositoOrigen?->nombre,
+                    'ciudad_destino' => $depositoDestino?->nombre,
+                ]);
+
+                if ($manifiesto->wasRecentlyCreated) {
+                    $createdEnvios++;
+                }
+
+                $res = $this->importCargasForEnvio($empresa, $manifiesto, $envioId, $existingCargaMap);
+                $createdPedidos += $res['created'];
+                $skippedPedidos += $res['skipped'];
+            } catch (\Throwable $e) {
+                $errores[] = "Envio {$envio->envio_id}: {$e->getMessage()}";
+                Log::warning('Error importando envio externo', [
+                    'envio_id' => $envio->envio_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'since' => $since->toDateString(),
+            'total' => count($envios),
+            'created' => $createdPedidos,
+            'skipped' => $skippedPedidos,
+            'envios_total' => count($envios),
+            'envios_creados' => $createdEnvios,
+            'pedidos_creados' => $createdPedidos,
+            'pedidos_omitidos' => $skippedPedidos,
+            'errores' => $errores,
+        ];
+    }
+
+    private function importCargasForEnvio(Empresa $empresa, ManifiestoIngreso $manifiesto, int $envioId, array &$existingCargaMap): array
+    {
+        $rows = DB::connection('mysql_external')->select(
+            <<<'SQL'
+select
+  c.id as id,
+  c.fecha as fecha,
+  c.cantidad as cantidad,
+  c.unidad as unidad,
+  c.remito as remito,
+  c.valordeclarado as valordeclarado,
+  c.estado as estado,
+  c.observacion as observacion,
+  c.facturado as facturado,
+  c.retiro as retiro,
+  o.cuiclie as cuitori,
+  d.cuiclie as cuitdest,
+  o.numclie as idorigen,
+  d.numclie as iddest,
+  o.nomclie as nomorigen,
+  d.nomclie as nomdest
+from carga c
+inner join clientes o on c.idproveedor = o.numclie
+inner join clientes d on c.idcliente = d.numclie
+inner join cargaporenvio cpe on cpe.idcarga = c.id
+where cpe.idenvio = ?
+order by c.id
+SQL,
+            [$envioId]
+        );
 
         $created = 0;
         $skipped = 0;
@@ -68,51 +169,36 @@ SQL,
         foreach ($rows as $row) {
             $externalId = (int) $row->id;
 
-            if ($externalId === 0 || isset($existingMap[$externalId])) {
+            if ($externalId === 0 || isset($existingCargaMap[$externalId])) {
                 $skipped++;
                 continue;
             }
 
-            $remitente = $this->firstOrCreateTercero((string) ($row->cuitori ?? ''), (string) ($row->nomorigen ?? ''), (int) ($row->idorigen ?? 0));
-            $destinatario = $this->firstOrCreateTercero((string) ($row->cuitdest ?? ''), (string) ($row->nomdest ?? ''), (int) ($row->iddest ?? 0));
+            $remitente = $this->firstOrCreateTercero(
+                (string) ($row->cuitori ?? ''),
+                (string) ($row->nomorigen ?? ''),
+                (int) ($row->idorigen ?? 0)
+            );
+            $destinatario = $this->firstOrCreateTercero(
+                (string) ($row->cuitdest ?? ''),
+                (string) ($row->nomdest ?? ''),
+                (int) ($row->iddest ?? 0)
+            );
 
             $remitenteCuenta = $this->firstOrCreateCuenta($empresa, $remitente, (int) ($row->idorigen ?? 0), (string) ($row->nomorigen ?? ''));
             $destinatarioCuenta = $this->firstOrCreateCuenta($empresa, $destinatario, (int) ($row->iddest ?? 0), (string) ($row->nomdest ?? ''));
 
-            $empresaEfectiva = $this->resolveEmpresaForImport($empresa, $remitenteCuenta, $destinatarioCuenta);
-            $depositoOrigen = $this->resolveDepositoForImport($empresaEfectiva, $depositoOrigenSeleccionado);
-            $depositoDestino = $this->resolveDepositoDestinoCentral($empresaEfectiva, $depositoOrigen);
-
-            $fecha = CarbonImmutable::parse((string) $row->fecha)->toDateString();
-            $manifiesto = ManifiestoIngreso::query()->firstOrCreate(
-                [
-                    'empresa_id' => $empresaEfectiva->id,
-                    'deposito_id' => $depositoOrigen->id,
-                    'destino_deposito_id' => $depositoDestino?->id,
-                    'fecha' => $fecha,
-                ],
-                [
-                    'chofer' => ($row->chofer ?? null) !== null ? (string) $row->chofer : null,
-                    'patente_camion' => null,
-                    'patente_acoplado' => null,
-                    'ciudad_origen' => $depositoOrigen->nombre,
-                    'ciudad_destino' => $depositoDestino?->nombre,
-                    'valor_asegurado' => null,
-                    'gastos_envio' => null,
-                ]
-            );
-
             if ($remitenteCuenta) {
-                $this->markCuentaAsCliente($empresaEfectiva, $remitenteCuenta);
+                $this->markCuentaAsCliente($empresa, $remitenteCuenta);
             }
             if ($destinatarioCuenta) {
-                $this->markCuentaAsCliente($empresaEfectiva, $destinatarioCuenta);
+                $this->markCuentaAsCliente($empresa, $destinatarioCuenta);
             }
 
             Pedido::query()->create([
                 'external_carga_id' => $externalId,
-                'empresa_id' => $empresaEfectiva->id,
-                'deposito_id' => $depositoOrigen->id,
+                'empresa_id' => $empresa->id,
+                'deposito_id' => $manifiesto->deposito_id,
                 'manifiesto_ingreso_id' => $manifiesto->id,
                 'envio_consolidado_id' => null,
                 'remitente_tercero_id' => $remitente->id,
@@ -134,15 +220,41 @@ SQL,
                 'external_retiro' => (bool) ($row->retiro ?? false),
             ]);
 
+            $existingCargaMap[$externalId] = true;
             $created++;
         }
 
-        return [
-            'since' => $since->toDateString(),
-            'total' => count($rows),
-            'created' => $created,
-            'skipped' => $skipped,
-        ];
+        return ['created' => $created, 'skipped' => $skipped];
+    }
+
+    private function resolveDepositoByName(Empresa $empresa, string $nombre): Deposito
+    {
+        $nombre = trim($nombre);
+        if ($nombre === '') {
+            $nombre = 'Central';
+        }
+
+        return Deposito::query()->firstOrCreate(
+            ['empresa_id' => $empresa->id, 'nombre' => $nombre],
+            ['punto_venta_numero' => $empresa->arca_pv_default]
+        );
+    }
+
+    private function resolveDepositoDestino(Empresa $empresa, string $nombre, Deposito $fallbackOrigen): Deposito
+    {
+        $nombre = trim($nombre);
+        if ($nombre === '') {
+            return Deposito::query()
+                ->where('empresa_id', $empresa->id)
+                ->where('es_central', true)
+                ->first()
+                ?: $fallbackOrigen;
+        }
+
+        return Deposito::query()->firstOrCreate(
+            ['empresa_id' => $empresa->id, 'nombre' => $nombre],
+            ['punto_venta_numero' => $empresa->arca_pv_default]
+        );
     }
 
     private function firstOrCreateTercero(string $cuit, string $razonSocial, int $externalId): Tercero
@@ -150,9 +262,8 @@ SQL,
         $cleanCuit = preg_replace('/\D+/', '', $cuit) ?? '';
         $cleanRazon = trim($razonSocial) !== '' ? trim($razonSocial) : ('Tercero '.$externalId);
 
-        // CUIT no válido (corto como 1463): buscar por razón social para no chocar con unique
         $isValidCuit = (bool) preg_match('/^\d{11}$/', $cleanCuit);
-        if (!$isValidCuit) {
+        if (! $isValidCuit) {
             if ($cleanCuit !== '') {
                 $byCuit = Tercero::query()->where('cuit', $cleanCuit)->first();
                 if ($byCuit) return $byCuit;
@@ -217,35 +328,6 @@ SQL,
                 'activo' => true,
             ]
         );
-    }
-
-    private function resolveEmpresaForImport(Empresa $empresaSeleccionada, ?TerceroCuenta $remitenteCuenta, ?TerceroCuenta $destinatarioCuenta): Empresa
-    {
-        $empresaId = $destinatarioCuenta?->empresa_id ?: $remitenteCuenta?->empresa_id ?: $empresaSeleccionada->id;
-        return $empresaId === $empresaSeleccionada->id
-            ? $empresaSeleccionada
-            : Empresa::query()->findOrFail($empresaId);
-    }
-
-    private function resolveDepositoForImport(Empresa $empresa, Deposito $depositoSeleccionado): Deposito
-    {
-        if ((int) $depositoSeleccionado->empresa_id === (int) $empresa->id) {
-            return $depositoSeleccionado;
-        }
-
-        return Deposito::query()->firstOrCreate(
-            ['empresa_id' => $empresa->id, 'nombre' => $depositoSeleccionado->nombre],
-            ['punto_venta_numero' => $empresa->arca_pv_default]
-        );
-    }
-
-    private function resolveDepositoDestinoCentral(Empresa $empresa, Deposito $fallbackOrigen): ?Deposito
-    {
-        return Deposito::query()
-            ->where('empresa_id', $empresa->id)
-            ->where('es_central', true)
-            ->first()
-            ?: $fallbackOrigen;
     }
 
     private function markCuentaAsCliente(Empresa $empresa, TerceroCuenta $cuenta): void

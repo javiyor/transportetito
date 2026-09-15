@@ -21,10 +21,12 @@ class ManifiestoIngresoController extends Controller
 {
     public function index(Request $request)
     {
+        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $orden = $request->query('orden', 'desc');
         $orden = in_array($orden, ['asc', 'desc'], true) ? $orden : 'desc';
 
         $query = ManifiestoIngreso::query()
+            ->where('empresa_id', $empresaId)
             ->with(['deposito:id,nombre', 'empresa:id,razon_social'])
             ->withCount(['pedidos', 'pedidos as pedidos_con_error_count' => function($q){ $q->where('recepcion_estado','con_error'); }]);
 
@@ -92,32 +94,16 @@ class ManifiestoIngresoController extends Controller
             return back()->with('flash.error', 'Empresa no encontrada');
         }
 
-        $empresaIds = [$empresa->id];
-        $shared = \App\Models\TerceroCuenta::whereIn('tercero_id', function ($q) use ($empresa) {
-            $q->select('tercero_id')->from('tercero_cuentas')->where('empresa_id', $empresa->id);
-        })->where('empresa_id', '!=', $empresa->id)->distinct()->pluck('empresa_id')->toArray();
-        $empresaIds = array_merge($empresaIds, $shared);
-
-        $depositos = \App\Models\Deposito::whereIn('empresa_id', $empresaIds)->get();
-        if ($depositos->isEmpty()) {
-            $depositos = \App\Models\Deposito::where('empresa_id', $empresa->id)->get();
-        }
-
         $importer = app(\App\Services\Import\ExternalCargaImporter::class);
         $since = now()->subDays(6)->toDateString();
-        $resultados = [];
-        $totalCreados = 0;
 
-        foreach ($depositos as $deposito) {
-            try {
-                $empresaEfectiva = \App\Models\Empresa::find($deposito->empresa_id) ?: $empresa;
-                $res = $importer->importSince($empresaEfectiva, $deposito, $since);
-                $creados = $res['created'] ?? 0;
-                $totalCreados += $creados;
-                $resultados[] = ['deposito' => $deposito->nombre, 'creados' => $creados, 'omitidos' => $res['skipped'] ?? 0];
-            } catch (\Throwable $e) {
-                $resultados[] = ['deposito' => $deposito->nombre, 'error' => $e->getMessage()];
-            }
+        try {
+            $res = $importer->importSince($empresa, $since);
+            $totalCreados = $res['created'] ?? 0;
+            $resultados = [['empresa' => $empresa->razon_social, 'creados' => $totalCreados, 'omitidos' => $res['skipped'] ?? 0, 'envios' => $res['envios_total'] ?? 0]];
+        } catch (\Throwable $e) {
+            $resultados = [['empresa' => $empresa->razon_social, 'error' => $e->getMessage()]];
+            $totalCreados = 0;
         }
 
         $msg = $totalCreados > 0 ? "Importados $totalCreados nuevos pedidos" : "Sin nuevos pedidos";
