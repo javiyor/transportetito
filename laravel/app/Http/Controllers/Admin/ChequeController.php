@@ -23,11 +23,13 @@ class ChequeController extends Controller
             $baseQuery->where('empresa_id', $empresaId);
         }
 
-        $aplicarFiltros = function ($query, $prefijo) use ($request) {
-            if ($estado = $request->query($prefijo.'_estado')) {
+        $aplicarFiltros = function ($query, $prefijo, array $estadosPermitidos) use ($request) {
+            $estado = $request->query($prefijo.'_estado');
+            if ($estado && in_array($estado, $estadosPermitidos, true)) {
                 $query->where('estado', $estado);
             }
-            if ($tipo = $request->query($prefijo.'_tipo')) {
+            $tipo = $request->query($prefijo.'_tipo');
+            if ($tipo && in_array($tipo, Cheque::TIPOS, true)) {
                 $query->where('tipo', $tipo);
             }
             if ($desde = $request->query($prefijo.'_desde')) {
@@ -39,10 +41,10 @@ class ChequeController extends Controller
         };
 
         $queryPropios = (clone $baseQuery)->where('origen', 'propio');
-        $aplicarFiltros($queryPropios, 'p');
+        $aplicarFiltros($queryPropios, 'p', Cheque::ESTADOS_PROPIO);
 
         $queryTerceros = (clone $baseQuery)->where('origen', 'tercero');
-        $aplicarFiltros($queryTerceros, 't');
+        $aplicarFiltros($queryTerceros, 't', Cheque::ESTADOS_TERCERO);
 
         $totalesPropios = [
             'fisico' => round((float) (clone $queryPropios)->where('tipo', 'fisico')->sum('importe'), 2),
@@ -65,14 +67,14 @@ class ChequeController extends Controller
             'empresaId' => $empresaId > 0 ? $empresaId : null,
             'filtros' => [
                 'propios' => [
-                    'estado' => $request->query('p_estado') ?: '',
-                    'tipo' => $request->query('p_tipo') ?: '',
+                    'estado' => in_array($request->query('p_estado'), Cheque::ESTADOS_PROPIO, true) ? $request->query('p_estado') : '',
+                    'tipo' => in_array($request->query('p_tipo'), Cheque::TIPOS, true) ? $request->query('p_tipo') : '',
                     'desde' => $request->query('p_desde') ?: '',
                     'hasta' => $request->query('p_hasta') ?: '',
                 ],
                 'terceros' => [
-                    'estado' => $request->query('t_estado') ?: '',
-                    'tipo' => $request->query('t_tipo') ?: '',
+                    'estado' => in_array($request->query('t_estado'), Cheque::ESTADOS_TERCERO, true) ? $request->query('t_estado') : '',
+                    'tipo' => in_array($request->query('t_tipo'), Cheque::TIPOS, true) ? $request->query('t_tipo') : '',
                     'desde' => $request->query('t_desde') ?: '',
                     'hasta' => $request->query('t_hasta') ?: '',
                 ],
