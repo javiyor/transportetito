@@ -13,6 +13,7 @@ use App\Models\ProveedorComprobante;
 use App\Models\Recibo;
 use App\Models\ReciboItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ContabilizadorService
 {
