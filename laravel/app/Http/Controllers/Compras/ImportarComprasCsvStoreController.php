@@ -122,6 +122,7 @@ class ImportarComprasCsvStoreController extends Controller
                         'tributos_total' => $row['tributos_total'] ?? $existing->tributos_total,
                         'total' => $row['total'],
                         'moneda' => $row['moneda'],
+                        'receptor_cuit' => $row['receptor_cuit'] ?? $existing->receptor_cuit,
                     ]);
                     $updated = CtaCteMovimiento::where('referencia_tipo', 'proveedor_comprobante')
                         ->where('referencia_id', $existing->id)
@@ -152,6 +153,7 @@ class ImportarComprasCsvStoreController extends Controller
                     'tercero_cuenta_id' => $cuenta->id,
                     'tipo' => $row['tipo'] ?? 'FA',
                     'numero' => $numero,
+                    'receptor_cuit' => $row['receptor_cuit'] ?? null,
                     'estado' => 'emitida',
                     'moneda' => $row['moneda'],
                     'cotizacion_ars' => 1,
@@ -190,11 +192,11 @@ class ImportarComprasCsvStoreController extends Controller
             }
         });
 
-        $msg = "Importados: $importados, actualizados: $actualizados, omitidos: $omitidos.";
-        if (! empty($errores)) {
-            $msg .= ' Errores: '.implode(', ', $errores);
-        }
-
-        return back()->with('tt.import_result', $msg);
+        return back()->with('tt.import_result', [
+            'importados' => $importados,
+            'actualizados' => $actualizados,
+            'omitidos' => $omitidos,
+            'errores' => $errores,
+        ]);
     }
 }

@@ -14,6 +14,7 @@ class ProveedorComprobante extends Model
         'tercero_cuenta_id',
         'tipo',
         'numero',
+        'receptor_cuit',
         'estado',
         'moneda',
         'cotizacion_ars',

@@ -8,7 +8,22 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 defineProps({});
 
 const page = usePage();
-const importResult = computed(() => page.props.tt?.flash?.importResult);
+const importResult = computed(() => {
+    const r = page.props.tt?.flash?.importResult;
+    if (! r) return null;
+    if (typeof r === 'string') {
+        return { text: r, counts: null, errores: [] };
+    }
+    return {
+        text: null,
+        counts: {
+            importados: r.importados ?? 0,
+            actualizados: r.actualizados ?? 0,
+            omitidos: r.omitidos ?? 0,
+        },
+        errores: r.errores ?? [],
+    };
+});
 
 const csvText = ref('');
 const csvPreview = ref([]);
@@ -257,8 +272,20 @@ const submitCsv = () => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
-            <div v-if="importResult" class="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded">
-                {{ importResult }}
+            <div v-if="importResult" :class="importResult.errores.length ? 'bg-yellow-50 border-yellow-200 text-yellow-900' : 'bg-green-50 border-green-200 text-green-900'" class="border px-4 py-3 rounded">
+                <div v-if="importResult.counts" class="text-sm font-medium">
+                    Importados: {{ importResult.counts.importados }} · Actualizados: {{ importResult.counts.actualizados }} · Omitidos: {{ importResult.counts.omitidos }}
+                </div>
+                <div v-else-if="importResult.text" class="text-sm">{{ importResult.text }}</div>
+                <div v-if="importResult.errores.length" class="mt-2">
+                    <p class="text-xs font-semibold uppercase tracking-wide mb-1">Detalle de omitidos:</p>
+                    <table class="min-w-full text-xs border border-current divide-y divide-current">
+                        <thead class="bg-black/5"><tr><th class="px-2 py-1 text-left">#</th><th class="px-2 py-1 text-left">Motivo</th></tr></thead>
+                        <tbody class="divide-y divide-current">
+                            <tr v-for="(err, i) in importResult.errores" :key="i"><td class="px-2 py-1">{{ i + 1 }}</td><td class="px-2 py-1">{{ err }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div v-if="Object.keys(csvForm.errors).length" class="bg-red-50 border border-red-200 text-red-900 px-4 py-3 rounded">
@@ -270,7 +297,7 @@ const submitCsv = () => {
 
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde CSV</h3>
-                <p class="text-sm text-gray-500 mb-4">Pegue el CSV. Detecta columnas automaticamente. Requiere: proveedor_cuit/CUIT, proveedor_razon_social/denominacion, fecha_emision, total.</p>
+                <p class="text-sm text-gray-500 mb-4">Pegue el CSV. Detecta columnas automaticamente. Requiere: CUIT emisor, denominacion emisor, CUIT receptor, fecha_emision, total.</p>
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Pegar CSV</label>

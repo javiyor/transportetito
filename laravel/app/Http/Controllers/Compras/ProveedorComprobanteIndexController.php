@@ -121,6 +121,7 @@ class ProveedorComprobanteIndexController extends Controller
             'tercero_cuenta_id' => $cuenta->id,
             'tipo' => $data['tipo'],
             'numero' => $data['numero'] ?: null,
+            'receptor_cuit' => $data['receptor_cuit'] ?? null,
             'estado' => 'emitida',
             'moneda' => $data['moneda'],
             'cotizacion_ars' => $cotizacion['tasa_ars'],
