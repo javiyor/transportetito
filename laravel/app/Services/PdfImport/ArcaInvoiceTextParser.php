@@ -8,6 +8,8 @@ class ArcaInvoiceTextParser
     {
         $result = [
             'cuit' => null,
+            'cuit_emisor' => null,
+            'cuit_receptor' => null,
             'razon_social' => null,
             'tipo' => null,
             'numero' => null,
@@ -26,6 +28,8 @@ class ArcaInvoiceTextParser
         $fullText = mb_strtoupper($text);
 
         $result['cuit'] = $this->extractCuit($fullText, $lines);
+        $result['cuit_emisor'] = $result['cuit'];
+        $result['cuit_receptor'] = $this->extractCuitReceptor($fullText, $lines);
         $result['razon_social'] = $this->extractRazonSocial($lines);
         $result['tipo'] = $this->extractTipo($fullText, $lines);
         $result['numero'] = $this->extractNumero($fullText, $lines);
@@ -63,6 +67,40 @@ class ArcaInvoiceTextParser
                 }
             }
         }
+        return null;
+    }
+
+    private function extractCuitReceptor(string $fullText, array $lines): ?string
+    {
+        $keywordPatterns = [
+            '/RECEPTOR\b.*?CUIT[:\s]*([\d\-]{11,13})/si',
+            '/COMPRADOR\b.*?CUIT[:\s]*([\d\-]{11,13})/si',
+            '/DESTINATARIO\b.*?CUIT[:\s]*([\d\-]{11,13})/si',
+            '/FACTURAR\s+A\b.*?CUIT[:\s]*([\d\-]{11,13})/si',
+            '/CUIT[:\s]*([\d\-]{11,13}).*?RECEPTOR\b/si',
+            '/CUIT[:\s]*([\d\-]{11,13}).*?COMPRADOR\b/si',
+        ];
+
+        foreach ($keywordPatterns as $pat) {
+            if (preg_match($pat, $fullText, $m)) {
+                $cuit = preg_replace('/\D/', '', $m[1]);
+                if (strlen($cuit) === 11) {
+                    return $cuit;
+                }
+            }
+        }
+
+        // Fallback: return the second 11-digit CUIT found in the document.
+        if (preg_match_all('/\d{2}[\-\.]?\d{8}[\-\.]?\d{1}/', $fullText, $matches)) {
+            $emisor = $this->extractCuit($fullText, $lines);
+            foreach ($matches[0] as $match) {
+                $cuit = preg_replace('/\D/', '', $match);
+                if (strlen($cuit) === 11 && $cuit !== $emisor) {
+                    return $cuit;
+                }
+            }
+        }
+
         return null;
     }
 

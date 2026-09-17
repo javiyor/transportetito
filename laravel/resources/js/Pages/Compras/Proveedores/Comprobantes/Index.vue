@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm, Link } from '@inertiajs/vue3';
+import { Head, useForm, usePage, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -46,6 +46,7 @@ const parseNro = (num) => {
 };
 
 const tasaActualCombustible = ref(0);
+const page = usePage();
 
 const props = defineProps({
     proveedores: Array,
@@ -58,6 +59,7 @@ const props = defineProps({
 const form = useForm({
     tercero_cuenta_id: '',
     proveedor_cuit_busqueda: '',
+    receptor_cuit: '',
     tipo: '',
     numero: '',
     moneda: 'ARS',
@@ -234,7 +236,20 @@ watch([() => editComprobanteForm.combustible_tipo, () => editComprobanteForm.lit
 
 const pdfImportDialog = ref(false);
 
+const currentEmpresaCuit = computed(() => page.props.tt?.currentEmpresa?.cuit || '');
+
 const onPdfImported = (datos) => {
+    if (datos.cuit_receptor && currentEmpresaCuit.value) {
+        const rec = String(datos.cuit_receptor).replace(/\D/g, '');
+        const emp = String(currentEmpresaCuit.value).replace(/\D/g, '');
+        if (rec && rec !== emp) {
+            alert('El CUIT receptor del PDF no coincide con la empresa activa. No se cargarán los datos.');
+            return;
+        }
+    }
+
+    form.receptor_cuit = datos.cuit_receptor || '';
+
     if (datos.cuit) {
         form.proveedor_cuit_busqueda = datos.cuit;
         fetchTiposArcaPorCuit(datos.cuit).then((cuenta) => {

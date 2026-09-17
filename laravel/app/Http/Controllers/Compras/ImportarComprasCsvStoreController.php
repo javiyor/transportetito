@@ -36,6 +36,7 @@ class ImportarComprasCsvStoreController extends Controller
             'rows.*.subtotal' => ['nullable', 'numeric', 'min:0'],
             'rows.*.iva_total' => ['nullable', 'numeric', 'min:0'],
             'rows.*.tributos_total' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.receptor_cuit' => ['required', 'string', 'max:32'],
         ]);
 
         $empresa = Empresa::query()->findOrFail($request->user()->current_empresa_id);
@@ -53,9 +54,34 @@ class ImportarComprasCsvStoreController extends Controller
         $actualizados = 0;
         $omitidos = 0;
         $errores = [];
+        $empresaCuit = $empresa->cuit ? preg_replace('/\D+/', '', $empresa->cuit) : null;
 
-        DB::transaction(function () use ($data, $empresa, $request, &$importados, &$actualizados, &$omitidos, &$errores) {
-            foreach ($data['rows'] as $row) {
+        Log::info('Validando importacion CSV compras', [
+            'empresa_id' => $empresa->id,
+            'empresa_razon_social' => $empresa->razon_social,
+            'empresa_cuit_raw' => $empresa->cuit,
+            'empresa_cuit_norm' => $empresaCuit,
+            'rows_count' => count($data['rows']),
+        ]);
+
+        DB::transaction(function () use ($data, $empresa, $empresaCuit, $request, &$importados, &$actualizados, &$omitidos, &$errores) {
+            foreach ($data['rows'] as $index => $row) {
+                $receptorCuit = preg_replace('/\D+/', '', $row['receptor_cuit']) ?? '';
+
+                Log::info('Fila CSV compras', [
+                    'index' => $index,
+                    'receptor_cuit_raw' => $row['receptor_cuit'] ?? null,
+                    'receptor_cuit_norm' => $receptorCuit,
+                    'empresa_cuit_norm' => $empresaCuit,
+                    'coincide' => $receptorCuit !== '' && $receptorCuit === $empresaCuit,
+                ]);
+
+                if ($empresaCuit === null || $receptorCuit === '' || $receptorCuit !== $empresaCuit) {
+                    $errores[] = 'Fila '.($index + 1).': CUIT receptor '.$row['receptor_cuit'].' no coincide con '.$empresa->razon_social.'.';
+                    $omitidos++;
+                    continue;
+                }
+
                 $cuit = preg_replace('/\D+/', '', $row['proveedor_cuit']) ?? '';
 
                 $tercero = Tercero::firstOrCreate(

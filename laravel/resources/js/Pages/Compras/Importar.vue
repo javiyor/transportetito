@@ -37,7 +37,14 @@ const headerMap = {
     'cod autorizacion': 'arca_cae',
     'codigo de autorizacion': 'arca_cae',
     'proveedor_cuit': 'proveedor_cuit',
+    'nro doc emisor': 'proveedor_cuit',
+    'cuit emisor': 'proveedor_cuit',
+    'cuit': 'proveedor_cuit',
     'proveedor_razon_social': 'proveedor_razon_social',
+    'denominacion emisor': 'proveedor_razon_social',
+    'receptor_cuit': 'receptor_cuit',
+    'nro doc receptor': 'receptor_cuit',
+    'cuit receptor': 'receptor_cuit',
     'tipo': 'tipo',
     'numero': 'numero',
     'pv': 'pv',
@@ -163,7 +170,7 @@ const parseCsv = () => {
         }
         return null;
     });
-    const required = ['proveedor_cuit', 'proveedor_razon_social', 'fecha_emision', 'total'];
+    const required = ['proveedor_cuit', 'proveedor_razon_social', 'receptor_cuit', 'fecha_emision', 'total'];
     const missing = required.filter((r) => !mapped.includes(r));
     if (missing.length) {
         alert('No se encontraron estas columnas: ' + missing.join(', ') + '. Detectadas: ' + rawHeaders.join(', ') + ' (delim=' + (delim === '\t' ? 'TAB' : delim) + ')');
@@ -218,6 +225,7 @@ const parseCsv = () => {
         return {
             proveedor_cuit: r.proveedor_cuit || '',
             proveedor_razon_social: r.proveedor_razon_social || '',
+            receptor_cuit: r.receptor_cuit || '',
             tipo: tipo,
             numero: r.numero || '',
             pv: r.pv ? parseInt(String(r.pv).replace(/\D/g,''), 10) || null : null,

@@ -280,6 +280,7 @@ class ProveedorComprobanteIndexController extends Controller
             'tercero_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'tipo' => ['required', 'string', 'max:64'],
             'numero' => ['nullable', 'string', 'max:64'],
+            'receptor_cuit' => ['nullable', 'string', 'max:32'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
             'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
@@ -305,6 +306,17 @@ class ProveedorComprobanteIndexController extends Controller
         abort_unless((int) $cuenta->empresa_id === $empresaId, 422);
 
         $empresa = $cuenta->empresa()->firstOrFail();
+
+        if (! empty($data['receptor_cuit']) && ! empty($empresa->cuit)) {
+            $receptorCuit = preg_replace('/\D+/', '', $data['receptor_cuit']) ?? '';
+            $empresaCuit = preg_replace('/\D+/', '', $empresa->cuit) ?? '';
+            if ($receptorCuit !== '' && $receptorCuit !== $empresaCuit) {
+                return back()->withErrors([
+                    'receptor_cuit' => 'El CUIT receptor del comprobante no coincide con el CUIT de la empresa activa.',
+                ])->with('flash.error', 'El CUIT receptor del comprobante no coincide con el CUIT de la empresa activa.');
+            }
+        }
+
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha_emision']);
         $fiscal = $this->fiscalDetail($data, $data['tipo']);
 

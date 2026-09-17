@@ -90,8 +90,9 @@ const close = () => {
                         <span>Datos reconocidos (confianza: {{ result.confianza }}%)</span>
                     </div>
                     <dl class="grid grid-cols-2 gap-2 text-sm">
-                        <div><dt class="text-xs text-gray-500">CUIT</dt><dd class="font-medium text-gray-900">{{ result.datos.cuit || '-' }}</dd></div>
+                        <div><dt class="text-xs text-gray-500">CUIT emisor</dt><dd class="font-medium text-gray-900">{{ result.datos.cuit || '-' }}</dd></div>
                         <div><dt class="text-xs text-gray-500">Razon social</dt><dd class="font-medium text-gray-900">{{ result.datos.razon_social || '-' }}</dd></div>
+                        <div v-if="result.datos.cuit_receptor" class="col-span-2"><dt class="text-xs text-gray-500">CUIT receptor</dt><dd class="font-medium text-gray-900">{{ result.datos.cuit_receptor }}</dd></div>
                         <div><dt class="text-xs text-gray-500">Tipo</dt><dd class="font-medium text-gray-900">{{ result.datos.tipo || '-' }}</dd></div>
                         <div><dt class="text-xs text-gray-500">Numero</dt><dd class="font-medium text-gray-900">{{ result.datos.numero || '-' }}</dd></div>
                         <div><dt class="text-xs text-gray-500">Fecha emision</dt><dd class="font-medium text-gray-900">{{ result.datos.fecha_emision || '-' }}</dd></div>
