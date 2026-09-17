@@ -522,7 +522,6 @@ const errorLabels = {
 const formatRecepcionErrores = (errores) => (errores || []).map((e) => errorLabels[e] || e).join(', ');
 const destinatarioCuentaId = (g) => g.pedidos[0]?.destinatario_cuenta_id || g.entregaId;
 
-const recepcionConErrores = computed(() => (props.manifiesto.pedidos || []).filter((p) => p.recepcion_estado === 'con_error'));
 const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
 
 const pedidosConErrorDeGrupo = (g) => (g?.pedidos || []).filter((p) => p.recepcion_estado === 'con_error');
@@ -629,9 +628,6 @@ const enviarCorreccion = () => {
 
                     <div v-if="faltanSelecciones && gruposFacturacion.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         Falta seleccionar "Facturar a" en uno o mas grupos.
-                    </div>
-                    <div v-if="recepcionConErrores.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                        Hay pedidos recibidos con error. Se pueden facturar igual, pero no estaran disponibles para la hoja de ruta de reparto hasta que se corrijan.
                     </div>
                     <div v-if="pedidosSinControl.length" class="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         Hay pedidos sin controlar. Se pueden facturar igual, pero no estaran disponibles para la hoja de ruta de reparto hasta que se controlen como correctos.
