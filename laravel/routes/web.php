@@ -185,6 +185,7 @@ Route::middleware([
         Route::post('/terceros', [TerceroAdminController::class, 'store'])->name('terceros.store');
         Route::put('/terceros/{cuenta}', [TerceroAdminController::class, 'update'])->name('terceros.update');
         Route::get('/terceros/lookup-cuit', [TerceroAdminController::class, 'lookupByCuit'])->name('terceros.lookup-cuit');
+        Route::get('/terceros/lookup-cuentas', [TerceroAdminController::class, 'lookupCuentas'])->name('terceros.lookup-cuentas');
         Route::get('/terceros/lookup-arca-cuit', [TerceroAdminController::class, 'lookupArcaCuit'])->name('terceros.lookup-arca-cuit');
         Route::get('/terceros/localidades-por-provincia/{provincia}', [TerceroAdminController::class, 'localidadesPorProvincia'])->name('terceros.localidades-por-provincia');
 

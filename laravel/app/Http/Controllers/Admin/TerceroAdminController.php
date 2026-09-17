@@ -312,4 +312,46 @@ class TerceroAdminController extends Controller
             'tercero' => $tercero->only(['id', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id']),
         ]);
     }
+
+    public function lookupCuentas(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:255'],
+            'empresa_id' => ['nullable', 'integer', 'exists:empresas,id'],
+        ]);
+
+        $q = trim($data['q']);
+        $empresaId = (int) ($data['empresa_id'] ?? 0);
+        $cleanCuit = preg_replace('/\D+/', '', $q) ?? '';
+
+        $query = TerceroCuenta::query()
+            ->with('tercero:id,cuit,razon_social')
+            ->leftJoin('tercero_empresa as te', function ($join) {
+                $join->on('te.tercero_cuenta_id', '=', 'tercero_cuentas.id')
+                    ->on('te.empresa_id', '=', 'tercero_cuentas.empresa_id');
+            })
+            ->where('te.es_cliente', true)
+            ->when($empresaId > 0, fn ($builder) => $builder->where('tercero_cuentas.empresa_id', $empresaId))
+            ->where(function ($builder) use ($q, $cleanCuit) {
+                if (strlen($cleanCuit) >= 3) {
+                    $builder->orWhereHas('tercero', fn ($t) => $t->where('cuit', 'like', "%{$cleanCuit}%"));
+                }
+                $builder->orWhereHas('tercero', fn ($t) => $t->where('razon_social', 'ilike', "%{$q}%"));
+                $builder->orWhere('tercero_cuentas.nombre_cuenta', 'ilike', "%{$q}%");
+            })
+            ->limit(20)
+            ->get(['tercero_cuentas.id', 'tercero_cuentas.tercero_id', 'tercero_cuentas.empresa_id', 'tercero_cuentas.numero_cliente', 'tercero_cuentas.nombre_cuenta']);
+
+        $results = $query->map(fn ($c) => [
+            'id' => $c->id,
+            'tercero_id' => $c->tercero_id,
+            'razon_social' => $c->tercero?->razon_social ?? '',
+            'nombre_cuenta' => $c->nombre_cuenta,
+            'cuit' => $c->tercero?->cuit ?? '',
+            'numero_cliente' => $c->numero_cliente,
+            'label' => trim(($c->tercero?->razon_social ?? '') . ($c->nombre_cuenta ? ' / ' . $c->nombre_cuenta : '')),
+        ]);
+
+        return response()->json(['results' => $results]);
+    }
 }

@@ -524,6 +524,69 @@ const destinatarioCuentaId = (g) => g.pedidos[0]?.destinatario_cuenta_id || g.en
 
 const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
 
+const busquedaCuentas = reactive({});
+const cuentasManuales = reactive({});
+const busquedaTimers = {};
+
+const initBusqueda = (g) => {
+    if (!busquedaCuentas[g.entregaId]) {
+        busquedaCuentas[g.entregaId] = { open: false, q: '', loading: false, results: [] };
+    }
+};
+
+const toggleBusqueda = (g) => {
+    initBusqueda(g);
+    const state = busquedaCuentas[g.entregaId];
+    state.open = !state.open;
+    if (state.open) {
+        const selectedId = facturarPorEntrega.facturar_por_entrega[g.entregaId];
+        const selected = g.cuentas.find((c) => String(c.id) === String(selectedId));
+        if (selected?.cuit) {
+            state.q = selected.cuit;
+            buscarCuentas(g);
+        }
+    }
+};
+
+const buscarCuentas = (g) => {
+    const state = busquedaCuentas[g.entregaId];
+    if (!state || state.q.length < 2) {
+        state.results = [];
+        return;
+    }
+    state.loading = true;
+    clearTimeout(busquedaTimers[g.entregaId]);
+    busquedaTimers[g.entregaId] = setTimeout(() => {
+        window.axios
+            .get(route('admin.terceros.lookup-cuentas'), {
+                params: { q: state.q, empresa_id: props.manifiesto?.empresa?.id },
+            })
+            .then((res) => {
+                state.results = res.data.results || [];
+            })
+            .catch(() => {
+                state.results = [];
+            })
+            .finally(() => {
+                state.loading = false;
+            });
+    }, 300);
+};
+
+const seleccionarCuentaManual = (g, cuenta) => {
+    facturarPorEntrega.facturar_por_entrega[g.entregaId] = String(cuenta.id);
+    cuentasManuales[g.entregaId] = cuenta;
+    busquedaCuentas[g.entregaId].open = false;
+};
+
+const cuentaSeleccionadaLabel = (g) => {
+    const selectedId = facturarPorEntrega.facturar_por_entrega[g.entregaId];
+    if (!selectedId) return null;
+    const fromGroup = g.cuentas.find((c) => String(c.id) === String(selectedId));
+    if (fromGroup) return fromGroup;
+    return cuentasManuales[g.entregaId] || null;
+};
+
 const pedidosConErrorDeGrupo = (g) => (g?.pedidos || []).filter((p) => p.recepcion_estado === 'con_error');
 const tieneErroresGrupo = (g) => pedidosConErrorDeGrupo(g).length > 0;
 
@@ -682,6 +745,9 @@ const enviarCorreccion = () => {
                                             <option v-for="c in g.cuentas" :key="c.id" :value="String(c.id)">
                                                 {{ c.label }}{{ c.cuit ? ' CUIT ' + c.cuit : '' }}
                                             </option>
+                                            <option v-if="cuentasManuales[g.entregaId]" :value="String(cuentasManuales[g.entregaId].id)">
+                                                {{ cuentasManuales[g.entregaId].label }}{{ cuentasManuales[g.entregaId].cuit ? ' CUIT ' + cuentasManuales[g.entregaId].cuit : '' }}
+                                            </option>
                                         </select>
                                         <select
                                             v-model="facturarPorEntrega.empresa_por_entrega[g.entregaId]"
@@ -691,6 +757,40 @@ const enviarCorreccion = () => {
                                                 {{ emp.razon_social }}
                                             </option>
                                         </select>
+                                        <button
+                                            type="button"
+                                            class="text-[10px] text-indigo-600 hover:text-indigo-800 underline"
+                                            @click.prevent="toggleBusqueda(g)"
+                                        >
+                                            {{ busquedaCuentas[g.entregaId]?.open ? 'Cerrar' : 'Buscar' }}
+                                        </button>
+                                    </div>
+                                    <div v-if="busquedaCuentas[g.entregaId]?.open" class="mt-1 border border-gray-300 rounded-md bg-white shadow-sm p-2 w-80">
+                                        <TextInput
+                                            v-model="busquedaCuentas[g.entregaId].q"
+                                            type="text"
+                                            placeholder="Razon social o CUIT"
+                                            class="block w-full text-xs"
+                                            @input="buscarCuentas(g)"
+                                        />
+                                        <div v-if="busquedaCuentas[g.entregaId].loading" class="text-xs text-gray-500 mt-1">Buscando...</div>
+                                        <ul v-else class="mt-1 max-h-32 overflow-y-auto divide-y divide-gray-100">
+                                            <li
+                                                v-for="c in busquedaCuentas[g.entregaId].results"
+                                                :key="c.id"
+                                                class="px-1 py-1 text-xs cursor-pointer hover:bg-gray-100"
+                                                @click.prevent="seleccionarCuentaManual(g, c)"
+                                            >
+                                                <div class="font-medium">{{ c.label }}</div>
+                                                <div v-if="c.cuit" class="text-gray-500">CUIT {{ c.cuit }} · N° {{ c.numero_cliente }}</div>
+                                            </li>
+                                            <li v-if="!busquedaCuentas[g.entregaId].results.length && busquedaCuentas[g.entregaId].q.length >= 2" class="px-1 py-1 text-xs text-gray-500">
+                                                Sin resultados.
+                                            </li>
+                                        </ul>
+                                        <div v-if="cuentaSeleccionadaLabel(g)" class="mt-2 text-xs text-green-700">
+                                            Seleccionado: {{ cuentaSeleccionadaLabel(g).label }}{{ cuentaSeleccionadaLabel(g).cuit ? ' CUIT ' + cuentaSeleccionadaLabel(g).cuit : '' }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
