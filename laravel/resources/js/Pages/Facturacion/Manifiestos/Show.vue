@@ -735,7 +735,16 @@ const enviarCorreccion = () => {
                                     </label>
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <div class="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider">A quién facturar</div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider">A quién facturar</div>
+                                        <button
+                                            type="button"
+                                            class="text-[10px] text-indigo-600 hover:text-indigo-800 underline"
+                                            @click.prevent="toggleBusqueda(g)"
+                                        >
+                                            {{ busquedaCuentas[g.entregaId]?.open ? 'Cerrar' : 'Buscar' }}
+                                        </button>
+                                    </div>
                                     <div class="flex items-center gap-2">
                                         <select
                                             v-model="facturarPorEntrega.facturar_por_entrega[g.entregaId]"
@@ -757,13 +766,6 @@ const enviarCorreccion = () => {
                                                 {{ emp.razon_social }}
                                             </option>
                                         </select>
-                                        <button
-                                            type="button"
-                                            class="text-[10px] text-indigo-600 hover:text-indigo-800 underline"
-                                            @click.prevent="toggleBusqueda(g)"
-                                        >
-                                            {{ busquedaCuentas[g.entregaId]?.open ? 'Cerrar' : 'Buscar' }}
-                                        </button>
                                     </div>
                                     <div v-if="busquedaCuentas[g.entregaId]?.open" class="mt-1 border border-gray-300 rounded-md bg-white shadow-sm p-2 w-80">
                                         <TextInput
