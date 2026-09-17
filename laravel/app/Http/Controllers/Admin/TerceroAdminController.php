@@ -317,21 +317,19 @@ class TerceroAdminController extends Controller
     {
         $data = $request->validate([
             'q' => ['required', 'string', 'min:2', 'max:255'],
-            'empresa_id' => ['nullable', 'integer', 'exists:empresas,id'],
         ]);
 
         $q = trim($data['q']);
-        $empresaId = (int) ($data['empresa_id'] ?? 0);
         $cleanCuit = preg_replace('/\D+/', '', $q) ?? '';
 
         $query = TerceroCuenta::query()
             ->with('tercero:id,cuit,razon_social')
-            ->leftJoin('tercero_empresa as te', function ($join) {
-                $join->on('te.tercero_cuenta_id', '=', 'tercero_cuentas.id')
-                    ->on('te.empresa_id', '=', 'tercero_cuentas.empresa_id');
+            ->whereExists(function ($builder) {
+                $builder->selectRaw(1)
+                    ->from('tercero_empresa')
+                    ->whereColumn('tercero_empresa.tercero_cuenta_id', 'tercero_cuentas.id')
+                    ->where('tercero_empresa.es_cliente', true);
             })
-            ->where('te.es_cliente', true)
-            ->when($empresaId > 0, fn ($builder) => $builder->where('tercero_cuentas.empresa_id', $empresaId))
             ->where(function ($builder) use ($q, $cleanCuit) {
                 if (strlen($cleanCuit) >= 3) {
                     $builder->orWhereHas('tercero', fn ($t) => $t->where('cuit', 'like', "%{$cleanCuit}%"));

@@ -559,7 +559,7 @@ const buscarCuentas = (g) => {
     busquedaTimers[g.entregaId] = setTimeout(() => {
         window.axios
             .get(route('admin.terceros.lookup-cuentas'), {
-                params: { q: state.q, empresa_id: props.manifiesto?.empresa?.id },
+                params: { q: state.q },
             })
             .then((res) => {
                 state.results = res.data.results || [];
