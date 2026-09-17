@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputError from '@/Components/InputError.vue';
@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 
 const props = defineProps({
     manifiesto: Object,
@@ -212,7 +213,7 @@ const pedidosPendientes = computed(() => {
     return (props.manifiesto.pedidos || []).filter((p) => !(p.comprobantes && p.comprobantes.length));
 });
 
-const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {}, empresa_por_entrega: {} });
+const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {}, empresa_por_entrega: {}, reparto_forzado_por_entrega: {} });
 
 const detalleOverridesSnapshot = computed(() => JSON.stringify(facturarPorEntrega.detalles_por_entrega || {}));
 
@@ -337,10 +338,16 @@ const initFacturarMap = () => {
     const map = {};
     const det = {};
     const emp = {};
+    const reparto = {};
     for (const g of gruposFacturacion.value) {
         const empresaId = props.manifiesto?.empresa?.id || '';
         map[g.entregaId] = g.suggested || '';
         emp[g.entregaId] = String(empresaId);
+
+        const destCuentaId = g.pedidos[0]?.destinatario_cuenta_id;
+        if (destCuentaId && reparto[destCuentaId] === undefined) {
+            reparto[destCuentaId] = false;
+        }
         det[g.entregaId] = {
             editar: false,
             persistir_tarifa: false,
@@ -367,6 +374,7 @@ const initFacturarMap = () => {
     facturarPorEntrega.facturar_por_entrega = map;
     facturarPorEntrega.detalles_por_entrega = det;
     facturarPorEntrega.empresa_por_entrega = emp;
+    facturarPorEntrega.reparto_forzado_por_entrega = reparto;
 };
 
 initFacturarMap();
@@ -386,10 +394,12 @@ const facturarSolo = (entregaId) => {
         return;
     }
     if (!confirm('¿Confirmar facturación de este grupo?')) return;
+    const destId = destinatarioCuentaId(g);
     const singleData = {
         facturar_por_entrega: { [entregaId]: facturarPorEntrega.facturar_por_entrega[entregaId] },
         detalles_por_entrega: { [entregaId]: facturarPorEntrega.detalles_por_entrega[entregaId] },
         empresa_por_entrega: { [entregaId]: facturarPorEntrega.empresa_por_entrega[entregaId] },
+        reparto_forzado_por_entrega: { [destId]: facturarPorEntrega.reparto_forzado_por_entrega?.[destId] ?? false },
     };
     const keysToNull = ['tarifa_bulto','tarifa_palet','tarifa_valor_declarado_pct','flete_minimo','seguro_pct','seguro_minimo','seguro_tope','cr_comision_pct','cr_comision_minimo','cr_comision_tope','cr_importe_manual','comision_cr_manual','iva_pct','usar_bulto','usar_palet','usar_valor','usar_servicio_minimo','servicio_retiro'];
     const det = {};
@@ -485,8 +495,10 @@ const emitirGuias = () => {
 
 const formatFecha = (value) => {
     if (!value) return '-';
-    const d = new Date(String(value).slice(0, 10));
-    const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
+    const s = String(value).slice(0, 10);
+    const [yyyy, mm, dd] = s.split('-');
+    if (!yyyy || !mm || !dd) return s;
+    return `${dd}-${mm}-${yyyy}`;
 };
 
 const formatMoney = (n) => {
@@ -501,8 +513,51 @@ const comprobanteTipoLabel = (tipo) => {
     return tipo || '-';
 };
 
+const errorLabels = {
+    bultos: 'Bultos',
+    palets: 'Palets',
+    roturas: 'Roturas',
+    bultos_abiertos: 'Bultos abiertos',
+};
+const formatRecepcionErrores = (errores) => (errores || []).map((e) => errorLabels[e] || e).join(', ');
+const destinatarioCuentaId = (g) => g.pedidos[0]?.destinatario_cuenta_id || g.entregaId;
+
 const recepcionConErrores = computed(() => (props.manifiesto.pedidos || []).filter((p) => p.recepcion_estado === 'con_error'));
 const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
+
+const pedidosConErrorDeGrupo = (g) => (g?.pedidos || []).filter((p) => p.recepcion_estado === 'con_error');
+const tieneErroresGrupo = (g) => pedidosConErrorDeGrupo(g).length > 0;
+
+const correccionModalOpen = ref(false);
+const correccionPedido = ref(null);
+const correccionForm = useForm({
+    bultos: 0,
+    palets: 0,
+    valor_declarado: 0,
+    observacion: '',
+});
+
+const abrirCorreccion = (pedido) => {
+    correccionPedido.value = pedido;
+    correccionForm.bultos = pedido.bultos || 0;
+    correccionForm.palets = pedido.palets || 0;
+    correccionForm.valor_declarado = pedido.valor_declarado || 0;
+    correccionForm.observacion = pedido.observacion || '';
+    correccionModalOpen.value = true;
+};
+
+const cerrarCorreccion = () => {
+    correccionModalOpen.value = false;
+    correccionPedido.value = null;
+};
+
+const enviarCorreccion = () => {
+    if (!correccionPedido.value) return;
+    correccionForm.post(route('operacion.manifiestos.pedidos.corregir', [props.manifiesto.id, correccionPedido.value.id]), {
+        preserveScroll: true,
+        onSuccess: () => cerrarCorreccion(),
+    });
+};
 </script>
 
 <template>
@@ -644,6 +699,25 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                 </div>
                             </div>
 
+                            <div v-if="tieneErroresGrupo(g)" class="bg-red-50 border-y border-red-200 px-4 py-3">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                    <div class="text-sm text-red-900">
+                                        <div class="font-semibold">Pedidos con errores de recepcion</div>
+                                        <ul class="mt-1 space-y-1">
+                                            <li v-for="p in pedidosConErrorDeGrupo(g)" :key="p.id">
+                                                Pedido #{{ p.id }} (remito {{ p.remito_numero || '-' }}):
+                                                <span class="font-medium">{{ formatRecepcionErrores(p.recepcion_errores) }}</span>
+                                                <span v-if="p.recepcion_observacion"> · {{ p.recepcion_observacion }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <label class="inline-flex items-center gap-2 text-xs text-red-900 whitespace-nowrap cursor-pointer select-none">
+                                        <Checkbox v-model:checked="facturarPorEntrega.reparto_forzado_por_entrega[destinatarioCuentaId(g)]" />
+                                        <span>Enviar a reparto igual</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200 text-xs">
                                     <thead class="bg-gray-50">
@@ -653,6 +727,7 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                             <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Palets</th>
                                             <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor decl.</th>
                                             <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
+                                            <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -662,6 +737,17 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                             <td class="px-3 py-1.5 whitespace-nowrap text-center text-gray-700">{{ p.palets }}</td>
                                             <td class="px-3 py-1.5 whitespace-nowrap text-right font-mono text-gray-700">${{ formatMoney(p.valor_declarado) }}</td>
                                             <td class="px-3 py-1.5 whitespace-nowrap text-right font-mono text-gray-700">{{ p.cr_importe ? '$' + formatMoney(p.cr_importe) : '-' }}</td>
+                                            <td class="px-3 py-1.5 whitespace-nowrap text-center">
+                                                <button
+                                                    v-if="p.recepcion_estado === 'con_error'"
+                                                    type="button"
+                                                    class="text-xs text-red-700 underline hover:text-red-900"
+                                                    @click.prevent="abrirCorreccion(p)"
+                                                >
+                                                    Corregir
+                                                </button>
+                                                <span v-else class="text-gray-400">-</span>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -779,7 +865,15 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
                                         <Link :href="route('operacion.comprobantes.show', c.id)" class="text-indigo-600 hover:text-indigo-800">#{{ c.id }}</Link>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ comprobanteTipoLabel(c.tipo) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {{ comprobanteTipoLabel(c.tipo) }}
+                                        <span v-if="c.detalle_facturacion?.errores_recepcion?.length" class="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                            Con errores
+                                        </span>
+                                        <span v-else-if="c.detalle_facturacion?.reparto_forzado" class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                            Reparto forzado
+                                        </span>
+                                    </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="font-medium text-gray-900">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                         <div class="text-xs text-gray-500">CUIT {{ c.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ c.entrega_cuenta?.numero_cliente || '-' }}</div>
@@ -830,5 +924,44 @@ const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="correccionModalOpen" @close="cerrarCorreccion">
+            <template #title>
+                Corregir pedido #{{ correccionPedido?.id }}
+            </template>
+            <template #content>
+                <div v-if="correccionPedido" class="space-y-3">
+                    <p class="text-xs text-gray-600">
+                        Remito {{ correccionPedido.remito_numero || '-' }} · errores: {{ formatRecepcionErrores(correccionPedido.recepcion_errores) }}
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <InputLabel value="Bultos" />
+                            <TextInput v-model="correccionForm.bultos" type="number" min="0" step="1" class="mt-1 block w-full text-sm" />
+                            <InputError :message="correccionForm.errors.bultos" />
+                        </div>
+                        <div>
+                            <InputLabel value="Palets" />
+                            <TextInput v-model="correccionForm.palets" type="number" min="0" step="1" class="mt-1 block w-full text-sm" />
+                            <InputError :message="correccionForm.errors.palets" />
+                        </div>
+                        <div>
+                            <InputLabel value="Valor declarado" />
+                            <TextInput v-model="correccionForm.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full text-sm" />
+                            <InputError :message="correccionForm.errors.valor_declarado" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <InputLabel value="Observacion" />
+                            <TextInput v-model="correccionForm.observacion" type="text" class="mt-1 block w-full text-sm" />
+                            <InputError :message="correccionForm.errors.observacion" />
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton class="mr-2" @click="cerrarCorreccion">Cancelar</SecondaryButton>
+                <PrimaryButton :disabled="correccionForm.processing" @click="enviarCorreccion">Guardar correccion</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

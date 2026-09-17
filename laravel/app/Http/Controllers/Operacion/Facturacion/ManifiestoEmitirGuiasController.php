@@ -67,10 +67,16 @@ class ManifiestoEmitirGuiasController extends Controller
             'detalles_por_entrega.*.iva_pct' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.persistir_tarifa' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.moneda' => ['nullable', 'in:ARS,USD,EUR,BRL'],
+            'empresa_por_entrega' => ['nullable', 'array'],
+            'empresa_por_entrega.*' => ['nullable', 'integer', 'exists:empresas,id'],
+            'reparto_forzado_por_entrega' => ['nullable', 'array'],
+            'reparto_forzado_por_entrega.*' => ['nullable', 'boolean'],
         ]);
 
         $map = $request->input('facturar_por_entrega', []);
         $detalles = $request->input('detalles_por_entrega', []);
+        $empresaPorEntrega = $request->input('empresa_por_entrega', []);
+        $repartoForzadoMap = $request->input('reparto_forzado_por_entrega', []);
         $created = 0;
         $skipped = 0;
         $missingCuentas = 0;
@@ -80,7 +86,7 @@ class ManifiestoEmitirGuiasController extends Controller
         $tarifaResolver = new TarifaResolver();
         $calculator = new FacturaCalculator();
 
-        DB::transaction(function () use ($empresa, $manifiesto, $map, $detalles, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
+        DB::transaction(function () use ($empresa, $manifiesto, $map, $detalles, $empresaPorEntrega, $repartoForzadoMap, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
             $pedidos = Pedido::query()
                 ->where('manifiesto_ingreso_id', $manifiesto->id)
                 ->whereDoesntHave('comprobantes')
@@ -126,6 +132,32 @@ class ManifiestoEmitirGuiasController extends Controller
                 }
 
                 $facturarCuentaId = $selected;
+
+                $pedidosConError = collect($g['pedidos'])->filter(fn (Pedido $p) => $p->recepcion_estado === 'con_error');
+                $tieneErrores = $pedidosConError->isNotEmpty();
+                $repartoForzado = (bool) ($repartoForzadoMap[$entregaCuentaId] ?? false);
+                $disponibleParaHojaRuta = ! $tieneErrores || $repartoForzado;
+
+                $erroresRecepcion = $pedidosConError->map(fn (Pedido $p) => [
+                    'pedido_id' => $p->id,
+                    'remito_numero' => $p->remito_numero,
+                    'errores' => $p->recepcion_errores ?? [],
+                    'observacion' => $p->recepcion_observacion,
+                ])->values()->all();
+
+                $observacionRecepcion = '';
+                if ($tieneErrores) {
+                    $partes = $pedidosConError->map(function (Pedido $p) {
+                        $campos = implode(', ', $p->recepcion_errores ?? []);
+                        $linea = "Pedido #{$p->id} (remito {$p->remito_numero}): {$campos}";
+                        if ($p->recepcion_observacion) {
+                            $linea .= " - {$p->recepcion_observacion}";
+                        }
+
+                        return $linea;
+                    })->all();
+                    $observacionRecepcion = 'Recepcion con errores: '.implode('; ', $partes);
+                }
 
                 $override = $detalles[(string) $g['entrega']] ?? null;
 
@@ -253,12 +285,16 @@ class ManifiestoEmitirGuiasController extends Controller
                     'total' => $total,
                     'numero_interno' => null,
                     'fecha_emision' => $manifiesto->fecha->toDateString(),
+                    'disponible_para_hoja_ruta' => $disponibleParaHojaRuta,
                     'requiere_autorizacion_arca' => false,
                     'detalle_facturacion' => [
                         'version' => 'v2',
                         'calculo' => $detalleCalc,
                         'relacion_unica' => $isSingleRelacion,
                         'no_fiscal' => true,
+                        'errores_recepcion' => $erroresRecepcion,
+                        'reparto_forzado' => $repartoForzado,
+                        'observacion_recepcion' => $observacionRecepcion,
                     ],
                 ]);
 
@@ -283,7 +319,7 @@ class ManifiestoEmitirGuiasController extends Controller
                     'importe_signed' => $total,
                     'referencia_tipo' => 'comprobante',
                     'referencia_id' => $comprobante->id,
-                    'observacion' => 'Emision guia envio '.$comprobante->id,
+                    'observacion' => $observacionRecepcion !== '' ? $observacionRecepcion : ('Emision guia envio '.$comprobante->id),
                 ]);
 
                 AuditLog::query()->create([

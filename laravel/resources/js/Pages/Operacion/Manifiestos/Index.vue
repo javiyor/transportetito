@@ -40,8 +40,10 @@ const traducirLabel = (label) => {
 
 const formatFecha = (value) => {
     if (!value) return '-';
-    const d = new Date(String(value).slice(0, 10));
-    const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
+    const s = String(value).slice(0, 10);
+    const [yyyy, mm, dd] = s.split('-');
+    if (!yyyy || !mm || !dd) return s;
+    return `${dd}-${mm}-${yyyy}`;
 };
 
 const autoImportando = ref(false);

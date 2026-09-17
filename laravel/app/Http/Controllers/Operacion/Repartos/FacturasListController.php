@@ -53,10 +53,6 @@ class FacturasListController extends Controller
             ->where('estado', 'emitida')
             ->where('disponible_para_hoja_ruta', true)
             ->whereDoesntHave('hojaRutaItems', fn ($q) => $q->where('estado_entrega', 'entregado'))
-            ->whereDoesntHave('pedidos', function ($q) {
-                $q->where('recepcion_estado', '!=', 'correcto')
-                    ->orWhereNull('recepcion_estado');
-            })
             ->orderBy('id');
 
         if ($empresaFiltro > 0) {

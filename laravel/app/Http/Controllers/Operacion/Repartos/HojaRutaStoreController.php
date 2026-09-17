@@ -44,16 +44,20 @@ class HojaRutaStoreController extends Controller
 
         $invalidos = $comprobantes->filter(function (Comprobante $c) {
             $tienePedidos = $c->pedidos()->exists();
+            if (! $tienePedidos) {
+                return false;
+            }
 
-            return $tienePedidos
-                && $c->pedidos()->where(function ($q) {
-                    $q->where('recepcion_estado', '!=', 'correcto')
-                        ->orWhereNull('recepcion_estado');
-                })->exists();
+            $tieneErrores = $c->pedidos()->where(function ($q) {
+                $q->where('recepcion_estado', '!=', 'correcto')
+                    ->orWhereNull('recepcion_estado');
+            })->exists();
+
+            return $tieneErrores && ! $c->disponible_para_hoja_ruta;
         });
 
         if ($invalidos->isNotEmpty()) {
-            return back()->with('error', 'No se pueden incluir en la hoja de ruta comprobantes con pedidos sin controlar o con errores.');
+            return back()->with('error', 'No se pueden incluir en la hoja de ruta comprobantes con pedidos sin controlar o con errores (salvo que se haya autorizado el reparto al facturar).');
         }
 
         $order = 10;

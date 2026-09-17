@@ -44,6 +44,14 @@ const autorizarArca = () => {
     autorizarForm.post(route('operacion.comprobantes.autorizar-arca', props.comprobante.id), { preserveScroll: true });
 };
 
+const recepcionErrorLabels = {
+    bultos: 'Bultos',
+    palets: 'Palets',
+    roturas: 'Roturas',
+    bultos_abiertos: 'Bultos abiertos',
+};
+const formatRecepcionErrores = (errores) => (errores || []).map((e) => recepcionErrorLabels[e] || e).join(', ');
+
 const arcaTipoLabel = (arca_tipo_cbte) => {
     const map = {
         '01': 'Factura A', '02': 'Nota debito A', '03': 'Nota credito A',
@@ -176,6 +184,17 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                     <div class="text-xs uppercase tracking-wider text-gray-500">Motivo</div>
                     <div class="mt-1 text-sm text-gray-900">{{ comprobante.motivo }}</div>
                 </div>
+            </div>
+
+            <div v-if="comprobante.detalle_facturacion?.errores_recepcion?.length || comprobante.detalle_facturacion?.observacion_recepcion" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-red-900">Errores de recepcion</h3>
+                <p class="mt-1 text-sm text-red-800">{{ comprobante.detalle_facturacion.observacion_recepcion }}</p>
+                <ul v-if="comprobante.detalle_facturacion?.errores_recepcion?.length" class="mt-2 space-y-1 text-xs text-red-800">
+                    <li v-for="e in comprobante.detalle_facturacion.errores_recepcion" :key="e.pedido_id">
+                        Pedido #{{ e.pedido_id }} (remito {{ e.remito_numero || '-' }}): {{ formatRecepcionErrores(e.errores) }}
+                        <span v-if="e.observacion"> · {{ e.observacion }}</span>
+                    </li>
+                </ul>
             </div>
 
             <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-4">
