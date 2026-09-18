@@ -932,9 +932,9 @@ const enviarCorreccion = () => {
                                         <InputLabel value="Valor neto total" />
                                         <TextInput :value="formatMoney(detalleGrupo(g).subtotalGravado)" type="text" class="mt-0.5 block w-full text-xs bg-gray-100" disabled />
                                     </div>
-                                    <div>
+                                    <div v-if="!sinIvaEntrega(g.entregaId)">
                                         <InputLabel value="% IVA" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.21" :disabled="sinIvaEntrega(g.entregaId)" :title="sinIvaEntrega(g.entregaId) ? 'La empresa factura sin IVA' : ''" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.21" />
                                     </div>
                                 </div>
                                 <div v-if="g.isSingleRelacion" class="mt-2 flex items-center gap-2">
