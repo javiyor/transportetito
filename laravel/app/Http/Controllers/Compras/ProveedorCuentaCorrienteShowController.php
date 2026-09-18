@@ -75,10 +75,11 @@ class ProveedorCuentaCorrienteShowController extends Controller
             ->where('tercero_cuenta_id', $cuenta->id)
             ->where('estado', '!=', 'anulada')
             ->get()
-            ->filter(fn (OrdenPago $op) => empty($op->detalle['comprobante_ids'] ?? []) && (float) $op->total !== 0.0)
             ->map(function (OrdenPago $op) {
+                $aplicado = collect($op->detalle['aplicaciones'] ?? [])->sum('importe');
                 $usado = collect($op->detalle['compensado_en'] ?? [])->sum('importe');
-                $disponible = round((float) $op->total - (float) $usado, 2);
+                $disponible = round((float) $op->total - (float) $aplicado - (float) $usado, 2);
+                $disponible = max(0, $disponible);
 
                 return (object) [
                     'id' => 'op_credit_'.$op->id,
@@ -87,7 +88,7 @@ class ProveedorCuentaCorrienteShowController extends Controller
                     'total' => round((float) $op->total, 2),
                     'moneda' => $op->moneda,
                     'fecha_emision' => $op->fecha,
-                    'pagado_total' => round((float) $usado, 2),
+                    'pagado_total' => round((float) $aplicado + (float) $usado, 2),
                     'saldo_pendiente' => round(-1 * $disponible, 2),
                     'is_credit' => true,
                 ];

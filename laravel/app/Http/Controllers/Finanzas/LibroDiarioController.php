@@ -49,7 +49,7 @@ class LibroDiarioController extends Controller
             'cuentasContables' => CuentaContable::query()
                 ->where('empresa_id', $empresaId)
                 ->where('activo', true)
-                ->whereIn('nivel', ['cuenta', 'subcuenta', 'cuenta_madre'])
+                ->whereNotIn('nivel', ['capitulo', 'rubro'])
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'codigo_completo', 'nombre', 'nivel']),
             'filtros' => [
