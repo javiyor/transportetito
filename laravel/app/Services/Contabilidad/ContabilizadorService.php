@@ -106,6 +106,12 @@ class ContabilizadorService
         $cuentaIvaCredito = $empresa->getCuentaContable('iva_credito');
         $cuentaProveedores = $empresa->getCuentaContable('proveedores_default');
 
+        foreach (['compras_default' => $cuentaCompras, 'iva_credito' => $cuentaIvaCredito, 'proveedores_default' => $cuentaProveedores] as $clave => $cuenta) {
+            if (! $cuenta) {
+                throw new \RuntimeException("Cuenta contable no configurada para contabilizar: {$clave} (empresa {$empresa->id})");
+            }
+        }
+
         return DB::transaction(function () use ($comprobante, $empresa, $cuentaCompras, $cuentaIvaCredito, $cuentaProveedores) {
             $asiento = AsientoContable::create([
                 'empresa_id' => $empresa->id,
