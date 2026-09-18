@@ -23,12 +23,60 @@ class ReconstruirCtaCteProveedores extends Command
             $this->warn('Modo dry-run: no se guardaran cambios.');
         }
 
+        $this->eliminarAsientosDuplicados($cuentaId, $dry);
         $this->reconstruirFacturas($cuentaId, $dry);
         $this->reconstruirPagos($cuentaId, $dry);
         $this->reconstruirAnulaciones($cuentaId, $dry);
         $this->limpiarHuerfanos($cuentaId, $dry);
 
         return self::SUCCESS;
+    }
+
+    private function eliminarAsientosDuplicados(?int $cuentaId, bool $dry): void
+    {
+        $this->info('Limpiando asientos contables duplicados...');
+        $eliminados = 0;
+
+        $tipos = ['proveedor_comprobante', 'orden_pago'];
+
+        foreach ($tipos as $tipo) {
+            $query = DB::table('asiento_contables')
+                ->where('referencia_tipo', $tipo)
+                ->when($cuentaId, function ($q) use ($tipo, $cuentaId) {
+                    if ($tipo === 'proveedor_comprobante') {
+                        $q->whereIn('referencia_id', function ($sub) use ($cuentaId) {
+                            $sub->select('id')->from('proveedor_comprobantes')->where('tercero_cuenta_id', $cuentaId);
+                        });
+                    } else {
+                        $q->whereIn('referencia_id', function ($sub) use ($cuentaId) {
+                            $sub->select('id')->from('ordenes_pago')->where('tercero_cuenta_id', $cuentaId);
+                        });
+                    }
+                })
+                ->select('referencia_tipo', 'referencia_id')
+                ->selectRaw('COUNT(*) as total, MAX(id) as max_id')
+                ->groupBy('referencia_tipo', 'referencia_id')
+                ->havingRaw('COUNT(*) > 1');
+
+            $duplicados = $query->get();
+
+            foreach ($duplicados as $dup) {
+                $aEliminar = DB::table('asiento_contables')
+                    ->where('referencia_tipo', $dup->referencia_tipo)
+                    ->where('referencia_id', $dup->referencia_id)
+                    ->where('id', '<', $dup->max_id)
+                    ->pluck('id');
+
+                $eliminados += $aEliminar->count();
+
+                if (! $dry) {
+                    DB::table('asiento_lineas')->whereIn('asiento_id', $aEliminar)->delete();
+                    DB::table('asiento_contables')->whereIn('id', $aEliminar)->delete();
+                }
+            }
+        }
+
+        $this->info("  Asientos duplicados a eliminar: {$eliminados}");
     }
 
     private function reconstruirFacturas(?int $cuentaId, bool $dry): void
@@ -56,14 +104,25 @@ class ReconstruirCtaCteProveedores extends Command
                 $importe = $esCredito ? (-1 * abs((float) $c->total)) : (float) $c->total;
 
                 if ($mov) {
-                    if (abs((float) $mov->importe_signed - $importe) > 0.01 || (int) $mov->tercero_cuenta_id !== (int) $c->tercero_cuenta_id) {
+                    $cambios = [];
+                    if (abs((float) $mov->importe_signed - $importe) > 0.01) {
+                        $cambios['importe_signed'] = $importe;
+                    }
+                    if ((int) $mov->tercero_cuenta_id !== (int) $c->tercero_cuenta_id) {
+                        $cambios['tercero_cuenta_id'] = $c->tercero_cuenta_id;
+                    }
+                    if ((int) $mov->empresa_id !== (int) $c->empresa_id) {
+                        $cambios['empresa_id'] = $c->empresa_id;
+                    }
+                    if ($mov->fecha != $c->fecha_emision) {
+                        $cambios['fecha'] = $c->fecha_emision;
+                    }
+                    if ($mov->moneda !== $c->moneda) {
+                        $cambios['moneda'] = $c->moneda;
+                    }
+                    if (! empty($cambios)) {
                         if (! $dry) {
-                            $mov->update([
-                                'importe_signed' => $importe,
-                                'tercero_cuenta_id' => $c->tercero_cuenta_id,
-                                'fecha' => $c->fecha_emision,
-                                'moneda' => $c->moneda,
-                            ]);
+                            $mov->update($cambios);
                         }
                         $actualizados++;
                     }
@@ -121,14 +180,25 @@ class ReconstruirCtaCteProveedores extends Command
                 $importe = round(-1 * $totalEfectivo, 2);
 
                 if ($mov) {
+                    $cambios = [];
                     if (abs((float) $mov->importe_signed - $importe) > 0.01) {
+                        $cambios['importe_signed'] = $importe;
+                    }
+                    if ((int) $mov->tercero_cuenta_id !== (int) $op->tercero_cuenta_id) {
+                        $cambios['tercero_cuenta_id'] = $op->tercero_cuenta_id;
+                    }
+                    if ((int) $mov->empresa_id !== (int) $op->empresa_id) {
+                        $cambios['empresa_id'] = $op->empresa_id;
+                    }
+                    if ($mov->fecha != $op->fecha) {
+                        $cambios['fecha'] = $op->fecha;
+                    }
+                    if ($mov->moneda !== $op->moneda) {
+                        $cambios['moneda'] = $op->moneda;
+                    }
+                    if (! empty($cambios)) {
                         if (! $dry) {
-                            $mov->update([
-                                'importe_signed' => $importe,
-                                'fecha' => $op->fecha,
-                                'moneda' => $op->moneda,
-                                'tercero_cuenta_id' => $op->tercero_cuenta_id,
-                            ]);
+                            $mov->update($cambios);
                         }
                         $actualizados++;
                     }
