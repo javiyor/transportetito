@@ -239,7 +239,95 @@ class RepararPlanCuentas extends Command
             $this->info("Reparadas: {$repaired} cuentas con codigo incorrecto.");
         }
 
+        $this->ensureIngresoGastoDefaultCuentas($empresaId);
+
         $this->info("Completado. Creadas: {$stats['created']}, omitidas: {$stats['skipped']}, corregidas: {$stats['fixed']}");
+    }
+
+    private function ensureIngresoGastoDefaultCuentas(int $empresaId): void
+    {
+        $needed = [
+            [
+                'codigo' => '4.01.001.001',
+                'codigo_corto' => '4000',
+                'nombre' => 'Fletes Generales',
+                'tipo' => 'ingreso',
+                'naturaleza' => 'acreedor',
+                'contabilizable' => true,
+                'parents' => [
+                    ['codigo' => '4', 'nombre' => 'INGRESO', 'tipo' => 'ingreso', 'naturaleza' => null],
+                    ['codigo' => '4.01', 'nombre' => 'INGRESOS POR VENTAS', 'tipo' => 'ingreso', 'naturaleza' => null],
+                    ['codigo' => '4.01.001', 'nombre' => 'FLETES', 'tipo' => 'ingreso', 'naturaleza' => 'acreedor'],
+                ],
+            ],
+            [
+                'codigo' => '5.01.001.001',
+                'codigo_corto' => '5000',
+                'nombre' => 'Combustibles',
+                'tipo' => 'egreso',
+                'naturaleza' => 'deudor',
+                'contabilizable' => true,
+                'parents' => [
+                    ['codigo' => '5', 'nombre' => 'EGRESO', 'tipo' => 'egreso', 'naturaleza' => null],
+                    ['codigo' => '5.01', 'nombre' => 'COSTOS Y GASTOS', 'tipo' => 'egreso', 'naturaleza' => null],
+                    ['codigo' => '5.01.001', 'nombre' => 'COMBUSTIBLES', 'tipo' => 'egreso', 'naturaleza' => 'deudor'],
+                ],
+            ],
+        ];
+
+        foreach ($needed as $def) {
+            if (CuentaContable::where('empresa_id', $empresaId)->where('codigo', $def['codigo'])->exists()) {
+                continue;
+            }
+
+            $parentId = null;
+            foreach ($def['parents'] as $parentDef) {
+                $parent = CuentaContable::firstOrCreate(
+                    ['empresa_id' => $empresaId, 'codigo' => $parentDef['codigo']],
+                    [
+                        'parent_id' => $parentId,
+                        'codigo_completo' => $parentDef['codigo'],
+                        'codigo_corto' => null,
+                        'nombre' => $parentDef['nombre'],
+                        'tipo' => $parentDef['tipo'],
+                        'naturaleza' => $parentDef['naturaleza'],
+                        'nivel' => $this->nivelPorCodigo($parentDef['codigo']),
+                        'activo' => true,
+                        'contabilizable' => false,
+                        'orden' => 1,
+                    ]
+                );
+                $parentId = $parent->id;
+            }
+
+            CuentaContable::create([
+                'empresa_id' => $empresaId,
+                'parent_id' => $parentId,
+                'codigo' => $def['codigo'],
+                'codigo_completo' => $def['codigo'],
+                'codigo_corto' => $def['codigo_corto'],
+                'nombre' => $def['nombre'],
+                'tipo' => $def['tipo'],
+                'naturaleza' => $def['naturaleza'],
+                'nivel' => 'cuenta',
+                'activo' => true,
+                'contabilizable' => $def['contabilizable'],
+                'orden' => 1,
+            ]);
+
+            $this->line("  Creada cuenta default: {$def['codigo']} {$def['nombre']}");
+        }
+    }
+
+    private function nivelPorCodigo(string $codigo): string
+    {
+        return match (substr_count($codigo, '.')) {
+            0 => 'capitulo',
+            1 => 'rubro',
+            2 => 'cuenta_madre',
+            3 => 'cuenta',
+            default => 'subcuenta',
+        };
     }
 
     private function repairExisting(int $empresaId): int
