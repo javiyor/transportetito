@@ -29,7 +29,7 @@ class LibroDiarioController extends Controller
             $query->whereHas('lineas', fn ($q) => $q->where('cuenta_contable_id', $cuentaId));
         }
         if ($request->boolean('sin_balancear')) {
-            $query->whereIn('asiento_contables.id', function ($q) {
+            $query->whereIn('asientos_contables.id', function ($q) {
                 $q->from('asiento_lineas')
                     ->select('asiento_id')
                     ->groupBy('asiento_id')
