@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Compras;
 use App\Http\Controllers\Controller;
 use App\Models\CtaCteMovimiento;
 use App\Models\ProveedorComprobante;
+use App\Models\TerceroCuenta;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -90,6 +91,7 @@ class ProveedorComprobanteUpdateController extends Controller
             'tipo' => ['required', 'string', 'max:64'],
             'numero' => ['nullable', 'string', 'max:64'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
+            'tercero_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
             'iva_items' => ['nullable', 'array'],
@@ -110,20 +112,26 @@ class ProveedorComprobanteUpdateController extends Controller
             'observacion' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $nuevaCuenta = TerceroCuenta::query()->findOrFail($data['tercero_cuenta_id']);
+        abort_unless((int) $nuevaCuenta->empresa_id === $empresaId, 422);
+
         $empresa = $comprobante->empresa()->firstOrFail();
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha_emision']);
         $fiscal = $this->fiscalDetail($data, $data['tipo']);
 
-        // Resolver cuenta contable: si viene del form usarla, sino mantener la existente o fallback a cuenta del proveedor/empresa
-        $cuentaContableId = $data['cuenta_contable_id'] ?? $comprobante->cuenta_contable_id;
+        // Resolver cuenta contable: si viene del form usarla, sino usar la cuenta por defecto del proveedor (nueva cuenta) o fallback empresa
+        $cuentaContableId = $data['cuenta_contable_id'] ?? null;
         if (!$cuentaContableId) {
-            $cuentaContableId = $comprobante->cuenta?->cuenta_contable_proveedor_id ?: $empresa->getCuentaContable('compras_default')?->id;
+            $cuentaContableId = $nuevaCuenta->cuenta_contable_proveedor_id
+                ?: $comprobante->cuenta_contable_id
+                ?: $empresa->getCuentaContable('compras_default')?->id;
         }
 
         $comprobante->update([
             'tipo' => $data['tipo'],
             'numero' => $data['numero'] ?: null,
             'moneda' => $data['moneda'],
+            'tercero_cuenta_id' => $data['tercero_cuenta_id'],
             'cotizacion_ars' => $cotizacion['tasa_ars'],
             'subtotal' => $fiscal['subtotal'],
             'iva_total' => $fiscal['iva_total'],
@@ -143,6 +151,7 @@ class ProveedorComprobanteUpdateController extends Controller
                 'fecha' => $data['fecha_emision'],
                 'moneda' => $data['moneda'],
                 'cotizacion_ars' => $cotizacion['tasa_ars'],
+                'tercero_cuenta_id' => $data['tercero_cuenta_id'],
                 'importe_signed' => $fiscal['total'],
                 'observacion' => $data['observacion'] ?: ('Comprobante proveedor '.$comprobante->id),
             ]);

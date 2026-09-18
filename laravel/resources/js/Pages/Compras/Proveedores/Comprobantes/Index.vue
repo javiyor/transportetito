@@ -85,6 +85,8 @@ const editComprobanteDialog = ref(false);
 const editComprobanteId = ref(null);
 
 const editComprobanteForm = useForm({
+    tercero_cuenta_id: '',
+    proveedor_cuit_busqueda: '',
     tipo: '',
     numero: '',
     moneda: 'ARS',
@@ -160,6 +162,11 @@ watch(() => form.tercero_cuenta_id, (val) => {
     if (editComprobanteDialog.value) return;
     fetchTiposArca(val);
     form.tipo = '';
+});
+
+watch(() => editComprobanteForm.tercero_cuenta_id, (val) => {
+    if (!editComprobanteDialog.value) return;
+    fetchTiposArca(val, true);
 });
 
 watch(() => form.tipo, (tipo) => {
@@ -308,8 +315,26 @@ const buscarProveedorPorCuit = async () => {
     }
 };
 
+const buscarProveedorPorCuitEdit = async () => {
+    const cuit = String(editComprobanteForm.proveedor_cuit_busqueda || '').trim();
+    if (!cuit) return;
+
+    const url = route('compras.proveedores.lookup-cuit', { cuit });
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    const data = await res.json();
+
+    if (data.cuenta?.id) {
+        editComprobanteForm.tercero_cuenta_id = data.cuenta.id;
+        fetchTiposArca(data.cuenta.id, true);
+    } else {
+        window.location.href = route('admin.terceros.index', { cuit, tipo: 'proveedor' });
+    }
+};
+
 const openEditComprobante = (c) => {
     editComprobanteId.value = c.id;
+    editComprobanteForm.tercero_cuenta_id = c.tercero_cuenta_id || '';
+    editComprobanteForm.proveedor_cuit_busqueda = c.cuenta?.tercero?.cuit || '';
     fetchTiposArca(c.tercero_cuenta_id, true);
     editComprobanteForm.tipo = c.tipo || '';
     editComprobanteForm.numero = c.numero || '';
@@ -534,6 +559,23 @@ const submitDelete = () => {
                 <template #title>Editar comprobante proveedor</template>
                 <template #content>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end rounded-lg border border-gray-200 bg-gray-50 p-2">
+                                <div>
+                                    <InputLabel value="Buscar proveedor por CUIT" />
+                                    <TextInput v-model="editComprobanteForm.proveedor_cuit_busqueda" type="text" class="mt-1 block w-full text-sm" placeholder="CUIT" />
+                                </div>
+                                <div>
+                                    <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="buscarProveedorPorCuitEdit">Buscar CUIT</SecondaryButton>
+                                </div>
+                            </div>
+                            <div>
+                                <InputLabel value="Proveedor" />
+                                <select v-model="editComprobanteForm.tercero_cuenta_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                    <option value="">(seleccionar)</option>
+                                    <option v-for="p in proveedores" :key="p.id" :value="p.id">{{ p.tercero?.razon_social || p.nombre_cuenta || ('#' + p.id) }}</option>
+                                </select>
+                                <InputError class="mt-1" :message="editComprobanteForm.errors.tercero_cuenta_id" />
+                            </div>
                             <div><InputLabel value="Tipo" /><select v-model="editComprobanteForm.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">(seleccionar tipo)</option><option v-for="t in tiposArca" :key="t.code" :value="t.code">{{ t.label }}</option></select><InputError class="mt-1" :message="editComprobanteForm.errors.tipo" /></div>
                             <div><InputLabel value="Numero" /><TextInput v-model="editComprobanteForm.numero" type="text" class="mt-1 block w-full text-sm" /><InputError class="mt-1" :message="editComprobanteForm.errors.numero" /></div>
                             <div><InputLabel value="Moneda" /><select v-model="editComprobanteForm.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-1" :message="editComprobanteForm.errors.moneda" /></div>
