@@ -131,7 +131,7 @@ class CargaDirectaStoreController extends Controller
             ];
         }
 
-        $ivaPct = (float) ($tarifa['iva_pct'] ?? 0.21);
+        $ivaPct = $empresa->factura_sin_iva ? 0.0 : (float) ($tarifa['iva_pct'] ?? 0.21);
         $subtotalGravado = round($totalImporte + $totalSeguro + $totalCr, 2);
         $iva = round($subtotalGravado * $ivaPct, 2);
         $total = round($subtotalGravado + $iva, 2);

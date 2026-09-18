@@ -19,7 +19,7 @@ const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.
 const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const defaultPct = Number(props.tarifaDefaults?.tarifa_valor_declarado_pct) || 0.03;
-const ivaPct = Number(props.tarifaDefaults?.iva_pct) || 0.21;
+const ivaPct = props.empresa?.factura_sin_iva ? 0 : (Number(props.tarifaDefaults?.iva_pct) || 0.21);
 
 const form = useForm({
     origen_cuenta_id: '',

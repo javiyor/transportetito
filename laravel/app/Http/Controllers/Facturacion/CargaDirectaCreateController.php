@@ -16,7 +16,7 @@ class CargaDirectaCreateController extends Controller
     {
         $empresaId = (int) $request->user()->current_empresa_id;
 
-        $empresa = Empresa::query()->find($empresaId, ['id', 'razon_social', 'condicion_iva']);
+        $empresa = Empresa::query()->find($empresaId, ['id', 'razon_social', 'condicion_iva', 'factura_sin_iva']);
 
         $cuentas = TerceroCuenta::query()
             ->where('empresa_id', $empresaId)

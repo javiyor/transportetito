@@ -30,12 +30,14 @@ class Empresa extends Model
         'facebook_url',
         'linkedin_url',
         'permite_guias_no_fiscales',
+        'factura_sin_iva',
         'moneda_base',
         'logo',
     ];
 
     protected $casts = [
         'permite_guias_no_fiscales' => 'bool',
+        'factura_sin_iva' => 'bool',
     ];
 
     protected $appends = [

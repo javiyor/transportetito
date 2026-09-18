@@ -168,3 +168,4 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
 
 ## Empresas
 - (extensión) logo (string, nullable) — renderizado en navbar y encabezados de impresiones
+- (extensión) factura_sin_iva (bool, default false) — fuerza IVA 0 en facturación de manifiestos, guías y carga directa (activa en empresa 2)

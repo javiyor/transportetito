@@ -37,6 +37,7 @@ class EmpresaAdminController extends Controller
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
             'permite_guias_no_fiscales' => ['sometimes', 'boolean'],
+            'factura_sin_iva' => ['sometimes', 'boolean'],
 
             'telefono' => ['nullable', 'string', 'max:64'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -85,6 +86,7 @@ class EmpresaAdminController extends Controller
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
             'permite_guias_no_fiscales' => ['sometimes', 'boolean'],
+            'factura_sin_iva' => ['sometimes', 'boolean'],
 
             'telefono' => ['nullable', 'string', 'max:64'],
             'email' => ['nullable', 'email', 'max:255'],

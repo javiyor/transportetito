@@ -136,8 +136,17 @@ const applyOverride = (tarifa, override) => {
     return out;
 };
 
-const calcFactura = (pedidos, tarifa, override) => {
+const empresaSinIva = (empresaId) => {
+    const id = String(empresaId || props.manifiesto?.empresa?.id || '');
+    if (String(props.manifiesto?.empresa?.id || '') === id) return !!props.manifiesto?.empresa?.factura_sin_iva;
+    const e = (props.empresas || []).find((x) => String(x.id) === id);
+    return !!e?.factura_sin_iva;
+};
+const sinIvaEntrega = (entregaId) => empresaSinIva(facturarPorEntrega.empresa_por_entrega?.[entregaId]);
+
+const calcFactura = (pedidos, tarifa, override, forzarSinIva = false) => {
     const t = applyOverride(tarifa, override);
+    if (forzarSinIva) t.iva_pct = 0;
     const usarBulto = override?.usar_bulto !== false;
     const usarPalet = override?.usar_palet !== false;
     const usarValor = override?.usar_valor !== false;
@@ -276,7 +285,7 @@ const gruposFacturacion = computed(() => {
                 const entregaId = relKey + '-p' + p.id;
                 ensureDet(entregaId);
                 const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
-                const detalle = calcFactura([p], tarifaBase, override);
+                const detalle = calcFactura([p], tarifaBase, override, sinIvaEntrega(entregaId));
                 const cuentas = new Map();
                 if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
                 if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
@@ -289,7 +298,7 @@ const gruposFacturacion = computed(() => {
             const entregaId = relKey;
             ensureDet(entregaId);
             const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
-            const detalle = calcFactura(pedidos, tarifaBase, override);
+            const detalle = calcFactura(pedidos, tarifaBase, override, sinIvaEntrega(entregaId));
             const cuentas = new Map();
             for (const p of pedidos) {
                 if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
@@ -312,7 +321,7 @@ const detalleGrupo = (g) => {
     const pedidos = g?.pedidos || [];
     const override = facturarPorEntrega.detalles_por_entrega?.[g.entregaId] || null;
     const tarifaBase = resolveTarifa(g.remitenteId, g.destinatarioId);
-    return calcFactura(pedidos, tarifaBase, override);
+    return calcFactura(pedidos, tarifaBase, override, sinIvaEntrega(g.entregaId));
 };
 
 const backfillForm = useForm({ confirm: true });
@@ -925,7 +934,7 @@ const enviarCorreccion = () => {
                                     </div>
                                     <div>
                                         <InputLabel value="% IVA" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.21" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].iva_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.21" :disabled="sinIvaEntrega(g.entregaId)" :title="sinIvaEntrega(g.entregaId) ? 'La empresa factura sin IVA' : ''" />
                                     </div>
                                 </div>
                                 <div v-if="g.isSingleRelacion" class="mt-2 flex items-center gap-2">

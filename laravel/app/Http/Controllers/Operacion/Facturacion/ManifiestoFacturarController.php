@@ -249,6 +249,10 @@ class ManifiestoFacturarController extends Controller
                     $tarifa['tasa_origen_importes_ars'] = 1;
                     $tarifa['tasa_destino_ars'] = $tipoCambioResolver->resolver($empresa, (string) $tarifa['moneda'], $manifiesto->fecha->toDateString())['tasa_ars'];
 
+                    if ($empresa->factura_sin_iva) {
+                        $tarifa['iva_pct'] = 0;
+                    }
+
                     $calc = $calculator->calcular($rg['pedidos'], $tarifa);
                     $detallesPorRelacion[] = [
                         'remitente_tercero_id' => (int) $rg['remitente_id'],

@@ -161,6 +161,9 @@ class ManifiestoEmitirGuiasController extends Controller
 
                 $override = $detalles[(string) $g['entrega']] ?? null;
 
+                $empresaFacturante = \App\Models\Empresa::query()->find($empresaPorEntrega[$entregaCuentaId] ?? $manifiesto->empresa_id);
+                $facturaSinIva = (bool) ($empresaFacturante?->factura_sin_iva);
+
                 $relationGroups = [];
                 foreach ($g['pedidos'] as $p) {
                     $remId = (int) ($p->remitente_tercero_id ?: 0);
@@ -216,6 +219,10 @@ class ManifiestoEmitirGuiasController extends Controller
                     $tarifa['moneda_origen_importes'] = 'ARS';
                     $tarifa['tasa_origen_importes_ars'] = 1;
                     $tarifa['tasa_destino_ars'] = $tipoCambioResolver->resolver($empresa, (string) $tarifa['moneda'], $manifiesto->fecha->toDateString())['tasa_ars'];
+
+                    if ($facturaSinIva) {
+                        $tarifa['iva_pct'] = 0;
+                    }
 
                     $calc = $calculator->calcular($rg['pedidos'], $tarifa);
                     $detallesPorRelacion[] = [

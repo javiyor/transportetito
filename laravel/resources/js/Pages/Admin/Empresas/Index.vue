@@ -27,6 +27,7 @@ const createForm = useForm({
     arca_pv_default: 2,
     arca_env: 'homologacion',
     permite_guias_no_fiscales: false,
+    factura_sin_iva: false,
 
     telefono: '',
     email: '',
@@ -70,6 +71,7 @@ const editForm = useForm({
     arca_pv_default: 2,
     arca_env: 'homologacion',
     permite_guias_no_fiscales: false,
+    factura_sin_iva: false,
 
     telefono: '',
     email: '',
@@ -94,6 +96,7 @@ const openEdit = (e) => {
     editForm.arca_pv_default = e.arca_pv_default;
     editForm.arca_env = e.arca_env;
     editForm.permite_guias_no_fiscales = !!e.permite_guias_no_fiscales;
+    editForm.factura_sin_iva = !!e.factura_sin_iva;
 
     editForm.telefono = e.telefono || '';
     editForm.email = e.email || '';
@@ -199,6 +202,12 @@ const confirmDelete = (e) => {
                         <label class="flex items-center gap-2 text-sm text-gray-700">
                             <Checkbox v-model:checked="createForm.permite_guias_no_fiscales" />
                             Permite emitir guias no fiscales
+                        </label>
+                    </div>
+                    <div class="flex items-end">
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <Checkbox v-model:checked="createForm.factura_sin_iva" />
+                            Factura sin IVA
                         </label>
                     </div>
 
@@ -351,7 +360,12 @@ const confirmDelete = (e) => {
                             Permite guias no fiscales
                         </label>
                     </div>
-                    <div></div>
+                    <div class="flex items-end pb-1">
+                        <label class="flex items-center gap-2 text-xs text-gray-700">
+                            <Checkbox v-model:checked="editForm.factura_sin_iva" />
+                            Factura sin IVA
+                        </label>
+                    </div>
 
                     <div>
                         <InputLabel value="Telefono" class="!text-xs" />

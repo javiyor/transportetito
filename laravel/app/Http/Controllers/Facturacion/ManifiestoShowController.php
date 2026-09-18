@@ -16,7 +16,7 @@ class ManifiestoShowController extends Controller
 {
     public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ArcaTipoComprobanteResolver $arcaTipos, TipoCambioResolver $tipoCambioResolver)
     {
-        $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id, ['id', 'razon_social', 'permite_guias_no_fiscales', 'condicion_iva', 'moneda_base']);
+        $empresa = Empresa::query()->findOrFail($manifiesto->empresa_id, ['id', 'razon_social', 'permite_guias_no_fiscales', 'factura_sin_iva', 'condicion_iva', 'moneda_base']);
 
         $comprobantes = Comprobante::query()
             ->where('empresa_id', $manifiesto->empresa_id)
@@ -48,7 +48,7 @@ class ManifiestoShowController extends Controller
         });
 
         $manifiesto->load([
-            'empresa:id,razon_social,permite_guias_no_fiscales,condicion_iva,moneda_base',
+            'empresa:id,razon_social,permite_guias_no_fiscales,factura_sin_iva,condicion_iva,moneda_base',
             'deposito:id,nombre',
             'pedidos' => function ($q) {
                 $q->with([
@@ -96,7 +96,7 @@ class ManifiestoShowController extends Controller
             }
         }
 
-        $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']);
+        $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social', 'factura_sin_iva']);
 
         return Inertia::render('Facturacion/Manifiestos/Show', [
             'manifiesto' => $manifiesto,
