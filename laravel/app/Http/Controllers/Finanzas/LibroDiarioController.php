@@ -30,9 +30,9 @@ class LibroDiarioController extends Controller
         }
         if ($request->boolean('sin_balancear')) {
             $query->whereIn('asiento_contables.id', function ($q) {
-                $q->from('lineas')
-                    ->select('asiento_contable_id')
-                    ->groupBy('asiento_contable_id')
+                $q->from('asiento_lineas')
+                    ->select('asiento_id')
+                    ->groupBy('asiento_id')
                     ->havingRaw('SUM(debe) != SUM(haber)');
             });
         }
