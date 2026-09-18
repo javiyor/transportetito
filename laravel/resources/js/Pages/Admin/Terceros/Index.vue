@@ -20,9 +20,13 @@ const props = defineProps({
     proximoNumeroCliente: Number,
     cobradores: Array,
     condicionesIva: Array,
+    cuentasContables: Array,
     compartidos: Boolean,
     search: String,
 });
+
+const cuentasDeEmpresa = (empresaId) => (props.cuentasContables || []).filter((c) => String(c.empresa_id) === String(empresaId || ''));
+const cuentaLabel = (c) => (c ? `${c.codigo} - ${c.nombre}` : '-');
 
 const localidades = ref([]);
 const editLocalidades = ref([]);
@@ -105,6 +109,7 @@ const form = useForm({
     cobrador_user_id: '',
     es_cliente: props.tipoInicial === 'cliente' || !props.tipoInicial,
     es_proveedor: props.tipoInicial === 'proveedor',
+    cuenta_contable_proveedor_id: '',
 });
 
 watch(() => form.provincia_id, (val) => {
@@ -116,10 +121,18 @@ watch(empresaFiltroId, (val) => {
     form.empresa_id = val || props.empresaId || props.empresas?.[0]?.id || null;
 });
 
+watch(() => form.es_proveedor, (val) => {
+    if (!val) form.cuenta_contable_proveedor_id = '';
+});
+
+watch(() => editForm.es_proveedor, (val) => {
+    if (!val) editForm.cuenta_contable_proveedor_id = '';
+});
+
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
     });
 };
 
@@ -141,6 +154,7 @@ const editForm = useForm({
     cobrador_user_id: '',
     es_cliente: false,
     es_proveedor: false,
+    cuenta_contable_proveedor_id: '',
 });
 
 const openEdit = (c) => {
@@ -160,6 +174,7 @@ const openEdit = (c) => {
     editForm.cobrador_user_id = c.cobrador_user_id || '';
     editForm.es_cliente = !!c.es_cliente;
     editForm.es_proveedor = !!c.es_proveedor;
+    editForm.cuenta_contable_proveedor_id = c.cuenta_contable_proveedor_id || '';
     editForm.clearErrors();
     editing.value = true;
     if (c.provincia_id) {
@@ -271,6 +286,15 @@ const localidadNombre = (c) => {
                         <InputError class="mt-1" :message="form.errors.cobrador_user_id" />
                     </div>
 
+                    <div v-if="form.es_proveedor" class="sm:col-span-3">
+                        <InputLabel value="Cuenta contable por defecto (compras)" />
+                        <select v-model="form.cuenta_contable_proveedor_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">(predeterminada de la empresa)</option>
+                            <option v-for="c in cuentasDeEmpresa(form.empresa_id)" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                        </select>
+                        <InputError class="mt-1" :message="form.errors.cuenta_contable_proveedor_id" />
+                    </div>
+
                     <div class="sm:col-span-6 flex items-center gap-4 pt-2">
                         <label class="flex items-center gap-1 text-xs text-gray-700">
                             <Checkbox v-model:checked="form.es_cliente" />
@@ -293,7 +317,7 @@ const localidadNombre = (c) => {
                 <div class="p-4 border-b border-gray-200">
                     <div class="flex items-center justify-between gap-4">
                         <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-semibold text-gray-900 shrink-0">Cuentas</h3>
+                            <h3 class="text-sm font-semibold text-gray-900 shrink-0">Cuentas <span v-if="searchQuery" class="font-normal text-gray-500">(búsqueda en todas las empresas)</span></h3>
                             <select v-model="empresaFiltroId" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1" @change="filtrar">
                                 <option value="">Todas</option>
                                 <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
@@ -327,6 +351,10 @@ const localidadNombre = (c) => {
                             <div>
                                 <span class="text-xs uppercase tracking-wider text-gray-500">Cuenta: </span>
                                 <span class="font-medium text-gray-900">{{ c.nombre_cuenta || '-' }}</span>
+                            </div>
+                            <div v-if="c.es_proveedor">
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Cta contable: </span>
+                                <span class="font-medium text-gray-900">{{ cuentaLabel(c.cuenta_contable_proveedor) }}</span>
                             </div>
                             <div>
                                 <span class="text-xs uppercase tracking-wider text-gray-500">Prov/Ciudad: </span>
@@ -366,6 +394,7 @@ const localidadNombre = (c) => {
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cta contable</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prov</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
@@ -389,6 +418,7 @@ const localidadNombre = (c) => {
                                 <td class="px-3 py-2 text-xs text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.es_proveedor ? cuentaLabel(c.cuenta_contable_proveedor) : '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ provinciaNombre(c.provincia_id) || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ localidadNombre(c) }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.barrio || '-' }}</td>
@@ -405,7 +435,7 @@ const localidadNombre = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td :colspan="mostrarCompartidos ? 14 : 13" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
+                                <td :colspan="mostrarCompartidos ? 15 : 14" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -483,6 +513,14 @@ const localidadNombre = (c) => {
                                 <option v-for="c in cobradores" :key="c.id" :value="c.id">{{ c.name }}</option>
                             </select>
                             <InputError class="mt-1" :message="editForm.errors.cobrador_user_id" />
+                        </div>
+                        <div v-if="editForm.es_proveedor" class="sm:col-span-2">
+                            <InputLabel value="Cuenta contable por defecto (compras)" />
+                            <select v-model="editForm.cuenta_contable_proveedor_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">(predeterminada de la empresa)</option>
+                                <option v-for="c in cuentasDeEmpresa(editForm.empresa_id)" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                            </select>
+                            <InputError class="mt-1" :message="editForm.errors.cuenta_contable_proveedor_id" />
                         </div>
                         <div class="sm:col-span-2 flex flex-wrap items-center gap-4 pt-2">
                             <label class="flex items-center gap-1 text-xs text-gray-700">

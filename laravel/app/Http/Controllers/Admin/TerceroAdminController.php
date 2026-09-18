@@ -24,14 +24,17 @@ class TerceroAdminController extends Controller
         $empresaId = (int) ($request->query('empresa_id') ?: $request->user()->current_empresa_id ?: 0);
 
         $query = TerceroCuenta::query()
-            ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name'])
+            ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name', 'cuentaContableProveedor:id,codigo,nombre'])
             ->leftJoin('tercero_empresa as te', function ($join) {
                 $join->on('te.tercero_cuenta_id', '=', 'tercero_cuentas.id')
                     ->on('te.empresa_id', '=', 'tercero_cuentas.empresa_id');
             })
             ->orderBy('tercero_cuentas.numero_cliente');
 
-        if ($empresaId > 0) {
+        $search = trim((string) ($request->query('search') ?: ''));
+
+        // Con búsqueda activa se busca en todas las empresas (la columna Empresa indica a cuál pertenece cada cuenta)
+        if ($empresaId > 0 && $search === '') {
             $query->where('tercero_cuentas.empresa_id', $empresaId);
         }
 
@@ -46,8 +49,12 @@ class TerceroAdminController extends Controller
             });
         }
 
-        if ($search = $request->query('search')) {
-            $query->whereHas('tercero', fn($q) => $q->where('razon_social', 'ilike', "%{$search}%"));
+        if ($search !== '') {
+            $query->where(function ($w) use ($search) {
+                $w->whereHas('tercero', fn ($q) => $q->where('razon_social', 'ilike', "%{$search}%"))
+                    ->orWhereHas('tercero', fn ($q) => $q->where('cuit', 'like', "%{$search}%"))
+                    ->orWhere('tercero_cuentas.nombre_cuenta', 'ilike', "%{$search}%");
+            });
         }
 
         $cuentas = $query->get([
@@ -63,6 +70,7 @@ class TerceroAdminController extends Controller
             'tercero_cuentas.email',
             'tercero_cuentas.enviar_comprobantes_por_email',
             'tercero_cuentas.cobrador_user_id',
+            'tercero_cuentas.cuenta_contable_proveedor_id',
             'tercero_cuentas.activo',
             'te.es_cliente',
             'te.es_proveedor',
@@ -106,6 +114,12 @@ class TerceroAdminController extends Controller
             'tipoInicial' => $request->query('tipo') ?: null,
             'proximoNumeroCliente' => ($proximoNumero ?? 0) + 1,
             'cobradores' => User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']),
+            'cuentasContables' => \App\Models\CuentaContable::query()
+                ->where('activo', true)
+                ->where('contabilizable', true)
+                ->orderBy('empresa_id')
+                ->orderBy('codigo')
+                ->get(['id', 'empresa_id', 'codigo', 'nombre']),
             'condicionesIva' => CondicionIva::query()->orderBy('codigo_afip')->get(['id', 'codigo_afip', 'nombre']),
             'compartidos' => $compartidos,
             'search' => $request->query('search') ?: null,
@@ -131,6 +145,7 @@ class TerceroAdminController extends Controller
             'cobrador_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'es_cliente' => ['required', 'boolean'],
             'es_proveedor' => ['required', 'boolean'],
+            'cuenta_contable_proveedor_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
         ]);
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
@@ -140,6 +155,11 @@ class TerceroAdminController extends Controller
             $condicionIva = CondicionIva::find($data['condicion_iva_id']);
             $condicionIvaNombre = $condicionIva?->nombre;
         }
+
+        // La cuenta contable por defecto solo aplica si es proveedor
+        $cuentaContableProveedorId = ((bool) $data['es_proveedor'] && ! empty($data['cuenta_contable_proveedor_id']))
+            ? (int) $data['cuenta_contable_proveedor_id']
+            : null;
 
         $tercero = Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
@@ -168,6 +188,7 @@ class TerceroAdminController extends Controller
                 'email' => $data['email'] ?: null,
                 'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
                 'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
+                'cuenta_contable_proveedor_id' => $cuentaContableProveedorId,
                 'activo' => true,
             ]
         );
@@ -182,6 +203,7 @@ class TerceroAdminController extends Controller
             'email' => $data['email'] ?: null,
             'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
             'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
+            'cuenta_contable_proveedor_id' => $cuentaContableProveedorId,
         ]);
 
         TerceroEmpresa::query()->updateOrCreate(
@@ -210,6 +232,7 @@ class TerceroAdminController extends Controller
             'cobrador_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'es_cliente' => ['required', 'boolean'],
             'es_proveedor' => ['required', 'boolean'],
+            'cuenta_contable_proveedor_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
         ]);
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
@@ -219,6 +242,11 @@ class TerceroAdminController extends Controller
             $condicionIva = CondicionIva::find($data['condicion_iva_id']);
             $condicionIvaNombre = $condicionIva?->nombre;
         }
+
+        // La cuenta contable por defecto solo aplica si es proveedor
+        $cuentaContableProveedorId = ((bool) $data['es_proveedor'] && ! empty($data['cuenta_contable_proveedor_id']))
+            ? (int) $data['cuenta_contable_proveedor_id']
+            : null;
 
         $tercero = Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
@@ -246,6 +274,7 @@ class TerceroAdminController extends Controller
             'email' => $data['email'] ?: null,
             'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
             'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
+            'cuenta_contable_proveedor_id' => $cuentaContableProveedorId,
         ]);
 
         TerceroEmpresa::query()->updateOrCreate(

@@ -151,6 +151,8 @@ class ImportarComprasCsvStoreController extends Controller
                 $comprobante = ProveedorComprobante::create([
                     'empresa_id' => $empresa->id,
                     'tercero_cuenta_id' => $cuenta->id,
+                    'cuenta_contable_id' => $cuenta->cuenta_contable_proveedor_id
+                        ?: $empresa->getCuentaContable('compras_default')?->id,
                     'tipo' => $row['tipo'] ?? 'FA',
                     'numero' => $numero,
                     'receptor_cuit' => $row['receptor_cuit'] ?? null,

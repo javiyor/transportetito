@@ -102,7 +102,8 @@ class ContabilizadorService
     {
         $empresa = $comprobante->empresa;
 
-        $cuentaCompras = $empresa->getCuentaContable('compras_default');
+        // Preferir la cuenta específica del comprobante (por defecto del proveedor), con fallback a compras_default
+        $cuentaCompras = $comprobante->cuentaContable ?: $empresa->getCuentaContable('compras_default');
         $cuentaIvaCredito = $empresa->getCuentaContable('iva_credito');
         $cuentaProveedores = $empresa->getCuentaContable('proveedores_default');
 
