@@ -387,6 +387,9 @@ Route::middleware([
 
         Route::get('/libro-diario', [\App\Http\Controllers\Finanzas\LibroDiarioController::class, 'index'])->name('libro-diario');
         Route::post('/libro-diario', \App\Http\Controllers\Finanzas\AsientoStoreController::class)->name('libro-diario.store');
+        Route::put('/libro-diario/{asiento}', \App\Http\Controllers\Finanzas\AsientoUpdateController::class)->name('libro-diario.update');
+        Route::delete('/libro-diario/{asiento}', \App\Http\Controllers\Finanzas\AsientoDestroyController::class)->name('libro-diario.destroy');
+        Route::get('/libro-diario/imprimir', \App\Http\Controllers\Finanzas\LibroDiarioPrintController::class)->name('libro-diario.imprimir');
         Route::get('/libro-mayor', [\App\Http\Controllers\Finanzas\LibroMayorController::class, 'index'])->name('libro-mayor');
         Route::get('/balance', [\App\Http\Controllers\Finanzas\BalanceController::class, 'index'])->name('balance');
         Route::get('/balance/export', [\App\Http\Controllers\Finanzas\BalanceController::class, 'export'])->name('balance.export');

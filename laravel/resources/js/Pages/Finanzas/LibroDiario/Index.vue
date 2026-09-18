@@ -51,18 +51,83 @@ const openCreate = () => {
     showCreate.value = true;
 };
 
-const addLinea = () => {
-    createForm.lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false });
+const asientoEdit = ref(null);
+const showEdit = ref(false);
+const editForm = useForm({
+    fecha: '',
+    descripcion: '',
+    moneda: 'ARS',
+    lineas: [],
+});
+
+const openEdit = (asiento) => {
+    asientoEdit.value = asiento;
+    editForm.fecha = asiento.fecha;
+    editForm.descripcion = asiento.descripcion ?? '';
+    editForm.moneda = asiento.moneda ?? 'ARS';
+    editForm.lineas = (asiento.lineas || []).map((l) => {
+        const cuenta = props.cuentasContables.find((c) => c.id == l.cuenta_contable_id);
+        return {
+            cuenta_contable_id: l.cuenta_contable_id,
+            debe: l.debe || '',
+            haber: l.haber || '',
+            descripcion: l.descripcion ?? '',
+            tercero_cuenta_id: l.tercero_cuenta_id ?? '',
+            _search: cuenta ? cuentaLabel(cuenta) : '',
+            _showCuentas: false,
+        };
+    });
+    if (editForm.lineas.length < 2) {
+        while (editForm.lineas.length < 2) {
+            editForm.lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '', tercero_cuenta_id: '', _search: '', _showCuentas: false });
+        }
+    }
+    editForm.clearErrors();
+    showEdit.value = true;
 };
 
-const removeLinea = (idx) => {
-    if (createForm.lineas.length <= 2) return;
-    createForm.lineas.splice(idx, 1);
+const submitEdit = () => {
+    if (!asientoEdit.value) return;
+    editForm.put(route('finanzas.libro-diario.update', asientoEdit.value.id), {
+        preserveScroll: true,
+        onSuccess: () => { showEdit.value = false; asientoEdit.value = null; },
+    });
+};
+
+const destroyAsiento = (asiento) => {
+    if (!confirm('¿Eliminar el asiento #' + asiento.id + '?')) return;
+    router.delete(route('finanzas.libro-diario.destroy', asiento.id), { preserveScroll: true });
+};
+
+const imprimirUrl = computed(() => {
+    const params = new URLSearchParams();
+    if (props.filtros.fecha_desde) params.set('fecha_desde', props.filtros.fecha_desde);
+    if (props.filtros.fecha_hasta) params.set('fecha_hasta', props.filtros.fecha_hasta);
+    if (props.filtros.cuenta_contable_id) params.set('cuenta_contable_id', props.filtros.cuenta_contable_id);
+    return route('finanzas.libro-diario.imprimir') + '?' + params.toString();
+});
+
+const addLinea = (lineas) => {
+    lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '', tercero_cuenta_id: '', _search: '', _showCuentas: false });
+};
+
+const removeLinea = (lineas, idx) => {
+    if (lineas.length <= 2) return;
+    lineas.splice(idx, 1);
 };
 
 const totalesCreate = computed(() => {
     let debe = 0, haber = 0;
     for (const l of createForm.lineas) {
+        debe += parseFloat(l.debe) || 0;
+        haber += parseFloat(l.haber) || 0;
+    }
+    return { debe: Math.round(debe * 100) / 100, haber: Math.round(haber * 100) / 100, diff: Math.round((debe - haber) * 100) / 100, balanceado: Math.abs(debe - haber) < 0.01 && debe > 0 };
+});
+
+const totalesEdit = computed(() => {
+    let debe = 0, haber = 0;
+    for (const l of editForm.lineas) {
         debe += parseFloat(l.debe) || 0;
         haber += parseFloat(l.haber) || 0;
     }
@@ -197,8 +262,9 @@ const fmtDesc = (d) => {
                         </select>
                         <div v-if="filtroCuentaQuery && !cuentasFiltradasFiltro.length" class="text-[10px] text-gray-400 mt-1">Sin resultados</div>
                     </div>
-                    <div>
+                    <div class="flex items-end gap-2">
                         <button @click="applyFilters" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700">Filtrar</button>
+                        <a :href="imprimirUrl" target="_blank" class="inline-block bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 text-center">Imprimir</a>
                     </div>
                 </div>
             </div>
@@ -251,8 +317,16 @@ const fmtDesc = (d) => {
                                     <td class="px-4 py-2 text-sm text-right font-mono text-red-700">
                                         $ {{ asiento.lineas.reduce((s, l) => s + parseFloat(l.haber), 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
                                     </td>
-                                    <td class="px-4 py-2 text-sm text-center text-gray-400">{{ expanded.has(asiento.id) ? '▲' : '▼' }}</td>
-                                </tr>
+                                <td class="px-4 py-2 text-sm text-center">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <span class="text-gray-400 cursor-pointer" @click.stop="toggle(asiento.id)">{{ expanded.has(asiento.id) ? '▲' : '▼' }}</span>
+                                        <template v-if="asiento.referencia_tipo === 'manual'">
+                                            <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800" @click.stop="openEdit(asiento)">Editar</button>
+                                            <button type="button" class="text-xs text-red-600 hover:text-red-800" @click.stop="destroyAsiento(asiento)">Eliminar</button>
+                                        </template>
+                                    </div>
+                                </td>
+                            </tr>
                                 <tr v-if="expanded.has(asiento.id)">
                                     <td colspan="6" class="px-8 py-2 bg-gray-50">
                                         <table class="w-full text-sm">
@@ -331,7 +405,7 @@ const fmtDesc = (d) => {
                     <div class="border-t border-gray-200 pt-3">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-semibold text-gray-700">Líneas (mínimo 2, Debe = Haber)</span>
-                            <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" @click="addLinea">+ Agregar línea</button>
+                            <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" @click="addLinea(createForm.lineas)">+ Agregar línea</button>
                         </div>
 
                         <div class="space-y-2">
@@ -363,7 +437,7 @@ const fmtDesc = (d) => {
                                     <TextInput v-model="linea.descripcion" type="text" class="block w-full text-xs py-1" placeholder="Detalle" />
                                 </div>
                                 <div class="col-span-2 sm:col-span-1 flex justify-end pt-1">
-                                    <button type="button" class="text-xs text-red-600 hover:text-red-800 disabled:opacity-30" :disabled="createForm.lineas.length <= 2" @click="removeLinea(idx)">✕</button>
+                                    <button type="button" class="text-xs text-red-600 hover:text-red-800 disabled:opacity-30" :disabled="createForm.lineas.length <= 2" @click="removeLinea(createForm.lineas, idx)">✕</button>
                                 </div>
                             </div>
                         </div>
@@ -381,6 +455,89 @@ const fmtDesc = (d) => {
             <template #footer>
                 <SecondaryButton @click="showCreate = false">Cancelar</SecondaryButton>
                 <PrimaryButton class="ms-3" :disabled="createForm.processing || !totalesCreate.balanceado" @click="submitCreate">Crear asiento</PrimaryButton>
+            </template>
+        </DialogModal>
+
+        <DialogModal :show="showEdit" max-width="5xl" @close="showEdit = false">
+            <template #title>Editar asiento #{{ asientoEdit?.id }}</template>
+            <template #content>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <InputLabel value="Fecha" class="!text-xs" />
+                            <TextInput v-model="editForm.fecha" type="date" class="mt-0.5 block w-full text-sm py-1" />
+                            <InputError class="mt-1 text-xs" :message="editForm.errors.fecha" />
+                        </div>
+                        <div>
+                            <InputLabel value="Moneda" class="!text-xs" />
+                            <select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm py-1">
+                                <option value="ARS">ARS</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="BRL">BRL</option>
+                            </select>
+                            <InputError class="mt-1 text-xs" :message="editForm.errors.moneda" />
+                        </div>
+                        <div class="sm:col-span-1">
+                            <InputLabel value="Descripción" class="!text-xs" />
+                            <TextInput v-model="editForm.descripcion" type="text" class="mt-0.5 block w-full text-sm py-1" placeholder="Ej: Ajuste manual" />
+                            <InputError class="mt-1 text-xs" :message="editForm.errors.descripcion" />
+                        </div>
+                    </div>
+
+                        <div class="border-t border-gray-200 pt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-gray-700">Líneas (mínimo 2, Debe = Haber)</span>
+                                <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" @click="addLinea(editForm.lineas)">+ Agregar línea</button>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="hidden sm:grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-gray-500 px-1">
+                                    <div class="col-span-5">Cuenta</div>
+                                    <div class="col-span-2 text-right">Debe</div>
+                                    <div class="col-span-2 text-right">Haber</div>
+                                    <div class="col-span-2">Detalle</div>
+                                    <div class="col-span-1"></div>
+                                </div>
+                                <div v-for="(linea, idx) in editForm.lineas" :key="idx" class="grid grid-cols-12 gap-2 items-start">
+                                    <div class="col-span-12 sm:col-span-5 relative">
+                                    <input v-model="linea._search" @input="onCuentaSearchInput(linea)" @focus="linea._showCuentas = true" @blur="setTimeout(() => linea._showCuentas = false, 150)" type="text" placeholder="Buscar por código o descripción..." class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" />
+                                    <button v-if="linea.cuenta_contable_id" type="button" class="absolute right-1 top-1.5 text-gray-400 hover:text-gray-600 text-[10px]" @mousedown.prevent="clearCuenta(linea)">✕</button>
+                                    <ul v-if="linea._showCuentas" class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                        <li v-for="c in filteredCuentas(linea._search).slice(0, 40)" :key="c.id" class="px-2 py-1 text-xs hover:bg-indigo-50 cursor-pointer" @mousedown.prevent="selectCuenta(linea, c)">{{ cuentaLabel(c) }}</li>
+                                        <li v-if="!filteredCuentas(linea._search).length" class="px-2 py-1 text-xs text-gray-400">Sin resultados</li>
+                                    </ul>
+                                    <div v-if="linea.cuenta_contable_id" class="text-[10px] text-green-700 mt-0.5 truncate">{{ cuentaLabel(cuentasContables.find(x => x.id == linea.cuenta_contable_id) || {}) }}</div>
+                                    <div v-else class="text-[10px] text-gray-400 mt-0.5">Seleccioná una cuenta (código o nombre)</div>
+                                </div>
+                                <div class="col-span-5 sm:col-span-2">
+                                    <TextInput v-model="linea.debe" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />
+                                </div>
+                                <div class="col-span-5 sm:col-span-2">
+                                    <TextInput v-model="linea.haber" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />
+                                </div>
+                                <div class="col-span-10 sm:col-span-2">
+                                    <TextInput v-model="linea.descripcion" type="text" class="block w-full text-xs py-1" placeholder="Detalle" />
+                                </div>
+                                <div class="col-span-2 sm:col-span-1 flex justify-end pt-1">
+                                    <button type="button" class="text-xs text-red-600 hover:text-red-800 disabled:opacity-30" :disabled="editForm.lineas.length <= 2" @click="removeLinea(editForm.lineas, idx)">✕</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <InputError class="mt-2 text-xs" :message="editForm.errors.lineas" />
+
+                        <div class="mt-3 flex justify-end gap-4 text-xs font-mono border-t border-gray-200 pt-2">
+                            <span>Debe: <b class="text-green-700">{{ totalesEdit.debe.toLocaleString('es-AR', {minimumFractionDigits:2}) }}</b></span>
+                            <span>Haber: <b class="text-red-700">{{ totalesEdit.haber.toLocaleString('es-AR', {minimumFractionDigits:2}) }}</b></span>
+                            <span :class="totalesEdit.balanceado ? 'text-green-600' : 'text-red-600'">{{ totalesEdit.balanceado ? '✓ Balanceado' : '✗ Desbalance: ' + totalesEdit.diff.toLocaleString('es-AR', {minimumFractionDigits:2}) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="showEdit = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="editForm.processing || !totalesEdit.balanceado" @click="submitEdit">Guardar cambios</PrimaryButton>
             </template>
         </DialogModal>
     </AppLayout>
