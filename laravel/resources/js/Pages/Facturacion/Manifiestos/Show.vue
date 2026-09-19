@@ -50,6 +50,7 @@ const DEFAULT_TARIFA = {
     cr_comision_minimo: null,
     cr_comision_tope: null,
     iva_pct: 0.21,
+    usar_seguro: true,
 };
 
 const tarifaKey = (remId, destId) => `${remId || 0}-${destId || 0}`;
@@ -74,6 +75,7 @@ const resolveTarifa = (remId, destId) => {
         seguro_pct: Number(t.seguro_pct || 0),
         seguro_minimo: t.seguro_minimo === null ? null : Number(t.seguro_minimo || 0),
         seguro_tope: t.seguro_tope === null ? null : Number(t.seguro_tope || 0),
+        usar_seguro: t.usar_seguro !== false,
         cr_comision_pct: Number(t.cr_comision_pct || 0),
         cr_comision_minimo: t.cr_comision_minimo === null ? null : Number(t.cr_comision_minimo || 0),
         cr_comision_tope: t.cr_comision_tope === null ? null : Number(t.cr_comision_tope || 0),
@@ -150,6 +152,7 @@ const calcFactura = (pedidos, tarifa, override, forzarSinIva = false) => {
     const usarBulto = override?.usar_bulto !== false;
     const usarPalet = override?.usar_palet !== false;
     const usarValor = override?.usar_valor !== false;
+    const usarSeguro = override?.usar_seguro !== false;
     const usarMinimo = override?.usar_servicio_minimo !== false;
     const bultos = pedidos.reduce((acc, p) => acc + Number(p.bultos || 0), 0);
     const palets = pedidos.reduce((acc, p) => acc + Number(p.palets || 0), 0);
@@ -170,9 +173,9 @@ const calcFactura = (pedidos, tarifa, override, forzarSinIva = false) => {
     const valorNetoTotal = valorDeclarado * pctValorEff;
     const flete = Math.max(fleteMinEff, fletePorUnidad, fletePorValor);
 
-    let seguro = valorDeclarado * t.seguro_pct;
-    if (t.seguro_minimo !== null) seguro = Math.max(Number(t.seguro_minimo), seguro);
-    if (t.seguro_tope !== null) seguro = Math.min(Number(t.seguro_tope), seguro);
+    let seguro = usarSeguro ? valorDeclarado * t.seguro_pct : 0;
+    if (usarSeguro && t.seguro_minimo !== null) seguro = Math.max(Number(t.seguro_minimo), seguro);
+    if (usarSeguro && t.seguro_tope !== null) seguro = Math.min(Number(t.seguro_tope), seguro);
 
     let comisionCr = crImporte * t.cr_comision_pct;
     if (t.cr_comision_minimo !== null) comisionCr = Math.max(Number(t.cr_comision_minimo), comisionCr);
@@ -200,7 +203,7 @@ const calcFactura = (pedidos, tarifa, override, forzarSinIva = false) => {
         total: round2(total),
         valorNetoTotal: round2(valorNetoTotal),
         parametros: t,
-        seleccion: { usar_bulto: usarBulto, usar_palet: usarPalet, usar_valor: usarValor, usar_servicio_minimo: usarMinimo },
+        seleccion: { usar_bulto: usarBulto, usar_palet: usarPalet, usar_valor: usarValor, usar_seguro: usarSeguro, usar_servicio_minimo: usarMinimo },
     };
 };
 
@@ -231,7 +234,7 @@ const splitRelaciones = reactive({});
 const gruposFacturacion = computed(() => {
     detalleOverridesSnapshot.value;
 
-    const ensureDet = (entregaId) => {
+    const ensureDet = (entregaId, tarifaBase) => {
         if (!facturarPorEntrega.facturar_por_entrega?.[entregaId]) {
             facturarPorEntrega.facturar_por_entrega[entregaId] = '';
         }
@@ -256,6 +259,7 @@ const gruposFacturacion = computed(() => {
                 usar_bulto: false,
                 usar_palet: false,
                 usar_valor: true,
+                usar_seguro: tarifaBase?.usar_seguro !== false,
                 usar_servicio_minimo: false,
             };
         }
@@ -263,6 +267,7 @@ const gruposFacturacion = computed(() => {
         if (d.usar_bulto === undefined) d.usar_bulto = false;
         if (d.usar_palet === undefined) d.usar_palet = false;
         if (d.usar_valor === undefined) d.usar_valor = true;
+        if (d.usar_seguro === undefined) d.usar_seguro = tarifaBase?.usar_seguro !== false;
         if (d.usar_servicio_minimo === undefined) d.usar_servicio_minimo = false;
     };
 
@@ -283,7 +288,7 @@ const gruposFacturacion = computed(() => {
         if (splitRelaciones[relKey]) {
             for (const p of pedidos) {
                 const entregaId = relKey + '-p' + p.id;
-                ensureDet(entregaId);
+                ensureDet(entregaId, tarifaBase);
                 const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
                 const detalle = calcFactura([p], tarifaBase, override, sinIvaEntrega(entregaId));
                 const cuentas = new Map();
@@ -296,7 +301,7 @@ const gruposFacturacion = computed(() => {
             }
         } else {
             const entregaId = relKey;
-            ensureDet(entregaId);
+            ensureDet(entregaId, tarifaBase);
             const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
             const detalle = calcFactura(pedidos, tarifaBase, override, sinIvaEntrega(entregaId));
             const cuentas = new Map();
@@ -316,6 +321,13 @@ const gruposFacturacion = computed(() => {
 
     return out.sort((a, b) => (b.pedidos[0]?.id || 0) - (a.pedidos[0]?.id || 0));
 });
+
+const onUsarSeguroChange = (g) => {
+    const det = facturarPorEntrega.detalles_por_entrega?.[g?.entregaId];
+    if (!det || !det.usar_seguro) return;
+    const eff = Number(det.seguro_pct || 0) || Number(resolveTarifa(g.remitenteId, g.destinatarioId).seguro_pct || 0);
+    if (!eff) det.seguro_pct = 0.007;
+};
 
 const detalleGrupo = (g) => {
     const pedidos = g?.pedidos || [];
@@ -377,6 +389,7 @@ const initFacturarMap = () => {
             usar_bulto: false,
             usar_palet: false,
             usar_valor: true,
+            usar_seguro: resolveTarifa(g.remitenteId, g.destinatarioId).usar_seguro !== false,
             usar_servicio_minimo: false,
         };
     }
@@ -914,8 +927,11 @@ const enviarCorreccion = () => {
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_valor_declarado_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.03" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_valor === false" />
                                     </div>
                                     <div>
-                                        <InputLabel value="% seguro" />
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.007" />
+                                        <div class="flex items-center gap-1">
+                                            <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_seguro" class="rounded border-gray-300" @change="onUsarSeguroChange(g)" />
+                                            <InputLabel value="% seguro" class="!mb-0" />
+                                        </div>
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].seguro_pct" type="number" min="0" step="0.0001" class="mt-0.5 block w-full text-xs" placeholder="0.007" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_seguro === false" />
                                     </div>
                                     <div>
                                         <div class="flex items-center gap-1">

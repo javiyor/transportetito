@@ -66,6 +66,7 @@ class ManifiestoFacturarController extends Controller
             'detalles_por_entrega.*.usar_bulto' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.usar_palet' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.usar_valor' => ['nullable', 'boolean'],
+            'detalles_por_entrega.*.usar_seguro' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.usar_servicio_minimo' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.servicio_retiro' => ['nullable', 'numeric', 'min:0'],
             'empresa_por_entrega' => ['nullable', 'array'],
@@ -218,12 +219,12 @@ class ManifiestoFacturarController extends Controller
                         }
                     foreach ([
                         'tarifa_bulto',
-                            'tarifa_palet',
-                            'tarifa_valor_declarado_pct',
-                            'flete_minimo',
-                            'seguro_pct',
-                            'seguro_minimo',
-                            'seguro_tope',
+                        'tarifa_palet',
+                        'tarifa_valor_declarado_pct',
+                        'flete_minimo',
+                        'seguro_pct',
+                        'seguro_minimo',
+                        'seguro_tope',
                         'cr_comision_pct',
                         'cr_comision_minimo',
                         'cr_comision_tope',
@@ -233,12 +234,13 @@ class ManifiestoFacturarController extends Controller
                         'usar_bulto',
                         'usar_palet',
                         'usar_valor',
+                        'usar_seguro',
                         'usar_servicio_minimo',
                         'servicio_retiro',
                      ] as $k) {
                             if (array_key_exists($k, $override) && $override[$k] !== null && $override[$k] !== '') {
                                 $tarifa[$k] = is_bool($override[$k]) ? $override[$k] : (float) $override[$k];
-                                if (in_array($k, ['usar_bulto','usar_palet','usar_valor','usar_servicio_minimo'])) {
+                                if (in_array($k, ['usar_bulto','usar_palet','usar_valor','usar_seguro','usar_servicio_minimo'])) {
                                     $tarifa[$k] = (bool) $override[$k];
                                 }
                             }
@@ -298,6 +300,7 @@ class ManifiestoFacturarController extends Controller
                         'usar_bulto' => $tarifa['usar_bulto'] ?? true,
                         'usar_palet' => $tarifa['usar_palet'] ?? true,
                         'usar_valor' => $tarifa['usar_valor'] ?? true,
+                        'usar_seguro' => $tarifa['usar_seguro'] ?? true,
                         'usar_servicio_minimo' => $tarifa['usar_servicio_minimo'] ?? true,
                     ],
                     'override' => is_array($override) ? array_intersect_key($override, array_flip([
@@ -317,6 +320,7 @@ class ManifiestoFacturarController extends Controller
                         'usar_bulto',
                         'usar_palet',
                         'usar_valor',
+                        'usar_seguro',
                         'usar_servicio_minimo',
                         'servicio_retiro',
                     ])) : null,
@@ -372,6 +376,7 @@ class ManifiestoFacturarController extends Controller
                                 'seguro_pct' => (float) $params['seguro_pct'],
                                 'seguro_minimo' => $params['seguro_minimo'],
                                 'seguro_tope' => $params['seguro_tope'],
+                                'usar_seguro' => (bool) ($params['usar_seguro'] ?? true),
                                 'cr_comision_pct' => (float) $params['cr_comision_pct'],
                                 'cr_comision_minimo' => $params['cr_comision_minimo'],
                                 'cr_comision_tope' => $params['cr_comision_tope'],

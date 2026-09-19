@@ -55,14 +55,15 @@ class FacturaCalculator
         $valorNetoTotal = $valorDeclarado * $pctValor;
         $flete = max($fleteMin, $fletePorUnidad, $fletePorValor);
 
+        $usarSeguro = ($tarifa['usar_seguro'] ?? true) !== false;
         $seguroPct = (float) ($tarifa['seguro_pct'] ?? 0);
-        $seguro = $valorDeclarado * $seguroPct;
+        $seguro = $usarSeguro ? $valorDeclarado * $seguroPct : 0.0;
         $seguroMin = $tarifa['seguro_minimo'] ?? null;
         $seguroTope = $tarifa['seguro_tope'] ?? null;
-        if ($seguroMin !== null) {
+        if ($usarSeguro && $seguroMin !== null) {
             $seguro = max((float) $seguroMin, $seguro);
         }
-        if ($seguroTope !== null) {
+        if ($usarSeguro && $seguroTope !== null) {
             $seguro = min((float) $seguroTope, $seguro);
         }
 
@@ -107,6 +108,7 @@ class FacturaCalculator
                 'seguro_pct' => $seguroPct,
                 'seguro_minimo' => $seguroMin,
                 'seguro_tope' => $seguroTope,
+                'usar_seguro' => $usarSeguro,
                 'cr_comision_pct' => $crPct,
                 'cr_comision_minimo' => $crMin,
                 'cr_comision_tope' => $crTope,

@@ -65,6 +65,7 @@ class ManifiestoEmitirGuiasController extends Controller
             'detalles_por_entrega.*.cr_importe_manual' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.comision_cr_manual' => ['nullable', 'numeric', 'min:0'],
             'detalles_por_entrega.*.iva_pct' => ['nullable', 'numeric', 'min:0'],
+            'detalles_por_entrega.*.usar_seguro' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.persistir_tarifa' => ['nullable', 'boolean'],
             'detalles_por_entrega.*.moneda' => ['nullable', 'in:ARS,USD,EUR,BRL'],
             'empresa_por_entrega' => ['nullable', 'array'],
@@ -209,9 +210,10 @@ class ManifiestoEmitirGuiasController extends Controller
                             'cr_importe_manual',
                             'comision_cr_manual',
                             'iva_pct',
+                            'usar_seguro',
                         ] as $k) {
                             if (array_key_exists($k, $override) && $override[$k] !== null && $override[$k] !== '') {
-                                $tarifa[$k] = (float) $override[$k];
+                                $tarifa[$k] = $k === 'usar_seguro' ? (bool) $override[$k] : (float) $override[$k];
                             }
                         }
                     }
@@ -368,6 +370,7 @@ class ManifiestoEmitirGuiasController extends Controller
                                 'seguro_pct' => (float) $params['seguro_pct'],
                                 'seguro_minimo' => $params['seguro_minimo'],
                                 'seguro_tope' => $params['seguro_tope'],
+                                'usar_seguro' => (bool) ($params['usar_seguro'] ?? true),
                                 'cr_comision_pct' => (float) $params['cr_comision_pct'],
                                 'cr_comision_minimo' => $params['cr_comision_minimo'],
                                 'cr_comision_tope' => $params['cr_comision_tope'],
