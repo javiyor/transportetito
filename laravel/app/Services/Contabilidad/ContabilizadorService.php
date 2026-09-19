@@ -142,7 +142,11 @@ class ContabilizadorService
 
     public function contabilizarCobro(Recibo $recibo): AsientoContable
     {
-        $empresa = $recibo->empresa;
+        // Fallback a la empresa de la cuenta para recibos viejos sin empresa_id
+        $empresa = $recibo->empresa ?? $recibo->cuenta?->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Recibo #{$recibo->id} sin empresa (ni cuenta) para contabilizar.");
+        }
         $cuentaDeudores = $empresa->getCuentaContable('deudores_ventas');
 
         return DB::transaction(function () use ($recibo, $empresa, $cuentaDeudores) {
