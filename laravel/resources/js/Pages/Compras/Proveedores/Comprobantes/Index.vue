@@ -56,6 +56,16 @@ const props = defineProps({
     cuentasContables: Array,
 });
 
+const searchCuentaContable = ref('');
+const searchCuentaContableEdit = ref('');
+const filtrarCuentasContables = (q) => {
+    const s = String(q || '').toLowerCase().trim();
+    if (!s) return props.cuentasContables || [];
+    return (props.cuentasContables || []).filter((c) => `${c.codigo || ''} ${c.nombre || ''}`.toLowerCase().includes(s));
+};
+const cuentasContablesFiltradas = computed(() => filtrarCuentasContables(searchCuentaContable.value));
+const cuentasContablesFiltradasEdit = computed(() => filtrarCuentasContables(searchCuentaContableEdit.value));
+
 const form = useForm({
     tercero_cuenta_id: '',
     proveedor_cuit_busqueda: '',
@@ -352,6 +362,7 @@ const openEditComprobante = (c) => {
     editComprobanteForm.fecha_vencimiento = c.fecha_vencimiento ? String(c.fecha_vencimiento).slice(0, 10) : '';
     editComprobanteForm.observacion = c.observacion || '';
     editComprobanteForm.clearErrors();
+    searchCuentaContableEdit.value = '';
     editComprobanteDialog.value = true;
 };
 
@@ -438,9 +449,10 @@ const submitDelete = () => {
                     <div><InputLabel value="Moneda" /><select v-model="form.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-1" :message="form.errors.moneda" /></div>
                     <div>
                         <InputLabel value="Cuenta contable" />
+                        <TextInput v-model="searchCuentaContable" type="text" class="mt-1 block w-full text-sm" placeholder="Buscar por código o nombre..." />
                         <select v-model="form.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(predeterminada)</option>
-                            <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                            <option v-for="c in cuentasContablesFiltradas" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
                         </select>
                         <InputError class="mt-1" :message="form.errors.cuenta_contable_id" />
                     </div>
@@ -581,9 +593,10 @@ const submitDelete = () => {
                             <div><InputLabel value="Moneda" /><select v-model="editComprobanteForm.moneda" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select><InputError class="mt-1" :message="editComprobanteForm.errors.moneda" /></div>
                             <div>
                                 <InputLabel value="Cuenta contable" />
+                                <TextInput v-model="searchCuentaContableEdit" type="text" class="mt-1 block w-full text-sm" placeholder="Buscar por código o nombre..." />
                                 <select v-model="editComprobanteForm.cuenta_contable_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
                                     <option value="">(predeterminada)</option>
-                                    <option v-for="c in cuentasContables" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
+                                    <option v-for="c in cuentasContablesFiltradasEdit" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option>
                                 </select>
                                 <InputError class="mt-1" :message="editComprobanteForm.errors.cuenta_contable_id" />
                             </div>
