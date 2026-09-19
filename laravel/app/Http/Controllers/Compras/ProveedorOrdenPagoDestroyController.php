@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\AsientoContable;
 use App\Models\CtaCteMovimiento;
 use App\Models\OrdenPago;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +26,12 @@ class ProveedorOrdenPagoDestroyController extends Controller
         ]);
 
         CtaCteMovimiento::query()
+            ->where('empresa_id', $empresaId)
+            ->where('referencia_tipo', 'orden_pago')
+            ->where('referencia_id', $ordenPago->id)
+            ->delete();
+
+        AsientoContable::query()
             ->where('empresa_id', $empresaId)
             ->where('referencia_tipo', 'orden_pago')
             ->where('referencia_id', $ordenPago->id)

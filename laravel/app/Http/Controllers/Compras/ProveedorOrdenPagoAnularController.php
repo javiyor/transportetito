@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\AsientoContable;
 use App\Models\AuditLog;
 use App\Models\CtaCteMovimiento;
 use App\Models\OrdenPago;
@@ -43,6 +44,12 @@ class ProveedorOrdenPagoAnularController extends Controller
                     $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);
                 }
             }
+
+            // La OP anula su efecto: se borra su asiento contable (el recontabilizar saltea anuladas)
+            AsientoContable::query()
+                ->where('referencia_tipo', 'orden_pago')
+                ->where('referencia_id', $ordenPago->id)
+                ->delete();
 
             $movimientos = CtaCteMovimiento::query()
                 ->where('referencia_tipo', 'orden_pago')

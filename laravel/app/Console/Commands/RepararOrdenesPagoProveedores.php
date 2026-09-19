@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class RepararOrdenesPagoProveedores extends Command
 {
     protected $signature = 'proveedores:reparar-op {cuenta_id?} {--dry-run}';
-    protected $description = 'Elimina movimientos de CtaCte huerfanos de ordenes de pago anuladas/eliminadas';
+    protected $description = 'Elimina movimientos de CtaCte y asientos huerfanos de ordenes de pago anuladas/eliminadas';
 
     public function handle(): int
     {
@@ -77,6 +77,34 @@ class RepararOrdenesPagoProveedores extends Command
             }
         }
         $this->info(($dry ? 'Creditos OP con compensaciones huérfanas a limpiar: ' : 'Creditos OP con compensaciones huérfanas limpiados: ') . $limpiados);
+
+        // 4. Asientos huerfanos (OP eliminada) o de OP anuladas
+        $empresaId = null;
+        if ($cuentaId) {
+            $empresaId = DB::table('tercero_cuentas')->where('id', $cuentaId)->value('empresa_id');
+        }
+        $asientosQuery = DB::table('asientos_contables as a')
+            ->where('a.referencia_tipo', 'orden_pago')
+            ->where(function ($q) {
+                $q->whereNotExists(function ($qq) {
+                    $qq->select(DB::raw(1))
+                        ->from('ordenes_pago as op')
+                        ->whereColumn('op.id', 'a.referencia_id');
+                })->orWhereExists(function ($qq) {
+                    $qq->select(DB::raw(1))
+                        ->from('ordenes_pago as op')
+                        ->whereColumn('op.id', 'a.referencia_id')
+                        ->where('op.estado', 'anulada');
+                });
+            });
+        if ($empresaId) {
+            $asientosQuery->where('a.empresa_id', $empresaId);
+        }
+        $asientosCount = $asientosQuery->count();
+        if (! $dry) {
+            $asientosQuery->delete();
+        }
+        $this->info(($dry ? 'Asientos OP huerfanos/anulados a eliminar: ' : 'Asientos OP huerfanos/anulados eliminados: ') . $asientosCount);
 
         return 0;
     }

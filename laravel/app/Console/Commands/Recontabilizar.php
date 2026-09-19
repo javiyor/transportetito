@@ -120,7 +120,7 @@ class Recontabilizar extends Command
 
     private function recontabilizarPagos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
     {
-        $query = OrdenPago::query();
+        $query = OrdenPago::query()->where('estado', '!=', 'anulada');
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
