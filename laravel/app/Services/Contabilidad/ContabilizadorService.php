@@ -159,11 +159,17 @@ class ContabilizadorService
             $totalCobrado = 0;
 
             foreach ($recibo->items as $item) {
-                $claveMedio = 'medio_pago.'.$item->medio;
+                $medio = (string) ($item->medio ?? '');
+                $claveMedio = 'medio_pago.'.$medio;
                 $cuentaMedio = $empresa->getCuentaContable($claveMedio);
 
-                if (! $cuentaMedio) {
+                // Solo efectivo puede caer en caja_default; cheques/transferencias deben tener su cuenta configurada
+                if (! $cuentaMedio && $medio === 'efectivo') {
                     $cuentaMedio = $empresa->getCuentaContable('caja_default');
+                }
+
+                if (! $cuentaMedio) {
+                    throw new \RuntimeException("Cuenta contable no configurada para medio de cobro '{$medio}' (clave {$claveMedio}, empresa {$empresa->id}).");
                 }
 
                 $importe = (float) $item->importe;
