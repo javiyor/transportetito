@@ -11,6 +11,7 @@ const page = usePage();
 const importResult = computed(() => page.props.tt?.flash?.importResult);
 
 const modo = ref('csv');
+const formatoCsv = ref('miscomprobantes');
 
 const csvForm = useForm({
     rows: [],
@@ -25,6 +26,28 @@ const arcaForm = useForm({
 
 const csvText = ref('');
 const csvPreview = ref([]);
+
+const misComprobantesHeaderMap = {
+    'fecha de emision': 'fecha_emision', 'tipo de comprobante': 'tipo',
+    'punto de venta': 'pv', 'numero desde': 'numero',
+    'cod autorizacion': 'arca_cae', 'codigo de autorizacion': 'arca_cae',
+    'tipo doc receptor': 'tipo_doc', 'nro doc receptor': 'cuit_cliente',
+    'denominacion receptor': 'razon_social',
+    'tipo cambio': 'tipo_cambio', 'moneda': 'moneda',
+    'imp total': 'total', 'importe total': 'total', 'total': 'total',
+    'imp neto gravado total': 'neto_total',
+    'imp neto no gravado': 'neto_no_gravado',
+    'imp op exentas': 'op_exentas',
+    'total iva': 'iva_total',
+    'otros tributos': 'tributos_total',
+    // Detalle por alícuota (neto + iva por columna)
+    'imp neto gravado iva 0': 'neto_iva_0',
+    'iva 2 5': 'iva_2_5', 'imp neto gravado iva 2 5': 'neto_iva_2_5',
+    'iva 5': 'iva_5', 'imp neto gravado iva 5': 'neto_iva_5',
+    'iva 10 5': 'iva_10_5', 'imp neto gravado iva 10 5': 'neto_iva_10_5',
+    'iva 21': 'iva_21', 'imp neto gravado iva 21': 'neto_iva_21',
+    'iva 27': 'iva_27', 'imp neto gravado iva 27': 'neto_iva_27',
+};
 
 const arcaHeaderMap = {
     'fecha de emision': 'fecha_emision', 'tipo de comprobante': 'tipo',
@@ -63,6 +86,7 @@ const tipoArcaMap = {
     '6': 'FB', '7': 'NDB', '8': 'NCB',
     '11': 'FC', '12': 'NDC', '13': 'NCC',
     '15': 'FE', '16': 'NDE', '17': 'NCE',
+    '19': 'FE', '20': 'NDE', '21': 'NCE',
     '51': 'FM', '52': 'NDM', '53': 'NCM',
     'factura a': 'FA', 'factura b': 'FB', 'factura c': 'FC', 'factura e': 'FE', 'factura m': 'FM',
     'factura credito a': 'FCA', 'factura credito b': 'FCB', 'factura credito c': 'FCC',
@@ -121,7 +145,10 @@ const parseCsv = () => {
     else if (raw.includes(';')) delim = ';';
     const cleanHeader = (h) => h.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').trim();
     const rawHeaders = raw.split(delim).map(cleanHeader);
-    const headerMap = { ...arcaHeaderMap, ...oldHeaderMap };
+    const esMisComprobantes = formatoCsv.value === 'miscomprobantes';
+    const headerMap = esMisComprobantes
+        ? { ...misComprobantesHeaderMap, ...oldHeaderMap }
+        : { ...arcaHeaderMap, ...oldHeaderMap };
     const mapped = rawHeaders.map((h) => {
         const key = normalizeKey(h);
         return headerMap[key] || null;
@@ -178,6 +205,7 @@ const parseCsv = () => {
             numero: parseInt(String(r.numero).replace(/\D/g, ''), 10) || 0,
             cuit_cliente: r.cuit_cliente || '',
             razon_social: r.razon_social || '',
+            tipo_doc: (r.tipo_doc || '').trim(),
             fecha_emision: parseArDate(r.fecha_emision) || r.fecha_emision || '',
             total: parseArNumber(r.total) ?? 0,
             moneda: moneda,
@@ -234,11 +262,16 @@ const submitArca = () => {
             <!-- CSV mode -->
             <div v-if="modo === 'csv'" class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-2">Importar desde CSV</h3>
-                <p class="text-sm text-gray-500 mb-4">Pegue el CSV descargado de ARCA (formato separado por punto y coma) o el formato simple. Detecta columnas automaticamente.</p>
+                <div class="flex gap-2 mb-3">
+                    <button class="px-3 py-1.5 text-xs rounded" :class="formatoCsv === 'miscomprobantes' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300'" @click="formatoCsv = 'miscomprobantes'; csvForm.rows = []; csvPreview.value = [];">Mis Comprobantes</button>
+                    <button class="px-3 py-1.5 text-xs rounded" :class="formatoCsv === 'portaliva' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300'" @click="formatoCsv = 'portaliva'; csvForm.rows = []; csvPreview.value = [];">Portal IVA</button>
+                </div>
+                <p v-if="formatoCsv === 'miscomprobantes'" class="text-sm text-gray-500 mb-4">CSV de ARCA / Mis Comprobantes / Comprobantes emitidos (punto y coma, con desglose de IVA por alícuota y CAE).</p>
+                <p v-else class="text-sm text-gray-500 mb-4">CSV del Portal IVA / Libro IVA o formato simple. Detecta columnas automaticamente.</p>
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Pegar CSV</label>
-                    <textarea v-model="csvText" rows="8" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-mono" placeholder="Pegue aqui el CSV de ARCA o formato simple&#10;Ej: &quot;Fecha de Emisión&quot;;&quot;Tipo de Comprobante&quot;;&quot;Punto de Venta&quot;;&quot;Número Desde&quot;;&quot;Cód. Autorización&quot;;&quot;Nro. Doc. Receptor&quot;;&quot;Denominación Receptor&quot;;&quot;Moneda&quot;;&quot;Imp. Total&quot;"></textarea>
+                    <textarea v-model="csvText" rows="8" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-mono" placeholder="Pegue aqui el CSV de ARCA&#10;Ej: &quot;Fecha de Emisión&quot;;&quot;Tipo de Comprobante&quot;;&quot;Punto de Venta&quot;;&quot;Número Desde&quot;;&quot;Cód. Autorización&quot;;&quot;Nro. Doc. Receptor&quot;;&quot;Denominación Receptor&quot;;&quot;Moneda&quot;;&quot;Imp. Total&quot;"></textarea>
                 </div>
 
                 <SecondaryButton :disabled="!csvText.trim()" @click="parseCsv">Previsualizar</SecondaryButton>
@@ -249,6 +282,7 @@ const submitArca = () => {
                             <table class="min-w-full divide-y divide-gray-200 text-xs">
                                 <thead class="bg-gray-50"><tr>
                                     <th class="px-2 py-1 text-left">Tipo</th><th class="px-2 py-1 text-left">PV</th><th class="px-2 py-1 text-left">Nro</th>
+                                    <th v-if="formatoCsv === 'miscomprobantes'" class="px-2 py-1 text-left">Doc</th>
                                     <th class="px-2 py-1 text-left">CUIT</th><th class="px-2 py-1 text-left">Cliente</th><th class="px-2 py-1 text-left">Fecha</th>
                                     <th class="px-2 py-1 text-right">Subtotal</th><th class="px-2 py-1 text-right">IVA</th>
                                     <th class="px-2 py-1 text-right">Total</th><th class="px-2 py-1 text-left">Mon</th>
@@ -256,6 +290,7 @@ const submitArca = () => {
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr v-for="(r, i) in csvForm.rows" :key="i">
                                         <td class="px-2 py-1">{{ tipoLabel(r.tipo) }}</td><td class="px-2 py-1">{{ r.pv }}</td><td class="px-2 py-1">{{ r.numero }}</td>
+                                        <td v-if="formatoCsv === 'miscomprobantes'" class="px-2 py-1" :class="r.tipo_doc && r.tipo_doc !== '80' ? 'text-amber-700 font-semibold' : ''">{{ r.tipo_doc || '-' }}</td>
                                         <td class="px-2 py-1 font-mono">{{ r.cuit_cliente }}</td><td class="px-2 py-1">{{ r.razon_social }}</td><td class="px-2 py-1">{{ r.fecha_emision }}</td>
                                         <td class="px-2 py-1 text-right">{{ r.subtotal || '-' }}</td><td class="px-2 py-1 text-right">{{ r.iva_total || '-' }}</td>
                                         <td class="px-2 py-1 text-right">{{ r.total }}</td><td class="px-2 py-1 font-bold">{{ r.moneda }}</td>
