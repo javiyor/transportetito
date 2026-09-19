@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Empresa;
 use App\Models\ReciboAplicacion;
 use App\Models\ReciboItem;
 use App\Models\TerceroCuenta;
@@ -36,6 +37,11 @@ class Recibo extends Model
         'fecha' => 'date',
         'retenciones' => 'array',
     ];
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class);
+    }
 
     public function cuenta(): BelongsTo
     {
