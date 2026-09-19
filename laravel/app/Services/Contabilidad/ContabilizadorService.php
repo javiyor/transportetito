@@ -4,6 +4,7 @@ namespace App\Services\Contabilidad;
 
 use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
+use App\Models\Cheque;
 use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\GastoOperativo;
@@ -259,8 +260,10 @@ class ContabilizadorService
 
             $mapaClaveMedio = [
                 'efectivo' => 'medio_pago.efectivo',
+                'cheque' => 'medio_pago.cheque',
                 'cheque_propio' => 'medio_pago.cheque_propio',
                 'cheque_tercero' => 'medio_pago.cheque_tercero',
+                'cheque_diferido' => 'medio_pago.cheque_diferido',
                 'transferencia' => 'medio_pago.transferencia',
                 'echeq' => 'medio_pago.echeq',
                 'tarjeta' => 'medio_pago.tarjeta',
@@ -297,6 +300,43 @@ class ContabilizadorService
         });
     }
 
+    /**
+     * Resuelve la cuenta contable del medio de pago de un egreso/ingreso.
+     * Solo efectivo puede caer en caja_default; cheques/transferencias/tarjeta
+     * deben tener su cuenta configurada (banco, echeq, cartera) o se lanza excepción.
+     */
+    private function cuentaMedioEgreso(Empresa $empresa, string $formaPago, ?Cheque $cheque = null)
+    {
+        $claveMedio = 'medio_pago.'.$formaPago;
+
+        if ($formaPago === 'cheque') {
+            if (($cheque?->tipo ?? null) === 'echeq') {
+                $claveMedio = 'medio_pago.echeq';
+            } elseif (($cheque?->origen ?? null) === 'tercero') {
+                $claveMedio = 'medio_pago.cheque_tercero';
+            } elseif (($cheque?->origen ?? null) === 'propio') {
+                $claveMedio = 'medio_pago.cheque_propio';
+            }
+        }
+
+        $cuentaMedio = $empresa->getCuentaContable($claveMedio);
+
+        // Compat: si se resolvió un subtipo de cheque sin config, probar la clave genérica
+        if (! $cuentaMedio && $claveMedio !== 'medio_pago.cheque' && str_starts_with($claveMedio, 'medio_pago.cheque')) {
+            $cuentaMedio = $empresa->getCuentaContable('medio_pago.cheque');
+        }
+
+        if (! $cuentaMedio && $formaPago === 'efectivo') {
+            $cuentaMedio = $empresa->getCuentaContable('caja_default');
+        }
+
+        if (! $cuentaMedio) {
+            throw new \RuntimeException("Cuenta contable no configurada para medio de pago '{$formaPago}' (clave {$claveMedio}, empresa {$empresa->id}).");
+        }
+
+        return $cuentaMedio;
+    }
+
     public function contabilizarGastoOperativo(GastoOperativo $gasto): AsientoContable
     {
         $empresa = $gasto->empresa;
@@ -306,8 +346,7 @@ class ContabilizadorService
                 $cuentaMedio = $empresa->getCuentaContable('proveedores_default') ?? $empresa->getCuentaContable('caja_default');
             }
         } else {
-            $claveMedio = 'medio_pago.'.$gasto->forma_pago;
-            $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+            $cuentaMedio = $this->cuentaMedioEgreso($empresa, (string) $gasto->forma_pago, $gasto->cheque);
         }
         $categorias = $gasto->categorias;
 
@@ -338,8 +377,7 @@ class ContabilizadorService
     public function contabilizarIngresoOperativo(IngresoOperativo $ingreso): AsientoContable
     {
         $empresa = $ingreso->empresa;
-        $claveMedio = 'medio_pago.'.$ingreso->forma_pago;
-        $cuentaMedio = $empresa->getCuentaContable($claveMedio) ?? $empresa->getCuentaContable('caja_default');
+        $cuentaMedio = $this->cuentaMedioEgreso($empresa, (string) $ingreso->forma_pago);
         $categorias = $ingreso->categorias;
 
         return DB::transaction(function () use ($ingreso, $empresa, $cuentaMedio, $categorias) {
