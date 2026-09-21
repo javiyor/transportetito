@@ -1,5 +1,5 @@
 <script setup>
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -7,6 +7,10 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import { ref, nextTick, computed } from 'vue';
+
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const props = defineProps({
     chequesPropios: Object,
@@ -224,6 +228,8 @@ const formatFecha = (v) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-2 rounded text-sm">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="bg-red-50 border border-red-200 text-red-900 px-4 py-2 rounded text-sm">{{ flashError }}</div>
             <div class="flex justify-end">
                 <PrimaryButton @click="showForm = !showForm">{{ showForm ? 'Cancelar' : '+ Nuevo cheque' }}</PrimaryButton>
             </div>
