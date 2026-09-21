@@ -166,8 +166,15 @@ class ProveedorComprobanteIndexController extends Controller
             ->orderBy('numero_cliente')
             ->get(['id', 'tercero_id', 'numero_cliente', 'nombre_cuenta', 'cuenta_contable_proveedor_id']);
 
+        $fFechaDesde = $request->query('fecha_desde') ?: null;
+        $fFechaHasta = $request->query('fecha_hasta') ?: null;
+        $fProveedorId = (int) ($request->query('proveedor_id') ?: 0);
+
         $comprobantes = ProveedorComprobante::query()
             ->where('empresa_id', $empresaId)
+            ->when($fFechaDesde, fn ($q) => $q->whereDate('fecha_emision', '>=', $fFechaDesde))
+            ->when($fFechaHasta, fn ($q) => $q->whereDate('fecha_emision', '<=', $fFechaHasta))
+            ->when($fProveedorId > 0, fn ($q) => $q->where('tercero_cuenta_id', $fProveedorId))
             ->with('cuenta.tercero:id,cuit,razon_social')
             ->orderByDesc('fecha_emision')
             ->orderByDesc('id')
@@ -189,6 +196,11 @@ class ProveedorComprobanteIndexController extends Controller
         return Inertia::render('Compras/Proveedores/Comprobantes/Index', [
             'proveedores' => $proveedores,
             'comprobantes' => $comprobantes,
+            'filtros' => [
+                'fecha_desde' => $fFechaDesde,
+                'fecha_hasta' => $fFechaHasta,
+                'proveedor_id' => $fProveedorId > 0 ? $fProveedorId : null,
+            ],
             'resumen' => array_map(fn ($v) => round((float) $v, 2), $resumen),
             'catalogos' => [
                 'percepciones' => collect(self::PERCEPCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),

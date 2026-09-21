@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm, usePage, Link } from '@inertiajs/vue3';
+import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -54,7 +54,27 @@ const props = defineProps({
     catalogos: Object,
     resumen: Object,
     cuentasContables: Array,
+    filtros: Object,
 });
+
+const filtroFechaDesde = ref(props.filtros?.fecha_desde || '');
+const filtroFechaHasta = ref(props.filtros?.fecha_hasta || '');
+const filtroProveedorId = ref(props.filtros?.proveedor_id || '');
+
+const aplicarFiltros = () => {
+    router.get(route('compras.proveedores.comprobantes.index'), {
+        fecha_desde: filtroFechaDesde.value || null,
+        fecha_hasta: filtroFechaHasta.value || null,
+        proveedor_id: filtroProveedorId.value || null,
+    }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const limpiarFiltros = () => {
+    filtroFechaDesde.value = '';
+    filtroFechaHasta.value = '';
+    filtroProveedorId.value = '';
+    aplicarFiltros();
+};
 
 const searchCuentaContable = ref('');
 const searchCuentaContableEdit = ref('');
@@ -532,7 +552,30 @@ const submitDelete = () => {
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-3 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Comprobantes cargados</h3></div>
+                <div class="p-2 border-b border-gray-200">
+                    <div class="flex flex-wrap items-end gap-2">
+                        <h3 class="text-sm font-semibold text-gray-900 me-2">Comprobantes cargados</h3>
+                        <div>
+                            <InputLabel value="Proveedor" />
+                            <select v-model="filtroProveedorId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                <option value="">Todos</option>
+                                <option v-for="p in proveedores" :key="p.id" :value="p.id">{{ p.tercero?.razon_social || p.nombre_cuenta || ('#' + p.id) }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel value="Desde" />
+                            <TextInput v-model="filtroFechaDesde" type="date" class="mt-1 block w-full text-xs" />
+                        </div>
+                        <div>
+                            <InputLabel value="Hasta" />
+                            <TextInput v-model="filtroFechaHasta" type="date" class="mt-1 block w-full text-xs" />
+                        </div>
+                        <div class="flex gap-2">
+                            <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="aplicarFiltros">Filtrar</SecondaryButton>
+                            <button v-if="filtros?.fecha_desde || filtros?.fecha_hasta || filtros?.proveedor_id" type="button" class="text-xs text-gray-500 hover:text-gray-800 underline" @click="limpiarFiltros">Limpiar</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="space-y-2 p-2 sm:hidden">
                     <div v-for="c in comprobantes.data" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-2">
                         <div class="flex items-start justify-between gap-3">
