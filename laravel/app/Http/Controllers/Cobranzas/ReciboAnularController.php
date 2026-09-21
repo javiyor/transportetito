@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
+use App\Models\AsientoContable;
 use App\Models\AuditLog;
+use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\Recibo;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +29,26 @@ class ReciboAnularController extends Controller
 
         DB::transaction(function () use ($request, $recibo) {
             $recibo->update(['estado' => 'anulada']);
+
+            // Eliminar cheques cargados con el recibo que sigan en cartera y sin uso posterior
+            $cheques = Cheque::query()->where('recibo_id', $recibo->id)->get();
+            foreach ($cheques as $ch) {
+                $enUso = \App\Models\GastoOperativo::query()->where('cheque_id', $ch->id)->exists()
+                    || \App\Models\OrdenPago::query()->where('cheque_id', $ch->id)->exists()
+                    || ($ch->movimiento_bancario_id && (bool) \App\Models\MovimientoBancario::query()->where('id', $ch->movimiento_bancario_id)->where('contabilizado', true)->exists());
+                if ($ch->estado === 'en_cartera' && ! $enUso) {
+                    if ($ch->movimiento_bancario_id) {
+                        \App\Models\MovimientoBancario::query()->where('id', $ch->movimiento_bancario_id)->where('contabilizado', false)->delete();
+                    }
+                    $ch->delete();
+                }
+            }
+
+            // Borrar asiento contable del recibo (el efecto se revierte en cuenta corriente)
+            AsientoContable::query()
+                ->where('referencia_tipo', 'recibo')
+                ->where('referencia_id', $recibo->id)
+                ->delete();
 
             $movimientos = CtaCteMovimiento::query()
                 ->where('referencia_tipo', 'recibo')
@@ -59,6 +81,6 @@ class ReciboAnularController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Recibo anulado. Se revirtieron los movimientos de cuenta corriente.');
+        return back()->with('success', 'Recibo anulado. Se revirtieron movimientos, cheques en cartera y asiento.');
     }
 }

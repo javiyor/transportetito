@@ -110,7 +110,7 @@ class Recontabilizar extends Command
 
     private function recontabilizarCobros(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
     {
-        $query = Recibo::query();
+        $query = Recibo::query()->where('estado', '!=', 'anulada');
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
