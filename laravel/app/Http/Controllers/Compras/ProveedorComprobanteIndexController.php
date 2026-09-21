@@ -20,16 +20,20 @@ class ProveedorComprobanteIndexController extends Controller
 {
     private const PERCEPCIONES_CATALOGO = [
         'iva' => 'Percepcion IVA',
+        'ganancias' => 'Percepcion Ganancias',
         'iibb' => 'Percepcion Ingresos Brutos',
+        'suss' => 'Percepcion SUSS',
         'municipal' => 'Percepcion Municipal',
         'aduana' => 'Percepcion Aduanera',
+        'internos' => 'Impuestos Internos',
     ];
 
     private const RETENCIONES_CATALOGO = [
-        'ganancias' => 'Retencion Ganancias',
-        'suss' => 'Retencion SUSS',
-        'iibb' => 'Retencion Ingresos Brutos',
         'iva' => 'Retencion IVA',
+        'ganancias' => 'Retencion Ganancias',
+        'iibb' => 'Retencion Ingresos Brutos',
+        'suss' => 'Retencion SUSS',
+        'municipal' => 'Retencion Municipal',
     ];
 
     private function fiscalDetail(array $data, ?string $tipo = null): array
@@ -77,8 +81,10 @@ class ProveedorComprobanteIndexController extends Controller
             'pago_cuenta_combustible' => round((float) ($data['pago_cuenta_combustible'] ?? 0), 2),
         ];
 
+        $netoNoGravado = round((float) ($data['neto_no_gravado'] ?? 0), 2);
+        $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
         $subtotal = !empty($ivaItems)
-            ? round(collect($ivaItems)->sum('base_imponible'), 2)
+            ? round(collect($ivaItems)->sum('base_imponible') + $netoNoGravado + $opExentas, 2)
             : round((float) ($data['subtotal'] ?? 0), 2);
         $ivaTotal = round(collect($ivaItems)->sum('importe'), 2);
         $tributos = round(collect($percepciones)->sum('importe') + $combustible['impuestos_combustible'], 2);
@@ -98,6 +104,8 @@ class ProveedorComprobanteIndexController extends Controller
                 'percepciones' => $percepciones,
                 'retenciones' => $retenciones,
                 'combustible' => $combustible,
+                'neto_no_gravado' => $netoNoGravado,
+                'op_exentas' => $opExentas,
             ],
         ];
     }
@@ -244,26 +252,16 @@ class ProveedorComprobanteIndexController extends Controller
             }
         }
 
-        $condicionProveedor = $arcaTipos->normalizarCondicionIva($cuenta->tercero?->condicion_iva);
-        $esRI = $condicionProveedor === 'ri';
+        // Lista completa de opciones ARCA (sin filtrar por condicion IVA del proveedor)
+        $percepciones = collect(self::PERCEPCIONES_CATALOGO)
+            ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
+            ->values()
+            ->all();
 
-        $percepciones = [
-            ['value' => 'iibb', 'label' => 'Percepcion Ingresos Brutos'],
-            ['value' => 'municipal', 'label' => 'Percepcion Municipal'],
-        ];
-        if ($esRI) {
-            $percepciones[] = ['value' => 'iva', 'label' => 'Percepcion IVA'];
-            $percepciones[] = ['value' => 'aduana', 'label' => 'Percepcion Aduanera'];
-        }
-
-        $retenciones = [
-            ['value' => 'iibb', 'label' => 'Retencion Ingresos Brutos'],
-        ];
-        if ($esRI) {
-            $retenciones[] = ['value' => 'ganancias', 'label' => 'Retencion Ganancias'];
-            $retenciones[] = ['value' => 'suss', 'label' => 'Retencion SUSS'];
-            $retenciones[] = ['value' => 'iva', 'label' => 'Retencion IVA'];
-        }
+        $retenciones = collect(self::RETENCIONES_CATALOGO)
+            ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
+            ->values()
+            ->all();
 
         return response()->json([
             'tipos' => $tipos,
@@ -284,6 +282,8 @@ class ProveedorComprobanteIndexController extends Controller
             'receptor_cuit' => ['nullable', 'string', 'max:32'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
+            'neto_no_gravado' => ['nullable', 'numeric', 'min:0'],
+            'op_exentas' => ['nullable', 'numeric', 'min:0'],
             'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
             'iva_items' => ['nullable', 'array'],
             'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],

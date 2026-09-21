@@ -71,6 +71,8 @@ defineProps({
                 <div><div class="text-xs text-gray-500">Fecha / Vto</div><div class="text-sm font-medium text-gray-900">{{ formatFecha(comprobante.fecha_emision) }} · {{ formatFecha(comprobante.fecha_vencimiento) }}</div></div>
                 <div><div class="text-xs text-gray-500">Subtotal</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.subtotal) }}</div></div>
                 <div><div class="text-xs text-gray-500">IVA</div><div class="text-sm font-medium text-green-700">$ {{ formatNum(comprobante.iva_total) }}</div></div>
+                <div v-if="Number(comprobante.detalle?.neto_no_gravado || 0) > 0"><div class="text-xs text-gray-500">Neto no gravado</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.detalle.neto_no_gravado) }}</div></div>
+                <div v-if="Number(comprobante.detalle?.op_exentas || 0) > 0"><div class="text-xs text-gray-500">Op. exentas</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.detalle.op_exentas) }}</div></div>
                 <div><div class="text-xs text-gray-500">Tributos</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.tributos_total) }}</div></div>
                 <div><div class="text-xs text-gray-500">Total</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(comprobante.total) }}</div></div>
                 <div><div class="text-xs text-gray-500">Pagado</div><div class="text-sm font-medium text-gray-900">$ {{ formatNum(pagado) }}</div></div>

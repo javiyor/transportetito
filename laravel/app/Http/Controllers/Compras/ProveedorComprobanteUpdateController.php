@@ -57,8 +57,10 @@ class ProveedorComprobanteUpdateController extends Controller
             'pago_cuenta_combustible' => round((float) ($data['pago_cuenta_combustible'] ?? 0), 2),
         ];
 
+        $netoNoGravado = round((float) ($data['neto_no_gravado'] ?? 0), 2);
+        $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
         $subtotal = !empty($ivaItems)
-            ? round(collect($ivaItems)->sum('base_imponible'), 2)
+            ? round(collect($ivaItems)->sum('base_imponible') + $netoNoGravado + $opExentas, 2)
             : round((float) ($data['subtotal'] ?? 0), 2);
         $ivaTotal = round(collect($ivaItems)->sum('importe'), 2);
         $tributos = round(collect($percepciones)->sum('importe') + $combustible['impuestos_combustible'], 2);
@@ -78,6 +80,8 @@ class ProveedorComprobanteUpdateController extends Controller
                 'percepciones' => $percepciones,
                 'retenciones' => $retenciones,
                 'combustible' => $combustible,
+                'neto_no_gravado' => $netoNoGravado,
+                'op_exentas' => $opExentas,
             ],
         ];
     }
@@ -94,6 +98,8 @@ class ProveedorComprobanteUpdateController extends Controller
             'tercero_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
+            'neto_no_gravado' => ['nullable', 'numeric', 'min:0'],
+            'op_exentas' => ['nullable', 'numeric', 'min:0'],
             'iva_items' => ['nullable', 'array'],
             'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],
             'iva_items.*.base_imponible' => ['required_with:iva_items.*.alicuota', 'numeric', 'min:0'],
