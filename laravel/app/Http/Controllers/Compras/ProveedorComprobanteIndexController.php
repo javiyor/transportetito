@@ -229,19 +229,20 @@ class ProveedorComprobanteIndexController extends Controller
         $fFechaHasta = $request->query('fecha_hasta') ?: null;
         $fProveedorId = (int) ($request->query('proveedor_id') ?: 0);
 
-        $comprobantes = ProveedorComprobante::query()
+        $baseFiltrada = fn () => ProveedorComprobante::query()
             ->where('empresa_id', $empresaId)
             ->when($fFechaDesde, fn ($q) => $q->whereDate('fecha_emision', '>=', $fFechaDesde))
             ->when($fFechaHasta, fn ($q) => $q->whereDate('fecha_emision', '<=', $fFechaHasta))
-            ->when($fProveedorId > 0, fn ($q) => $q->where('tercero_cuenta_id', $fProveedorId))
+            ->when($fProveedorId > 0, fn ($q) => $q->where('tercero_cuenta_id', $fProveedorId));
+
+        $comprobantes = $baseFiltrada()
             ->with('cuenta.tercero:id,cuit,razon_social')
             ->orderByDesc('fecha_emision')
             ->orderByDesc('id')
             ->paginate(30)
             ->withQueryString();
 
-        $resumen = ProveedorComprobante::query()
-            ->where('empresa_id', $empresaId)
+        $resumen = $baseFiltrada()
             ->get()
             ->reduce(function ($acc, ProveedorComprobante $c) {
                 $acc['subtotal'] += (float) $c->subtotal;

@@ -463,14 +463,6 @@ const submitDelete = () => {
         </template>
 
         <div class="max-w-7xl mx-auto py-2 sm:px-6 lg:px-8 space-y-2">
-            <div class="bg-white shadow sm:rounded-lg p-2 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-                <div><div class="text-xs text-gray-500">Subtotal</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.subtotal || 0) }}</div></div>
-                <div><div class="text-xs text-gray-500">IVA</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.iva_total || 0) }}</div></div>
-                <div><div class="text-xs text-gray-500">Tributos</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.tributos_total || 0) }}</div></div>
-                <div><div class="text-xs text-gray-500">Retenciones</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.retenciones_total || 0) }}</div></div>
-                <div><div class="text-xs text-gray-500">Total</div><div class="font-medium text-gray-900">$ {{ formatNum(resumen?.total || 0) }}</div></div>
-            </div>
-
             <div class="bg-white shadow sm:rounded-lg p-2">
                 <h3 class="text-xs font-semibold text-gray-900 mb-2">Nuevo comprobante proveedor</h3>
                 <form class="grid grid-cols-1 sm:grid-cols-4 gap-2 grilla-campos" @submit.prevent="submit">
@@ -512,15 +504,17 @@ const submitDelete = () => {
                         <InputError class="mt-1" :message="form.errors.cuenta_contable_id" />
                     </div>
                     <div v-if="!form.tipo || form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
-                        <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center justify-between gap-2">
                             <h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4>
-                            <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addIvaItem(form)">Agregar fila</SecondaryButton>
+                            <SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addIvaItem(form)">+ Fila</SecondaryButton>
                         </div>
-                        <div class="mt-2 space-y-2">
-                            <div v-for="(item, index) in form.iva_detalle" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                                <div><InputLabel value="Concepto" /><select v-model="item.concepto" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select></div>
-                                <div><InputLabel value="Importe" /><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" /></div>
-                                <div class="flex items-end gap-2"><div class="text-xs text-gray-700">IVA {{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}</div><button v-if="form.iva_detalle.length > 1" type="button" class="text-xs text-red-600" @click="removeAt(form.iva_detalle, index)">Quitar</button></div>
+                        <div class="mt-1 grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-5">Concepto</div><div class="col-span-3">Importe</div><div class="col-span-3">IVA</div><div></div></div>
+                        <div class="mt-1 space-y-1">
+                            <div v-for="(item, index) in form.iva_detalle" :key="index" class="grid grid-cols-12 gap-1 items-center">
+                                <select v-model="item.concepto" class="col-span-5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select>
+                                <TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-3 block w-full text-xs !py-1" />
+                                <div class="col-span-3 text-xs text-gray-700 text-right">{{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}</div>
+                                <button v-if="form.iva_detalle.length > 1" type="button" class="text-xs text-red-600 font-bold" @click="removeAt(form.iva_detalle, index)">X</button><span v-else></span>
                             </div>
                         </div>
                     </div>
@@ -529,12 +523,14 @@ const submitDelete = () => {
                         <TextInput v-model="form.subtotal" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" />
                     </div>
                     <div class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
-                        <div class="flex items-center justify-between gap-4 mb-2"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addPercepcion(form)">Agregar</SecondaryButton></div>
-                        <div class="space-y-2"><div v-for="(item, index) in form.percepciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full text-xs" placeholder="Importe" /><button type="button" class="text-xs text-red-600" @click="removeAt(form.percepciones, index)">Quitar</button></div></div></div>
+                        <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addPercepcion(form)">+ Fila</SecondaryButton></div>
+                        <div class="grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-6">Concepto</div><div class="col-span-4">Importe</div><div></div></div>
+                        <div class="mt-1 space-y-1"><div v-for="(item, index) in form.percepciones" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-6 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-4 block w-full text-xs !py-1" placeholder="Importe" /><button type="button" class="col-span-2 text-xs text-red-600 font-bold text-left" @click="removeAt(form.percepciones, index)">X</button></div></div>
                     </div>
                     <div class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
-                        <div class="flex items-center justify-between gap-4 mb-2"><h4 class="text-xs font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addRetencion(form)">Agregar</SecondaryButton></div>
-                        <div class="space-y-2"><div v-for="(item, index) in form.retenciones" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"><div class="sm:col-span-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select></div><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full text-xs" placeholder="Importe" /><button type="button" class="text-xs text-red-600" @click="removeAt(form.retenciones, index)">Quitar</button></div></div></div>
+                        <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addRetencion(form)">+ Fila</SecondaryButton></div>
+                        <div class="grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-6">Concepto</div><div class="col-span-4">Importe</div><div></div></div>
+                        <div class="mt-1 space-y-1"><div v-for="(item, index) in form.retenciones" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-6 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-4 block w-full text-xs !py-1" placeholder="Importe" /><button type="button" class="col-span-2 text-xs text-red-600 font-bold text-left" @click="removeAt(form.retenciones, index)">X</button></div></div>
                     </div>
                     <div class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
                         <h4 class="text-xs font-semibold text-gray-900 mb-2">Combustible</h4>
@@ -598,6 +594,13 @@ const submitDelete = () => {
                             <button v-if="filtros?.fecha_desde || filtros?.fecha_hasta || filtros?.proveedor_id" type="button" class="text-xs text-gray-500 hover:text-gray-800 underline" @click="limpiarFiltros">Limpiar</button>
                         </div>
                     </div>
+                </div>
+                <div class="px-2 py-1.5 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs bg-gray-50 border-b border-gray-200">
+                    <div><span class="text-gray-500">Subtotal $ </span><span class="font-medium text-gray-900">{{ formatNum(resumen?.subtotal || 0) }}</span></div>
+                    <div><span class="text-gray-500">IVA $ </span><span class="font-medium text-gray-900">{{ formatNum(resumen?.iva_total || 0) }}</span></div>
+                    <div><span class="text-gray-500">Tributos $ </span><span class="font-medium text-gray-900">{{ formatNum(resumen?.tributos_total || 0) }}</span></div>
+                    <div><span class="text-gray-500">Retenciones $ </span><span class="font-medium text-gray-900">{{ formatNum(resumen?.retenciones_total || 0) }}</span></div>
+                    <div><span class="text-gray-500">Total $ </span><span class="font-semibold text-gray-900">{{ formatNum(resumen?.total || 0) }}</span></div>
                 </div>
                 <div class="space-y-2 p-2 sm:hidden">
                     <div v-for="c in comprobantes.data" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-2">
@@ -679,20 +682,23 @@ const submitDelete = () => {
                                 <InputError class="mt-1" :message="editComprobanteForm.errors.cuenta_contable_id" />
                             </div>
                             <div v-if="!editComprobanteForm.tipo || editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
-                                <div class="flex items-center justify-between gap-4"><h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4><SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addIvaItem(editComprobanteForm)">Agregar fila</SecondaryButton></div>
-                                <div class="mt-2 space-y-2"><div v-for="(item, index) in editComprobanteForm.iva_detalle" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"><div><InputLabel value="Concepto" /><select v-model="item.concepto" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select></div><div><InputLabel value="Importe" /><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" /></div><div class="flex items-end gap-2"><div class="text-xs text-gray-700">IVA {{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}</div><button v-if="editComprobanteForm.iva_detalle.length > 1" type="button" class="text-xs text-red-600" @click="removeAt(editComprobanteForm.iva_detalle, index)">Quitar</button></div></div></div>
+                                <div class="flex items-center justify-between gap-2"><h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addIvaItem(editComprobanteForm)">+ Fila</SecondaryButton></div>
+                                <div class="mt-1 grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-5">Concepto</div><div class="col-span-3">Importe</div><div class="col-span-3">IVA</div><div></div></div>
+                                <div class="mt-1 space-y-1"><div v-for="(item, index) in editComprobanteForm.iva_detalle" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-3 block w-full text-xs !py-1" /><div class="col-span-3 text-xs text-gray-700 text-right">{{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}</div><button v-if="editComprobanteForm.iva_detalle.length > 1" type="button" class="text-xs text-red-600 font-bold" @click="removeAt(editComprobanteForm.iva_detalle, index)">X</button><span v-else></span></div></div>
                             </div>
                             <div v-if="editComprobanteForm.tipo && !editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <InputLabel value="Subtotal / Importe (IVA incluido)" />
                                 <TextInput v-model="editComprobanteForm.subtotal" type="number" min="0" step="0.01" class="mt-2 block w-full text-xs" />
                             </div>
                             <div class="rounded-lg border border-gray-200 p-2">
-                                <div class="flex items-center justify-between gap-4 mb-2"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addPercepcion(editComprobanteForm)">Agregar</SecondaryButton></div>
-                                <div class="space-y-2"><div v-for="(item, index) in editComprobanteForm.percepciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full text-xs" placeholder="Importe" /><button type="button" class="text-xs text-red-600" @click="removeAt(editComprobanteForm.percepciones, index)">Quitar</button></div></div></div>
+                                <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addPercepcion(editComprobanteForm)">+ Fila</SecondaryButton></div>
+                                <div class="grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-6">Concepto</div><div class="col-span-4">Importe</div><div></div></div>
+                                <div class="mt-1 space-y-1"><div v-for="(item, index) in editComprobanteForm.percepciones" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-6 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.percepciones || catalogos?.percepciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-4 block w-full text-xs !py-1" placeholder="Importe" /><button type="button" class="col-span-2 text-xs text-red-600 font-bold text-left" @click="removeAt(editComprobanteForm.percepciones, index)">X</button></div></div>
                             </div>
                             <div class="rounded-lg border border-gray-200 p-2">
-                                <div class="flex items-center justify-between gap-4 mb-2"><h4 class="text-xs font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addRetencion(editComprobanteForm)">Agregar</SecondaryButton></div>
-                                <div class="space-y-2"><div v-for="(item, index) in editComprobanteForm.retenciones" :key="index" class="grid grid-cols-1 gap-2"><select v-model="item.concepto" class="block w-full border-gray-300 rounded-md shadow-sm text-xs"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><div class="flex items-end gap-2"><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="block w-full text-xs" placeholder="Importe" /><button type="button" class="text-xs text-red-600" @click="removeAt(editComprobanteForm.retenciones, index)">Quitar</button></div></div></div>
+                                <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Retenciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addRetencion(editComprobanteForm)">+ Fila</SecondaryButton></div>
+                                <div class="grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-6">Concepto</div><div class="col-span-4">Importe</div><div></div></div>
+                                <div class="mt-1 space-y-1"><div v-for="(item, index) in editComprobanteForm.retenciones" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-6 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option value="">(concepto)</option><option v-for="c in (catalogosImpuestos?.retenciones || catalogos?.retenciones || [])" :key="c.value" :value="c.label">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-4 block w-full text-xs !py-1" placeholder="Importe" /><button type="button" class="col-span-2 text-xs text-red-600 font-bold text-left" @click="removeAt(editComprobanteForm.retenciones, index)">X</button></div></div>
                             </div>
                             <div class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <h4 class="text-xs font-semibold text-gray-900 mb-2">Combustible</h4>
