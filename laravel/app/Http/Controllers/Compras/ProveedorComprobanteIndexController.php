@@ -36,25 +36,79 @@ class ProveedorComprobanteIndexController extends Controller
         'municipal' => 'Retencion Municipal',
     ];
 
+    private const IVA_DETALLE_TASAS = [
+        'neto_27' => 27,
+        'neto_21' => 21,
+        'neto_105' => 10.5,
+        'neto_5' => 5,
+        'neto_25' => 2.5,
+        'neto_0' => 0,
+    ];
+
+    private const IVA_DETALLE_LABELS = [
+        'neto_27' => 'Neto 27%',
+        'neto_21' => 'Neto 21%',
+        'neto_105' => 'Neto 10,5%',
+        'neto_5' => 'Neto 5%',
+        'neto_25' => 'Neto 2,5%',
+        'neto_0' => 'Neto 0%',
+        'no_gravado' => 'Neto no gravado',
+        'exento' => 'Op. exentas',
+    ];
+
     private function fiscalDetail(array $data, ?string $tipo = null): array
     {
         $ivaDesglosado = $tipo && str_ends_with($tipo, 'A');
 
-        $ivaItems = collect($data['iva_items'] ?? [])
-            ->map(function ($item) {
-                $alicuota = (float) ($item['alicuota'] ?? 0);
-                $base = round((float) ($item['base_imponible'] ?? 0), 2);
-                $importe = round($base * ($alicuota / 100), 2);
+        // Nuevo formato: filas {concepto, importe} (dropdown ARCA + importe)
+        $ivaDetalleRows = collect($data['iva_detalle'] ?? [])
+            ->map(fn ($item) => [
+                'concepto' => trim((string) ($item['concepto'] ?? '')),
+                'importe' => round((float) ($item['importe'] ?? 0), 2),
+            ])
+            ->filter(fn ($item) => $item['concepto'] !== '' || $item['importe'] > 0)
+            ->values();
 
-                return [
-                    'alicuota' => $alicuota,
-                    'base_imponible' => $base,
-                    'importe' => $importe,
-                ];
-            })
-            ->filter(fn ($item) => $item['base_imponible'] > 0)
-            ->values()
-            ->all();
+        if ($ivaDetalleRows->isNotEmpty()) {
+            $ivaItems = [];
+            $netoNoGravado = 0.0;
+            $opExentas = 0.0;
+            foreach ($ivaDetalleRows as $row) {
+                if ($row['concepto'] === 'no_gravado') {
+                    $netoNoGravado = round($netoNoGravado + $row['importe'], 2);
+                } elseif ($row['concepto'] === 'exento') {
+                    $opExentas = round($opExentas + $row['importe'], 2);
+                } elseif (array_key_exists($row['concepto'], self::IVA_DETALLE_TASAS)) {
+                    $tasa = self::IVA_DETALLE_TASAS[$row['concepto']];
+                    $ivaImp = round($row['importe'] * ($tasa / 100), 2);
+                    if ($row['importe'] > 0) {
+                        $ivaItems[] = ['alicuota' => $tasa, 'base_imponible' => $row['importe'], 'importe' => $ivaImp];
+                    }
+                } else {
+                    // Concepto no gravado desconocido: suma al subtotal sin IVA
+                    $netoNoGravado = round($netoNoGravado + $row['importe'], 2);
+                }
+            }
+            $ivaDetalle = $ivaDetalleRows->all();
+        } else {
+            // Formato legacy: iva_items {alicuota, base_imponible}
+            $ivaItems = collect($data['iva_items'] ?? [])
+                ->map(function ($item) {
+                    $alicuota = (float) ($item['alicuota'] ?? 0);
+                    $base = round((float) ($item['base_imponible'] ?? 0), 2);
+                    $importe = round($base * ($alicuota / 100), 2);
+
+                    return [
+                        'alicuota' => $alicuota,
+                        'base_imponible' => $base,
+                        'importe' => $importe,
+                    ];
+                })
+                ->filter(fn ($item) => $item['base_imponible'] > 0)
+                ->values()
+                ->all();
+            $ivaDetalle = [];
+        }
 
         $percepciones = collect($data['percepciones'] ?? [])
             ->map(fn ($item) => [
@@ -81,8 +135,12 @@ class ProveedorComprobanteIndexController extends Controller
             'pago_cuenta_combustible' => round((float) ($data['pago_cuenta_combustible'] ?? 0), 2),
         ];
 
-        $netoNoGravado = round((float) ($data['neto_no_gravado'] ?? 0), 2);
-        $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
+        $usarIvaDetalle = ! empty($ivaDetalle);
+        if (! $usarIvaDetalle) {
+            // Formato legacy: campos sueltos + iva_items
+            $netoNoGravado = round((float) ($data['neto_no_gravado'] ?? 0), 2);
+            $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
+        }
         $subtotal = !empty($ivaItems)
             ? round(collect($ivaItems)->sum('base_imponible') + $netoNoGravado + $opExentas, 2)
             : round((float) ($data['subtotal'] ?? 0) + $netoNoGravado + $opExentas, 2);
@@ -101,6 +159,7 @@ class ProveedorComprobanteIndexController extends Controller
             'total' => $total,
             'detalle' => [
                 'iva_items' => $ivaItems,
+                'iva_detalle' => $ivaDetalle,
                 'percepciones' => $percepciones,
                 'retenciones' => $retenciones,
                 'combustible' => $combustible,
@@ -205,6 +264,7 @@ class ProveedorComprobanteIndexController extends Controller
             'catalogos' => [
                 'percepciones' => collect(self::PERCEPCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
                 'retenciones' => collect(self::RETENCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
+                'iva_detalle' => collect(self::IVA_DETALLE_LABELS)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
             ],
             'cuentasContables' => CuentaContable::query()
                 ->where('empresa_id', $empresaId)
@@ -280,6 +340,7 @@ class ProveedorComprobanteIndexController extends Controller
             'catalogos_impuestos' => [
                 'percepciones' => $percepciones,
                 'retenciones' => $retenciones,
+                'iva_detalle' => collect(self::IVA_DETALLE_LABELS)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values()->all(),
             ],
         ]);
     }
@@ -300,6 +361,9 @@ class ProveedorComprobanteIndexController extends Controller
             'iva_items' => ['nullable', 'array'],
             'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],
             'iva_items.*.base_imponible' => ['required_with:iva_items.*.alicuota', 'numeric', 'min:0'],
+            'iva_detalle' => ['nullable', 'array'],
+            'iva_detalle.*.concepto' => ['required_with:iva_detalle.*.importe', 'string', 'max:64'],
+            'iva_detalle.*.importe' => ['required_with:iva_detalle.*.concepto', 'numeric', 'min:0'],
             'percepciones' => ['nullable', 'array'],
             'percepciones.*.concepto' => ['nullable', 'string', 'max:255'],
             'percepciones.*.importe' => ['nullable', 'numeric', 'min:0'],
