@@ -219,6 +219,33 @@ class ChequeController extends Controller
         return back()->with('success', 'Cheque actualizado.'.($newEstado === 'depositado' ? ' Movimiento bancario pendiente generado.' : ($newEstado === 'cobrado' ? ' Cheque acreditado.' : '')));
     }
 
+    public function destroy(Cheque $cheque): RedirectResponse
+    {
+        if ($cheque->recibo_id) {
+            return back()->with('flash.error', 'No se puede eliminar: el cheque proviene de un recibo de cobranza.');
+        }
+
+        if (\App\Models\GastoOperativo::query()->where('cheque_id', $cheque->id)->exists()) {
+            return back()->with('flash.error', 'No se puede eliminar: el cheque está usado en un egreso.');
+        }
+
+        if (\App\Models\OrdenPago::query()->where('cheque_id', $cheque->id)->exists()) {
+            return back()->with('flash.error', 'No se puede eliminar: el cheque está usado en una orden de pago.');
+        }
+
+        if ($cheque->movimiento_bancario_id) {
+            $mov = \App\Models\MovimientoBancario::find($cheque->movimiento_bancario_id);
+            if ($mov && $mov->contabilizado) {
+                return back()->with('flash.error', 'No se puede eliminar: el cheque tiene movimiento bancario contabilizado.');
+            }
+            $mov?->delete();
+        }
+
+        $cheque->delete();
+
+        return back()->with('flash.success', 'Cheque eliminado.');
+    }
+
     public function bancos(): JsonResponse
     {
         return response()->json(

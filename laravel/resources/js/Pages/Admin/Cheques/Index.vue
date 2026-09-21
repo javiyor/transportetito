@@ -1,6 +1,7 @@
 <script setup>
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -99,6 +100,29 @@ const submitEdit = () => {
     editForm.put(route('admin.cheques.update', editId.value), {
         preserveScroll: true,
         onSuccess: () => { editId.value = null; },
+    });
+};
+
+const deleteId = ref(null);
+const deleteInfo = ref(null);
+const deleteProcessing = ref(false);
+
+const openDelete = (c) => {
+    deleteId.value = c.id;
+    deleteInfo.value = `#${c.id} · ${c.banco || '-'} · ${c.moneda} ${c.importe}`;
+    if (editId.value === c.id) editId.value = null;
+};
+
+const submitDelete = () => {
+    if (!deleteId.value) return;
+    deleteProcessing.value = true;
+    router.delete(route('admin.cheques.destroy', deleteId.value), {
+        preserveScroll: true,
+        onFinish: () => {
+            deleteProcessing.value = false;
+            deleteId.value = null;
+            deleteInfo.value = null;
+        },
     });
 };
 
@@ -362,8 +386,9 @@ const formatFecha = (v) => {
                                 <td class="px-2 py-0.5 text-xs">
                                     <span class="inline-flex items-center rounded-full px-2 py-0 text-[10px] font-medium" :class="estadoBadgeClass(c.estado)">{{ estadoLabel(c.estado) }}</span>
                                 </td>
-                                <td class="px-2 py-0.5 text-right text-xs">
+                                <td class="px-2 py-0.5 text-right text-xs whitespace-nowrap">
                                     <SecondaryButton class="!text-[10px] !px-2 !py-0.5" @click="openEdit(c)">Editar</SecondaryButton>
+                                    <button type="button" class="ms-1 text-[10px] text-red-600 hover:text-red-800" @click="openDelete(c)">Eliminar</button>
                                 </td>
                             </tr>
                             <tr v-if="!seccion.cheques.data.length">
@@ -453,6 +478,18 @@ const formatFecha = (v) => {
                     </div>
                 </form>
             </div>
+
+            <DialogModal :show="!!deleteId" @close="deleteId = null">
+                <template #title>Eliminar cheque</template>
+                <template #content>
+                    <p class="text-sm text-gray-700">¿Eliminar el cheque <span class="font-semibold">{{ deleteInfo }}</span>? Esta acción no se puede deshacer.</p>
+                    <p class="mt-2 text-xs text-gray-500">No se puede eliminar si está usado en recibos, egresos, órdenes de pago o movimientos contabilizados.</p>
+                </template>
+                <template #footer>
+                    <SecondaryButton class="!text-xs !px-3 !py-1.5" @click="deleteId = null">Cancelar</SecondaryButton>
+                    <button type="button" class="ms-3 inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" :disabled="deleteProcessing" @click="submitDelete">Eliminar</button>
+                </template>
+            </DialogModal>
         </div>
     </AppLayout>
 </template>
