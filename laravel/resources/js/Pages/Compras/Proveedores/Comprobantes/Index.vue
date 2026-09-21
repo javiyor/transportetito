@@ -511,7 +511,7 @@ const submitDelete = () => {
                         </select>
                         <InputError class="mt-1" :message="form.errors.cuenta_contable_id" />
                     </div>
-                    <div v-if="form.tipo && form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
+                    <div v-if="!form.tipo || form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
                         <div class="flex items-center justify-between gap-4">
                             <h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4>
                             <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addIvaItem(form)">Agregar fila</SecondaryButton>
@@ -678,7 +678,7 @@ const submitDelete = () => {
                                 </select>
                                 <InputError class="mt-1" :message="editComprobanteForm.errors.cuenta_contable_id" />
                             </div>
-                            <div v-if="editComprobanteForm.tipo && editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
+                            <div v-if="!editComprobanteForm.tipo || editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <div class="flex items-center justify-between gap-4"><h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4><SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="addIvaItem(editComprobanteForm)">Agregar fila</SecondaryButton></div>
                                 <div class="mt-2 space-y-2"><div v-for="(item, index) in editComprobanteForm.iva_detalle" :key="index" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"><div><InputLabel value="Concepto" /><select v-model="item.concepto" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select></div><div><InputLabel value="Importe" /><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" /></div><div class="flex items-end gap-2"><div class="text-xs text-gray-700">IVA {{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}</div><button v-if="editComprobanteForm.iva_detalle.length > 1" type="button" class="text-xs text-red-600" @click="removeAt(editComprobanteForm.iva_detalle, index)">Quitar</button></div></div></div>
                             </div>
