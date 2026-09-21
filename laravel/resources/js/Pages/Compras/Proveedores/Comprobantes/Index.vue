@@ -135,7 +135,7 @@ const editComprobanteForm = useForm({
 });
 
 const fiscalSummary = (target) => computed(() => {
-    const ivaDesglosado = (target.tipo || '').endsWith('A');
+    const ivaDesglosado = !target.tipo || (target.tipo || '').endsWith('A');
     let subtotal = 0;
     let iva = 0;
     if (ivaDesglosado) {
