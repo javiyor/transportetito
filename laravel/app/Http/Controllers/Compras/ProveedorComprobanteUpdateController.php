@@ -61,7 +61,7 @@ class ProveedorComprobanteUpdateController extends Controller
         $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
         $subtotal = !empty($ivaItems)
             ? round(collect($ivaItems)->sum('base_imponible') + $netoNoGravado + $opExentas, 2)
-            : round((float) ($data['subtotal'] ?? 0), 2);
+            : round((float) ($data['subtotal'] ?? 0) + $netoNoGravado + $opExentas, 2);
         $ivaTotal = round(collect($ivaItems)->sum('importe'), 2);
         $tributos = round(collect($percepciones)->sum('importe') + $combustible['impuestos_combustible'], 2);
         $retencionesTotal = round(collect($retenciones)->sum('importe') + $combustible['pago_cuenta_combustible'], 2);
