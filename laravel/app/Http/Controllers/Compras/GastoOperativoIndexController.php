@@ -39,7 +39,7 @@ class GastoOperativoIndexController extends Controller
                 ->where('contabilizable', true)
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'nombre']),
-            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
             'chequesDisponibles' => Cheque::query()
                 ->where('empresa_id', $empresaId)
                 ->where('origen', 'tercero')

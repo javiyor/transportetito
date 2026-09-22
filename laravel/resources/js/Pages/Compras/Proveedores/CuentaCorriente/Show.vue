@@ -27,6 +27,12 @@ const props = defineProps({
     bancos: Array,
 });
 
+// Cheque propio sale de cuenta propia; la lista fija (strings) se usa solo si no hay prop
+const bancosChequePropio = computed(() => {
+    const lista = props.bancos?.length ? props.bancos : BANCOS;
+    return lista.filter((b) => typeof b === 'string' || !!b.es_propio);
+});
+
 const form = useForm({
     fecha: new Date().toISOString().slice(0, 10),
     moneda: 'ARS',
@@ -275,7 +281,7 @@ const saldoPendienteTotal = computed(() => {
                             <div v-if="esChequePropio(item.medio)" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
                                 <div><label class="block text-xs text-gray-500">Tipo</label><select v-model="item.cheque_tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="fisico">Físico</option><option value="echeq">E-Cheq</option></select></div>
                                 <div><label class="block text-xs text-gray-500">Nro. cheque</label><TextInput v-model="item.cheque_numero" type="text" class="block w-full text-sm" placeholder="Nro cheque" /></div>
-                                <div><label class="block text-xs text-gray-500">Banco</label><select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar banco</option><option v-for="b in (bancos || BANCOS)" :key="b.id || b" :value="b.nombre || b">{{ b.nombre || b }}</option></select></div>
+                                <div><label class="block text-xs text-gray-500">Banco (cuenta propia)</label><select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar banco</option><option v-for="b in bancosChequePropio" :key="b.id || b" :value="b.nombre || b">{{ b.nombre || b }}</option></select></div>
                                 <div><label class="block text-xs text-gray-500">Vencimiento</label><TextInput v-model="item.cheque_vencimiento" type="date" class="block w-full text-sm" /></div>
                             </div>
                         </div>

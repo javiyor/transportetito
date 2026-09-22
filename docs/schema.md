@@ -153,6 +153,7 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
   - id, empresa_id, banco_id, fecha, tipo (ingreso/egreso/gasto_bancario), concepto, importe, moneda (ARS), referencia_tipo/referencia_id, contabilizado (bool), creado_por_user_id
 
 ## Proveedores / Cheques
+- bancos.es_propio (bool, default false) — bancos con cuenta propia; filtran selects de cheque propio, transferencias y movimientos
 - proveedor_comprobantes
   - id, empresa_id, tercero_cuenta_id, tipo, numero, estado (emitida), moneda, cotizacion_ars, subtotal/iva_total/tributos_total/total, fecha_emision, fecha_vencimiento, detalle (json), cuenta_contable_id, observacion, creado_por_user_id
 - ordenes_pago

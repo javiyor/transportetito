@@ -199,7 +199,7 @@ class CuentaCorrienteShowController extends Controller
                 'retenciones' => $retencionesSum,
                 'saldo_a_cancelar' => round($saldoTotal - $retencionesSum, 2),
             ],
-            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
         ]);
     }
 }

@@ -36,6 +36,7 @@ const form = useForm({
 
 const esCheque = computed(() => form.forma_pago === 'cheque');
 const esTransferencia = computed(() => form.forma_pago === 'transferencia');
+const bancosPropios = computed(() => (props.bancos || []).filter((b) => !!b.es_propio));
 
 const sumaDistribucion = computed(() => {
     return form.distribucion.reduce((s, d) => s + (parseFloat(d.importe) || 0), 0);
@@ -162,10 +163,10 @@ const detalleResumen = (g) => {
                             <InputError class="mt-2" :message="form.errors.forma_pago" />
                         </div>
                         <div v-if="esTransferencia">
-                            <InputLabel value="Banco destino (acreditacion)" />
+                            <InputLabel value="Banco destino (acreditacion, cuenta propia)" />
                             <select v-model="form.banco_destino_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Seleccionar...</option>
-                                <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.banco_destino_id" />
                         </div>
@@ -276,7 +277,7 @@ const detalleResumen = (g) => {
                         <div><InputLabel value="Fecha" class="!text-xs" /><TextInput v-model="editForm.fecha" type="date" class="mt-0.5 block w-full text-sm" /><InputError class="mt-1 text-xs" :message="editForm.errors.fecha" /></div>
                         <div><InputLabel value="Moneda" class="!text-xs" /><select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select></div>
                         <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option></select></div>
-                        <div v-if="esEditTransferencia"><InputLabel value="Banco destino" class="!text-xs" /><select v-model="editForm.banco_destino_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
+                        <div v-if="esEditTransferencia"><InputLabel value="Banco destino (cta. propia)" class="!text-xs" /><select v-model="editForm.banco_destino_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
                         <div><InputLabel value="Fecha cobro" class="!text-xs" /><TextInput v-model="editForm.fecha_cobro" type="date" class="mt-0.5 block w-full text-sm" /></div>
                     </div>
                     <div v-if="esEditCheque" class="border border-gray-200 rounded-lg p-3">

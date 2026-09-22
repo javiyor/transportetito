@@ -1,5 +1,5 @@
 <script setup>
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -39,6 +39,8 @@ const secciones = computed(() => [
         pageParam: 'terceros_page',
     },
 ]);
+
+const bancosPropios = computed(() => (props.bancos || []).filter((b) => !!b.es_propio));
 
 const showForm = ref(false);
 const createForm = useForm({
@@ -224,6 +226,7 @@ const formatFecha = (v) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Admin / Cheques</h2>
+                <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('admin.bancos.index')">Bancos</Link>
             </div>
         </template>
 
@@ -259,10 +262,10 @@ const formatFecha = (v) => {
                         <InputError :message="createForm.errors.numero" />
                     </div>
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Banco</div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Banco{{ createForm.origen === 'propio' ? ' (cuenta propia)' : '' }}</div>
                         <select v-model="createForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(seleccionar)</option>
-                            <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                            <option v-for="b in (createForm.origen === 'propio' ? bancosPropios : bancos)" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
                         </select>
                         <InputError :message="createForm.errors.banco" />
                     </div>
@@ -436,10 +439,10 @@ const formatFecha = (v) => {
                         <InputError :message="editForm.errors.numero" />
                     </div>
                     <div>
-                        <div class="text-xs font-medium text-gray-700 mb-1">Banco</div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Banco{{ editForm.origen === 'propio' ? ' (cuenta propia)' : '' }}</div>
                         <select v-model="editForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(seleccionar)</option>
-                            <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                            <option v-for="b in (editForm.origen === 'propio' ? bancosPropios : bancos)" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
                         </select>
                         <InputError :message="editForm.errors.banco" />
                     </div>
@@ -449,10 +452,10 @@ const formatFecha = (v) => {
                         <InputError :message="editForm.errors.fecha_deposito" />
                     </div>
                     <div v-if="editForm.estado === 'depositado' || editForm.estado === 'cobrado'">
-                        <div class="text-xs font-medium text-gray-700 mb-1">Banco donde se deposita</div>
+                        <div class="text-xs font-medium text-gray-700 mb-1">Banco donde se deposita (cuenta propia)</div>
                         <select v-model="editForm.banco_deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(seleccionar banco)</option>
-                            <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                            <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
                         </select>
                         <InputError :message="editForm.errors.banco_deposito_id" />
                         <div v-if="editForm.estado === 'depositado'" class="text-xs text-blue-600 mt-1">Se generará movimiento bancario pendiente</div>

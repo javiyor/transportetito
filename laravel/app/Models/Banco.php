@@ -12,9 +12,11 @@ class Banco extends Model
         'nombre',
         'codigo',
         'activo',
+        'es_propio',
     ];
 
     protected $casts = [
         'activo' => 'bool',
+        'es_propio' => 'bool',
     ];
 }

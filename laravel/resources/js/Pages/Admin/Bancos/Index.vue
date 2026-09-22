@@ -7,20 +7,26 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import DialogModal from '@/Components/DialogModal.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     bancos: Array,
 });
 
-const form = useForm({ nombre: '', codigo: '', activo: true });
+const page = usePage();
+const importResult = computed(() => page.props.tt?.import_result || null);
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
+
+const form = useForm({ nombre: '', codigo: '', activo: true, es_propio: false });
 
 const submit = () => {
     form.post(route('admin.bancos.store'), { preserveScroll: true, onSuccess: () => form.reset() });
 };
 
 const editing = ref(false);
-const editForm = useForm({ nombre: '', codigo: '', activo: true });
+const editForm = useForm({ nombre: '', codigo: '', activo: true, es_propio: false });
 const editId = ref(null);
 
 const openEdit = (b) => {
@@ -28,12 +34,36 @@ const openEdit = (b) => {
     editForm.nombre = b.nombre;
     editForm.codigo = b.codigo || '';
     editForm.activo = !!b.activo;
+    editForm.es_propio = !!b.es_propio;
     editForm.clearErrors();
     editing.value = true;
 };
 
 const submitEdit = () => {
     editForm.put(route('admin.bancos.update', editId.value), { preserveScroll: true, onSuccess: () => (editing.value = false) });
+};
+
+const deleteId = ref(null);
+const deleteInfo = ref(null);
+const deleteProcessing = ref(false);
+
+const openDelete = (b) => {
+    deleteId.value = b.id;
+    deleteInfo.value = b.nombre;
+    if (editing.value && editId.value === b.id) editing.value = false;
+};
+
+const submitDelete = () => {
+    if (!deleteId.value) return;
+    deleteProcessing.value = true;
+    router.delete(route('admin.bancos.destroy', deleteId.value), {
+        preserveScroll: true,
+        onFinish: () => {
+            deleteProcessing.value = false;
+            deleteId.value = null;
+            deleteInfo.value = null;
+        },
+    });
 };
 </script>
 
@@ -46,9 +76,12 @@ const submitEdit = () => {
         </template>
 
         <div class="max-w-4xl mx-auto py-3 sm:px-4 lg:px-6 space-y-4">
+            <div v-if="importResult" class="bg-green-50 border border-green-200 text-green-900 px-4 py-2 rounded text-sm">{{ importResult.message || importResult }}</div>
+            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-2 rounded text-sm">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="bg-red-50 border border-red-200 text-red-900 px-4 py-2 rounded text-sm">{{ flashError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-sm font-semibold text-gray-900">Nuevo banco</h3>
-                <form class="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-3" @submit.prevent="submit">
+                <form class="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-3" @submit.prevent="submit">
                     <div>
                         <InputLabel value="Nombre" />
                         <TextInput v-model="form.nombre" type="text" class="mt-1 block w-full" required />
@@ -65,6 +98,12 @@ const submitEdit = () => {
                             Activo
                         </label>
                     </div>
+                    <div class="flex items-end pb-1">
+                        <label class="flex items-center gap-2 text-sm text-gray-700" title="El banco tiene cuentas propias de la empresa (cheques propios, transferencias)">
+                            <input v-model="form.es_propio" type="checkbox" class="rounded border-gray-300" />
+                            Cuenta propia
+                        </label>
+                    </div>
                     <div class="flex items-end">
                         <PrimaryButton :disabled="form.processing">Crear</PrimaryButton>
                     </div>
@@ -78,6 +117,7 @@ const submitEdit = () => {
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cta. propia</th>
                             <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                         </tr>
                     </thead>
@@ -88,12 +128,16 @@ const submitEdit = () => {
                             <td class="px-3 py-2 text-xs">
                                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" :class="b.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">{{ b.activo ? 'Si' : 'No' }}</span>
                             </td>
-                            <td class="px-3 py-2 text-right text-xs">
+                            <td class="px-3 py-2 text-xs">
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" :class="b.es_propio ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'">{{ b.es_propio ? 'Si' : 'No' }}</span>
+                            </td>
+                            <td class="px-3 py-2 text-right text-xs whitespace-nowrap">
                                 <SecondaryButton class="text-xs" @click="openEdit(b)">Editar</SecondaryButton>
+                                <button type="button" class="ms-2 text-xs text-red-600 hover:text-red-800" @click="openDelete(b)">Eliminar</button>
                             </td>
                         </tr>
                         <tr v-if="!bancos.length">
-                            <td colspan="4" class="px-3 py-3 text-center text-xs text-gray-500">Sin bancos.</td>
+                            <td colspan="5" class="px-3 py-3 text-center text-xs text-gray-500">Sin bancos.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -117,11 +161,27 @@ const submitEdit = () => {
                             <input v-model="editForm.activo" type="checkbox" class="rounded border-gray-300" />
                             Activo
                         </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700" title="El banco tiene cuentas propias de la empresa (cheques propios, transferencias)">
+                            <input v-model="editForm.es_propio" type="checkbox" class="rounded border-gray-300" />
+                            Cuenta propia
+                        </label>
                     </form>
                 </template>
                 <template #footer>
                     <SecondaryButton @click="editing = false">Cancelar</SecondaryButton>
                     <PrimaryButton class="ms-3" :disabled="editForm.processing" @click="submitEdit">Guardar</PrimaryButton>
+                </template>
+            </DialogModal>
+
+            <DialogModal :show="!!deleteId" @close="deleteId = null">
+                <template #title>Eliminar banco</template>
+                <template #content>
+                    <p class="text-sm text-gray-700">¿Eliminar el banco <span class="font-semibold">{{ deleteInfo }}</span>? Esta acción no se puede deshacer.</p>
+                    <p class="mt-2 text-xs text-gray-500">No se puede eliminar si tiene cheques depositados, egresos o movimientos bancarios.</p>
+                </template>
+                <template #footer>
+                    <SecondaryButton class="!text-xs !px-3 !py-1.5" @click="deleteId = null">Cancelar</SecondaryButton>
+                    <button type="button" class="ms-3 inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" :disabled="deleteProcessing" @click="submitDelete">Eliminar</button>
                 </template>
             </DialogModal>
         </div>

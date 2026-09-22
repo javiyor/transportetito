@@ -43,6 +43,8 @@ const form = useForm({
     observacion: '',
 });
 
+const bancosPropios = computed(() => (props.bancos || []).filter((b) => !!b.es_propio));
+
 const esTransferencia = computed(() => form.forma_pago === 'transferencia');
 const esCheque = computed(() => form.forma_pago === 'cheque');
 const esChequePropio = computed(() => form.forma_pago === 'cheque' && form.tipo_cheque === 'propio');
@@ -239,10 +241,10 @@ const translateLabel = (label) => {
                             <InputError class="mt-2" :message="form.errors.forma_pago" />
                         </div>
                         <div v-if="esTransferencia">
-                            <InputLabel value="Banco origen (debito)" />
+                            <InputLabel value="Banco origen (debito, cuenta propia)" />
                             <select v-model="form.banco_origen_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Seleccionar...</option>
-                                <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
                             </select>
                             <InputError class="mt-2" :message="form.errors.banco_origen_id" />
                         </div>
@@ -268,10 +270,10 @@ const translateLabel = (label) => {
                                 </div>
                                 <template v-if="esChequePropio">
                                     <div>
-                                        <InputLabel value="Banco" />
+                                        <InputLabel value="Banco (cuenta propia)" />
                                         <select v-model="form.cheque_banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
                                             <option value="">Seleccionar...</option>
-                                            <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                            <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
                                         </select>
                                         <InputError class="mt-2" :message="form.errors.cheque_banco_id" />
                                     </div>
@@ -432,7 +434,7 @@ const translateLabel = (label) => {
                         <div><InputLabel value="Fecha" class="!text-xs" /><TextInput v-model="editForm.fecha" type="date" class="mt-0.5 block w-full text-sm" /><InputError class="mt-1 text-xs" :message="editForm.errors.fecha" /></div>
                         <div><InputLabel value="Moneda" class="!text-xs" /><select v-model="editForm.moneda" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option>ARS</option><option>USD</option><option>EUR</option><option>BRL</option></select></div>
                         <div><InputLabel value="Forma de pago" class="!text-xs" /><select v-model="editForm.forma_pago" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option><option value="cuenta_corriente">Cuenta corriente</option></select></div>
-                        <div v-if="esEditTransferencia"><InputLabel value="Banco origen" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
+                        <div v-if="esEditTransferencia"><InputLabel value="Banco origen (cta. propia)" class="!text-xs" /><select v-model="editForm.banco_origen_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
                         <div v-if="editForm.forma_pago === 'cuenta_corriente'"><InputLabel value="Cuenta pasivo" class="!text-xs" /><input v-model="pasivoSearchEdit" type="text" placeholder="Buscar..." class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" /><select v-model="editForm.cuenta_pasivo_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar pasivo...</option><option v-for="c in cuentasPasivoFiltradasEdit" :key="c.id" :value="c.id">{{ c.codigo }} - {{ c.nombre }}</option></select><InputError class="mt-1 text-xs" :message="editForm.errors.cuenta_pasivo_id" /></div>
                         <div><InputLabel value="Fecha pago" class="!text-xs" /><TextInput v-model="editForm.fecha_pago" type="date" class="mt-0.5 block w-full text-sm" /></div>
                     </div>
@@ -440,7 +442,7 @@ const translateLabel = (label) => {
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div><InputLabel value="Tipo cheque" class="!text-xs" /><select v-model="editForm.tipo_cheque" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="propio">Propio</option><option value="tercero">Tercero</option></select></div>
                             <template v-if="esEditChequePropio">
-                                <div><InputLabel value="Banco" class="!text-xs" /><select v-model="editForm.cheque_banco_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
+                                <div><InputLabel value="Banco (cta. propia)" class="!text-xs" /><select v-model="editForm.cheque_banco_id" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option></select></div>
                                 <div><InputLabel value="Número" class="!text-xs" /><TextInput v-model="editForm.cheque_numero" type="text" class="mt-0.5 block w-full text-sm" /></div>
                                 <div><InputLabel value="Importe cheque" class="!text-xs" /><TextInput v-model="editForm.cheque_importe" type="number" step="0.01" class="mt-0.5 block w-full text-sm" /></div>
                                 <div><InputLabel value="Vencimiento" class="!text-xs" /><TextInput v-model="editForm.cheque_fecha_vencimiento" type="date" class="mt-0.5 block w-full text-sm" /></div>

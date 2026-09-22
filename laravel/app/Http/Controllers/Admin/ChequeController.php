@@ -79,7 +79,7 @@ class ChequeController extends Controller
                     'hasta' => $request->query('t_hasta') ?: '',
                 ],
             ],
-            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
         ]);
     }
 
@@ -249,7 +249,7 @@ class ChequeController extends Controller
     public function bancos(): JsonResponse
     {
         return response()->json(
-            Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre'])
+            Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio'])
         );
     }
 }

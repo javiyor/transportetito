@@ -6,7 +6,7 @@ import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     movimientos: Object,
@@ -14,6 +14,8 @@ const props = defineProps({
     saldosPorBanco: Array,
     filtros: Object,
 });
+
+const bancosPropios = computed(() => (props.bancos || []).filter((b) => !!b.es_propio));
 
 const gastoForm = useForm({
     banco_id: '',
@@ -139,10 +141,10 @@ const filtrar = () => {
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Registrar gasto bancario</h3>
                 <form @submit.prevent="submitGasto" class="space-y-3">
                     <div>
-                        <InputLabel value="Banco" />
+                        <InputLabel value="Banco (cuenta propia)" />
                         <select v-model="gastoForm.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">Seleccionar...</option>
-                            <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                            <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
                         </select>
                         <InputError :message="gastoForm.errors.banco_id" />
                     </div>

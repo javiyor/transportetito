@@ -208,6 +208,7 @@ Route::middleware([
         Route::get('/bancos', [\App\Http\Controllers\Admin\BancoAdminController::class, 'index'])->name('bancos.index');
         Route::post('/bancos', [\App\Http\Controllers\Admin\BancoAdminController::class, 'store'])->name('bancos.store');
         Route::put('/bancos/{banco}', [\App\Http\Controllers\Admin\BancoAdminController::class, 'update'])->name('bancos.update');
+        Route::delete('/bancos/{banco}', [\App\Http\Controllers\Admin\BancoAdminController::class, 'destroy'])->name('bancos.destroy');
 
         Route::get('/vehiculos', [VehiculoAdminController::class, 'index'])->name('vehiculos.index');
         Route::post('/vehiculos', [VehiculoAdminController::class, 'store'])->name('vehiculos.store');

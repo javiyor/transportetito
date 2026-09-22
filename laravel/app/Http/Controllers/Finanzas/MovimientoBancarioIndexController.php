@@ -57,7 +57,7 @@ class MovimientoBancarioIndexController extends Controller
 
         return Inertia::render('Finanzas/MovimientosBancarios/Index', [
             'movimientos' => $movimientos,
-            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
             'saldosPorBanco' => $saldosPorBanco,
             'filtros' => [
                 'banco_id' => $request->query('banco_id') ?: '',

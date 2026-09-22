@@ -120,7 +120,7 @@ class ProveedorCuentaCorrienteShowController extends Controller
             'ordenesPago' => $ordenesPago,
             'chequesDisponibles' => $chequesDisponibles,
             'saldoTotal' => round((float) $movimientos->sum('importe_signed'), 2),
-            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'bancos' => Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
         ]);
     }
 }
