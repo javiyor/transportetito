@@ -12,7 +12,12 @@ import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     bancos: Array,
+    orden: String,
 });
+
+const ordenar = (campo) => {
+    router.get(route('admin.bancos.index'), { orden: campo }, { preserveState: true, preserveScroll: true, replace: true });
+};
 
 const page = usePage();
 const importResult = computed(() => page.props.tt?.import_result || null);
@@ -114,8 +119,8 @@ const submitDelete = () => {
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><button type="button" class="hover:text-gray-800" @click="ordenar('nombre')">Nombre {{ orden === 'nombre' ? '▲' : '' }}</button></th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><button type="button" class="hover:text-gray-800" @click="ordenar('codigo')">Codigo {{ orden !== 'nombre' ? '▲' : '' }}</button></th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cta. propia</th>
                             <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>

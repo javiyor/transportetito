@@ -11,10 +11,13 @@ use Inertia\Response;
 
 class BancoAdminController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $orden = $request->query('orden') === 'nombre' ? 'nombre' : 'codigo';
+
         return Inertia::render('Admin/Bancos/Index', [
-            'bancos' => Banco::query()->orderBy('nombre')->get(),
+            'bancos' => Banco::query()->orderBy($orden)->orderBy('id')->get(),
+            'orden' => $orden,
         ]);
     }
 
