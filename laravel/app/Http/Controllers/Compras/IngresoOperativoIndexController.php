@@ -181,9 +181,9 @@ class IngresoOperativoIndexController extends Controller
             return back()->with('flash.error', 'Ingreso actualizado pero no se pudo contabilizar: '.$e->getMessage());
         }
 
-        // Movimiento bancario si corresponde
+        // Movimiento bancario si corresponde (con sus asientos)
         $bancoId = $data['banco_destino_id'] ?? null;
-        \App\Models\MovimientoBancario::query()->where('referencia_tipo', 'ingreso_operativo')->where('referencia_id', $ingreso->id)->delete();
+        \App\Models\MovimientoBancario::eliminarReferencia('ingreso_operativo', $ingreso->id);
         if ($bancoId) {
             \App\Models\MovimientoBancario::query()->create([
                 'empresa_id' => $empresaId,
@@ -207,9 +207,9 @@ class IngresoOperativoIndexController extends Controller
     {
         abort_unless($ingreso->empresa_id === (int) (request()->user()->current_empresa_id ?: 0), 404);
         \App\Models\AsientoContable::query()->where('referencia_tipo', 'ingreso_operativo')->where('referencia_id', $ingreso->id)->delete();
-        \App\Models\MovimientoBancario::query()->where('referencia_tipo', 'ingreso_operativo')->where('referencia_id', $ingreso->id)->delete();
+        \App\Models\MovimientoBancario::eliminarReferencia('ingreso_operativo', $ingreso->id);
         $ingreso->categorias()->delete();
         $ingreso->delete();
-        return back()->with('flash.success', 'Ingreso eliminado.');
+        return back()->with('flash.success', 'Ingreso eliminado (movimientos y asientos limpiados).');
     }
 }

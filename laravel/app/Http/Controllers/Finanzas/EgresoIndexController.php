@@ -295,7 +295,7 @@ class EgresoIndexController extends Controller
             return back()->with('flash.error', 'Egreso actualizado pero no se pudo contabilizar: '.$e->getMessage());
         }
 
-        \App\Models\MovimientoBancario::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
+        \App\Models\MovimientoBancario::eliminarReferencia('gasto_operativo', $egreso->id);
         $bancoIdParaMovimiento = null;
         if (in_array($data['forma_pago'], ['transferencia', 'cheque', 'tarjeta'], true)) {
             $bancoIdParaMovimiento = $data['banco_origen_id'] ?? null;
@@ -327,12 +327,19 @@ class EgresoIndexController extends Controller
         abort_unless($egreso->empresa_id === (int) (request()->user()->current_empresa_id ?: 0), 404);
         if ($egreso->cheque_id) {
             $ch = \App\Models\Cheque::find($egreso->cheque_id);
-            if ($ch && $ch->origen === 'tercero') $ch->update(['estado' => 'en_cartera']);
+            if ($ch && $ch->origen === 'tercero') {
+                $ch->update(['estado' => 'en_cartera']);
+            } elseif ($ch && $ch->origen === 'propio'
+                && ! \App\Models\GastoOperativo::query()->where('cheque_id', $ch->id)->where('id', '!=', $egreso->id)->exists()
+                && ! \App\Models\OrdenPago::query()->where('cheque_id', $ch->id)->exists()
+            ) {
+                $ch->delete();
+            }
         }
         \App\Models\AsientoContable::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
-        \App\Models\MovimientoBancario::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $egreso->id)->delete();
+        \App\Models\MovimientoBancario::eliminarReferencia('gasto_operativo', $egreso->id);
         $egreso->categorias()->delete();
         $egreso->delete();
-        return back()->with('flash.success', 'Egreso eliminado.');
+        return back()->with('flash.success', 'Egreso eliminado (movimientos y asientos limpiados).');
     }
 }

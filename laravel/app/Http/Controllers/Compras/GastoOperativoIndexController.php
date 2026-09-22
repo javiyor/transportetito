@@ -266,8 +266,8 @@ class GastoOperativoIndexController extends Controller
             Log::warning('No se pudo recontabilizar gasto', ['gasto_id' => $gasto->id, 'error' => $contaError]);
         }
 
-        // Recreate movimiento
-        MovimientoBancario::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $gasto->id)->delete();
+        // Recreate movimiento (con sus asientos)
+        MovimientoBancario::eliminarReferencia('gasto_operativo', $gasto->id);
         $bancoIdParaMovimiento = null;
         if (in_array($data['forma_pago'], ['transferencia', 'cheque', 'tarjeta'], true)) {
             $bancoIdParaMovimiento = $data['banco_origen_id'] ?? null;
@@ -305,19 +305,24 @@ class GastoOperativoIndexController extends Controller
     {
         abort_unless($gasto->empresa_id === (int) (request()->user()->current_empresa_id ?: 0), 404);
 
-        // Revertir cheque tercero
+        // Revertir cheque tercero; eliminar propio generado por este gasto
         if ($gasto->cheque_id) {
             $ch = Cheque::find($gasto->cheque_id);
             if ($ch && $ch->origen === 'tercero') {
                 $ch->update(['estado' => 'en_cartera']);
+            } elseif ($ch && $ch->origen === 'propio'
+                && ! GastoOperativo::query()->where('cheque_id', $ch->id)->where('id', '!=', $gasto->id)->exists()
+                && ! \App\Models\OrdenPago::query()->where('cheque_id', $ch->id)->exists()
+            ) {
+                $ch->delete();
             }
         }
 
         \App\Models\AsientoContable::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $gasto->id)->delete();
-        MovimientoBancario::query()->where('referencia_tipo', 'gasto_operativo')->where('referencia_id', $gasto->id)->delete();
+        MovimientoBancario::eliminarReferencia('gasto_operativo', $gasto->id);
         $gasto->categorias()->delete();
         $gasto->delete();
 
-        return back()->with('flash.success', 'Gasto eliminado.');
+        return back()->with('flash.success', 'Gasto eliminado (movimientos y asientos limpiados).');
     }
 }

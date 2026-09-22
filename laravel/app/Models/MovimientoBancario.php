@@ -38,4 +38,23 @@ class MovimientoBancario extends Model
     {
         return $this->belongsTo(Banco::class);
     }
+
+    /**
+     * Elimina los movimientos de una referencia junto con sus asientos contables.
+     */
+    public static function eliminarReferencia(string $tipo, int $id): void
+    {
+        $movIds = static::query()
+            ->where('referencia_tipo', $tipo)
+            ->where('referencia_id', $id)
+            ->pluck('id');
+
+        if ($movIds->isNotEmpty()) {
+            AsientoContable::query()
+                ->where('referencia_tipo', 'movimiento_bancario')
+                ->whereIn('referencia_id', $movIds)
+                ->delete();
+            static::query()->whereIn('id', $movIds)->delete();
+        }
+    }
 }
