@@ -651,6 +651,10 @@ const submitDelete = () => {
             <DialogModal :show="editComprobanteDialog" @close="editComprobanteDialog = false">
                 <template #title>Editar comprobante proveedor</template>
                 <template #content>
+                        <div v-if="Object.keys(editComprobanteForm.errors).length" class="sm:col-span-2 mb-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+                            <p class="font-semibold">No se pudo guardar:</p>
+                            <ul class="list-disc list-inside"><li v-for="(msg, field) in editComprobanteForm.errors" :key="field">{{ field }}: {{ msg }}</li></ul>
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 grilla-campos">
                             <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end rounded-lg border border-gray-200 bg-gray-50 p-2">
                                 <div>
@@ -684,11 +688,12 @@ const submitDelete = () => {
                             <div v-if="!editComprobanteForm.tipo || editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <div class="flex items-center justify-between gap-2"><h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addIvaItem(editComprobanteForm)">+ Fila</SecondaryButton></div>
                                 <div class="mt-1 grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-5">Concepto</div><div class="col-span-3">Importe</div><div class="col-span-3">IVA</div><div></div></div>
-                                <div class="mt-1 space-y-1"><div v-for="(item, index) in editComprobanteForm.iva_detalle" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-3 block w-full text-xs !py-1" /><div class="col-span-3 text-xs text-gray-700 text-right">{{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}</div><button v-if="editComprobanteForm.iva_detalle.length > 1" type="button" class="text-xs text-red-600 font-bold" @click="removeAt(editComprobanteForm.iva_detalle, index)">X</button><span v-else></span></div></div>
+                                <div class="mt-1 space-y-1"><div v-for="(item, index) in editComprobanteForm.iva_detalle" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-3 block w-full text-xs !py-1" /><div class="col-span-3 text-xs text-gray-700 text-right">{{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}<InputError :message="editComprobanteForm.errors['iva_detalle.' + index + '.concepto'] || editComprobanteForm.errors['iva_detalle.' + index + '.importe']" /></div><button v-if="editComprobanteForm.iva_detalle.length > 1" type="button" class="text-xs text-red-600 font-bold" @click="removeAt(editComprobanteForm.iva_detalle, index)">X</button><span v-else></span></div></div>
                             </div>
                             <div v-if="editComprobanteForm.tipo && !editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <InputLabel value="Subtotal / Importe (IVA incluido)" />
                                 <TextInput v-model="editComprobanteForm.subtotal" type="number" min="0" step="0.01" class="mt-2 block w-full text-xs" />
+                                <InputError class="mt-1" :message="editComprobanteForm.errors.subtotal" />
                             </div>
                             <div class="rounded-lg border border-gray-200 p-2">
                                 <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addPercepcion(editComprobanteForm)">+ Fila</SecondaryButton></div>
