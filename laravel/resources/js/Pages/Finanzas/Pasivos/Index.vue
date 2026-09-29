@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -7,15 +7,38 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     pasivos: Array,
     totalPendiente: Number,
     bancos: Array,
+    filtros: Object,
 });
 
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
+
 const formatNum = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const bancosPropios = computed(() => (props.bancos || []).filter((b) => !!b.es_propio));
+
+const filtroDesde = ref(props.filtros?.fecha_desde || '');
+const filtroHasta = ref(props.filtros?.fecha_hasta || '');
+
+const aplicarFiltros = () => {
+    router.get(route('finanzas.pasivos.index'), {
+        fecha_desde: filtroDesde.value || null,
+        fecha_hasta: filtroHasta.value || null,
+    }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const limpiarFiltros = () => {
+    filtroDesde.value = '';
+    filtroHasta.value = '';
+    aplicarFiltros();
+};
 
 const showPagar = ref(false);
 const pagarCuenta = ref(null);
@@ -38,6 +61,42 @@ const submitPagar = () => {
         onSuccess: () => { showPagar.value = false; },
     });
 };
+
+// Pago múltiple: seleccionados o todos los filtrados
+const seleccionados = ref([]);
+const todoSeleccionado = computed(() => (props.pasivos || []).length > 0 && seleccionados.value.length === (props.pasivos || []).length);
+const toggleTodos = () => {
+    seleccionados.value = todoSeleccionado.value ? [] : (props.pasivos || []).map((p) => p.id);
+};
+const totalSeleccionado = computed(() => (props.pasivos || []).filter((p) => seleccionados.value.includes(p.id)).reduce((s, p) => s + Number(p.saldo || 0), 0));
+
+const showPagarTodos = ref(false);
+const pagarTodosForm = useForm({ fecha: new Date().toISOString().slice(0,10), banco_id: '', observacion: '' });
+
+const openPagarTodos = () => {
+    if (!seleccionados.value.length) return;
+    pagarTodosForm.fecha = new Date().toISOString().slice(0,10);
+    pagarTodosForm.banco_id = '';
+    pagarTodosForm.observacion = '';
+    pagarTodosForm.clearErrors();
+    showPagarTodos.value = true;
+};
+
+const pagarTodosFiltrados = () => {
+    seleccionados.value = (props.pasivos || []).map((p) => p.id);
+    openPagarTodos();
+};
+
+const submitPagarTodos = () => {
+    const items = (props.pasivos || [])
+        .filter((p) => seleccionados.value.includes(p.id))
+        .map((p) => ({ id: p.id, importe: Number(p.saldo || 0) }));
+    if (!items.length) return;
+    pagarTodosForm.transform((data) => ({ ...data, items })).post(route('finanzas.pasivos.pagar-todos'), {
+        preserveScroll: true,
+        onSuccess: () => { showPagarTodos.value = false; seleccionados.value = []; },
+    });
+};
 </script>
 
 <template>
@@ -50,15 +109,37 @@ const submitPagar = () => {
             </div>
         </template>
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="flashSuccess" class="bg-green-50 border border-green-200 text-green-900 px-4 py-2 rounded text-sm">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="bg-red-50 border border-red-200 text-red-900 px-4 py-2 rounded text-sm">{{ flashError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><div class="text-xs text-gray-500">Cuentas con saldo</div><div class="text-sm font-medium text-gray-900">{{ pasivos.length }}</div></div>
                 <div><div class="text-xs text-gray-500">Total pendiente</div><div class="text-sm font-medium text-red-700">$ {{ formatNum(totalPendiente) }}</div></div>
             </div>
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
+                <div class="p-2 border-b border-gray-200 flex flex-wrap items-end gap-2">
+                    <div>
+                        <InputLabel value="Desde" />
+                        <TextInput v-model="filtroDesde" type="date" class="mt-1 block w-full text-xs" />
+                    </div>
+                    <div>
+                        <InputLabel value="Hasta" />
+                        <TextInput v-model="filtroHasta" type="date" class="mt-1 block w-full text-xs" />
+                    </div>
+                    <div class="flex gap-2">
+                        <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" @click="aplicarFiltros">Filtrar</SecondaryButton>
+                        <button v-if="filtros?.fecha_desde || filtros?.fecha_hasta" type="button" class="text-xs text-gray-500 hover:text-gray-800 underline" @click="limpiarFiltros">Limpiar</button>
+                    </div>
+                    <div class="ms-auto flex gap-2 items-center">
+                        <span v-if="seleccionados.length" class="text-xs text-gray-700">{{ seleccionados.length }} seleccionada(s) · $ {{ formatNum(totalSeleccionado) }}</span>
+                        <SecondaryButton type="button" class="!text-xs !px-3 !py-1.5" :disabled="!pasivos.length" @click="pagarTodosFiltrados">Pagar todos los filtrados</SecondaryButton>
+                        <button v-if="seleccionados.length" type="button" class="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700" @click="openPagarTodos">Pagar seleccionados</button>
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-[11px]">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-2 py-1.5 text-center font-medium text-gray-500 uppercase"><input type="checkbox" :checked="todoSeleccionado" class="rounded border-gray-300" @change="toggleTodos" /></th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">Cuenta</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase">Debe</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase">Haber</th>
@@ -68,6 +149,7 @@ const submitPagar = () => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="p in pasivos" :key="p.id" class="hover:bg-gray-50">
+                                <td class="px-2 py-1 text-center"><input v-model="seleccionados" type="checkbox" :value="p.id" class="rounded border-gray-300" /></td>
                                 <td class="px-2 py-1 whitespace-nowrap"><span class="font-mono text-gray-900">{{ p.codigo }}</span> <span class="text-gray-700">{{ p.nombre }}</span></td>
                                 <td class="px-2 py-1 text-right font-mono text-gray-700">{{ formatNum(p.debe) }}</td>
                                 <td class="px-2 py-1 text-right font-mono text-green-700">{{ formatNum(p.haber) }}</td>
@@ -77,7 +159,7 @@ const submitPagar = () => {
                                     <button @click="openPagar(p)" class="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700">Pagar</button>
                                 </td>
                             </tr>
-                            <tr v-if="!pasivos.length"><td colspan="5" class="px-2 py-4 text-center text-xs text-gray-500">Sin pasivos pendientes.</td></tr>
+                            <tr v-if="!pasivos.length"><td colspan="6" class="px-2 py-4 text-center text-xs text-gray-500">Sin pasivos pendientes.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -91,13 +173,35 @@ const submitPagar = () => {
                 <div class="space-y-3">
                     <div><InputLabel value="Importe" /><TextInput v-model="pagarForm.importe" type="number" min="0.01" step="0.01" class="mt-1 block w-full" /><InputError class="mt-1" :message="pagarForm.errors.importe" /></div>
                     <div><InputLabel value="Fecha" /><TextInput v-model="pagarForm.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-1" :message="pagarForm.errors.fecha" /></div>
-                    <div><InputLabel value="Banco (opcional)" /><select v-model="pagarForm.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Sin banco (caja)</option><option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nombre }}</option></select><InputError class="mt-1" :message="pagarForm.errors.banco_id" /></div>
+                    <div><InputLabel value="Banco (opcional, cuenta propia)" /><select v-model="pagarForm.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Sin banco (caja)</option><option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option></select><InputError class="mt-1" :message="pagarForm.errors.banco_id" /></div>
                     <div><InputLabel value="Observación" /><TextInput v-model="pagarForm.observacion" type="text" class="mt-1 block w-full" placeholder="Pago pasivo" /><InputError class="mt-1" :message="pagarForm.errors.observacion" /></div>
                 </div>
             </template>
             <template #footer>
                 <SecondaryButton @click="showPagar = false">Cancelar</SecondaryButton>
                 <PrimaryButton class="ms-3" :disabled="pagarForm.processing" @click="submitPagar">Confirmar pago</PrimaryButton>
+            </template>
+        </DialogModal>
+
+        <DialogModal :show="showPagarTodos" max-width="lg" @close="showPagarTodos = false">
+            <template #title>Pagar {{ seleccionados.length }} pasivo(s) · Total $ {{ formatNum(totalSeleccionado) }}</template>
+            <template #content>
+                <div class="space-y-3">
+                    <div class="max-h-40 overflow-y-auto rounded border border-gray-200 divide-y divide-gray-100 text-xs">
+                        <div v-for="p in pasivos.filter((x) => seleccionados.includes(x.id))" :key="p.id" class="flex justify-between gap-2 px-2 py-1">
+                            <span class="text-gray-700">{{ p.codigo }} {{ p.nombre }}</span>
+                            <span class="font-mono font-semibold">$ {{ formatNum(p.saldo) }}</span>
+                        </div>
+                    </div>
+                    <div><InputLabel value="Fecha" /><TextInput v-model="pagarTodosForm.fecha" type="date" class="mt-1 block w-full" /><InputError class="mt-1" :message="pagarTodosForm.errors.fecha" /></div>
+                    <div><InputLabel value="Banco (opcional, cuenta propia)" /><select v-model="pagarTodosForm.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Sin banco (caja)</option><option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option></select><InputError class="mt-1" :message="pagarTodosForm.errors.banco_id" /></div>
+                    <div><InputLabel value="Observación" /><TextInput v-model="pagarTodosForm.observacion" type="text" class="mt-1 block w-full" placeholder="Pago pasivos" /><InputError class="mt-1" :message="pagarTodosForm.errors.observacion" /></div>
+                    <InputError class="mt-1" :message="pagarTodosForm.errors.items" />
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="showPagarTodos = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="pagarTodosForm.processing || !seleccionados.length" @click="submitPagarTodos">Confirmar pago $ {{ formatNum(totalSeleccionado) }}</PrimaryButton>
             </template>
         </DialogModal>
     </AppLayout>

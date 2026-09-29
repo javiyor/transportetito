@@ -22,9 +22,16 @@ class PasivoPendienteController extends Controller
             ->orderBy('codigo')
             ->get(['id', 'codigo', 'codigo_completo', 'nombre', 'tipo']);
 
-        $pasivos = $cuentas->map(function (CuentaContable $c) {
-            $debe = round((float) AsientoLinea::where('cuenta_contable_id', $c->id)->sum('debe'), 2);
-            $haber = round((float) AsientoLinea::where('cuenta_contable_id', $c->id)->sum('haber'), 2);
+        $fDesde = $request->query('fecha_desde') ?: null;
+        $fHasta = $request->query('fecha_hasta') ?: null;
+
+        $pasivos = $cuentas->map(function (CuentaContable $c) use ($fDesde, $fHasta) {
+            $base = fn () => AsientoLinea::where('cuenta_contable_id', $c->id)
+                ->whereHas('asiento', fn ($q) => $q
+                    ->when($fDesde, fn ($qq) => $qq->whereDate('fecha', '>=', $fDesde))
+                    ->when($fHasta, fn ($qq) => $qq->whereDate('fecha', '<=', $fHasta)));
+            $debe = round((float) $base()->sum('debe'), 2);
+            $haber = round((float) $base()->sum('haber'), 2);
             $saldo = round($haber - $debe, 2);
             return [
                 'id' => $c->id,
@@ -42,7 +49,11 @@ class PasivoPendienteController extends Controller
         return Inertia::render('Finanzas/Pasivos/Index', [
             'pasivos' => $pasivos,
             'totalPendiente' => $totalPendiente,
-            'bancos' => \App\Models\Banco::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'bancos' => \App\Models\Banco::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
+            'filtros' => [
+                'fecha_desde' => $fDesde,
+                'fecha_hasta' => $fHasta,
+            ],
         ]);
     }
 }

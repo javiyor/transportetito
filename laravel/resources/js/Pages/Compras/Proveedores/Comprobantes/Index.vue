@@ -8,7 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
 import PdfImportDialog from '@/Components/PdfImportDialog.vue';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { formatNum } from '@/Utils/format.js';
 
 const tipoLabel = (t) => {
@@ -55,6 +55,7 @@ const props = defineProps({
     resumen: Object,
     cuentasContables: Array,
     filtros: Object,
+    editarInicial: Object,
 });
 
 const filtroFechaDesde = ref(props.filtros?.fecha_desde || '');
@@ -427,6 +428,12 @@ const submitEditComprobante = () => {
         onSuccess: () => { editComprobanteDialog.value = false; },
     });
 };
+
+onMounted(() => {
+    if (props.editarInicial?.id) {
+        openEditComprobante(props.editarInicial);
+    }
+});
 
 const confirmDeleteId = ref(null);
 const deleteForm = useForm({ password: '' });

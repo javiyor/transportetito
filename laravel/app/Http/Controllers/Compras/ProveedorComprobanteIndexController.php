@@ -253,6 +253,15 @@ class ProveedorComprobanteIndexController extends Controller
                 return $acc;
             }, ['subtotal' => 0, 'iva_total' => 0, 'tributos_total' => 0, 'retenciones_total' => 0, 'total' => 0]);
 
+        $editarInicial = null;
+        if ((int) ($request->query('edit') ?: 0) > 0) {
+            $editarInicial = ProveedorComprobante::query()
+                ->where('empresa_id', $empresaId)
+                ->where('id', (int) $request->query('edit'))
+                ->with('cuenta.tercero:id,cuit,razon_social')
+                ->first();
+        }
+
         return Inertia::render('Compras/Proveedores/Comprobantes/Index', [
             'proveedores' => $proveedores,
             'comprobantes' => $comprobantes,
@@ -261,6 +270,7 @@ class ProveedorComprobanteIndexController extends Controller
                 'fecha_hasta' => $fFechaHasta,
                 'proveedor_id' => $fProveedorId > 0 ? $fProveedorId : null,
             ],
+            'editarInicial' => $editarInicial,
             'resumen' => array_map(fn ($v) => round((float) $v, 2), $resumen),
             'catalogos' => [
                 'percepciones' => collect(self::PERCEPCIONES_CATALOGO)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),

@@ -397,6 +397,7 @@ Route::middleware([
         Route::get('/balance/export', [\App\Http\Controllers\Finanzas\BalanceController::class, 'export'])->name('balance.export');
         Route::get('/pasivos', [\App\Http\Controllers\Finanzas\PasivoPendienteController::class, 'index'])->name('pasivos.index');
         Route::post('/pasivos/{cuenta}/pagar', [\App\Http\Controllers\Finanzas\PasivoPagarController::class, 'store'])->name('pasivos.pagar');
+        Route::post('/pasivos/pagar-todos', [\App\Http\Controllers\Finanzas\PasivoPagarController::class, 'storeTodos'])->name('pasivos.pagar-todos');
     });
 
     Route::middleware(['role:cobranzas|cobranzas_admin|cobrador'])->prefix('cobranzas')->name('cobranzas.')->group(function () {

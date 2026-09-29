@@ -324,6 +324,9 @@ const fmtDesc = (d) => {
                                             <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800" @click.stop="openEdit(asiento)">Editar</button>
                                             <button type="button" class="text-xs text-red-600 hover:text-red-800" @click.stop="destroyAsiento(asiento)">Eliminar</button>
                                         </template>
+                                        <template v-if="asiento.referencia_tipo === 'proveedor_comprobante'">
+                                            <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.index', { edit: asiento.referencia_id })" @click.stop>Editar compra</Link>
+                                        </template>
                                     </div>
                                 </td>
                             </tr>
