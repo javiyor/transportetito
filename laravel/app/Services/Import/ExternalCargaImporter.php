@@ -259,15 +259,33 @@ SQL,
 
     private function firstOrCreateTercero(string $cuit, string $razonSocial, int $externalId): Tercero
     {
-        $cleanCuit = preg_replace('/\D+/', '', $cuit) ?? '';
+        $cleanCuit = Tercero::soloDigitos($cuit);
         $cleanRazon = trim($razonSocial) !== '' ? trim($razonSocial) : ('Tercero '.$externalId);
+
+        // Si el CUIT ya existe (en cualquier formato), reutilizar y normalizar el formato guardado
+        if ($cleanCuit !== '') {
+            $existente = Tercero::buscarPorCuit($cleanCuit);
+            if ($existente) {
+                if ($existente->cuit !== $cleanCuit && preg_match('/^\d{11}$/', $cleanCuit)) {
+                    try {
+                        $existente->update(['cuit' => $cleanCuit]);
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        $otro = Tercero::query()->where('cuit', $cleanCuit)->first();
+                        if ($otro) {
+                            return $otro;
+                        }
+                    }
+                }
+                if (! $existente->razon_social && $cleanRazon !== '') {
+                    $existente->update(['razon_social' => $cleanRazon]);
+                }
+
+                return $existente->fresh() ?? $existente;
+            }
+        }
 
         $isValidCuit = (bool) preg_match('/^\d{11}$/', $cleanCuit);
         if (! $isValidCuit) {
-            if ($cleanCuit !== '') {
-                $byCuit = Tercero::query()->where('cuit', $cleanCuit)->first();
-                if ($byCuit) return $byCuit;
-            }
             $byName = Tercero::query()->where('razon_social', $cleanRazon)->first();
             if ($byName) return $byName;
             $cleanCuit = 'EXT-'.$externalId;
@@ -304,7 +322,9 @@ SQL,
 
         $nombre = trim($nombreCuenta) !== '' ? trim($nombreCuenta) : null;
 
+        // Reutilizar la cuenta del tercero DENTRO de esta empresa (no mezclar empresas)
         $existing = TerceroCuenta::query()
+            ->where('empresa_id', $empresa->id)
             ->where('tercero_id', $tercero->id)
             ->orderBy('id')
             ->first();
@@ -317,10 +337,20 @@ SQL,
             return $existing;
         }
 
+        // El numero externo puede estar ocupado por otra cuenta: usar max+1 como fallback
+        $numero = $numeroCliente;
+        $ocupado = TerceroCuenta::query()
+            ->where('empresa_id', $empresa->id)
+            ->where('numero_cliente', $numero)
+            ->exists();
+        if ($ocupado) {
+            $numero = (int) TerceroCuenta::query()->where('empresa_id', $empresa->id)->max('numero_cliente') + 1;
+        }
+
         return TerceroCuenta::query()->firstOrCreate(
             [
                 'empresa_id' => $empresa->id,
-                'numero_cliente' => $numeroCliente,
+                'numero_cliente' => $numero,
             ],
             [
                 'tercero_id' => $tercero->id,

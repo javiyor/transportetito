@@ -161,7 +161,7 @@ class TerceroAdminController extends Controller
             ? (int) $data['cuenta_contable_proveedor_id']
             : null;
 
-        $tercero = Tercero::query()->firstOrCreate(
+        $tercero = Tercero::buscarPorCuit($cleanCuit) ?? Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             [
                 'razon_social' => $data['razon_social'],
@@ -248,7 +248,7 @@ class TerceroAdminController extends Controller
             ? (int) $data['cuenta_contable_proveedor_id']
             : null;
 
-        $tercero = Tercero::query()->firstOrCreate(
+        $tercero = Tercero::buscarPorCuit($cleanCuit) ?? Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             [
                 'razon_social' => $data['razon_social'],

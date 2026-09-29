@@ -84,7 +84,7 @@ class ImportarComprasCsvStoreController extends Controller
 
                 $cuit = preg_replace('/\D+/', '', $row['proveedor_cuit']) ?? '';
 
-                $tercero = Tercero::firstOrCreate(
+                $tercero = Tercero::buscarPorCuit($cuit) ?? Tercero::firstOrCreate(
                     ['cuit' => $cuit],
                     ['razon_social' => $row['proveedor_razon_social']]
                 );

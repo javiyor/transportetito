@@ -70,7 +70,7 @@ class ImportarFacturasCsvStoreController extends Controller
                     ->first();
 
                 // Pre-calcular tipo para manejo de signo
-                $terceroTmp = Tercero::where('cuit', $cuit)->first();
+                $terceroTmp = Tercero::buscarPorCuit($cuit);
                 $tipoFinalTmp = $row['tipo'];
                 if ($terceroTmp && $terceroTmp->condicion_iva) {
                     $tipoFinalTmp = $this->arcaTipoResolver->corregirTipo(
@@ -134,7 +134,7 @@ class ImportarFacturasCsvStoreController extends Controller
                     continue;
                 }
 
-                $tercero = Tercero::firstOrCreate(
+                $tercero = Tercero::buscarPorCuit($cuit) ?? Tercero::firstOrCreate(
                     ['cuit' => $cuit],
                     ['razon_social' => $row['razon_social']]
                 );

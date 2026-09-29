@@ -103,7 +103,7 @@ class ImportarFacturasArcaStoreController extends Controller
 
                 $tercero = null;
                 if ($cuit) {
-                    $tercero = Tercero::firstOrCreate(
+                    $tercero = Tercero::buscarPorCuit($cuit) ?? Tercero::firstOrCreate(
                         ['cuit' => $cuit],
                         ['razon_social' => $razonSocial]
                     );

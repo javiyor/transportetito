@@ -16,12 +16,12 @@ class PedidoStoreController extends Controller
     {
         $data = $request->validated();
 
-        $remitente = Tercero::query()->firstOrCreate(
+        $remitente = Tercero::buscarPorCuit($data['remitente']['cuit']) ?? Tercero::query()->firstOrCreate(
             ['cuit' => $data['remitente']['cuit']],
             ['razon_social' => $data['remitente']['razon_social']]
         );
 
-        $destinatario = Tercero::query()->firstOrCreate(
+        $destinatario = Tercero::buscarPorCuit($data['destinatario']['cuit']) ?? Tercero::query()->firstOrCreate(
             ['cuit' => $data['destinatario']['cuit']],
             ['razon_social' => $data['destinatario']['razon_social']]
         );

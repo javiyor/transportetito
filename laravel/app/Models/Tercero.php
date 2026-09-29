@@ -27,6 +27,41 @@ class Tercero extends Model
         $this->attributes['cuit'] = $value ? preg_replace('/\D+/', '', $value) : null;
     }
 
+    public static function soloDigitos(?string $cuit): string
+    {
+        return preg_replace('/\D+/', '', $cuit ?? '') ?? '';
+    }
+
+    /**
+     * Busca por CUIT tolerando formatos mixtos legacy (con puntos/guiones).
+     * Portable (sin funciones específicas del motor).
+     */
+    public static function buscarPorCuit(?string $cuit): ?self
+    {
+        $clean = self::soloDigitos($cuit);
+        if ($clean === '') {
+            return null;
+        }
+
+        $exact = static::query()->where('cuit', $clean)->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        $candidatos = static::query()
+            ->where('cuit', 'like', '%'.substr($clean, -6).'%')
+            ->limit(50)
+            ->get(['id', 'cuit', 'razon_social']);
+
+        foreach ($candidatos as $t) {
+            if (self::soloDigitos($t->cuit) === $clean) {
+                return $t;
+            }
+        }
+
+        return null;
+    }
+
     public function cuentas(): HasMany
     {
         return $this->hasMany(TerceroCuenta::class, 'tercero_id');

@@ -426,7 +426,7 @@ class ProveedorComprobanteIndexController extends Controller
         ]);
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
-        $tercero = Tercero::query()->where('cuit', $cleanCuit)->first();
+        $tercero = Tercero::buscarPorCuit($cleanCuit);
 
         if (! $tercero) {
             return response()->json(['found' => false]);
@@ -458,7 +458,7 @@ class ProveedorComprobanteIndexController extends Controller
         ]);
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
-        $tercero = Tercero::query()->firstOrCreate(
+        $tercero = Tercero::buscarPorCuit($cleanCuit) ?? Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             ['razon_social' => $data['razon_social'], 'condicion_iva' => $data['condicion_iva'] ?: null]
         );
@@ -513,7 +513,7 @@ class ProveedorComprobanteIndexController extends Controller
         ]);
 
         $cleanCuit = preg_replace('/\D+/', '', $data['cuit']) ?? '';
-        $tercero = Tercero::query()->firstOrCreate(
+        $tercero = Tercero::buscarPorCuit($cleanCuit) ?? Tercero::query()->firstOrCreate(
             ['cuit' => $cleanCuit],
             ['razon_social' => $data['razon_social'], 'condicion_iva' => $data['condicion_iva'] ?: null]
         );
