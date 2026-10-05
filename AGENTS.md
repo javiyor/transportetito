@@ -417,6 +417,65 @@ If Jetstream/Inertia is installed, follow its patterns; avoid inline styles (use
 - `laravel/app/Http/Controllers/Operacion/ManifiestoIngresoController.php` — listado filtra por empresa
 - `laravel/app/Console/Commands/MigrarManifiestosAEnvios.php` — migración a manifiestos por envío
 
+### Session log (Oct 2026)
+
+#### Bugs found and fixed
+- **Edición de comprobante de proveedor no guardaba**: el update no aceptaba `tercero_cuenta_id` y el modal no tenía buscador de cuenta; algunos errores de validación eran invisibles. Agregado selector/buscador + `InputError` por campo + banner general de errores en el modal (`7373266`, `e306584`, `55184d8`).
+- **Cobros nunca se contabilizaban**: al modelo `Recibo` le faltaba la relación `empresa()` (`$recibo->empresa` siempre null). Agregada + fallback a la empresa de la cuenta (`3d68972`, `77efb97`).
+- **Cheques en Mayor de caja**: egresos/ingresos/cobros con cheque caían a `caja_default` por fallback. Ahora solo efectivo usa caja; el resto exige cuenta configurada (banco/echeq/cartera) o lanza error visible. OPs: agregado `cheque`/`cheque_diferido` al mapa de medios (`5d1cab0`, `480b72f`, `189ae9e`).
+- **Asientos huérfanos de OP eliminada en caja (caso asiento #696)**: anular/eliminar OP no borraba sus asientos. Ahora sí; `recontabilizar --tipo=pagos` saltea anuladas; `proveedores:reparar-op` limpia asientos huérfanos/anulados (`b87d4f0`).
+- **Anular recibo dejaba cheques y asiento**: ahora elimina cheques en cartera sin uso + asiento; `recontabilizar --tipo=cobros` saltea anuladas (`72183d2`).
+- **Clientes duplicados por CUIT con formato mixto**: `Tercero::buscarPorCuit()` (portable PG/SQLite) usado en importación de manifiestos/hojaderuta, importar ventas (CSV/ARCA), importar compras, admin terceros/proveedores y carga de pedidos. La importación además reutiliza la cuenta **de la empresa** (no mezcla empresas) con fallback max+1 y normaliza el formato guardado (`6391773`, `546b3b0` previo).
+- **Egresos/gastos/ingresos dejaban residuos**: al eliminar se borran movimientos bancarios **con sus asientos** (nuevo `MovimientoBancario::eliminarReferencia()`), asiento propio, categorías y cheque propio generado; tercero vuelve a cartera. También al editar/recortar movimientos (`fd7142f`).
+- **Libro Diario**: filtro `sin_balancear`, edición/eliminación de asientos manuales + impresión, fix ruta store invokable (`75cc4d3`, `5bf814b`, `e75a39c`, `334834a`, `d71b178`).
+
+#### Features / changes
+- **Terceros**: `cuenta_contable_proveedor_id` en alta/edición (solo si es proveedor) + columna en tabla; fallback en cargas manuales, CSV y contabilización. Búsqueda global en todas las empresas (razón social, CUIT, cuenta) con aviso (`73a2c0e`).
+- **Empresa factura sin IVA**: flag `factura_sin_iva` (migración, activo en empresa 2) + IVA 0 en manifiestos, guías y carga directa; campo % IVA oculto en ese caso; checkbox en admin empresas (`dfcf514`, `0e8ab57`).
+- **Tarifa `usar_seguro`**: tilde como % valor declarado, activa 0.007 por defecto, persiste en `tarifas_relaciones` (`cf61fba`).
+- **Importar facturas**: selector MisComprobantes vs Portal IVA (28 columnas mapeadas y verificadas, códigos 19/20/21) (`c3d66d6`).
+- **Comprobantes de proveedor**: filtros fecha/proveedor en cargados (`8149825`); resumen junto al listado respetando filtros y recalculado al cargar (`4fe6a31`, `34dafad`); IVA por filas concepto+importe con cálculo automático (`168e916`, visible desde el inicio `5894c81`); vista compacta con celdas (`9ebde81`).
+- **Libro Diario → editar compra**: link directo al modal de edición del comprobante (`5c173a5`). **Pasivos**: filtro fecha + pago múltiple/seleccionados (`5c173a5`).
+- **Cheques**: eliminar con confirmación + validación de uso (`79901d7`); flash messages (`67c68be`); filtros por origen/estado, tabla compacta, comandos de migración de estados (`8900f4d`, `ed040db`, `6b13a24`, `2c1d4f2`, `9eff507`, `c98ceb6`, `af6d252`, `1b62c7f`, `8ae38aa`, `5fbe305`).
+- **Bancos**: CRUD con eliminar + confirmación; flag `es_propio` (cuenta propia) que filtra selects de cheque propio, transferencias, depósitos y movimientos; orden por código (default) o nombre; link desde cheques (`0a368c3`, `648a6d3`).
+- **Facturación manifiestos**: errores de recepción, fix fechas + comando, `receptor_cuit`, buscadores de clientes globales (`547298e`, `3d6eeae`, `229b18f`, `8116e44`, `f68dbba`, `8aa7be9`, `bf1998c`).
+- **Varios**: `plan-cuentas:importar-maestro` (solo agrega faltantes) (`c82ce5c`); `cuentas:reparar-plan` crea cuentas default faltantes (`582aba7`); `proveedores:reconstruir-ctacte` (`b3c8aae`, `3ccc998`); conciliación proveedores CC vs Mayor (`f35f7a6`); Mayor con paginación HTML (`fef08f6`); factura print sin origen/destino/valor + items/remito en manifiestos (`50cb333`).
+
+#### Commands / tools
+- `plan-cuentas:importar-maestro [--dry-run] [--sobrescribir-nombres]` — importa plan maestro agregando solo faltantes.
+- `contabilidad:recontabilizar --tipo=ventas|compras|cobros|pagos|gastos|ingresos|movimientos|todos [--desde] [--hasta] [--force]` — cobros/pagos saltean anuladas; errores por ítem sin cortar.
+- `proveedores:reparar-op [cuenta_id] [--dry-run]` — ahora también elimina asientos huérfanos/anulados.
+- `manifiestos:reparar-fechas` — corrige fechas de manifiestos.
+- Seed `ConfiguracionContableSeeder` + recontabilizar por tipo para corregir histórico (cheques en caja, cobros sin asiento).
+
+#### Relevant files (new / modified)
+- `laravel/app/Models/Tercero.php` — `buscarPorCuit()`, `soloDigitos()`, mutador ya normalizaba al guardar.
+- `laravel/app/Models/Recibo.php` — agregada relación `empresa()`.
+- `laravel/app/Models/Banco.php` — `es_propio` (+ migración `2026_09_19_000002`).
+- `laravel/app/Models/TarifaRelacion.php` — `usar_seguro` (+ migración `2026_09_19_000001`).
+- `laravel/app/Models/MovimientoBancario.php` — `eliminarReferencia()`.
+- `laravel/app/Models/Empresa.php` — `factura_sin_iva` (+ migración `2026_09_18_000001`, activa empresa 2).
+- `laravel/app/Services/Import/ExternalCargaImporter.php` — dedupe terceros + cuenta por empresa.
+- `laravel/app/Services/Contabilidad/ContabilizadorService.php` — medios a banco/echeq/cartera, cuenta del comprobante en compras.
+- `laravel/app/Services/Facturacion/FacturaCalculator.php` + `TarifaResolver.php` — `usar_seguro`.
+- `laravel/app/Http/Controllers/Compras/ProveedorComprobante{Index,Update}Controller.php` — `iva_detalle`, catálogos ARCA, filtros, `editarInicial`.
+- `laravel/app/Http/Controllers/Compras/ProveedorOrdenPago{Anular,Destroy}Controller.php` — borran asientos.
+- `laravel/app/Http/Controllers/Cobranzas/{ReciboAnularController,CuentaCorrienteReciboDestroyController,CuentaCorrienteReciboStoreController}.php`
+- `laravel/app/Http/Controllers/Finanzas/{EgresoIndexController,PasivoPagarController,PasivoPendienteController,LibroDiarioController}.php`
+- `laravel/app/Http/Controllers/Admin/{BancoAdminController,ChequeController,TerceroAdminController,EmpresaAdminController}.php`
+- `laravel/app/Http/Controllers/Facturacion/{ImportarFacturasCsvStoreController,CargaDirectaStoreController,ManifiestoShowController}.php`
+- `laravel/app/Http/Controllers/Operacion/{PedidoStoreController,Facturacion/ManifiestoFacturarController,Facturacion/ManifiestoEmitirGuiasController}.php`
+- `laravel/app/Console/Commands/{ImportarPlanCuentasMaestro,Recontabilizar,RepararOrdenesPagoProveedores,ReconstruirCtaCteProveedores,RepararPlanCuentas}.php`
+- Frontend: `Compras/Proveedores/Comprobantes/{Index,Show}.vue`, `Admin/{Terceros,Bancos,Cheques,Empresas}/Index.vue`, `Facturacion/{Importar,CargaDirecta/Create,Manifiestos/Show}.vue`, `Finanzas/{LibroDiario,LibroMayor,Pasivos,Egresos,MovimientosBancarios}/Index.vue`, `Compras/{Gastos,Ingresos}/Index.vue`, `Compras/Proveedores/CuentaCorriente/Show.vue`, `Cobranzas/CuentaCorriente/Show.vue`.
+
+#### Migrations / deploy notes (Oct 2026)
+- `2026_09_17_000001` `receptor_cuit` en proveedor_comprobantes.
+- `2026_09_18_000001` `empresas.factura_sin_iva` (true en empresa 2).
+- `2026_09_19_000001` `tarifas_relaciones.usar_seguro` (default true).
+- `2026_09_19_000002` `bancos.es_propio` (default false; marcar propios a mano).
+- Tras deploy con fixes contables: `db:seed --class=ConfiguracionContableSeeder --force` + `contabilidad:recontabilizar --tipo=gastos|ingresos|pagos|cobros --force`.
+- Frontend build gitignored: `docker compose run --rm node` + `optimize:clear` + restart app (+ Ctrl+Shift+R en navegador).
+
 ### Pending / Known issues
 
 - Delivery.vue muestra `saldo_pendiente` pero falta verificar con datos reales.
