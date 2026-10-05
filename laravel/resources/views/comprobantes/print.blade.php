@@ -708,12 +708,13 @@
                         $partes = [];
                         if (($sel['usar_bulto'] ?? true) && ($pedido->bultos ?? 0) > 0) $partes[] = $pedido->bultos.' bulto'.($pedido->bultos>1?'s':'');
                         if (($sel['usar_palet'] ?? true) && ($pedido->palets ?? 0) > 0) $partes[] = $pedido->palets.' palet'.($pedido->palets>1?'s':'');
-                        if (($sel['usar_valor'] ?? true) && ($pedido->valor_declarado ?? 0) > 0) $partes[] = 'valor $'.$fmtNum($pedido->valor_declarado);
-                        if (($sel['usar_servicio_minimo'] ?? false)) $partes[] = 'mínimo';
-                        $base = $partes ? implode(' + ', $partes) : 'Flete';
-                        $descripcion = $base.': '.($pedido->remitente?->razon_social ?? '?').' → '.($pedido->destinatario?->razon_social ?? '?');
-                        if ($pedido->remito_numero) $descripcion .= ' (Remito: '.$pedido->remito_numero.')';
-                        $descripcion .= ' ['.($pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino').']';
+                        // Solo descripcion de lo facturado: bultos/palets + observacion (ej: servicio de retiro).
+                        // Origen/destino ya estan en el encabezado y el valor declarado en su columna/total.
+                        $descripcion = $partes ? implode(', ', $partes) : '';
+                        if (!empty($pedido->observacion)) $descripcion .= ($descripcion !== '' ? ' — ' : '').trim($pedido->observacion);
+                        if ($descripcion === '') $descripcion = 'Servicio de flete';
+                        $cantLinea = (int) ($pedido->bultos ?? 0) + (int) ($pedido->palets ?? 0);
+                        if ($cantLinea <= 0) $cantLinea = 1;
                         // Importe neto sin IVA por pedido (proporcional al valor neto total)
                         $pedidoImporteNeto = 0;
                         if (!empty($calculo['valor_neto_total']) && ($calculo['valor_declarado'] ?? 0) > 0) {
@@ -725,7 +726,7 @@
                         }
                     @endphp
                     <tr>
-                        <td style="text-align:center;">{{ $pedido->bultos }}</td>
+                        <td style="text-align:center;">{{ $cantLinea }}</td>
                         <td>{{ $descripcion }}</td>
                         <td style="text-align:right;">{{ $fmtNum($pedido->valor_declarado) }}</td>
                         <td style="text-align:right;">{{ $fmtNum($pedidoImporteNeto) }}</td>

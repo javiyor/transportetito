@@ -619,7 +619,10 @@ const correccionForm = useForm({
     palets: 0,
     valor_declarado: 0,
     observacion: '',
+    remito_numero: '',
 });
+
+const pedidoFacturado = (pedido) => !!(pedido?.comprobantes && pedido.comprobantes.length);
 
 const abrirCorreccion = (pedido) => {
     correccionPedido.value = pedido;
@@ -627,6 +630,8 @@ const abrirCorreccion = (pedido) => {
     correccionForm.palets = pedido.palets || 0;
     correccionForm.valor_declarado = pedido.valor_declarado || 0;
     correccionForm.observacion = pedido.observacion || '';
+    correccionForm.remito_numero = pedido.remito_numero || '';
+    correccionForm.clearErrors();
     correccionModalOpen.value = true;
 };
 
@@ -640,6 +645,42 @@ const enviarCorreccion = () => {
     correccionForm.post(route('operacion.manifiestos.pedidos.corregir', [props.manifiesto.id, correccionPedido.value.id]), {
         preserveScroll: true,
         onSuccess: () => cerrarCorreccion(),
+    });
+};
+
+const agregarModalOpen = ref(false);
+const pedidoForm = useForm({
+    remitente: { cuit: '', razon_social: '' },
+    destinatario: { cuit: '', razon_social: '' },
+    paga: 'destino',
+    remito_numero: '',
+    bultos: 0,
+    palets: 0,
+    valor_declarado: 0,
+    es_devolucion: false,
+    cr_importe: '',
+});
+
+const abrirAgregar = () => {
+    pedidoForm.clearErrors();
+    agregarModalOpen.value = true;
+};
+
+const cerrarAgregar = () => {
+    agregarModalOpen.value = false;
+};
+
+const enviarPedido = () => {
+    pedidoForm.post(route('operacion.manifiestos.pedidos.store', props.manifiesto.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            cerrarAgregar();
+            pedidoForm.reset();
+            pedidoForm.paga = 'destino';
+            pedidoForm.bultos = 0;
+            pedidoForm.palets = 0;
+            pedidoForm.valor_declarado = 0;
+        },
     });
 };
 </script>
@@ -702,6 +743,7 @@ const enviarCorreccion = () => {
                         <p class="mt-1 text-sm text-gray-600">{{ statsFacturacion.total }} cargados · {{ statsFacturacion.pendientes }} pendientes · {{ statsFacturacion.emitidos }} comprobantes</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <SecondaryButton v-if="canFacturar" @click.prevent="abrirAgregar">Agregar item</SecondaryButton>
                         <SecondaryButton v-if="permiteGuiasNoFiscales" :disabled="facturarPorEntrega.processing || !gruposFacturacion.length || faltanSelecciones" @click.prevent="emitirGuias">Emitir guias</SecondaryButton>
                     </div>
                 </div>
@@ -859,14 +901,22 @@ const enviarCorreccion = () => {
                                             <td class="px-3 py-1.5 whitespace-nowrap text-right font-mono text-gray-700">{{ p.cr_importe ? '$' + formatMoney(p.cr_importe) : '-' }}</td>
                                             <td class="px-3 py-1.5 whitespace-nowrap text-center">
                                                 <button
-                                                    v-if="p.recepcion_estado === 'con_error'"
+                                                    v-if="!pedidoFacturado(p)"
                                                     type="button"
-                                                    class="text-xs text-red-700 underline hover:text-red-900"
+                                                    class="text-xs text-indigo-700 underline hover:text-indigo-900"
                                                     @click.prevent="abrirCorreccion(p)"
                                                 >
-                                                    Corregir
+                                                    Editar
                                                 </button>
-                                                <span v-else class="text-gray-400">-</span>
+                                                <button
+                                                    v-else
+                                                    type="button"
+                                                    class="text-xs text-gray-600 underline hover:text-gray-900"
+                                                    title="El pedido ya fue facturado: solo se puede editar remito/observación"
+                                                    @click.prevent="abrirCorreccion(p)"
+                                                >
+                                                    Remito
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -1050,27 +1100,36 @@ const enviarCorreccion = () => {
 
         <DialogModal :show="correccionModalOpen" @close="cerrarCorreccion">
             <template #title>
-                Corregir pedido #{{ correccionPedido?.id }}
+                {{ pedidoFacturado(correccionPedido) ? 'Editar remito' : 'Editar pedido' }} #{{ correccionPedido?.id }}
             </template>
             <template #content>
                 <div v-if="correccionPedido" class="space-y-3">
                     <p class="text-xs text-gray-600">
-                        Remito {{ correccionPedido.remito_numero || '-' }} · errores: {{ formatRecepcionErrores(correccionPedido.recepcion_errores) }}
+                        {{ correccionPedido.remitente?.razon_social || '-' }} → {{ correccionPedido.destinatario?.razon_social || '-' }}
+                        <span v-if="correccionPedido.recepcion_errores?.length"> · errores: {{ formatRecepcionErrores(correccionPedido.recepcion_errores) }}</span>
+                    </p>
+                    <p v-if="pedidoFacturado(correccionPedido)" class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        El pedido ya fue facturado: solo se puede editar el remito y la observación (bultos/palets/valor quedan bloqueados).
                     </p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="sm:col-span-2">
+                            <InputLabel value="Remito" />
+                            <TextInput v-model="correccionForm.remito_numero" type="text" class="mt-1 block w-full text-sm" placeholder="N° remito" />
+                            <InputError :message="correccionForm.errors.remito_numero" />
+                        </div>
                         <div>
                             <InputLabel value="Bultos" />
-                            <TextInput v-model="correccionForm.bultos" type="number" min="0" step="1" class="mt-1 block w-full text-sm" />
+                            <TextInput v-model="correccionForm.bultos" type="number" min="0" step="1" class="mt-1 block w-full text-sm" :disabled="pedidoFacturado(correccionPedido)" />
                             <InputError :message="correccionForm.errors.bultos" />
                         </div>
                         <div>
                             <InputLabel value="Palets" />
-                            <TextInput v-model="correccionForm.palets" type="number" min="0" step="1" class="mt-1 block w-full text-sm" />
+                            <TextInput v-model="correccionForm.palets" type="number" min="0" step="1" class="mt-1 block w-full text-sm" :disabled="pedidoFacturado(correccionPedido)" />
                             <InputError :message="correccionForm.errors.palets" />
                         </div>
                         <div>
                             <InputLabel value="Valor declarado" />
-                            <TextInput v-model="correccionForm.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full text-sm" />
+                            <TextInput v-model="correccionForm.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full text-sm" :disabled="pedidoFacturado(correccionPedido)" />
                             <InputError :message="correccionForm.errors.valor_declarado" />
                         </div>
                         <div class="sm:col-span-2">
@@ -1083,7 +1142,76 @@ const enviarCorreccion = () => {
             </template>
             <template #footer>
                 <SecondaryButton class="mr-2" @click="cerrarCorreccion">Cancelar</SecondaryButton>
-                <PrimaryButton :disabled="correccionForm.processing" @click="enviarCorreccion">Guardar correccion</PrimaryButton>
+                <PrimaryButton :disabled="correccionForm.processing" @click="enviarCorreccion">Guardar</PrimaryButton>
+            </template>
+        </DialogModal>
+
+        <DialogModal :show="agregarModalOpen" @close="cerrarAgregar">
+            <template #title>
+                Agregar item al manifiesto #{{ manifiesto.id }}
+            </template>
+            <template #content>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <InputLabel value="Remitente CUIT" />
+                            <TextInput v-model="pedidoForm.remitente.cuit" type="text" class="mt-1 block w-full text-sm" placeholder="20-XXXXXXXX-X" />
+                            <InputError :message="pedidoForm.errors['remitente.cuit']" />
+                        </div>
+                        <div>
+                            <InputLabel value="Remitente razón social" />
+                            <TextInput v-model="pedidoForm.remitente.razon_social" type="text" class="mt-1 block w-full text-sm" />
+                            <InputError :message="pedidoForm.errors['remitente.razon_social']" />
+                        </div>
+                        <div>
+                            <InputLabel value="Destinatario CUIT" />
+                            <TextInput v-model="pedidoForm.destinatario.cuit" type="text" class="mt-1 block w-full text-sm" placeholder="20-XXXXXXXX-X" />
+                            <InputError :message="pedidoForm.errors['destinatario.cuit']" />
+                        </div>
+                        <div>
+                            <InputLabel value="Destinatario razón social" />
+                            <TextInput v-model="pedidoForm.destinatario.razon_social" type="text" class="mt-1 block w-full text-sm" />
+                            <InputError :message="pedidoForm.errors['destinatario.razon_social']" />
+                        </div>
+                        <div>
+                            <InputLabel value="Paga" />
+                            <select v-model="pedidoForm.paga" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="origen">Origen</option>
+                                <option value="destino">Destino</option>
+                            </select>
+                            <InputError :message="pedidoForm.errors.paga" />
+                        </div>
+                        <div>
+                            <InputLabel value="Remito" />
+                            <TextInput v-model="pedidoForm.remito_numero" type="text" class="mt-1 block w-full text-sm" placeholder="N° remito" />
+                            <InputError :message="pedidoForm.errors.remito_numero" />
+                        </div>
+                        <div>
+                            <InputLabel value="Bultos" />
+                            <TextInput v-model="pedidoForm.bultos" type="number" min="0" step="1" class="mt-1 block w-full text-sm" />
+                            <InputError :message="pedidoForm.errors.bultos" />
+                        </div>
+                        <div>
+                            <InputLabel value="Palets" />
+                            <TextInput v-model="pedidoForm.palets" type="number" min="0" step="1" class="mt-1 block w-full text-sm" />
+                            <InputError :message="pedidoForm.errors.palets" />
+                        </div>
+                        <div>
+                            <InputLabel value="Valor declarado" />
+                            <TextInput v-model="pedidoForm.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full text-sm" />
+                            <InputError :message="pedidoForm.errors.valor_declarado" />
+                        </div>
+                        <div>
+                            <InputLabel value="CR (contra-reembolso)" />
+                            <TextInput v-model="pedidoForm.cr_importe" type="number" min="0" step="0.01" class="mt-1 block w-full text-sm" placeholder="0.00" />
+                            <InputError :message="pedidoForm.errors.cr_importe" />
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton class="mr-2" @click="cerrarAgregar">Cancelar</SecondaryButton>
+                <PrimaryButton :disabled="pedidoForm.processing" @click="enviarPedido">Agregar</PrimaryButton>
             </template>
         </DialogModal>
     </AppLayout>

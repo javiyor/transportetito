@@ -49,7 +49,7 @@ class PedidoStoreController extends Controller
             ]);
         });
 
-        return redirect()->route('operacion.manifiestos.show', $manifiesto);
+        return back()->with('flash.success', 'Pedido agregado al manifiesto #'.$manifiesto->id.'.');
     }
 
     private function firstOrCreateCuenta(int $empresaId, Tercero $tercero, string $razonSocial): TerceroCuenta

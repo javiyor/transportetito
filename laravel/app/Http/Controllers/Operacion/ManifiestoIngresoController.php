@@ -229,23 +229,36 @@ class ManifiestoIngresoController extends Controller
 
     public function corregirPedido(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
     {
+        abort_unless((int) $pedido->manifiesto_ingreso_id === (int) $manifiesto->id, 404);
+
         $data = $request->validate([
             'bultos' => ['nullable', 'integer', 'min:0'],
             'palets' => ['nullable', 'integer', 'min:0'],
             'valor_declarado' => ['nullable', 'numeric', 'min:0'],
             'observacion' => ['nullable', 'string', 'max:1000'],
+            'remito_numero' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $pedido->update([
-            'bultos' => $data['bultos'] ?? $pedido->bultos,
-            'palets' => $data['palets'] ?? $pedido->palets,
-            'valor_declarado' => $data['valor_declarado'] ?? $pedido->valor_declarado,
-            'observacion' => $data['observacion'] ?? $pedido->observacion,
+        // Si el pedido ya fue facturado, solo se permite tocar texto libre
+        // (remito/observacion) para no desincronizar los comprobantes emitidos.
+        $yaFacturado = $pedido->comprobantes()->exists();
+
+        $update = [
+            'observacion' => array_key_exists('observacion', $data) ? $data['observacion'] : $pedido->observacion,
+            'remito_numero' => array_key_exists('remito_numero', $data) ? $data['remito_numero'] : $pedido->remito_numero,
             'recepcion_corregido_por_user_id' => $request->user()->id,
             'recepcion_corregido_at' => now(),
-        ]);
+        ];
 
-        return back()->with('success', 'Pedido corregido.');
+        if (! $yaFacturado) {
+            if (array_key_exists('bultos', $data)) $update['bultos'] = $data['bultos'] ?? $pedido->bultos;
+            if (array_key_exists('palets', $data)) $update['palets'] = $data['palets'] ?? $pedido->palets;
+            if (array_key_exists('valor_declarado', $data)) $update['valor_declarado'] = $data['valor_declarado'] ?? $pedido->valor_declarado;
+        }
+
+        $pedido->update($update);
+
+        return back()->with('flash.success', $yaFacturado ? 'Remito/observación actualizados (pedido ya facturado: bultos/palets/valor sin cambios).' : 'Pedido corregido.');
     }
 
     public function adjuntarFotoBultos(Request $request, ManifiestoIngreso $manifiesto, Pedido $pedido): RedirectResponse
