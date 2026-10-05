@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Operacion\Comprobantes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
+use App\Models\Empresa;
 use App\Models\TerceroCuenta;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,13 +34,20 @@ class ComprobanteIndexController extends Controller
             $empresaIds = array_merge([$empresaId], $shared);
         }
 
+        $fEmpresaId = (int) ($request->query('empresa_id') ?: 0);
+        if ($fEmpresaId > 0 && ! in_array($fEmpresaId, $empresaIds, true)) {
+            $fEmpresaId = 0;
+        }
+        $fCliente = trim((string) ($request->query('cliente') ?: ''));
+
         $query = Comprobante::query()
             ->with([
+                'empresa:id,razon_social',
                 'entregaCuenta.tercero:id,cuit,razon_social',
                 'facturarCuenta.tercero:id,cuit,razon_social',
                 'notasCredito:id,comprobante_origen_id,estado,total',
             ])
-            ->whereIn('empresa_id', $empresaIds)
+            ->whereIn('empresa_id', $fEmpresaId > 0 ? [$fEmpresaId] : $empresaIds)
             ->orderByDesc('arca_punto_venta')
             ->orderByDesc('arca_numero')
             ->orderByDesc('id');
@@ -50,6 +58,17 @@ class ComprobanteIndexController extends Controller
 
         if (in_array($estado, ['emitida', 'anulada'], true)) {
             $query->where('estado', $estado);
+        }
+
+        if ($fCliente !== '') {
+            $query->where(function ($q) use ($fCliente) {
+                $q->whereHas('facturarCuenta.tercero', fn ($t) => $t
+                        ->where('razon_social', 'ilike', "%{$fCliente}%")
+                        ->orWhere('cuit', 'like', "%{$fCliente}%"))
+                    ->orWhereHas('entregaCuenta.tercero', fn ($t) => $t
+                        ->where('razon_social', 'ilike', "%{$fCliente}%")
+                        ->orWhere('cuit', 'like', "%{$fCliente}%"));
+            });
         }
 
         $comprobantes = $query->paginate(30)->withQueryString();
@@ -74,7 +93,10 @@ class ComprobanteIndexController extends Controller
                 'tipo' => $tipo,
                 'estado' => $estado,
                 'compartidos' => $compartidos,
+                'empresa_id' => $fEmpresaId > 0 ? $fEmpresaId : null,
+                'cliente' => $fCliente !== '' ? $fCliente : null,
             ],
+            'empresas' => Empresa::query()->whereIn('id', $empresaIds)->orderBy('razon_social')->get(['id', 'razon_social']),
             'comprobantes' => $comprobantes,
         ]);
     }

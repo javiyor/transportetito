@@ -6,6 +6,7 @@ import { formatNum } from '@/Utils/format.js';
 
 const props = defineProps({
     filters: Object,
+    empresas: Array,
     comprobantes: Object,
 });
 
@@ -13,6 +14,8 @@ const form = useForm({
     tipo: props.filters?.tipo || 'todos',
     estado: props.filters?.estado || 'todos',
     compartidos: props.filters?.compartidos || '1',
+    empresa_id: props.filters?.empresa_id || '',
+    cliente: props.filters?.cliente || '',
 });
 
 const applyFilters = () => {
@@ -20,6 +23,8 @@ const applyFilters = () => {
         tipo: form.tipo || 'todos',
         estado: form.estado || 'todos',
         compartidos: form.compartidos || '1',
+        empresa_id: form.empresa_id || null,
+        cliente: form.cliente?.trim() || null,
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
@@ -84,6 +89,8 @@ const goToPage = (url) => {
             tipo: form.tipo || 'todos',
             estado: form.estado || 'todos',
             compartidos: form.compartidos || '1',
+            empresa_id: form.empresa_id || null,
+            cliente: form.cliente?.trim() || null,
         }, { preserveState: true, preserveScroll: true });
     } catch {
         router.get(url, {}, { preserveState: true, preserveScroll: true });
@@ -96,6 +103,8 @@ const goToPageNum = (page) => {
         tipo: form.tipo || 'todos',
         estado: form.estado || 'todos',
         compartidos: form.compartidos || '1',
+        empresa_id: form.empresa_id || null,
+        cliente: form.cliente?.trim() || null,
     }, { preserveState: true, preserveScroll: true });
 };
 
@@ -121,7 +130,7 @@ const translateLabel = (label) => {
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="bg-white shadow sm:rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div>
                         <div class="text-sm font-medium text-gray-900">Tipo</div>
                         <select v-model="form.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" @change="applyFilters">
@@ -139,7 +148,19 @@ const translateLabel = (label) => {
                             <option value="anulada">Anuladas</option>
                         </select>
                     </div>
-                    <div class="flex items-end">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Empresa</div>
+                        <select v-model="form.empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" @change="applyFilters">
+                            <option value="">Todas</option>
+                            <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.razon_social }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">Cliente</div>
+                        <input v-model="form.cliente" type="text" placeholder="Razón social o CUIT..." class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" @keyup.enter="applyFilters" />
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button @click="applyFilters()" class="text-xs px-3 py-2 rounded border font-medium transition-colors bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Filtrar</button>
                         <button @click="form.compartidos = form.compartidos === '1' ? '0' : '1'; applyFilters()"
                             class="text-xs px-3 py-2 rounded border font-medium transition-colors"
                             :class="form.compartidos === '1' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
@@ -159,6 +180,7 @@ const translateLabel = (label) => {
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">#{{ c.id }} <span class="text-xs font-normal text-gray-500">· {{ formatFecha(c.fecha_emision) }}</span></div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.estado }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
+                                <div class="mt-0.5"><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ c.empresa?.razon_social || '-' }}</span></div>
                             </div>
                             <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</a>
                         </div>
@@ -210,6 +232,7 @@ const translateLabel = (label) => {
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Nro</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -226,6 +249,7 @@ const translateLabel = (label) => {
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ tipoLabel(c) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-indigo-700 truncate max-w-[120px]">{{ c.empresa?.razon_social || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 truncate max-w-[120px]">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 truncate max-w-[120px]">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ c.estado }}</td>
@@ -241,7 +265,7 @@ const translateLabel = (label) => {
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
-                                <td colspan="12" class="px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</td>
+                                <td colspan="13" class="px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</td>
                             </tr>
                         </tbody>
                     </table>
