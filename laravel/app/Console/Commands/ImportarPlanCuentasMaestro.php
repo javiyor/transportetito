@@ -234,19 +234,20 @@ class ImportarPlanCuentasMaestro extends Command
                     continue;
                 }
 
-                // Detect short-code collisions as potential duplicates.
-                if ($row['codigo_corto'] && CuentaContable::where('empresa_id', $empresa->id)
-                    ->where('codigo_corto', $row['codigo_corto'])
+                // Si el codigo_corto ya existe en otra cuenta, importar igual pero sin corto
+                // (el corto se usa para el mapeo de configuracion; no se pisa el existente).
+                $codigoCorto = $row['codigo_corto'];
+                if ($codigoCorto && CuentaContable::where('empresa_id', $empresa->id)
+                    ->where('codigo_corto', $codigoCorto)
                     ->exists()) {
                     $this->report['conflicts'][] = [
                         'empresa' => $empresa->id,
                         'codigo' => $codigo,
-                        'codigo_corto' => $row['codigo_corto'],
+                        'codigo_corto' => $codigoCorto,
                         'nombre' => $row['nombre'],
-                        'motivo' => 'codigo_corto ya existe en otra cuenta',
+                        'motivo' => 'codigo_corto ya existe en otra cuenta: se importa sin corto',
                     ];
-
-                    continue;
+                    $codigoCorto = null;
                 }
 
                 $parentId = $this->resolveParent($empresa, $codigo, $created, $placeholders);
@@ -263,7 +264,7 @@ class ImportarPlanCuentasMaestro extends Command
                         'parent_id' => $parentId,
                         'codigo' => $codigo,
                         'codigo_completo' => $row['codigo_completo'],
-                        'codigo_corto' => $row['codigo_corto'],
+                        'codigo_corto' => $codigoCorto,
                         'nombre' => $row['nombre'],
                         'tipo' => $row['tipo'],
                         'naturaleza' => $row['naturaleza'],
@@ -278,7 +279,7 @@ class ImportarPlanCuentasMaestro extends Command
                 $this->report['added'][] = [
                     'empresa' => $empresa->id,
                     'codigo' => $codigo,
-                    'codigo_corto' => $row['codigo_corto'],
+                    'codigo_corto' => $codigoCorto,
                     'nombre' => $row['nombre'],
                     'nivel' => $row['nivel'],
                 ];
@@ -381,7 +382,7 @@ class ImportarPlanCuentasMaestro extends Command
         $this->info('Agregadas: '.count($this->report['added']));
         $this->info('Existentes (sin cambios): '.count($this->report['existing']));
         $this->info('Actualizadas (nombre): '.count($this->report['updated']));
-        $this->warn('Conflictos (codigo_corto duplicado): '.count($this->report['conflicts']));
+        $this->warn('Importadas sin corto (corto en uso por otra cuenta): '.count($this->report['conflicts']));
         $this->error('Errores: '.count($this->report['errors']));
 
         if (! empty($this->report['conflicts'])) {
