@@ -72,18 +72,31 @@ class ImportarPlanCuentasMaestro extends Command
 
     private function parseFile(string $path): void
     {
-        $handle = fopen($path, 'r');
-        if (! $handle) {
+        $rawLines = @file($path);
+        if (! $rawLines) {
             return;
         }
 
-        $lineNumber = 0;
-        while (($line = fgets($handle)) !== false) {
-            $lineNumber++;
-            // El export del sistema contable viene en Latin1: convertir a UTF-8
-            if (! mb_check_encoding($line, 'UTF-8')) {
-                $line = mb_convert_encoding($line, 'UTF-8', 'Windows-1252');
+        // Primera pasada: códigos de detalle para decidir alias .000 solo sin hijos
+        $detailCodes = [];
+        foreach ($rawLines as $line) {
+            $line = $this->toUtf8($line);
+            $line = trim($line, "\r\n");
+            if (! preg_match('/^(\d+(\.\d+)+);/', $line, $mCod)) {
+                continue;
             }
+            $cols = str_getcsv($line, ';');
+            $cols = array_pad($cols, 11, '');
+            if (trim($cols[0]) === '' || trim($cols[5]) === '') {
+                continue;
+            }
+            $detailCodes[trim($cols[0])] = true;
+        }
+
+        $lineNumber = 0;
+        foreach ($rawLines as $line) {
+            $lineNumber++;
+            $line = $this->toUtf8($line);
             $line = trim($line, "\r\n");
             if ($line === '') {
                 continue;
@@ -98,6 +111,10 @@ class ImportarPlanCuentasMaestro extends Command
                         $codigoSec = trim($c);
                         break;
                     }
+                }
+                // Los rubros vienen como 101/102...: normalizar a 1.01/1.02...
+                if ($mSec[1] === 'RUBRO' && preg_match('/^(\d)(\d{2})$/', $codigoSec, $mRub)) {
+                    $codigoSec = $mRub[1].'.'.$mRub[2];
                 }
                 $nombreSec = '';
                 foreach (array_reverse($cols) as $c) {
@@ -147,7 +164,8 @@ class ImportarPlanCuentasMaestro extends Command
             $parts = explode('.', $codigoCompleto);
             $nivelCount = count($parts);
 
-            // Leaves ending in .000 map to the 4-level cuenta.
+            // Hojas terminadas en .000 mapean a la cuenta de 4 niveles, SALVO que
+            // tengan hijas en el archivo (grupo intermedio real: se conserva).
             $codigo = $codigoCompleto;
             $nivel = match (true) {
                 $nivelCount === 1 => 'capitulo',
@@ -157,7 +175,7 @@ class ImportarPlanCuentasMaestro extends Command
                 default => 'subcuenta',
             };
 
-            if ($nivelCount === 5 && end($parts) === '000') {
+            if ($nivelCount === 5 && end($parts) === '000' && ! $this->tieneHijas($codigoCompleto, $detailCodes)) {
                 array_pop($parts);
                 $codigo = implode('.', $parts);
                 $nivel = 'cuenta';
@@ -176,8 +194,28 @@ class ImportarPlanCuentasMaestro extends Command
                 'nivel' => $nivel,
             ];
         }
+    }
 
-        fclose($handle);
+    private function toUtf8(string $line): string
+    {
+        // El export del sistema contable viene en Latin1: convertir a UTF-8
+        if (! mb_check_encoding($line, 'UTF-8')) {
+            $line = mb_convert_encoding($line, 'UTF-8', 'Windows-1252');
+        }
+
+        return $line;
+    }
+
+    private function tieneHijas(string $codigo, array $detailCodes): bool
+    {
+        $prefix = $codigo.'.';
+        foreach ($detailCodes as $otro => $_) {
+            if ($otro !== $codigo && str_starts_with($otro, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function tipoPorCodigo(string $codigo): string
@@ -293,49 +331,122 @@ class ImportarPlanCuentasMaestro extends Command
     }
 
     /**
+     * Resuelve el padre usando el ancestro más profundo disponible (creados,
+     * DB o filas del archivo). Los niveles intermedios sin nombre en el archivo
+     * se saltean en lugar de crear "Cuenta autogenerada".
+     *
      * @param array<string, CuentaContable> $created
      * @param array<string, object{id:int}> $placeholders
      * @return int|false|null
      */
     private function resolveParent(Empresa $empresa, string $codigo, array &$created, array &$placeholders): int|false|null
     {
-        $parts = explode('.', $codigo);
-        if (count($parts) <= 1) {
-            return null;
-        }
+        foreach ($this->ancestros($codigo) as $parentCode) {
+            if (isset($created[$parentCode])) {
+                return $created[$parentCode]->id;
+            }
 
-        array_pop($parts);
-        $parentCode = implode('.', $parts);
+            if (isset($placeholders[$parentCode])) {
+                return $placeholders[$parentCode]->id;
+            }
 
-        if (isset($created[$parentCode])) {
-            return $created[$parentCode]->id;
-        }
+            $parent = CuentaContable::where('empresa_id', $empresa->id)
+                ->where('codigo', $parentCode)
+                ->first();
 
-        if (isset($placeholders[$parentCode])) {
-            return $placeholders[$parentCode]->id;
-        }
+            if ($parent) {
+                $created[$parentCode] = $parent;
 
-        $parent = CuentaContable::where('empresa_id', $empresa->id)
-            ->where('codigo', $parentCode)
-            ->first();
+                return $parent->id;
+            }
 
-        if ($parent) {
-            return $parent->id;
+            if (isset($this->rows[$parentCode])) {
+                $id = $this->crearPadreDesdeFila($empresa, $parentCode, $created, $placeholders);
+                if ($id !== false && $id !== null) {
+                    return $id;
+                }
+            }
         }
 
         if ($this->option('no-crear-padres')) {
             return false;
         }
 
-        $parentRow = $this->rows[$parentCode] ?? null;
+        // Último recurso: placeholder del padre inmediato
+        $parts = explode('.', $codigo);
+        array_pop($parts);
+        if (empty($parts)) {
+            return null;
+        }
+
+        return $this->crearPlaceholder($empresa, implode('.', $parts), $created, $placeholders);
+    }
+
+    /** @return list<string> ancestros del más profundo al más alto */
+    private function ancestros(string $codigo): array
+    {
+        $parts = explode('.', $codigo);
+        array_pop($parts);
+        $out = [];
+        while (count($parts) >= 1) {
+            $out[] = implode('.', $parts);
+            array_pop($parts);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<string, CuentaContable> $created
+     * @param array<string, object{id:int}> $placeholders
+     * @return int|false|null
+     */
+    private function crearPadreDesdeFila(Empresa $empresa, string $parentCode, array &$created, array &$placeholders): int|false|null
+    {
+        $parentRow = $this->rows[$parentCode];
         $grandparentId = $this->resolveParent($empresa, $parentCode, $created, $placeholders);
         if ($grandparentId === false) {
             return false;
         }
 
-        $nombre = $parentRow['nombre'] ?? "Cuenta autogenerada {$parentCode}";
-        $naturaleza = $parentRow['naturaleza'] ?? null;
-        $tipo = $parentRow['tipo'] ?? $this->tipoPorCodigo($parentCode);
+        if ($this->option('dry-run')) {
+            $fake = (object) ['id' => -(count($placeholders) + 1)];
+            $placeholders[$parentCode] = $fake;
+
+            return $fake->id;
+        }
+
+        $padre = CuentaContable::create([
+            'empresa_id' => $empresa->id,
+            'parent_id' => $grandparentId,
+            'codigo' => $parentCode,
+            'codigo_completo' => $parentRow['codigo_completo'],
+            'codigo_corto' => null,
+            'nombre' => $parentRow['nombre'],
+            'tipo' => $parentRow['tipo'],
+            'naturaleza' => $parentRow['naturaleza'],
+            'nivel' => $parentRow['nivel'],
+            'activo' => true,
+            'contabilizable' => false,
+            'orden' => 0,
+        ]);
+        $placeholders[$parentCode] = (object) ['id' => $padre->id];
+        $created[$parentCode] = $padre;
+
+        return $padre->id;
+    }
+
+    /**
+     * @param array<string, CuentaContable> $created
+     * @param array<string, object{id:int}> $placeholders
+     * @return int|false|null
+     */
+    private function crearPlaceholder(Empresa $empresa, string $parentCode, array &$created, array &$placeholders): int|false|null
+    {
+        $grandparentId = $this->resolveParent($empresa, $parentCode, $created, $placeholders);
+        if ($grandparentId === false) {
+            return false;
+        }
 
         if ($this->option('dry-run')) {
             $fake = (object) ['id' => -(count($placeholders) + 1)];
@@ -350,9 +461,9 @@ class ImportarPlanCuentasMaestro extends Command
             'codigo' => $parentCode,
             'codigo_completo' => $parentCode,
             'codigo_corto' => null,
-            'nombre' => $nombre,
-            'tipo' => $tipo,
-            'naturaleza' => $naturaleza,
+            'nombre' => "Cuenta autogenerada {$parentCode}",
+            'tipo' => $this->tipoPorCodigo($parentCode),
+            'naturaleza' => null,
             'nivel' => $this->nivelPorCodigo($parentCode),
             'activo' => true,
             'contabilizable' => false,
