@@ -80,8 +80,46 @@ class ImportarPlanCuentasMaestro extends Command
         $lineNumber = 0;
         while (($line = fgets($handle)) !== false) {
             $lineNumber++;
+            // El export del sistema contable viene en Latin1: convertir a UTF-8
+            if (! mb_check_encoding($line, 'UTF-8')) {
+                $line = mb_convert_encoding($line, 'UTF-8', 'Windows-1252');
+            }
             $line = trim($line, "\r\n");
             if ($line === '') {
+                continue;
+            }
+
+            // Niveles padre desde las secciones (CAPITULO / RUBRO / CTA.MADRE)
+            if (preg_match('/^(CAPITULO|RUBRO|CTA\.MADRE):/', $line, $mSec)) {
+                $cols = str_getcsv($line, ';');
+                $codigoSec = '';
+                foreach ($cols as $c) {
+                    if (preg_match('/^\d+(\.\d+)*$/', trim($c))) {
+                        $codigoSec = trim($c);
+                        break;
+                    }
+                }
+                $nombreSec = '';
+                foreach (array_reverse($cols) as $c) {
+                    if (trim($c) !== '') {
+                        $nombreSec = trim($c);
+                        break;
+                    }
+                }
+                if ($codigoSec !== '' && $nombreSec !== '' && $nombreSec !== $codigoSec && $nombreSec !== ($cols[0] ?? '')) {
+                    $nivelSec = $mSec[1] === 'CAPITULO' ? 'capitulo' : ($mSec[1] === 'RUBRO' ? 'rubro' : 'cuenta_madre');
+                    $this->rows[$codigoSec] = [
+                        'line' => $lineNumber,
+                        'codigo_completo' => $codigoSec,
+                        'codigo' => $codigoSec,
+                        'codigo_corto' => null,
+                        'nombre' => $nombreSec,
+                        'tipo' => $this->tipoPorCodigo($codigoSec),
+                        'naturaleza' => null,
+                        'contabilizable' => false,
+                        'nivel' => $nivelSec,
+                    ];
+                }
                 continue;
             }
 
