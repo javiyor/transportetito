@@ -20,6 +20,7 @@ class Recontabilizar extends Command
         {--tipo= : Tipo de documento a procesar (ventas,compras,cobros,pagos,gastos,ingresos,movimientos,todos)}
         {--desde= : Fecha desde (Y-m-d)}
         {--hasta= : Fecha hasta (Y-m-d)}
+        {--empresa_id= : Solo una empresa}
         {--dry-run : Solo mostrar que se procesaria sin crear asientos}
         {--force : Re-contabilizar incluso si ya existe asiento}';
 
@@ -32,6 +33,7 @@ class Recontabilizar extends Command
         $hasta = $this->option('hasta');
         $dryRun = (bool) $this->option('dry-run');
         $force = (bool) $this->option('force');
+        $empresaId = $this->option('empresa_id') ? (int) $this->option('empresa_id') : null;
         $procesados = 0;
         $omitidos = 0;
         $errores = 0;
@@ -41,14 +43,14 @@ class Recontabilizar extends Command
         foreach ($tipos as $t) {
             $this->info("Procesando: {$t}");
             $result = match ($t) {
-                'ventas' => $this->recontabilizarVentas($contabilizador, $desde, $hasta, $dryRun, $force),
-                'notas_credito' => $this->recontabilizarNotasCredito($contabilizador, $desde, $hasta, $dryRun, $force),
-                'compras' => $this->recontabilizarCompras($contabilizador, $desde, $hasta, $dryRun, $force),
-                'cobros' => $this->recontabilizarCobros($contabilizador, $desde, $hasta, $dryRun, $force),
-                'pagos' => $this->recontabilizarPagos($contabilizador, $desde, $hasta, $dryRun, $force),
-                'gastos' => $this->recontabilizarGastos($contabilizador, $desde, $hasta, $dryRun, $force),
-                'ingresos' => $this->recontabilizarIngresos($contabilizador, $desde, $hasta, $dryRun, $force),
-                'movimientos' => $this->recontabilizarMovimientos($desde, $hasta, $dryRun, $force),
+                'ventas' => $this->recontabilizarVentas($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'notas_credito' => $this->recontabilizarNotasCredito($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'compras' => $this->recontabilizarCompras($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'cobros' => $this->recontabilizarCobros($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'pagos' => $this->recontabilizarPagos($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'gastos' => $this->recontabilizarGastos($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'ingresos' => $this->recontabilizarIngresos($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'movimientos' => $this->recontabilizarMovimientos($desde, $hasta, $dryRun, $force, $empresaId),
                 default => [0, 0, 0],
             };
             $procesados += $result[0];
@@ -68,9 +70,18 @@ class Recontabilizar extends Command
         return 0;
     }
 
-    private function recontabilizarVentas(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function porEmpresa($query, ?int $empresaId)
     {
-        $query = Comprobante::query()
+        if ($empresaId) {
+            $query->where('empresa_id', $empresaId);
+        }
+
+        return $query;
+    }
+
+    private function recontabilizarVentas(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
+    {
+        $query = $this->porEmpresa(Comprobante::query(), $empresaId)
             ->where(function ($q) {
                 $q->whereNotIn('tipo', [
                     'nota_credito_a', 'nota_credito_b', 'nota_credito_c', 'nota_credito_e', 'nota_credito_m',
@@ -84,9 +95,9 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarVenta', 'comprobante', $dryRun, $force);
     }
 
-    private function recontabilizarNotasCredito(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarNotasCredito(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = Comprobante::query()
+        $query = $this->porEmpresa(Comprobante::query(), $empresaId)
             ->whereIn('tipo', [
                 'nota_credito_a', 'nota_credito_b', 'nota_credito_c', 'nota_credito_e', 'nota_credito_m',
                 'nota_credito_interna', 'nota_credito_manual',
@@ -98,9 +109,9 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarNotaCredito', 'comprobante', $dryRun, $force);
     }
 
-    private function recontabilizarCompras(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarCompras(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = ProveedorComprobante::query();
+        $query = $this->porEmpresa(ProveedorComprobante::query(), $empresaId);
 
         if ($desde) $query->whereDate('fecha_emision', '>=', $desde);
         if ($hasta) $query->whereDate('fecha_emision', '<=', $hasta);
@@ -108,9 +119,9 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarCompra', 'proveedor_comprobante', $dryRun, $force);
     }
 
-    private function recontabilizarCobros(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarCobros(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = Recibo::query()->where('estado', '!=', 'anulada');
+        $query = $this->porEmpresa(Recibo::query(), $empresaId)->where('estado', '!=', 'anulada');
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
@@ -118,9 +129,9 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarCobro', 'recibo', $dryRun, $force);
     }
 
-    private function recontabilizarPagos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarPagos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = OrdenPago::query()->where('estado', '!=', 'anulada');
+        $query = $this->porEmpresa(OrdenPago::query(), $empresaId)->where('estado', '!=', 'anulada');
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
@@ -128,9 +139,9 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarPagoProveedor', 'orden_pago', $dryRun, $force);
     }
 
-    private function recontabilizarGastos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarGastos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = GastoOperativo::query()->with('categorias');
+        $query = $this->porEmpresa(GastoOperativo::query(), $empresaId)->with('categorias');
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
@@ -147,9 +158,9 @@ class Recontabilizar extends Command
         });
     }
 
-    private function recontabilizarIngresos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarIngresos(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = IngresoOperativo::query()->with('categorias');
+        $query = $this->porEmpresa(IngresoOperativo::query(), $empresaId)->with('categorias');
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
@@ -165,9 +176,9 @@ class Recontabilizar extends Command
         });
     }
 
-    private function recontabilizarMovimientos(?string $desde, ?string $hasta, bool $dryRun, bool $force): array
+    private function recontabilizarMovimientos(?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
     {
-        $query = MovimientoBancario::query();
+        $query = $this->porEmpresa(MovimientoBancario::query(), $empresaId);
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);
 

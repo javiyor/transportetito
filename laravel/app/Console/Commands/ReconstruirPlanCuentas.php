@@ -63,9 +63,11 @@ class ReconstruirPlanCuentas extends Command
         }
 
         $fallidas = [];
+        $ok = [];
         foreach ($empresas as $empresa) {
             try {
                 $this->reconstruirEmpresa($empresa, $path);
+                $ok[] = $empresa->id;
             } catch (\Throwable $e) {
                 $fallidas[] = $empresa->id;
                 $this->error('Empresa '.$empresa->id.': '.$e->getMessage().' (se revierte, se sigue con las demas)');
@@ -75,16 +77,24 @@ class ReconstruirPlanCuentas extends Command
             $this->error('Fallaron: '.implode(', ', $fallidas));
         }
 
+        if (empty($ok)) {
+            $this->error('Sin empresas reconstruidas: no se hace nada mas.');
+
+            return self::FAILURE;
+        }
+
         $this->newLine();
         $this->info('Re-sembrando configuracion contable...');
         Artisan::call('db:seed', ['--class' => 'ConfiguracionContableSeeder', '--force' => true]);
         $this->line(Artisan::output());
 
         if (! $this->option('no-recontabilizar')) {
-            $this->newLine();
-            $this->info('Recontabilizando todo...');
-            Artisan::call('contabilidad:recontabilizar', ['--tipo' => 'todos', '--force' => true]);
-            $this->line(Artisan::output());
+            foreach ($ok as $eid) {
+                $this->newLine();
+                $this->info("Recontabilizando empresa {$eid}...");
+                Artisan::call('contabilidad:recontabilizar', ['--tipo' => 'todos', '--force' => true, '--empresa_id' => $eid]);
+                $this->line(Artisan::output());
+            }
         }
 
         $this->newLine();
