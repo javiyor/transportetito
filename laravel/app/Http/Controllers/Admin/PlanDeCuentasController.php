@@ -150,11 +150,7 @@ class PlanDeCuentasController extends Controller
             ->orderBy('orden')
             ->get(['codigo_completo', 'codigo_corto', 'nombre', 'naturaleza', 'nivel', 'tipo', 'activo', 'contabilizable', 'orden']);
         $cuentas = $cuentas->sort(function ($a, $b) {
-            if ((int) $a->orden !== (int) $b->orden) {
-                return (int) $a->orden <=> (int) $b->orden;
-            }
-
-            return strnatcmp((string) $a->codigo_completo, (string) $b->codigo_completo);
+            return strcmp((string) $a->codigo_completo, (string) $b->codigo_completo);
         })->values();
 
         return response()->streamDownload(function () use ($cuentas) {
@@ -177,19 +173,12 @@ class PlanDeCuentasController extends Controller
     }
 
     /**
-     * Orden numérico natural por segmentos (1.01.002.2 antes que 1.01.002.10),
-     * respetando el campo `orden` como primer criterio.
+     * Orden alfabético por código (1.01, 1.02, ..., 1.1, ...).
      */
     private function ordenarPorNumeracion($cuentas)
     {
         return $cuentas->sort(function ($a, $b) {
-            $oa = (int) ($a->orden ?? $a['orden'] ?? 0);
-            $ob = (int) ($b->orden ?? $b['orden'] ?? 0);
-            if ($oa !== $ob) {
-                return $oa <=> $ob;
-            }
-
-            return strnatcmp((string) ($a->codigo ?? $a['codigo'] ?? ''), (string) ($b->codigo ?? $b['codigo'] ?? ''));
+            return strcmp((string) ($a->codigo ?? $a['codigo'] ?? ''), (string) ($b->codigo ?? $b['codigo'] ?? ''));
         })->values();
     }
 
