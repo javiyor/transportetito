@@ -24,9 +24,9 @@ class PlanDeCuentasController extends Controller
             ->where('nivel', 'capitulo')
             ->when($tipoFiltro, fn ($q) => $q->where('tipo', $tipoFiltro))
             ->orderBy('orden')
-            ->get(['id', 'codigo', 'nombre', 'tipo']);
+            ->get(['id', 'codigo', 'nombre', 'tipo', 'orden']);
 
-        $arbol = $capitulos->map(fn ($c) => $this->buildTree($c, $empresaId));
+        $arbol = $this->ordenarPorNumeracion($capitulos)->map(fn ($c) => $this->buildTree($c, $empresaId));
 
         return Inertia::render('Admin/PlanDeCuentas/Index', [
             'arbol' => $arbol,
@@ -147,8 +147,15 @@ class PlanDeCuentasController extends Controller
         $empresa = Empresa::find($empresaId);
 
         $cuentas = CuentaContable::where('empresa_id', $empresaId)
-            ->orderBy('codigo_completo')
-            ->get(['codigo_completo', 'codigo_corto', 'nombre', 'naturaleza', 'nivel', 'tipo', 'activo', 'contabilizable']);
+            ->orderBy('orden')
+            ->get(['codigo_completo', 'codigo_corto', 'nombre', 'naturaleza', 'nivel', 'tipo', 'activo', 'contabilizable', 'orden']);
+        $cuentas = $cuentas->sort(function ($a, $b) {
+            if ((int) $a->orden !== (int) $b->orden) {
+                return (int) $a->orden <=> (int) $b->orden;
+            }
+
+            return strnatcmp((string) $a->codigo_completo, (string) $b->codigo_completo);
+        })->values();
 
         return response()->streamDownload(function () use ($cuentas) {
             $fh = fopen('php://output', 'w');
@@ -169,13 +176,30 @@ class PlanDeCuentasController extends Controller
         }, 'plan_de_cuentas.csv', ['Content-Type' => 'text/csv']);
     }
 
+    /**
+     * Orden numérico natural por segmentos (1.01.002.2 antes que 1.01.002.10),
+     * respetando el campo `orden` como primer criterio.
+     */
+    private function ordenarPorNumeracion($cuentas)
+    {
+        return $cuentas->sort(function ($a, $b) {
+            $oa = (int) ($a->orden ?? $a['orden'] ?? 0);
+            $ob = (int) ($b->orden ?? $b['orden'] ?? 0);
+            if ($oa !== $ob) {
+                return $oa <=> $ob;
+            }
+
+            return strnatcmp((string) ($a->codigo ?? $a['codigo'] ?? ''), (string) ($b->codigo ?? $b['codigo'] ?? ''));
+        })->values();
+    }
+
     private function buildTree(CuentaContable $cuenta, int $empresaId): array
     {
         $children = CuentaContable::where('empresa_id', $empresaId)
             ->where('parent_id', $cuenta->id)
             ->orderBy('orden')
-            ->orderBy('codigo')
             ->get(['id', 'codigo', 'codigo_completo', 'codigo_corto', 'nombre', 'naturaleza', 'nivel', 'tipo', 'activo', 'contabilizable', 'orden']);
+        $children = $this->ordenarPorNumeracion($children);
 
         return [
             'id' => $cuenta->id,
