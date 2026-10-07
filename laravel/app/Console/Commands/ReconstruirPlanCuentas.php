@@ -62,8 +62,17 @@ class ReconstruirPlanCuentas extends Command
             return self::SUCCESS;
         }
 
+        $fallidas = [];
         foreach ($empresas as $empresa) {
-            $this->reconstruirEmpresa($empresa, $path);
+            try {
+                $this->reconstruirEmpresa($empresa, $path);
+            } catch (\Throwable $e) {
+                $fallidas[] = $empresa->id;
+                $this->error('Empresa '.$empresa->id.': '.$e->getMessage().' (se revierte, se sigue con las demas)');
+            }
+        }
+        if (! empty($fallidas)) {
+            $this->error('Fallaron: '.implode(', ', $fallidas));
         }
 
         $this->newLine();
