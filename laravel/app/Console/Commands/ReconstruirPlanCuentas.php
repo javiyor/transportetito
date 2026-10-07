@@ -123,16 +123,16 @@ class ReconstruirPlanCuentas extends Command
         ];
 
         foreach ($tablas as [$tabla, $col, $empCol]) {
-            $q = DB::table($tabla)->whereNotNull($col);
+            $q = DB::table("{$tabla} as c")->whereNotNull("c.{$col}");
             if ($empCol) {
-                $q->where($empCol, $empresaId);
+                $q->where("c.{$empCol}", $empresaId);
             } else {
                 // categorias: filtrar por empresa del documento padre
                 $parent = str_contains($tabla, 'gasto') ? 'gastos_operativos' : 'ingresos_operativos';
                 $fk = str_contains($tabla, 'gasto') ? 'gasto_operativo_id' : 'ingreso_operativo_id';
-                $q->join("{$parent} as p", "p.id", '=', "{$tabla}.{$fk}")->where('p.empresa_id', $empresaId);
+                $q->join("{$parent} as p", "p.id", '=', "c.{$fk}")->where('p.empresa_id', $empresaId);
             }
-            foreach ($q->pluck($col)->unique() as $id) {
+            foreach ($q->pluck("c.{$col}")->unique() as $id) {
                 $cod = $map[$id] ?? null;
                 if ($cod && ! isset($this->codigosCsv[$cod])) {
                     $usados[$cod] = true;
