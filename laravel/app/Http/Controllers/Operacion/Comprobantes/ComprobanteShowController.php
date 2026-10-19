@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\TerceroCuenta;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ComprobanteShowController extends Controller
 {
-    public function __invoke(Request $request, Comprobante $comprobante)
+    public function __invoke(Request $request, Comprobante $comprobante, ArcaTipoComprobanteResolver $arcaTipos)
     {
         $currentEmpresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $allowedIds = [$currentEmpresaId];
@@ -33,10 +34,10 @@ class ComprobanteShowController extends Controller
         abort_unless(in_array((int) $comprobante->empresa_id, $allowedIds, true), 404);
 
         $comprobante->load([
-            'empresa:id,razon_social,cuit',
+            'empresa:id,razon_social,cuit,condicion_iva',
             'deposito:id,nombre',
-            'entregaCuenta.tercero:id,cuit,razon_social',
-            'facturarCuenta.tercero:id,cuit,razon_social',
+            'entregaCuenta.tercero:id,cuit,razon_social,condicion_iva',
+            'facturarCuenta.tercero:id,cuit,razon_social,condicion_iva',
             'pedidos.remitente:id,razon_social,cuit',
             'pedidos.destinatario:id,razon_social,cuit',
             'comprobanteOrigen:id,tipo,arca_tipo_cbte,arca_numero,arca_cae,total,moneda',
@@ -47,6 +48,16 @@ class ComprobanteShowController extends Controller
             ->where('estado', '!=', 'anulada')
             ->sum(fn (Comprobante $nota) => abs((float) $nota->total)), 2);
         $saldoAcreditable = round(max(0, abs((float) $comprobante->total) - $creditoEmitido), 2);
+
+        $arcaTipoOpciones = [];
+        if ((string) $comprobante->tipo === 'factura_interna' && ! $comprobante->arca_cae && $comprobante->requiere_autorizacion_arca) {
+            $arcaTipoOpciones = $arcaTipos->opcionesFactura(
+                $comprobante->empresa?->condicion_iva,
+                $comprobante->facturarCuenta?->tercero?->condicion_iva,
+                (float) $comprobante->total,
+                $comprobante->facturarCuenta?->tercero?->cuit,
+            );
+        }
 
         $auditLogs = AuditLog::query()
             ->with('user:id,name,email')
@@ -68,6 +79,7 @@ class ComprobanteShowController extends Controller
 
         return Inertia::render('Operacion/Comprobantes/Show', [
             'comprobante' => $comprobante,
+            'arcaTipoOpciones' => $arcaTipoOpciones,
             'auditLogs' => $auditLogs,
             'cuentas' => $cuentas,
             'creditSummary' => [

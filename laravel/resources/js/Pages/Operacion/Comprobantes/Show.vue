@@ -12,6 +12,7 @@ const props = defineProps({
     cuentas: Array,
     creditSummary: Object,
     motivoOptions: Array,
+    arcaTipoOpciones: Array,
 });
 
 const notaCreditoForm = useForm({ motivo_tipo: 'devolucion_parcial', motivo_detalle: '', importe: '' });
@@ -39,10 +40,14 @@ const generarNotaDebito = () => {
 };
 
 const autorizarArca = () => {
-    const tipo = props.comprobante.comprobante_origen?.arca_tipo_cbte || 'FC';
+    const tipo = autorizarForm.tipo || props.comprobante.comprobante_origen?.arca_tipo_cbte || props.arcaTipoOpciones?.[0]?.code || 'FC';
     autorizarForm.tipo = tipo;
     autorizarForm.post(route('operacion.comprobantes.autorizar-arca', props.comprobante.id), { preserveScroll: true });
 };
+
+if (props.arcaTipoOpciones?.length) {
+    autorizarForm.tipo = props.arcaTipoOpciones[0].code;
+}
 
 const recepcionErrorLabels = {
     bultos: 'Bultos',
@@ -112,6 +117,12 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <SecondaryButton @click="imprimir">Imprimir / PDF</SecondaryButton>
+                    <div v-if="comprobante.tipo === 'factura_interna' && !comprobante.arca_cae && arcaTipoOpciones?.length" class="flex items-center gap-2">
+                        <select v-model="autorizarForm.tipo" class="rounded-md border-gray-300 text-xs shadow-sm" aria-label="Tipo comprobante ARCA">
+                            <option v-for="tipo in arcaTipoOpciones" :key="tipo.code" :value="tipo.code">{{ tipo.label }}</option>
+                        </select>
+                        <PrimaryButton :disabled="autorizarForm.processing" @click="autorizarArca">Reintentar ARCA</PrimaryButton>
+                    </div>
                     <PrimaryButton v-if="['nota_credito_interna', 'nota_debito_interna'].includes(comprobante.tipo) && !comprobante.arca_cae && comprobante.comprobante_origen?.arca_tipo_cbte" :disabled="autorizarForm.processing" @click="autorizarArca">Autorizar ARCA</PrimaryButton>
                     <PrimaryButton v-if="comprobante.estado === 'emitida' && !comprobante.arca_cae" @click="anular">Anular</PrimaryButton>
                     <Link :href="route('operacion.comprobantes.index')"><SecondaryButton>Volver</SecondaryButton></Link>
@@ -120,6 +131,10 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
         </template>
 
         <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="comprobante.requiere_autorizacion_arca && !comprobante.arca_cae" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <div class="font-semibold">Pendiente de autorización ARCA</div>
+                <div v-if="comprobante.arca_error" class="mt-1">{{ comprobante.arca_error }}</div>
+            </div>
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <div class="text-xs uppercase tracking-wider text-gray-500">Empresa</div>

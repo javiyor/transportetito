@@ -271,16 +271,8 @@ class CargaDirectaStoreController extends Controller
                     throw new \RuntimeException('No se pudo determinar el tipo de comprobante ARCA para el cliente.');
                 }
 
-                $depositoCentral = Deposito::query()
-                    ->where('empresa_id', $empresaId)
-                    ->where('es_central', true)
-                    ->orderBy('id')
-                    ->first();
-                if (! $depositoCentral) {
-                    throw new \RuntimeException('No hay depósito central configurado para autorizar la factura en ARCA.');
-                }
-
-                $wsfe->autorizarComprobante($comprobante, $depositoCentral, $tipoArca);
+                // Autorizar usando el mismo depósito/PV operativo seleccionado para esta carga.
+                $wsfe->autorizarComprobante($comprobante, $deposito, $tipoArca);
                 $comprobante->refresh();
             } catch (\Throwable $e) {
                 $autorizacionError = $e->getMessage();

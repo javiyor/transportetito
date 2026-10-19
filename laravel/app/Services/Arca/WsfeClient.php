@@ -74,11 +74,21 @@ class WsfeClient
         $importeTotal = abs((float) $comprobante->total);
         $subtotalGravado = abs((float) ($calculo['subtotal_gravado'] ?? 0));
         $importeIva = abs((float) ($calculo['iva'] ?? 0));
-        if ($subtotalGravado <= 0 && $importeTotal > 0) {
-            $subtotalGravado = round($importeTotal / 1.21, 2);
+        $ivaPctExplicito = array_key_exists('iva_pct', $calculo);
+        $ivaPct = $ivaPctExplicito ? (float) $calculo['iva_pct'] : null;
+        if ($ivaPct !== null && $ivaPct > 0 && $ivaPct <= 1) {
+            $ivaPct *= 100;
         }
-        if ($importeIva <= 0 && $importeTotal > 0) {
+        if ($subtotalGravado <= 0 && $importeTotal > 0) {
+            $subtotalGravado = $ivaPctExplicito
+                ? $importeTotal
+                : round($importeTotal / 1.21, 2);
+        }
+        if (! $ivaPctExplicito && $importeIva <= 0 && $importeTotal > 0) {
             $importeIva = round($importeTotal - $subtotalGravado, 2);
+        }
+        if ($ivaPct === null) {
+            $ivaPct = $subtotalGravado > 0 ? round(($importeIva / $subtotalGravado) * 100, 2) : 0.0;
         }
         $importeNeto = $subtotalGravado;
         $cotizacion = (array) (($detalleFacturacion['calculo']['cotizacion'] ?? $detalleFacturacion['cotizacion'] ?? []) ?: []);
@@ -88,6 +98,16 @@ class WsfeClient
         if ($moneda !== 'ARS' && $monCotiz <= 0) {
             throw new RuntimeException('Falta cotizacion para autorizar comprobante en moneda '.$moneda.'.');
         }
+
+        $ivaCodigo = match (true) {
+            abs($ivaPct - 27.0) < 0.001 => 6,
+            abs($ivaPct - 21.0) < 0.001 => 5,
+            abs($ivaPct - 10.5) < 0.001 => 4,
+            abs($ivaPct - 5.0) < 0.001 => 8,
+            abs($ivaPct - 2.5) < 0.001 => 9,
+            abs($ivaPct) < 0.001 => 3,
+            default => throw new RuntimeException('Alícuota de IVA no soportada por WSFE: '.$ivaPct.'%.'),
+        };
 
         $detalleRequest = [
             'Concepto' => 2, // Servicios
@@ -110,7 +130,7 @@ class WsfeClient
             'Iva' => [
                 'AlicIva' => [
                     [
-                        'Id' => 5,
+                        'Id' => $ivaCodigo,
                         'BaseImp' => $importeNeto,
                         'Importe' => $importeIva,
                     ],
