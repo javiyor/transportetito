@@ -12,6 +12,7 @@ import { computed, ref } from 'vue';
 const props = defineProps({
     asientos: Object,
     cuentasContables: Array,
+    bancos: Array,
     filtros: Object,
     totales: Object,
 });
@@ -21,6 +22,12 @@ const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.
 const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const expanded = ref(new Set());
+const bancosPropios = computed(() => (props.bancos || []).filter((b) => b.es_propio));
+const esCuentaBanco = (linea) => {
+    const cuenta = props.cuentasContables.find((c) => String(c.id) === String(linea.cuenta_contable_id));
+    const codigo = String(cuenta?.codigo_completo || cuenta?.codigo || '');
+    return codigo.startsWith('1.01.002');
+};
 
 const toggle = (id) => {
     const s = new Set(expanded.value);
@@ -44,8 +51,8 @@ const openCreate = () => {
     createForm.descripcion = '';
     createForm.moneda = 'ARS';
     createForm.lineas = [
-        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false },
-        { cuenta_contable_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false },
+        { cuenta_contable_id: '', banco_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false },
+        { cuenta_contable_id: '', banco_id: '', debe: '', haber: '', descripcion: '', _search: '', _showCuentas: false },
     ];
     createForm.clearErrors();
     showCreate.value = true;
@@ -69,6 +76,7 @@ const openEdit = (asiento) => {
         const cuenta = props.cuentasContables.find((c) => c.id == l.cuenta_contable_id);
         return {
             cuenta_contable_id: l.cuenta_contable_id,
+            banco_id: l.banco_id ?? '',
             debe: l.debe || '',
             haber: l.haber || '',
             descripcion: l.descripcion ?? '',
@@ -79,7 +87,7 @@ const openEdit = (asiento) => {
     });
     if (editForm.lineas.length < 2) {
         while (editForm.lineas.length < 2) {
-            editForm.lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '', tercero_cuenta_id: '', _search: '', _showCuentas: false });
+            editForm.lineas.push({ cuenta_contable_id: '', banco_id: '', debe: '', haber: '', descripcion: '', tercero_cuenta_id: '', _search: '', _showCuentas: false });
         }
     }
     editForm.clearErrors();
@@ -108,7 +116,7 @@ const imprimirUrl = computed(() => {
 });
 
 const addLinea = (lineas) => {
-    lineas.push({ cuenta_contable_id: '', debe: '', haber: '', descripcion: '', tercero_cuenta_id: '', _search: '', _showCuentas: false });
+    lineas.push({ cuenta_contable_id: '', banco_id: '', debe: '', haber: '', descripcion: '', tercero_cuenta_id: '', _search: '', _showCuentas: false });
 };
 
 const removeLinea = (lineas, idx) => {
@@ -152,12 +160,16 @@ const onCuentaSearchInput = (linea) => {
 
 const selectCuenta = (linea, cuenta) => {
     linea.cuenta_contable_id = cuenta.id;
+    if (!String(cuenta.codigo_completo || cuenta.codigo || '').startsWith('1.01.002')) {
+        linea.banco_id = '';
+    }
     linea._search = cuentaLabel(cuenta);
     linea._showCuentas = false;
 };
 
 const clearCuenta = (linea) => {
     linea.cuenta_contable_id = '';
+    linea.banco_id = '';
     linea._search = '';
     linea._showCuentas = false;
 };
@@ -170,6 +182,7 @@ const submitCreate = () => {
         moneda: createForm.moneda,
         lineas: createForm.lineas.map(l => ({
             cuenta_contable_id: l.cuenta_contable_id ? parseInt(l.cuenta_contable_id, 10) : null,
+            banco_id: l.banco_id ? parseInt(l.banco_id, 10) : null,
             debe: l.debe === '' ? 0 : parseFloat(l.debe) || 0,
             haber: l.haber === '' ? 0 : parseFloat(l.haber) || 0,
             descripcion: l.descripcion || null,
@@ -343,7 +356,7 @@ const fmtDesc = (d) => {
                                             </thead>
                                             <tbody>
                                                 <tr v-for="linea in asiento.lineas" :key="linea.id" class="border-t border-gray-100">
-                                                    <td class="px-2 py-1 text-xs">{{ linea.cuenta_contable?.codigo_completo }} - {{ linea.cuenta_contable?.nombre }}</td>
+                                                    <td class="px-2 py-1 text-xs">{{ linea.cuenta_contable?.codigo_completo }} - {{ linea.cuenta_contable?.nombre }}<span v-if="linea.banco?.nombre" class="ms-1 text-indigo-600">· {{ linea.banco.nombre }}</span></td>
                                                     <td class="px-2 py-1 text-xs text-gray-500">{{ linea.tercero_cuenta?.tercero?.razon_social || '-' }}</td>
                                                     <td class="px-2 py-1 text-right text-xs font-mono text-green-700">{{ parseFloat(linea.debe) > 0 ? '$ ' + parseFloat(linea.debe).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '' }}</td>
                                                     <td class="px-2 py-1 text-right text-xs font-mono text-red-700">{{ parseFloat(linea.haber) > 0 ? '$ ' + parseFloat(linea.haber).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '' }}</td>
@@ -429,6 +442,10 @@ const fmtDesc = (d) => {
                                     </ul>
                                     <div v-if="linea.cuenta_contable_id" class="text-[10px] text-green-700 mt-0.5 truncate">{{ cuentaLabel(cuentasContables.find(x => x.id == linea.cuenta_contable_id) || {}) }}</div>
                                     <div v-else class="text-[10px] text-gray-400 mt-0.5">Seleccioná una cuenta (código o nombre)</div>
+                                    <select v-if="esCuentaBanco(linea)" v-model="linea.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-[10px] py-0.5">
+                                        <option value="">Banco asociado (requerido para movimientos)</option>
+                                        <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                    </select>
                                 </div>
                                 <div class="col-span-5 sm:col-span-2">
                                     <TextInput v-model="linea.debe" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />
@@ -512,6 +529,10 @@ const fmtDesc = (d) => {
                                     </ul>
                                     <div v-if="linea.cuenta_contable_id" class="text-[10px] text-green-700 mt-0.5 truncate">{{ cuentaLabel(cuentasContables.find(x => x.id == linea.cuenta_contable_id) || {}) }}</div>
                                     <div v-else class="text-[10px] text-gray-400 mt-0.5">Seleccioná una cuenta (código o nombre)</div>
+                                    <select v-if="esCuentaBanco(linea)" v-model="linea.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-[10px] py-0.5">
+                                        <option value="">Banco asociado (requerido para movimientos)</option>
+                                        <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                                    </select>
                                 </div>
                                 <div class="col-span-5 sm:col-span-2">
                                     <TextInput v-model="linea.debe" type="number" min="0" step="0.01" class="block w-full text-xs py-1 text-right" placeholder="0.00" />

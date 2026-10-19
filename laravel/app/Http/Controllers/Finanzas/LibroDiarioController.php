@@ -16,7 +16,7 @@ class LibroDiarioController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
         $query = AsientoContable::query()
-            ->with(['lineas.cuentaContable', 'lineas.terceroCuenta.tercero'])
+            ->with(['lineas.cuentaContable', 'lineas.terceroCuenta.tercero', 'lineas.banco:id,nombre'])
             ->where('empresa_id', $empresaId);
 
         if ($fechaDesde = $request->query('fecha_desde')) {
@@ -58,6 +58,7 @@ class LibroDiarioController extends Controller
                 'cuenta_contable_id' => $request->query('cuenta_contable_id', ''),
             ],
             'totales' => $totales,
+            'bancos' => \App\Models\Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio']),
         ]);
     }
 }

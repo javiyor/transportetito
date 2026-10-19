@@ -14,6 +14,7 @@ class AsientoLinea extends Model
         'asiento_id',
         'cuenta_contable_id',
         'tercero_cuenta_id',
+        'banco_id',
         'debe',
         'haber',
         'descripcion',
@@ -37,5 +38,10 @@ class AsientoLinea extends Model
     public function terceroCuenta(): BelongsTo
     {
         return $this->belongsTo(TerceroCuenta::class);
+    }
+
+    public function banco(): BelongsTo
+    {
+        return $this->belongsTo(Banco::class);
     }
 }

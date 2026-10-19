@@ -129,7 +129,7 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
   - id, empresa_id, fecha, moneda (ARS), estado (confirmado), referencia_tipo/referencia_id, descripcion, timestamps
   - index (empresa_id, fecha); (referencia_tipo, referencia_id)
 - asiento_lineas
-  - id, asiento_id, cuenta_contable_id, tercero_cuenta_id (nullable), debe, haber, descripcion
+  - id, asiento_id, cuenta_contable_id, tercero_cuenta_id (nullable), banco_id (nullable), debe, haber, descripcion
   - generados por `ContabilizadorService`; `contabilidad:recontabilizar --force` los borra/rehace
 
 ## Cotizaciones

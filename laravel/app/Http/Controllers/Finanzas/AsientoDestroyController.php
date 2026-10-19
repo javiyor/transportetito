@@ -18,6 +18,7 @@ class AsientoDestroyController extends Controller
         abort_unless((int) $asiento->empresa_id === $empresaId, 403);
 
         DB::transaction(function () use ($asiento) {
+            \App\Models\MovimientoBancario::eliminarReferencia('asiento_manual', $asiento->id);
             $asiento->lineas()->delete();
             $asiento->delete();
         });
