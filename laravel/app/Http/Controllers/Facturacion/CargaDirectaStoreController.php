@@ -10,6 +10,8 @@ use App\Models\Deposito;
 use App\Models\Empresa;
 use App\Models\Pedido;
 use App\Models\TerceroCuenta;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
+use App\Services\Arca\WsfeClient;
 use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Facturacion\TarifaResolver;
@@ -24,6 +26,8 @@ class CargaDirectaStoreController extends Controller
         Request $request,
         ComprobanteMailer $mailer,
         ContabilizadorService $contabilizador,
+        WsfeClient $wsfe,
+        ArcaTipoComprobanteResolver $arcaTipos,
     ): RedirectResponse {
         $empresaId = (int) $request->user()->current_empresa_id;
         abort_unless($empresaId, 403);
@@ -250,12 +254,68 @@ class CargaDirectaStoreController extends Controller
             ]);
         }
 
+        $autorizacionError = null;
+        $tipoArca = null;
+        if ($comprobante->requiere_autorizacion_arca) {
+            $cuentaFacturacion = $facturarCuentaId === $cuentaOrigen->id ? $cuentaOrigen : $cuentaDestino;
+            $opciones = $arcaTipos->opcionesFactura(
+                $empresa->condicion_iva,
+                $cuentaFacturacion->tercero?->condicion_iva,
+                (float) $comprobante->total,
+                $cuentaFacturacion->tercero?->cuit,
+            );
+            $tipoArca = $opciones[0]['code'] ?? null;
+
+            try {
+                if (! $tipoArca) {
+                    throw new \RuntimeException('No se pudo determinar el tipo de comprobante ARCA para el cliente.');
+                }
+
+                $depositoCentral = Deposito::query()
+                    ->where('empresa_id', $empresaId)
+                    ->where('es_central', true)
+                    ->orderBy('id')
+                    ->first();
+                if (! $depositoCentral) {
+                    throw new \RuntimeException('No hay depósito central configurado para autorizar la factura en ARCA.');
+                }
+
+                $wsfe->autorizarComprobante($comprobante, $depositoCentral, $tipoArca);
+                $comprobante->refresh();
+            } catch (\Throwable $e) {
+                $autorizacionError = $e->getMessage();
+                Log::warning('No se pudo autorizar carga directa en ARCA', [
+                    'comprobante_id' => $comprobante->id,
+                    'empresa_id' => $empresaId,
+                    'tipo_arca' => $tipoArca,
+                    'error' => $autorizacionError,
+                ]);
+                AuditLog::query()->create([
+                    'user_id' => $request->user()?->id,
+                    'action' => 'comprobante.arca_autorizacion_fallida',
+                    'subject_type' => Comprobante::class,
+                    'subject_id' => $comprobante->id,
+                    'context' => [
+                        'origen' => 'carga_directa',
+                        'tipo_solicitado' => $tipoArca,
+                        'mensaje' => $autorizacionError,
+                    ],
+                ]);
+            }
+        }
+
         $comprobante->load('facturarCuenta');
         $mailer->enviarSiCorresponde($comprobante);
 
-        return redirect()
+        $redirect = redirect()
             ->route('facturacion.carga-directa.create')
-            ->with('flash.success', "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').") — lista para otra. " . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : ''));
+            ->with('flash.success', "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').")" . ($comprobante->arca_cae ? " y autorizada en ARCA (CAE {$comprobante->arca_cae}). " : '. ') . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : ''));
+
+        if ($autorizacionError) {
+            $redirect->with('flash.error', "Factura #{$comprobante->id} creada pero no se pudo autorizar en ARCA: {$autorizacionError}. Podés reintentar desde Comprobantes.");
+        }
+
+        return $redirect;
 
     }
 }
