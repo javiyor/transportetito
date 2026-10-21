@@ -91,7 +91,18 @@ class PlanDeCuentasController extends Controller
         ]);
 
         $parent = $cuentaContable->parent;
-        $codigoCompleto = $parent ? $parent->codigo_completo.'.'.$data['codigo'] : $data['codigo'];
+        $codigoIngresado = trim($data['codigo']);
+        if ($parent) {
+            $prefijoPadre = rtrim((string) ($parent->codigo_completo ?: $parent->codigo), '.').'.';
+            // Cuentas importadas suelen tener `codigo` completo; cuentas creadas
+            // desde la UI pueden tener solo el segmento. No volver a prefijar
+            // cuando el formulario ya envió el código jerárquico entero.
+            $codigoCompleto = str_starts_with($codigoIngresado, $prefijoPadre)
+                ? $codigoIngresado
+                : $prefijoPadre.$codigoIngresado;
+        } else {
+            $codigoCompleto = $codigoIngresado;
+        }
 
         $cuentaContable->update([
             'codigo' => $data['codigo'],
