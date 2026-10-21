@@ -94,12 +94,13 @@ class PlanDeCuentasController extends Controller
         $codigoIngresado = trim($data['codigo']);
         if ($parent) {
             $prefijoPadre = rtrim((string) ($parent->codigo_completo ?: $parent->codigo), '.').'.';
-            // Cuentas importadas suelen tener `codigo` completo; cuentas creadas
-            // desde la UI pueden tener solo el segmento. No volver a prefijar
-            // cuando el formulario ya envió el código jerárquico entero.
-            $codigoCompleto = str_starts_with($codigoIngresado, $prefijoPadre)
-                ? $codigoIngresado
-                : $prefijoPadre.$codigoIngresado;
+            // Cuentas importadas pueden tener codigo completo y cuentas creadas
+            // en UI solo el segmento. Quitar todos los prefijos ya presentes
+            // antes de recomponer el codigo jerarquico para no duplicarlo.
+            while (str_starts_with($codigoIngresado, $prefijoPadre)) {
+                $codigoIngresado = substr($codigoIngresado, strlen($prefijoPadre));
+            }
+            $codigoCompleto = $prefijoPadre.$codigoIngresado;
         } else {
             $codigoCompleto = $codigoIngresado;
         }
