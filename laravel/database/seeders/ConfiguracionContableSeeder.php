@@ -30,6 +30,7 @@ class ConfiguracionContableSeeder extends Seeder
             'tributos_ventas'            => ['codigo' => '2.05.001.006.001', 'corto' => '2301'],
             'retenciones_ganancias'      => ['codigo' => '1.03.003.001.003', 'corto' => '2303'],
             'retenciones_iibb'           => ['codigo' => '1.03.003.010', 'corto' => '2311'],
+            'retenciones_iva'            => ['codigo' => '1.03.003.003.004', 'corto' => '1403'],
             'gastos_bancarios'           => ['codigo' => '5.02.002.001.004', 'corto' => '5621'],
             'gastos_default'             => ['codigo' => '5.02.002.001.004', 'corto' => '5621'],
             'medio_pago.efectivo'        => ['codigo' => '1.01.001.008', 'corto' => '1001'],

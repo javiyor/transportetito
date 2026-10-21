@@ -7,6 +7,7 @@ use App\Models\AsientoLinea;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\CuentaContable;
+use App\Models\Empresa;
 use App\Models\PreRecibo;
 use App\Models\Recibo;
 use App\Mail\ReciboConfirmadoMail;
@@ -170,7 +171,19 @@ class PreReciboConfirmer
                 'iva' => 'retenciones_iva',
                 default => null,
             };
-            $cuentaRet = $claveRet ? $this->getOrCreateCuenta($preRecibo->empresa_id, $claveRet === 'retenciones_ganancias' ? '2303' : ($claveRet === 'retenciones_iibb' ? '2311' : '1404'), $tipo, 'activo') : null;
+            $cuentaRet = null;
+            if ($claveRet === 'retenciones_iva') {
+                $cuentaRet = Empresa::query()->find($preRecibo->empresa_id)?->getCuentaContable('retenciones_iva');
+            } elseif ($claveRet === 'retenciones_ganancias') {
+                $cuentaRet = Empresa::query()->find($preRecibo->empresa_id)?->getCuentaContable('retenciones_ganancias')
+                    ?? $this->getOrCreateCuenta($preRecibo->empresa_id, '2303', $tipo, 'activo');
+            } elseif ($claveRet === 'retenciones_iibb') {
+                $cuentaRet = Empresa::query()->find($preRecibo->empresa_id)?->getCuentaContable('retenciones_iibb')
+                    ?? $this->getOrCreateCuenta($preRecibo->empresa_id, '2311', $tipo, 'activo');
+            }
+            if ($claveRet === 'retenciones_iva' && ! $cuentaRet) {
+                throw new \RuntimeException("Cuenta contable no configurada para retención IVA (empresa {$preRecibo->empresa_id}).");
+            }
             // Fallback: usar cuenta genérica si no hay mapeo
             if (!$cuentaRet) {
                 $cuentaRet = $this->getOrCreateCuenta($preRecibo->empresa_id, '2303', 'Retenciones', 'activo');

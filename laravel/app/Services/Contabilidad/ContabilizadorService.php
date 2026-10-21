@@ -222,10 +222,11 @@ class ContabilizadorService
                 }
                 if ($claveRet) {
                     $cuentaRet = $empresa->getCuentaContable($claveRet);
-                    if ($cuentaRet) {
-                        $this->addLinea($asiento, $cuentaRet, null, $importeRet, 0, 'Ret '.($tipo ?: $ret['descripcion'] ?? ''));
-                        $retencionesSum += $importeRet;
+                    if (! $cuentaRet) {
+                        throw new \RuntimeException("Cuenta contable no configurada para retención '{$tipo}' (clave {$claveRet}, empresa {$empresa->id}).");
                     }
+                    $this->addLinea($asiento, $cuentaRet, null, $importeRet, 0, 'Ret '.($tipo ?: $ret['descripcion'] ?? ''));
+                    $retencionesSum += $importeRet;
                 } else {
                     // Si no hay cuenta configurada, igual sumar para que el asiento cuadre (usar una genérica si existe)
                     $cuentaRetGen = $empresa->getCuentaContable('retenciones_ganancias') ?? $empresa->getCuentaContable('retenciones_iibb');
