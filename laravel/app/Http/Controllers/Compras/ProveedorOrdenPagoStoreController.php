@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\OrdenPago;
@@ -37,11 +38,23 @@ class ProveedorOrdenPagoStoreController extends Controller
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'items.*.cheque_numero' => ['nullable', 'string', 'max:64'],
             'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],
+            'items.*.cheque_banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
             'items.*.cheque_vencimiento' => ['nullable', 'date'],
             'items.*.cheque_id' => ['nullable', 'integer', 'exists:cheques,id'],
             'items.*.cheque_tipo' => ['nullable', 'string', 'in:fisico,echeq'],
             'observacion' => ['nullable', 'string', 'max:255'],
         ]);
+
+        foreach ($data['items'] ?? [] as $idx => $item) {
+            if (($item['medio'] ?? null) !== 'cheque_propio') {
+                continue;
+            }
+            $bancoValido = ! empty($item['cheque_banco_id'])
+                && Banco::query()->where('activo', true)->where('es_propio', true)->whereKey($item['cheque_banco_id'])->exists();
+            if (! $bancoValido) {
+                return back()->withErrors(["items.{$idx}.cheque_banco_id" => 'Seleccioná un banco marcado como cuenta propia.'])->withInput();
+            }
+        }
 
         $empresa = $cuenta->empresa()->firstOrFail();
         $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha']);
@@ -65,8 +78,9 @@ class ProveedorOrdenPagoStoreController extends Controller
 
         $itemsData = [];
         $chequesCreados = [];
+        $contabilizacionError = null;
 
-        DB::transaction(function () use ($data, $cuenta, $empresaId, $empresa, $cotizacion, $comprobanteIds, $creditOpIds, $request, &$itemsData, &$chequesCreados) {
+        DB::transaction(function () use ($data, $cuenta, $empresaId, $empresa, $cotizacion, $comprobanteIds, $creditOpIds, $request, &$itemsData, &$chequesCreados, &$contabilizacionError) {
             foreach ($data['items'] ?? [] as $item) {
                 $itemData = [
                     'medio' => $item['medio'],
@@ -88,28 +102,35 @@ class ProveedorOrdenPagoStoreController extends Controller
                     $itemData['cheque_id'] = $cheque->id;
                     $itemData['cheque_numero'] = $cheque->numero;
                     $itemData['cheque_banco'] = $cheque->banco;
+                    $itemData['cheque_banco_id'] = $cheque->banco_id;
                     $itemData['cheque_vencimiento'] = $cheque->fecha_vencimiento?->format('Y-m-d');
                     $chequesCreados[] = $cheque->id;
                 }
 
                 if ($item['medio'] === 'cheque_propio') {
+                    $bancoPropio = Banco::query()
+                        ->where('activo', true)
+                        ->where('es_propio', true)
+                        ->findOrFail($item['cheque_banco_id'] ?? null);
                     $cheque = Cheque::query()->create([
                         'empresa_id' => $empresaId,
                         'tipo' => $item['cheque_tipo'] ?? 'fisico',
                         'origen' => 'propio',
                         'numero' => $item['cheque_numero'],
-                        'banco' => $item['cheque_banco'],
+                        'banco' => $bancoPropio->nombre,
+                        'banco_id' => $bancoPropio->id,
                         'importe' => (float) $item['importe'],
                         'moneda' => $item['moneda'],
                         'fecha_emision' => $data['fecha'],
                         'fecha_vencimiento' => $item['cheque_vencimiento'] ?? null,
-                        'estado' => 'endosado',
+                        'estado' => 'emitido',
                         'endosado_a' => $cuenta->tercero?->razon_social,
                     ]);
 
                     $itemData['cheque_id'] = $cheque->id;
                     $itemData['cheque_numero'] = $cheque->numero;
                     $itemData['cheque_banco'] = $cheque->banco;
+                    $itemData['cheque_banco_id'] = $cheque->banco_id;
                     $itemData['cheque_vencimiento'] = $cheque->fecha_vencimiento?->format('Y-m-d');
                     $chequesCreados[] = $cheque->id;
                 }
@@ -294,12 +315,17 @@ class ProveedorOrdenPagoStoreController extends Controller
             try {
                 $this->contabilizador->contabilizarPagoProveedor($orden);
             } catch (\Throwable $e) {
+                $contabilizacionError = $e->getMessage();
                 Log::warning('No se pudo contabilizar OP', [
                     'orden_pago_id' => $orden->id,
-                    'error' => $e->getMessage(),
+                    'error' => $contabilizacionError,
                 ]);
             }
         });
+
+        if ($contabilizacionError) {
+            return back()->with('flash.error', 'La orden de pago se guardó, pero no se generó su asiento de Libro Diario: '.$contabilizacionError);
+        }
 
         return back()->with('success', 'Orden de pago registrada.');
     }

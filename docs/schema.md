@@ -154,6 +154,7 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
 
 ## Proveedores / Cheques
 - bancos.es_propio (bool, default false) — bancos con cuenta propia; filtran selects de cheque propio, transferencias y movimientos
+- cheques.banco_id (nullable FK bancos) — banco propio del cheque emitido; al pasar a pagado genera débito y asiento de liquidación
 - proveedor_comprobantes
   - id, empresa_id, tercero_cuenta_id, tipo, numero, estado (emitida), moneda, cotizacion_ars, subtotal/iva_total/tributos_total/total, fecha_emision, fecha_vencimiento, detalle (json), cuenta_contable_id, receptor_cuit, observacion, creado_por_user_id
   - detalle: iva_items (legacy) o iva_detalle [{concepto, importe}] (neto_21/105/27/5/25/0, no_gravado, exento), percepciones/retenciones [{concepto, importe}], combustible, neto_no_gravado, op_exentas

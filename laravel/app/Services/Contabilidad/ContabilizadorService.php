@@ -4,8 +4,10 @@ namespace App\Services\Contabilidad;
 
 use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
+use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\Comprobante;
+use App\Models\CuentaContable;
 use App\Models\Empresa;
 use App\Models\GastoOperativo;
 use App\Models\IngresoOperativo;
@@ -258,6 +260,10 @@ class ContabilizadorService
             return null;
         }
 
+        if (! $cuentaProveedores) {
+            throw new \RuntimeException("Cuenta contable no configurada para proveedores_default (empresa {$empresa->id}).");
+        }
+
         return DB::transaction(function () use ($ordenPago, $empresa, $cuentaProveedores, $itemsEfectivos) {
             $asiento = AsientoContable::create([
                 'empresa_id' => $empresa->id,
@@ -285,11 +291,20 @@ class ContabilizadorService
                 $claveMedio = $mapaClaveMedio[$medio] ?? null;
 
                 if (! $claveMedio) {
-                    Log::warning("OP #{$ordenPago->id}: medio de pago '{$medio}' sin mapeo contable.");
-                    continue;
+                    throw new \RuntimeException("OP #{$ordenPago->id}: medio de pago '{$medio}' sin mapeo contable.");
                 }
 
-                $cuentaMedio = $empresa->getCuentaContable($claveMedio);
+                $cheque = null;
+                if ($medio === 'cheque_propio' || $medio === 'echeq') {
+                    $chequeId = (int) ($item['cheque_id'] ?? 0);
+                    $cheque = $chequeId ? Cheque::query()->find($chequeId) : null;
+                    if (! $cheque || $cheque->origen !== 'propio') {
+                        throw new \RuntimeException("OP #{$ordenPago->id}: no se encontró el cheque propio asociado al medio '{$medio}'.");
+                    }
+                    $cuentaMedio = $this->cuentaChequeDiferido($empresa, $cheque);
+                } else {
+                    $cuentaMedio = $empresa->getCuentaContable($claveMedio);
+                }
 
                 // Solo efectivo puede caer en caja_default como fallback; cheques/transferencias deben tener su cuenta configurada.
                 if (! $cuentaMedio && $medio === 'efectivo') {
@@ -297,18 +312,151 @@ class ContabilizadorService
                 }
 
                 if (! $cuentaMedio) {
-                    Log::warning("OP #{$ordenPago->id}: no se encontró cuenta contable para medio '{$medio}' (clave {$claveMedio}).");
-                    continue;
+                    throw new \RuntimeException("OP #{$ordenPago->id}: no se encontró cuenta contable para medio '{$medio}' (clave {$claveMedio}).");
                 }
 
                 $importe = (float) $item['importe'];
 
                 $this->addLinea($asiento, $cuentaProveedores, $ordenPago->cuenta, $importe, 0, 'Cancelacion deuda proveedor');
-                $this->addLinea($asiento, $cuentaMedio, null, 0, $importe, 'Pago via '.$medio);
+                $this->addLinea($asiento, $cuentaMedio, null, 0, $importe, in_array($medio, ['cheque_propio', 'echeq'], true) ? 'Cheque propio emitido (pendiente de débito bancario)' : 'Pago via '.$medio);
             }
 
             return $asiento;
         });
+    }
+
+    /** Registra el débito efectivo del banco cuando un cheque propio se liquida. */
+    public function contabilizarLiquidacionChequePropio(Cheque $cheque, ?int $userId = null): AsientoContable
+    {
+        $empresa = $cheque->empresa;
+        if (! $empresa || $cheque->origen !== 'propio') {
+            throw new \RuntimeException("Cheque #{$cheque->id}: no es un cheque propio válido para liquidar.");
+        }
+        $ordenesConCheque = OrdenPago::query()
+            ->where('empresa_id', $cheque->empresa_id)
+            ->where('estado', '!=', 'anulada')
+            ->get(['cheque_id', 'detalle']);
+        $tieneOrdenPago = $ordenesConCheque->contains(function (OrdenPago $orden) use ($cheque) {
+            return (int) $orden->cheque_id === (int) $cheque->id
+                || collect($orden->detalle['items'] ?? [])->contains(fn ($item) => (int) ($item['cheque_id'] ?? 0) === (int) $cheque->id);
+        });
+        if (! $tieneOrdenPago) {
+            throw new \RuntimeException("Cheque #{$cheque->id}: no está asociado a una orden de pago contabilizada como cheque diferido.");
+        }
+        $banco = $cheque->banco_id ? Banco::query()->where('activo', true)->where('es_propio', true)->find($cheque->banco_id) : null;
+        if (! $banco) {
+            throw new \RuntimeException("Cheque #{$cheque->id}: debe tener asociado un banco propio antes de marcarlo pagado.");
+        }
+
+        $cuentaBanco = $this->cuentaBancoPorNombre($empresa, $banco->nombre);
+        $cuentaDiferidos = $this->cuentaChequeDiferido($empresa, $cheque);
+
+        return DB::transaction(function () use ($cheque, $empresa, $banco, $cuentaBanco, $cuentaDiferidos, $userId) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'cheque_liquidacion')
+                ->where('referencia_id', $cheque->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $importe = round((float) $cheque->importe, 2);
+            $fecha = $cheque->fecha_cobro?->toDateString() ?? now()->toDateString();
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $fecha,
+                'moneda' => $cheque->moneda ?: 'ARS',
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'cheque_liquidacion',
+                'referencia_id' => $cheque->id,
+                'descripcion' => 'Liquidación cheque propio '.($cheque->tipo === 'echeq' ? 'e-cheq ' : '').'#'.($cheque->numero ?: $cheque->id),
+            ]);
+
+            $this->addLinea($asiento, $cuentaDiferidos, null, $importe, 0, 'Cancelación de cheque diferido');
+            $this->addLinea($asiento, $cuentaBanco, null, 0, $importe, 'Débito bancario cheque propio');
+
+            MovimientoBancario::query()->firstOrCreate(
+                ['referencia_tipo' => 'cheque_liquidacion', 'referencia_id' => $cheque->id],
+                [
+                    'empresa_id' => $empresa->id,
+                    'banco_id' => $banco->id,
+                    'fecha' => $fecha,
+                    'tipo' => 'egreso',
+                    'concepto' => 'Liquidación cheque propio #'.($cheque->numero ?: $cheque->id),
+                    'importe' => $importe,
+                    'moneda' => $cheque->moneda ?: 'ARS',
+                    'contabilizado' => true,
+                    'creado_por_user_id' => $userId,
+                ]
+            );
+
+            return $asiento;
+        });
+    }
+
+    private function cuentaChequeDiferido(Empresa $empresa, Cheque $cheque): CuentaContable
+    {
+        $banco = $cheque->banco_id ? Banco::query()->find($cheque->banco_id) : null;
+        $nombreBanco = $banco?->nombre ?: (string) $cheque->banco;
+        $tokensBanco = $this->tokensBanco($nombreBanco);
+
+        $candidatas = CuentaContable::query()
+            ->where('empresa_id', $empresa->id)
+            ->where('tipo', 'pasivo')
+            ->where('activo', true)
+            ->where('contabilizable', true)
+            ->where(function ($q) {
+                $q->where('nombre', 'ilike', '%cheques diferidos%')
+                    ->orWhere('nombre', 'ilike', '%cheque diferido%');
+            })
+            ->get(['id', 'codigo', 'codigo_completo', 'nombre']);
+
+        $elegida = $candidatas->map(function (CuentaContable $cuenta) use ($tokensBanco) {
+            $tokensCuenta = $this->tokensBanco($cuenta->nombre);
+            return ['cuenta' => $cuenta, 'score' => count(array_intersect($tokensBanco, $tokensCuenta))];
+        })->sortByDesc('score')->first();
+
+        if (! $elegida || $elegida['score'] === 0) {
+            throw new \RuntimeException("No se encontró cuenta de cheques diferidos para el banco '{$nombreBanco}' (empresa {$empresa->id}).");
+        }
+
+        return $elegida['cuenta'];
+    }
+
+    private function cuentaBancoPorNombre(Empresa $empresa, string $nombreBanco): CuentaContable
+    {
+        $tokensBanco = $this->tokensBanco($nombreBanco);
+        $candidatas = CuentaContable::query()
+            ->where('empresa_id', $empresa->id)
+            ->where('tipo', 'activo')
+            ->where('activo', true)
+            ->where('contabilizable', true)
+            ->where(function ($q) {
+                $q->where('codigo_completo', 'like', '1.01.002%')
+                    ->orWhere('codigo', 'like', '1.01.002%');
+            })
+            ->get(['id', 'codigo', 'codigo_completo', 'nombre']);
+
+        $elegida = $candidatas->map(function (CuentaContable $cuenta) use ($tokensBanco) {
+            $tokensCuenta = $this->tokensBanco($cuenta->nombre);
+            return ['cuenta' => $cuenta, 'score' => count(array_intersect($tokensBanco, $tokensCuenta))];
+        })->sortByDesc('score')->first();
+
+        if (! $elegida || $elegida['score'] === 0) {
+            throw new \RuntimeException("No se encontró cuenta contable bancaria para '{$nombreBanco}' (empresa {$empresa->id}).");
+        }
+
+        return $elegida['cuenta'];
+    }
+
+    private function tokensBanco(string $nombre): array
+    {
+        $normalizado = mb_strtolower(trim($nombre));
+        $normalizado = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalizado) ?: $normalizado;
+        $normalizado = preg_replace('/[^a-z0-9]+/', ' ', $normalizado) ?? '';
+        $ignorar = ['banco', 'bancos', 'nuevo', 'nvo', 'cta', 'cte', 'cuenta', 'corriente', 'cheques', 'cheque', 'diferidos', 'diferido', 'no', 'corrientes', 'de', 'en', 'usd', 'dolares', 'especial'];
+
+        return array_values(array_filter(explode(' ', trim($normalizado)), fn ($token) => $token !== '' && ! in_array($token, $ignorar, true)));
     }
 
     /**

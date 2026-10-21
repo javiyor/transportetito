@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\Empresa;
+use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ChequeController extends Controller
@@ -17,7 +19,7 @@ class ChequeController extends Controller
     {
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
-        $baseQuery = Cheque::query()->with(['recibo.cuenta.tercero', 'bancoDeposito', 'movimientoBancario']);
+        $baseQuery = Cheque::query()->with(['recibo.cuenta.tercero', 'bancoDeposito', 'bancoPropio', 'movimientoBancario']);
 
         if ($empresaId > 0) {
             $baseQuery->where('empresa_id', $empresaId);
@@ -93,6 +95,7 @@ class ChequeController extends Controller
             'origen' => ['required', 'in:' . implode(',', Cheque::ORIGENES)],
             'numero' => ['nullable', 'string', 'max:64'],
             'banco' => ['nullable', 'string', 'max:255'],
+            'banco_id' => ['nullable', 'integer', 'exists:bancos,id', 'required_if:origen,propio'],
             'importe' => ['required', 'numeric', 'gt:0'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'fecha_emision' => ['required', 'date'],
@@ -102,27 +105,35 @@ class ChequeController extends Controller
             'observacion' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $bancoPropio = null;
+        if ($data['origen'] === 'propio') {
+            $bancoPropio = Banco::query()->where('activo', true)->where('es_propio', true)->findOrFail($data['banco_id']);
+        }
+
         Cheque::query()->create([
             'empresa_id' => $empresaId,
             'tipo' => $data['tipo'],
             'origen' => $data['origen'],
             'numero' => $data['numero'],
-            'banco' => $data['banco'],
+            'banco' => $bancoPropio?->nombre ?? $data['banco'],
+            'banco_id' => $bancoPropio?->id,
             'importe' => $data['importe'],
             'moneda' => $data['moneda'],
             'fecha_emision' => $data['fecha_emision'],
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'titular' => $data['titular'],
             'librado_por' => $data['librado_por'],
-            'estado' => 'en_cartera',
+            'estado' => $data['origen'] === 'propio' ? 'emitido' : 'en_cartera',
             'observacion' => $data['observacion'],
         ]);
 
         return back()->with('success', 'Cheque creado.');
     }
 
-    public function update(Request $request, Cheque $cheque): RedirectResponse
+    public function update(Request $request, Cheque $cheque, ContabilizadorService $contabilizador): RedirectResponse
     {
+        abort_unless((int) $cheque->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
+
         $data = $request->validate([
             'estado' => ['required', 'in:' . implode(',', array_merge(Cheque::ESTADOS_PROPIO, Cheque::ESTADOS_TERCERO))],
             'fecha_deposito' => ['nullable', 'date'],
@@ -133,11 +144,42 @@ class ChequeController extends Controller
             'tipo' => ['nullable', 'in:' . implode(',', Cheque::TIPOS)],
             'numero' => ['nullable', 'string', 'max:64'],
             'banco' => ['nullable', 'string', 'max:255'],
+            'banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
             'banco_deposito_id' => ['nullable', 'exists:bancos,id'],
         ]);
 
         $oldEstado = $cheque->estado;
         $newEstado = $data['estado'];
+
+        if ($cheque->origen === 'propio' && $newEstado === 'pagado' && $oldEstado !== 'pagado') {
+            $request->validate(['fecha_cobro' => ['required', 'date']]);
+            $bancoId = (int) ($data['banco_id'] ?? $cheque->banco_id ?? 0);
+            $banco = $bancoId > 0 ? Banco::query()->where('activo', true)->where('es_propio', true)->find($bancoId) : null;
+            if (! $banco) {
+                return back()->with('flash.error', 'Seleccioná el banco propio del cheque antes de marcarlo pagado.');
+            }
+            $data['banco_id'] = $banco->id;
+            $data['banco'] = $banco->nombre;
+
+            try {
+                DB::transaction(function () use ($cheque, $data, $contabilizador, $request) {
+                    $cheque->update($data);
+                    $contabilizador->contabilizarLiquidacionChequePropio($cheque->fresh(['empresa', 'bancoPropio']), $request->user()->id);
+                });
+            } catch (\Throwable $e) {
+                return back()->with('flash.error', 'No se pudo registrar el débito bancario del cheque: '.$e->getMessage());
+            }
+
+            return back()->with('flash.success', 'Cheque propio pagado: se registró el débito en banco y el asiento de liquidación.');
+        }
+
+        if ($cheque->origen === 'propio' && ! empty($data['banco_id'])) {
+            $bancoPropio = Banco::query()->where('activo', true)->where('es_propio', true)->find($data['banco_id']);
+            if (! $bancoPropio) {
+                return back()->with('flash.error', 'El banco seleccionado debe estar activo y marcado como cuenta propia.');
+            }
+            $data['banco'] = $bancoPropio->nombre;
+        }
 
         // Manejar transición a depositado: crear movimiento pendiente
         if ($newEstado === 'depositado' && $oldEstado !== 'depositado') {

@@ -15,6 +15,7 @@ class Cheque extends Model
         'origen',
         'numero',
         'banco',
+        'banco_id',
         'importe',
         'moneda',
         'titular',
@@ -43,6 +44,7 @@ class Cheque extends Model
         'fecha_rechazo' => 'date',
         'recibo_item_id' => 'int',
         'banco_deposito_id' => 'int',
+        'banco_id' => 'int',
         'movimiento_bancario_id' => 'int',
     ];
 
@@ -81,6 +83,11 @@ class Cheque extends Model
     public function bancoDeposito(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Banco::class, 'banco_deposito_id');
+    }
+
+    public function bancoPropio(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Banco::class, 'banco_id');
     }
 
     public function movimientoBancario(): BelongsTo

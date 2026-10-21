@@ -48,6 +48,7 @@ const createForm = useForm({
     origen: 'tercero',
     numero: '',
     banco: '',
+    banco_id: '',
     importe: '',
     moneda: 'ARS',
     fecha_emision: new Date().toISOString().slice(0, 10),
@@ -75,6 +76,7 @@ const editForm = useForm({
     tipo: '',
     numero: '',
     banco: '',
+    banco_id: '',
     fecha_deposito: '',
     fecha_cobro: '',
     fecha_rechazo: '',
@@ -90,6 +92,7 @@ const openEdit = (c) => {
     editForm.tipo = c.tipo;
     editForm.numero = c.numero || '';
     editForm.banco = c.banco || '';
+    editForm.banco_id = c.banco_id || '';
     editForm.fecha_deposito = c.fecha_deposito ? String(c.fecha_deposito).slice(0, 10) : '';
     editForm.fecha_cobro = c.fecha_cobro ? String(c.fecha_cobro).slice(0, 10) : '';
     editForm.fecha_rechazo = c.fecha_rechazo ? String(c.fecha_rechazo).slice(0, 10) : '';
@@ -263,11 +266,16 @@ const formatFecha = (v) => {
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Banco{{ createForm.origen === 'propio' ? ' (cuenta propia)' : '' }}</div>
-                        <select v-model="createForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <select v-if="createForm.origen === 'propio'" v-model="createForm.banco_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">(seleccionar cuenta propia)</option>
+                            <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                        </select>
+                        <select v-else v-model="createForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(seleccionar)</option>
-                            <option v-for="b in (createForm.origen === 'propio' ? bancosPropios : bancos)" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                            <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
                         </select>
                         <InputError :message="createForm.errors.banco" />
+                        <InputError :message="createForm.errors.banco_id" />
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Importe</div>
@@ -440,18 +448,23 @@ const formatFecha = (v) => {
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Banco{{ editForm.origen === 'propio' ? ' (cuenta propia)' : '' }}</div>
-                        <select v-model="editForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                        <select v-if="editForm.origen === 'propio'" v-model="editForm.banco_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">(seleccionar cuenta propia)</option>
+                            <option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option>
+                        </select>
+                        <select v-else v-model="editForm.banco" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(seleccionar)</option>
-                            <option v-for="b in (editForm.origen === 'propio' ? bancosPropios : bancos)" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
+                            <option v-for="b in bancos" :key="b.id" :value="b.nombre">{{ b.nombre }}</option>
                         </select>
                         <InputError :message="editForm.errors.banco" />
+                        <InputError :message="editForm.errors.banco_id" />
                     </div>
-                    <div v-if="editForm.estado === 'depositado' || editForm.estado === 'cobrado'">
+                    <div v-if="editForm.origen === 'tercero' && (editForm.estado === 'depositado' || editForm.estado === 'cobrado')">
                         <div class="text-xs font-medium text-gray-700 mb-1">Fecha depósito</div>
                         <TextInput v-model="editForm.fecha_deposito" type="date" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_deposito" />
                     </div>
-                    <div v-if="editForm.estado === 'depositado' || editForm.estado === 'cobrado'">
+                    <div v-if="editForm.origen === 'tercero' && (editForm.estado === 'depositado' || editForm.estado === 'cobrado')">
                         <div class="text-xs font-medium text-gray-700 mb-1">Banco donde se deposita (cuenta propia)</div>
                         <select v-model="editForm.banco_deposito_id" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="">(seleccionar banco)</option>
@@ -461,11 +474,12 @@ const formatFecha = (v) => {
                         <div v-if="editForm.estado === 'depositado'" class="text-xs text-blue-600 mt-1">Se generará movimiento bancario pendiente</div>
                         <div v-if="editForm.estado === 'cobrado'" class="text-xs text-green-600 mt-1">Se marcará como acreditado</div>
                     </div>
-                    <div v-if="editForm.estado === 'cobrado'">
-                        <div class="text-xs font-medium text-gray-700 mb-1">Fecha cobro (acreditación)</div>
+                    <div v-if="editForm.estado === 'cobrado' || (editForm.origen === 'propio' && editForm.estado === 'pagado')">
+                        <div class="text-xs font-medium text-gray-700 mb-1">{{ editForm.origen === 'propio' ? 'Fecha de pago bancario' : 'Fecha cobro (acreditación)' }}</div>
                         <TextInput v-model="editForm.fecha_cobro" type="date" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_cobro" />
                     </div>
+                    <div v-if="editForm.origen === 'propio' && editForm.estado === 'emitido'" class="text-xs text-blue-700 sm:col-span-2 self-end">El cheque ya cancela la cuenta corriente; el banco se debitará al marcarlo Pagado.</div>
                     <div v-if="editForm.estado === 'rechazado'">
                         <div class="text-xs font-medium text-gray-700 mb-1">Fecha rechazo</div>
                         <TextInput v-model="editForm.fecha_rechazo" type="date" class="block w-full" />
