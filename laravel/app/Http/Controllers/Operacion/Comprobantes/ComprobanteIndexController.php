@@ -52,8 +52,18 @@ class ComprobanteIndexController extends Controller
             ->orderByDesc('arca_numero')
             ->orderByDesc('id');
 
-        if (in_array($tipo, ['factura_interna', 'guia_envio', 'nota_credito_interna'], true)) {
-            $query->where('tipo', $tipo);
+        if ($tipo === 'factura_interna') {
+            $query->whereIn('tipo', [
+                'factura_interna', 'factura_a', 'factura_b', 'factura_c', 'factura_e', 'factura_m',
+                'factura_credito_a', 'factura_credito_b', 'factura_credito_c',
+            ]);
+        } elseif ($tipo === 'nota_credito_interna') {
+            $query->whereIn('tipo', [
+                'nota_credito_interna', 'nota_credito_a', 'nota_credito_b', 'nota_credito_c',
+                'nota_credito_e', 'nota_credito_m', 'nota_credito_manual',
+            ]);
+        } elseif ($tipo === 'guia_envio') {
+            $query->where('tipo', 'guia_envio');
         }
 
         if (in_array($estado, ['emitida', 'anulada'], true)) {
