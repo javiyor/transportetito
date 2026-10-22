@@ -168,15 +168,32 @@ XML;
         $signed = (string) file_get_contents($outFile);
         @unlink($outFile);
 
-        // Extract base64 payload from S/MIME output
-        $parts = preg_split("/\R\R/", $signed, 2);
-        $payload = $parts[1] ?? '';
-        $payload = preg_replace('/[^A-Za-z0-9+\/=]/', '', (string) $payload) ?? '';
-
-        if ($payload === '') {
-            throw new RuntimeException('No se pudo extraer CMS firmado.');
+        // openssl_pkcs7_sign with PKCS7_DETACHED emits multipart/signed S/MIME:
+        // strip the original TRA part and MIME boundaries; WSAA expects only
+        // the base64-encoded DER CMS signature from the application/pkcs7-signature part.
+        if (! preg_match('/boundary="?([^";\r\n]+)"?/i', $signed, $boundaryMatch)) {
+            throw new RuntimeException('Salida S/MIME de OpenSSL sin boundary MIME.');
         }
 
-        return $payload;
+        $boundary = '--'.$boundaryMatch[1];
+        $messageParts = explode($boundary, $signed);
+        foreach ($messageParts as $messagePart) {
+            $lowerPart = strtolower($messagePart);
+            if (! str_contains($lowerPart, 'content-type: application/x-pkcs7-signature')
+                && ! str_contains($lowerPart, 'content-type: application/pkcs7-signature')) {
+                continue;
+            }
+
+            $mimePart = preg_split("/\R\R/", trim($messagePart), 2);
+            $payload = preg_replace('/\s+/', '', (string) ($mimePart[1] ?? '')) ?? '';
+            $cmsDer = base64_decode($payload, true);
+            if ($cmsDer === false || $cmsDer === '') {
+                throw new RuntimeException('La parte CMS de la firma S/MIME no contiene Base64 válido.');
+            }
+
+            return base64_encode($cmsDer);
+        }
+
+        throw new RuntimeException('No se encontró la parte application/pkcs7-signature en la firma S/MIME.');
     }
 }
