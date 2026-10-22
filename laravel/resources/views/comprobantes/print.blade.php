@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>{{ $comprobante->tipo === 'guia_envio' ? 'Guia' : 'Factura' }} #{{ $comprobante->id }}</title>
+    <title>{{ ($comprobante->tipo === 'guia_envio' || ($comprobante->requiere_autorizacion_arca && ! $comprobante->arca_cae)) ? 'Guía' : 'Factura' }} #{{ $comprobante->id }}</title>
     <style>
         @page {
             size: A4;
@@ -390,7 +390,8 @@
             'palets' => 0,
         ];
     }
-    $esGuia = $comprobante->tipo === 'guia_envio';
+    $esGuiaPendiente = (bool) $comprobante->requiere_autorizacion_arca && ! $comprobante->arca_cae;
+    $esGuia = $comprobante->tipo === 'guia_envio' || $esGuiaPendiente;
     $esFactura = (bool) preg_match('/^factura/', $comprobante->tipo);
     $esNotaCredito = (bool) preg_match('/^nota_credito/', $comprobante->tipo);
     $esNotaDebito = (bool) preg_match('/^nota_debito/', $comprobante->tipo);
@@ -456,6 +457,9 @@
     }
     $obsText = $observaciones->unique()->implode('; ');
     $totalValorDeclarado = $comprobante->pedidos->sum(fn($p) => (float) $p->valor_declarado);
+    $totalSinIva = round((float) ($calculo['subtotal_gravado'] ?? $calculo['total_importe'] ?? $comprobante->subtotal ?? $comprobante->total ?? 0), 2);
+    $origenes = $comprobante->pedidos->map(fn($p) => $p->remitente)->filter()->unique('id')->values();
+    $destinos = $comprobante->pedidos->map(fn($p) => $p->destinatario)->filter()->unique('id')->values();
 @endphp
 
 @php
@@ -472,41 +476,60 @@
     {{--  GUIA NO FISCAL  --}}
     {{-- ================================================================ --}}
     <div class="page-border">
-        <div class="watermark">GUÍA NO FISCAL</div>
+        <div class="watermark">{{ $esGuiaPendiente ? 'GUÍA' : 'GUÍA NO FISCAL' }}</div>
         <div class="content">
 
         <div class="guia-header-centered">
-            @if($logoSrc)
+            @if(!$esGuiaPendiente && $logoSrc)
                 <div style="margin-bottom:4pt;">
                     <img src="{{ $logoSrc }}" alt="Logo" style="max-height:35pt;max-width:120pt;object-fit:contain;">
                 </div>
             @endif
-            <h1>Guía no fiscal</h1>
+            <h1>{{ $esGuiaPendiente ? 'Guía' : 'Guía no fiscal' }}</h1>
             <div class="line">Fecha: {{ optional($comprobante->fecha_emision)->format('d/m/Y') }}</div>
-            <div class="line">N° de guía: #{{ $comprobante->id }}</div>
-            @if($comprobante->numero_interno)
+            <div class="line">{{ $esGuiaPendiente ? 'N° de comprobante:' : 'N° de guía:' }} {{ $comprobante->numero_interno ?: '#'.$comprobante->id }}</div>
+            @if(!$esGuiaPendiente && $comprobante->numero_interno)
                 <div class="line">Interno: {{ $comprobante->numero_interno }}</div>
             @endif
-            <div class="contacto">{{ $empresa->razon_social }} - Tel: {{ $empresa->telefono ?? $empresa->whatsapp ?? '-' }}</div>
+            @if(!$esGuiaPendiente)
+                <div class="contacto">{{ $empresa->razon_social }} - Tel: {{ $empresa->telefono ?? $empresa->whatsapp ?? '-' }}</div>
+            @endif
         </div>
 
         <div class="guia-cliente-box">
-            <div class="row"><strong>Cliente:</strong> <span>{{ $comprobante->facturarCuenta?->tercero?->razon_social ?? '-' }}</span></div>
-            <div class="row"><strong>CUIT:</strong> <span>{{ $comprobante->facturarCuenta?->tercero?->cuit ?? '-' }}</span></div>
-            <div class="row"><strong>Entrega:</strong> <span>{{ $comprobante->entregaCuenta?->tercero?->razon_social ?? '-' }}</span></div>
+            @if($esGuiaPendiente)
+                <div style="display:flex;gap:12pt;">
+                    <div style="width:50%;"><strong>Origen</strong>
+                        @forelse($origenes as $tercero)
+                            <div>{{ $tercero->razon_social }} · CUIT {{ $tercero->cuit ?: '-' }}</div>
+                            @if($domicilioStr($tercero))<div class="helper">{{ $domicilioStr($tercero) }}</div>@endif
+                        @empty<div>-</div>@endforelse
+                    </div>
+                    <div style="width:50%;"><strong>Destino</strong>
+                        @forelse($destinos as $tercero)
+                            <div>{{ $tercero->razon_social }} · CUIT {{ $tercero->cuit ?: '-' }}</div>
+                            @if($domicilioStr($tercero))<div class="helper">{{ $domicilioStr($tercero) }}</div>@endif
+                        @empty<div>-</div>@endforelse
+                    </div>
+                </div>
+            @else
+                <div class="row"><strong>Cliente:</strong> <span>{{ $comprobante->facturarCuenta?->tercero?->razon_social ?? '-' }}</span></div>
+                <div class="row"><strong>CUIT:</strong> <span>{{ $comprobante->facturarCuenta?->tercero?->cuit ?? '-' }}</span></div>
+                <div class="row"><strong>Entrega:</strong> <span>{{ $comprobante->entregaCuenta?->tercero?->razon_social ?? '-' }}</span></div>
+            @endif
         </div>
 
         @if(!empty($calculo))
         <table class="calc-table">
-            <tr><td>Flete</td><td class="derecha">{{ $fmtMoneda($calculo['flete'] ?? 0) }}</td></tr>
-            <tr><td>Seguro</td><td class="derecha">{{ $fmtMoneda($calculo['seguro'] ?? 0) }}</td></tr>
+            @if(isset($calculo['flete']))<tr><td>Flete</td><td class="derecha">{{ $fmtMoneda($calculo['flete']) }}</td></tr>@endif
+            @if(isset($calculo['seguro']))<tr><td>Seguro</td><td class="derecha">{{ $fmtMoneda($calculo['seguro']) }}</td></tr>@endif
             @if(!empty($calculo['comision_cr']) && (float)$calculo['comision_cr'] > 0)
             <tr><td>Comisión CR</td><td class="derecha">{{ $fmtMoneda($calculo['comision_cr']) }}</td></tr>
             @endif
             @if(isset($calculo['valor_neto_total']))
             <tr><td>Valor neto total (valor * %)</td><td class="derecha">{{ $fmtMoneda($calculo['valor_neto_total']) }}</td></tr>
             @endif
-            <tr class="total-row"><td><strong>Total</strong></td><td class="derecha"><strong>{{ $fmtMoneda($calculo['total'] ?? 0) }}</strong></td></tr>
+            <tr class="total-row"><td><strong>{{ $esGuiaPendiente ? 'Total sin IVA' : 'Total' }}</strong></td><td class="derecha"><strong>{{ $fmtMoneda($esGuiaPendiente ? $totalSinIva : ($calculo['total'] ?? 0)) }}</strong></td></tr>
         </table>
         @if(!empty($calculo['seleccion']) || !empty($calculo['por_relacion'][0]['seleccion'] ?? null))
         <div style="font-size:7pt; color:#555; margin-top:4pt;">
@@ -520,30 +543,52 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Remitente</th>
-                    <th>Destinatario</th>
+                    <th>Origen</th>
+                    <th>Destino / detalle</th>
+                    @if($esGuiaPendiente)<th>Remito</th>@endif
                     <th class="num">Bultos</th>
                     <th class="num">Palets</th>
+                    @if($esGuiaPendiente)<th class="num">Valor declarado</th>@endif
+                    @if($esGuiaPendiente)<th class="num">Importe sin IVA</th>@endif
                 </tr>
             </thead>
             <tbody>
-                @forelse($comprobante->pedidos as $pedido)
+                @forelse($comprobante->pedidos as $pedidoIndex => $pedido)
+                    @php
+                        $directItem = $detalle['items'][$pedidoIndex] ?? null;
+                        if (!empty($detalle['carga_directa']) && is_array($directItem)) {
+                            $importeLineaSinIva = (float) ($directItem['importe'] ?? 0)
+                                + (float) ($directItem['seguro'] ?? 0)
+                                + (float) ($directItem['cr'] ?? 0);
+                        } elseif (!empty($calculo['valor_neto_total']) && ($calculo['valor_declarado'] ?? 0) > 0) {
+                            $importeLineaSinIva = (float) $pedido->valor_declarado / (float) $calculo['valor_declarado'] * (float) $calculo['valor_neto_total'];
+                        } elseif (count($comprobante->pedidos) > 0) {
+                            $importeLineaSinIva = $totalSinIva / count($comprobante->pedidos);
+                        } else {
+                            $importeLineaSinIva = (float) ($pedido->cr_importe ?? 0);
+                        }
+                    @endphp
                     <tr>
                         <td>{{ $pedido->id }}</td>
                         <td>{{ $pedido->remitente?->razon_social ?? '-' }}</td>
-                        <td>{{ $pedido->destinatario?->razon_social ?? '-' }}<br><span class="helper">{{ $pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino' }}</span></td>
+                        <td>{{ $pedido->destinatario?->razon_social ?? '-' }}@if($esGuiaPendiente && $pedido->observacion)<br><span class="helper">{{ $pedido->observacion }}</span>@endif<br><span class="helper">{{ $pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino' }}</span></td>
+                        @if($esGuiaPendiente)<td>{{ $pedido->remito_numero ?: '-' }}</td>@endif
                         <td class="num">{{ $pedido->bultos }}</td>
                         <td class="num">{{ $pedido->palets ?: '-' }}</td>
+                        @if($esGuiaPendiente)<td class="num">{{ $fmtMoneda($pedido->valor_declarado) }}</td>@endif
+                        @if($esGuiaPendiente)<td class="num">{{ $fmtMoneda($importeLineaSinIva) }}</td>@endif
                     </tr>
                 @empty
-                    <tr><td colspan="5">Sin pedidos.</td></tr>
+                    <tr><td colspan="{{ $esGuiaPendiente ? 8 : 5 }}">Sin pedidos.</td></tr>
                 @endforelse
             </tbody>
         </table>
 
-        <div style="border-top:1px solid #999;padding-top:4pt;margin-top:8pt;text-align:center;font-size:7pt;color:#666;">
-            {{ $empresa->razon_social }} - CUIT {{ $empresa->cuit }}
-        </div>
+        @if(!$esGuiaPendiente)
+            <div style="border-top:1px solid #999;padding-top:4pt;margin-top:8pt;text-align:center;font-size:7pt;color:#666;">
+                {{ $empresa->razon_social }} - CUIT {{ $empresa->cuit }}
+            </div>
+        @endif
 
         </div>{{-- /content --}}
     </div>{{-- /page-border --}}
