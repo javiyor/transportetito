@@ -148,7 +148,9 @@ XML;
 
         file_put_contents($traFile, $traXml);
 
-        $flags = PKCS7_BINARY | PKCS7_DETACHED;
+        // WSAA loginCms recibe únicamente el CMS, por lo que el TRA debe estar
+        // encapsulado dentro del PKCS#7; una firma detached no puede validarse allí.
+        $flags = PKCS7_BINARY;
         $ok = openssl_pkcs7_sign(
             $traFile,
             $outFile,
@@ -168,32 +170,21 @@ XML;
         $signed = (string) file_get_contents($outFile);
         @unlink($outFile);
 
-        // openssl_pkcs7_sign with PKCS7_DETACHED emits multipart/signed S/MIME:
-        // strip the original TRA part and MIME boundaries; WSAA expects only
-        // the base64-encoded DER CMS signature from the application/pkcs7-signature part.
-        if (! preg_match('/boundary="?([^";\r\n]+)"?/i', $signed, $boundaryMatch)) {
-            throw new RuntimeException('Salida S/MIME de OpenSSL sin boundary MIME.');
+        // Con PKCS7_BINARY no-detached, OpenSSL produce una parte MIME con el
+        // CMS encapsulado (application/x-pkcs7-mime). WSAA espera su Base64 DER.
+        $mimeParts = preg_split("/\R\R/", $signed, 2);
+        $headers = strtolower((string) ($mimeParts[0] ?? ''));
+        if (! str_contains($headers, 'content-type: application/x-pkcs7-mime')
+            && ! str_contains($headers, 'content-type: application/pkcs7-mime')) {
+            throw new RuntimeException('OpenSSL no generó un CMS S/MIME encapsulado válido para WSAA.');
         }
 
-        $boundary = '--'.$boundaryMatch[1];
-        $messageParts = explode($boundary, $signed);
-        foreach ($messageParts as $messagePart) {
-            $lowerPart = strtolower($messagePart);
-            if (! str_contains($lowerPart, 'content-type: application/x-pkcs7-signature')
-                && ! str_contains($lowerPart, 'content-type: application/pkcs7-signature')) {
-                continue;
-            }
-
-            $mimePart = preg_split("/\R\R/", trim($messagePart), 2);
-            $payload = preg_replace('/\s+/', '', (string) ($mimePart[1] ?? '')) ?? '';
-            $cmsDer = base64_decode($payload, true);
-            if ($cmsDer === false || $cmsDer === '') {
-                throw new RuntimeException('La parte CMS de la firma S/MIME no contiene Base64 válido.');
-            }
-
-            return base64_encode($cmsDer);
+        $payload = preg_replace('/\s+/', '', (string) ($mimeParts[1] ?? '')) ?? '';
+        $cmsDer = base64_decode($payload, true);
+        if ($cmsDer === false || $cmsDer === '') {
+            throw new RuntimeException('El CMS S/MIME encapsulado no contiene Base64 válido.');
         }
 
-        throw new RuntimeException('No se encontró la parte application/pkcs7-signature en la firma S/MIME.');
+        return base64_encode($cmsDer);
     }
 }
