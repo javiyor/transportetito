@@ -26,6 +26,10 @@ class ComprobanteAutorizarArcaController extends Controller
             return back()->with('error', 'Este comprobante no requiere autorizacion ARCA.');
         }
 
+        if (! empty($comprobante->arca_cae)) {
+            return back()->with('error', 'El comprobante ya tiene CAE y no se puede volver a autorizar.');
+        }
+
         $data = $request->validate([
             'tipo' => ['required', 'in:FA,FB,FC,FCA,FCB,FCC'],
         ]);

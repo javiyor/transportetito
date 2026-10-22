@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion\Comprobantes;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\TerceroCuenta;
@@ -84,7 +85,16 @@ class ComprobanteIndexController extends Controller
 
         $comprobantes = $query->paginate(30)->withQueryString();
 
-        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos) {
+        $motivosAutorizacion = AuditLog::query()
+            ->where('subject_type', Comprobante::class)
+            ->whereIn('subject_id', $comprobantes->getCollection()->pluck('id'))
+            ->where('action', 'comprobante.arca_autorizacion_fallida')
+            ->orderByDesc('id')
+            ->get(['subject_id', 'context'])
+            ->unique('subject_id')
+            ->mapWithKeys(fn (AuditLog $log) => [$log->subject_id => $log->context['mensaje'] ?? null]);
+
+        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos, $motivosAutorizacion) {
             $creditoEmitido = round((float) $comprobante->notasCredito
                 ->where('estado', '!=', 'anulada')
                 ->sum(fn (Comprobante $nota) => abs((float) $nota->total)), 2);
@@ -100,6 +110,7 @@ class ComprobanteIndexController extends Controller
                         $comprobante->facturarCuenta?->tercero?->cuit,
                     )
                     : [],
+                'arca_motivo' => $comprobante->arca_error ?: ($motivosAutorizacion[$comprobante->id] ?? null),
                 'credit_summary' => [
                     'credito_emitido' => $creditoEmitido,
                     'saldo_acreditable' => (string) $comprobante->tipo === 'factura_interna'
