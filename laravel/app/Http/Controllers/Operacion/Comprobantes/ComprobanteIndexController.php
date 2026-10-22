@@ -94,7 +94,7 @@ class ComprobanteIndexController extends Controller
             ->unique('subject_id')
             ->mapWithKeys(fn (AuditLog $log) => [$log->subject_id => $log->context['mensaje'] ?? null]);
 
-        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos, $motivosAutorizacion) {
+        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos, $motivosAutorizacion, $empresaId) {
             $creditoEmitido = round((float) $comprobante->notasCredito
                 ->where('estado', '!=', 'anulada')
                 ->sum(fn (Comprobante $nota) => abs((float) $nota->total)), 2);
@@ -111,6 +111,7 @@ class ComprobanteIndexController extends Controller
                     )
                     : [],
                 'arca_motivo' => $comprobante->arca_error ?: ($motivosAutorizacion[$comprobante->id] ?? null),
+                'arca_reintento_permitido' => (int) $comprobante->empresa_id === $empresaId,
                 'credit_summary' => [
                     'credito_emitido' => $creditoEmitido,
                     'saldo_acreditable' => (string) $comprobante->tipo === 'factura_interna'
