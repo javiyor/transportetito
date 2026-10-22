@@ -30,6 +30,7 @@ const applyFilters = () => {
 };
 
 const reintentandoId = ref(null);
+const copiadoArcaId = ref(null);
 const reintentarArca = (comprobante) => {
     const tipo = comprobante.arca_tipo_opciones?.[0]?.code;
     if (!tipo) return;
@@ -38,6 +39,35 @@ const reintentarArca = (comprobante) => {
         preserveScroll: true,
         onFinish: () => { reintentandoId.value = null; },
     });
+};
+
+const copiarErrorArca = async (comprobante) => {
+    const texto = String(comprobante.arca_motivo || '');
+    if (!texto) return;
+
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(texto);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = texto;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const copiado = document.execCommand('copy');
+            textarea.remove();
+            if (!copiado) throw new Error('No se pudo copiar el error ARCA.');
+        }
+
+        copiadoArcaId.value = comprobante.id;
+        window.setTimeout(() => {
+            if (copiadoArcaId.value === comprobante.id) copiadoArcaId.value = null;
+        }, 2000);
+    } catch {
+        copiadoArcaId.value = null;
+    }
 };
 
 const arcaTipoLabel = (arca_tipo_cbte) => {
@@ -233,7 +263,10 @@ const translateLabel = (label) => {
                                     <span v-else>-</span>
                                 </div>
                             </div>
-                            <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_motivo" class="text-xs text-red-700 break-words">Motivo ARCA: {{ c.arca_motivo }}</div>
+                            <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_motivo" class="text-xs text-red-700">
+                                <div class="break-words whitespace-pre-wrap">Motivo ARCA: {{ c.arca_motivo }}</div>
+                                <button type="button" class="mt-1 text-xs font-medium text-indigo-700 hover:text-indigo-900" @click="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
+                            </div>
                         </div>
                     </div>
                     <div v-if="!comprobantes.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</div>
@@ -279,7 +312,10 @@ const translateLabel = (label) => {
                                         <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
                                         <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                                     </div>
-                                    <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_motivo" class="mt-0.5 text-[10px] text-red-700 truncate max-w-[220px]" :title="c.arca_motivo">{{ c.arca_motivo }}</div>
+                                    <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_motivo" class="mt-1 max-w-[320px] text-[10px] text-red-700">
+                                        <div class="break-words whitespace-pre-wrap">{{ c.arca_motivo }}</div>
+                                        <button type="button" class="mt-0.5 font-medium text-indigo-700 hover:text-indigo-900" @click.stop="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
