@@ -276,6 +276,10 @@ class CargaDirectaStoreController extends Controller
                 $comprobante->refresh();
             } catch (\Throwable $e) {
                 $autorizacionError = $e->getMessage();
+                $comprobante->forceFill([
+                    'arca_resultado' => 'error',
+                    'arca_error' => $autorizacionError,
+                ])->save();
                 Log::warning('No se pudo autorizar carga directa en ARCA', [
                     'comprobante_id' => $comprobante->id,
                     'empresa_id' => $empresaId,

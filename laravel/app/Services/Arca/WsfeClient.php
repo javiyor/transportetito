@@ -7,6 +7,8 @@ use App\Models\Deposito;
 use App\Models\Comprobante;
 use App\Services\Moneda\MonedaAfipMapper;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use SoapClient;
 use SoapFault;
@@ -319,9 +321,10 @@ class WsfeClient
             throw new RuntimeException('WSDL WSFE no configurado para '.$env);
         }
 
-        return new SoapClient($wsdl, [
+        return new SoapClient($this->localWsdl($wsdl, $env), [
             'exceptions' => true,
             'trace' => false,
+            'cache_wsdl' => WSDL_CACHE_NONE,
             'stream_context' => stream_context_create([
                 'ssl' => [
                     'verify_peer' => false,
@@ -331,6 +334,34 @@ class WsfeClient
             ]),
             'connection_timeout' => 30,
         ]);
+    }
+
+    private function localWsdl(string $url, string $env): string
+    {
+        $path = storage_path('app/framework/cache/arca/wsfe-'.$env.'.wsdl');
+        $cacheFresh = is_file($path) && (filemtime($path) ?: 0) > (time() - 7 * 24 * 60 * 60);
+        if ($cacheFresh) {
+            return $path;
+        }
+
+        try {
+            $response = Http::timeout(30)->get($url);
+            if (! $response->successful() || ! str_contains($response->body(), 'definitions')) {
+                throw new RuntimeException('Respuesta HTTP '.$response->status().' al descargar WSDL WSFE.');
+            }
+
+            File::ensureDirectoryExists(dirname($path));
+            File::put($path, $response->body());
+
+            return $path;
+        } catch (\Throwable $e) {
+            // Una copia previamente descargada permite seguir ante una caída temporal de ARCA.
+            if (is_file($path) && filesize($path) > 0) {
+                return $path;
+            }
+
+            throw new RuntimeException('No se pudo descargar el WSDL WSFE desde '.$url.': '.$e->getMessage(), 0, $e);
+        }
     }
 
     private function resolveDocCliente(?string $condicionIva, ?string $cuit): array

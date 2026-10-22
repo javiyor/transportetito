@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
 use App\Models\Empresa;
 use App\Models\TerceroCuenta;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ComprobanteIndexController extends Controller
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request, ArcaTipoComprobanteResolver $arcaTipos)
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $tipo = (string) ($request->query('tipo') ?: 'todos');
@@ -42,9 +43,9 @@ class ComprobanteIndexController extends Controller
 
         $query = Comprobante::query()
             ->with([
-                'empresa:id,razon_social',
-                'entregaCuenta.tercero:id,cuit,razon_social',
-                'facturarCuenta.tercero:id,cuit,razon_social',
+                'empresa:id,razon_social,condicion_iva',
+                'entregaCuenta.tercero:id,cuit,razon_social,condicion_iva',
+                'facturarCuenta.tercero:id,cuit,razon_social,condicion_iva',
                 'notasCredito:id,comprobante_origen_id,estado,total',
             ])
             ->whereIn('empresa_id', $fEmpresaId > 0 ? [$fEmpresaId] : $empresaIds)
@@ -83,12 +84,22 @@ class ComprobanteIndexController extends Controller
 
         $comprobantes = $query->paginate(30)->withQueryString();
 
-        $comprobantes->through(function (Comprobante $comprobante) {
+        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos) {
             $creditoEmitido = round((float) $comprobante->notasCredito
                 ->where('estado', '!=', 'anulada')
                 ->sum(fn (Comprobante $nota) => abs((float) $nota->total)), 2);
 
             return array_merge($comprobante->toArray(), [
+                'arca_tipo_opciones' => (string) $comprobante->tipo === 'factura_interna'
+                    && ! $comprobante->arca_cae
+                    && $comprobante->requiere_autorizacion_arca
+                    ? $arcaTipos->opcionesFactura(
+                        $comprobante->empresa?->condicion_iva,
+                        $comprobante->facturarCuenta?->tercero?->condicion_iva,
+                        (float) $comprobante->total,
+                        $comprobante->facturarCuenta?->tercero?->cuit,
+                    )
+                    : [],
                 'credit_summary' => [
                     'credito_emitido' => $creditoEmitido,
                     'saldo_acreditable' => (string) $comprobante->tipo === 'factura_interna'

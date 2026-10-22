@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { formatNum } from '@/Utils/format.js';
+import { ref } from 'vue';
 
 const props = defineProps({
     filters: Object,
@@ -26,6 +27,17 @@ const applyFilters = () => {
         empresa_id: form.empresa_id || null,
         cliente: form.cliente?.trim() || null,
     }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const reintentandoId = ref(null);
+const reintentarArca = (comprobante) => {
+    const tipo = comprobante.arca_tipo_opciones?.[0]?.code;
+    if (!tipo) return;
+    reintentandoId.value = comprobante.id;
+    router.post(route('operacion.comprobantes.autorizar-arca', comprobante.id), { tipo }, {
+        preserveScroll: true,
+        onFinish: () => { reintentandoId.value = null; },
+    });
 };
 
 const arcaTipoLabel = (arca_tipo_cbte) => {
@@ -183,6 +195,7 @@ const translateLabel = (label) => {
                                 <div class="mt-0.5"><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ c.empresa?.razon_social || '-' }}</span></div>
                             </div>
                             <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</a>
+                            <button v-if="c.arca_tipo_opciones?.length" type="button" class="text-xs text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
@@ -220,6 +233,7 @@ const translateLabel = (label) => {
                                     <span v-else>-</span>
                                 </div>
                             </div>
+                            <div v-if="c.arca_error" class="text-xs text-red-700 break-words">ARCA: {{ c.arca_error }}</div>
                         </div>
                     </div>
                     <div v-if="!comprobantes.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</div>
@@ -261,7 +275,10 @@ const translateLabel = (label) => {
                                     <span v-else>-</span>
                                 </td>
                                 <td class="px-2 py-1 text-right whitespace-nowrap">
-                                    <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
+                                    <div class="flex justify-end gap-2">
+                                        <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
+                                        <button v-if="c.arca_tipo_opciones?.length" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="!comprobantes.data.length">
