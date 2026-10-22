@@ -8,6 +8,7 @@ use RuntimeException;
 use SoapClient;
 use SoapFault;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\Process\Process;
 
 class WsaaClient
 {
@@ -141,50 +142,53 @@ XML;
     {
         $tmpDir = sys_get_temp_dir();
         $traFile = tempnam($tmpDir, 'tra_');
-        $outFile = tempnam($tmpDir, 'tra_sig_');
-        if (! $traFile || ! $outFile) {
+        $cmsFile = tempnam($tmpDir, 'tra_cms_');
+        if (! $traFile || ! $cmsFile) {
+            if ($traFile) {
+                @unlink($traFile);
+            }
+            if ($cmsFile) {
+                @unlink($cmsFile);
+            }
             throw new RuntimeException('No se pudo crear archivo temporal para WSAA.');
         }
 
-        file_put_contents($traFile, $traXml);
+        try {
+            if (file_put_contents($traFile, $traXml) === false) {
+                throw new RuntimeException('No se pudo escribir el TRA temporal para WSAA.');
+            }
 
-        // WSAA loginCms recibe únicamente el CMS, por lo que el TRA debe estar
-        // encapsulado dentro del PKCS#7; una firma detached no puede validarse allí.
-        $flags = PKCS7_BINARY;
-        $ok = openssl_pkcs7_sign(
-            $traFile,
-            $outFile,
-            'file://'.$certPath,
-            'file://'.$keyPath,
-            [],
-            $flags
-        );
+            // WSAA loginCms espera CMS encapsulado en DER y Base64. Generar
+            // DER directamente evita depender del parser MIME de pkcs7_sign;
+            // SHA-256 y la ausencia de S/MIME capabilities hacen explícitos
+            // los parámetros de firma enviados al servicio.
+            $process = new Process([
+                'openssl', 'cms', '-sign',
+                '-in', $traFile,
+                '-signer', $certPath,
+                '-inkey', $keyPath,
+                '-out', $cmsFile,
+                '-outform', 'DER',
+                '-nodetach',
+                '-nosmimecap',
+                '-binary',
+                '-md', 'sha256',
+            ]);
+            $process->run();
 
-        @unlink($traFile);
+            if (! $process->isSuccessful()) {
+                throw new RuntimeException('No se pudo firmar el TRA para WSAA: '.trim($process->getErrorOutput()));
+            }
 
-        if (! $ok) {
-            @unlink($outFile);
-            throw new RuntimeException('No se pudo firmar TRA (openssl_pkcs7_sign).');
+            $cmsDer = file_get_contents($cmsFile);
+            if ($cmsDer === false || $cmsDer === '') {
+                throw new RuntimeException('OpenSSL no generó un CMS DER válido para WSAA.');
+            }
+
+            return base64_encode($cmsDer);
+        } finally {
+            @unlink($traFile);
+            @unlink($cmsFile);
         }
-
-        $signed = (string) file_get_contents($outFile);
-        @unlink($outFile);
-
-        // Con PKCS7_BINARY no-detached, OpenSSL produce una parte MIME con el
-        // CMS encapsulado (application/x-pkcs7-mime). WSAA espera su Base64 DER.
-        $mimeParts = preg_split("/\R\R/", $signed, 2);
-        $headers = strtolower((string) ($mimeParts[0] ?? ''));
-        if (! str_contains($headers, 'content-type: application/x-pkcs7-mime')
-            && ! str_contains($headers, 'content-type: application/pkcs7-mime')) {
-            throw new RuntimeException('OpenSSL no generó un CMS S/MIME encapsulado válido para WSAA.');
-        }
-
-        $payload = preg_replace('/\s+/', '', (string) ($mimeParts[1] ?? '')) ?? '';
-        $cmsDer = base64_decode($payload, true);
-        if ($cmsDer === false || $cmsDer === '') {
-            throw new RuntimeException('El CMS S/MIME encapsulado no contiene Base64 válido.');
-        }
-
-        return base64_encode($cmsDer);
     }
 }

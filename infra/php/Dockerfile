@@ -13,6 +13,7 @@ RUN apk add --no-cache \
     zip \
     git \
     curl \
+    openssl \
     tesseract-ocr \
     tesseract-ocr-data-spa \
     tesseract-ocr-data-eng \
