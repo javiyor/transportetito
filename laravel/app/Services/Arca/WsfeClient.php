@@ -330,6 +330,7 @@ class WsfeClient
                     'verify_peer' => false,
                     'verify_peer_name' => false,
                     'allow_self_signed' => true,
+                    'ciphers' => 'DEFAULT@SECLEVEL=1',
                 ],
             ]),
             'connection_timeout' => 30,
@@ -345,7 +346,12 @@ class WsfeClient
         }
 
         try {
-            $response = Http::timeout(30)->get($url);
+            // ARCA legacy servers use DH parameters rejected by OpenSSL SECLEVEL=2.
+            // Match the legacy SOAP transport's TLS settings only for this ARCA WSDL request.
+            $response = Http::withOptions([
+                'verify' => false,
+                'curl' => [CURLOPT_SSL_CIPHER_LIST => 'DEFAULT@SECLEVEL=1'],
+            ])->timeout(30)->get($url);
             if (! $response->successful() || ! str_contains($response->body(), 'definitions')) {
                 throw new RuntimeException('Respuesta HTTP '.$response->status().' al descargar WSDL WSFE.');
             }

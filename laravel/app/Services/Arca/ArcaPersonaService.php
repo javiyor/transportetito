@@ -36,6 +36,7 @@ class ArcaPersonaService
                         'verify_peer' => false,
                         'verify_peer_name' => false,
                         'allow_self_signed' => true,
+                        'ciphers' => 'DEFAULT@SECLEVEL=1',
                     ],
                 ]),
                 'connection_timeout' => 30,
