@@ -638,46 +638,37 @@
             @endif
         </div>
 
-        @if(!empty($calculo))
-        <table class="calc-table">
-            @if(isset($calculo['flete']))<tr><td>Flete</td><td class="derecha">{{ $fmtMoneda($calculo['flete']) }}</td></tr>@endif
-            @if(array_key_exists('seguro', $calculo) || array_key_exists('total_seguro', $calculo) || $totalSeguro > 0)
-                <tr><td>Seguro</td><td class="derecha">{{ $fmtMoneda($totalSeguro, $comprobante->moneda) }}</td></tr>
-            @endif
-            <tr><td>Valor declarado total</td><td class="derecha">{{ $fmtMoneda($totalValorDeclarado, $comprobante->moneda) }}</td></tr>
-            <tr><td>Remitos</td><td class="derecha">{{ $remitosList->isNotEmpty() ? $remitosList->implode(', ') : '—' }}</td></tr>
-            @if(!empty($calculo['comision_cr']) && (float)$calculo['comision_cr'] > 0)
-            <tr><td>Comisión CR</td><td class="derecha">{{ $fmtMoneda($calculo['comision_cr']) }}</td></tr>
-            @endif
-            @if(isset($calculo['valor_neto_total']))
-            <tr><td>Valor neto total (valor * %)</td><td class="derecha">{{ $fmtMoneda($calculo['valor_neto_total']) }}</td></tr>
-            @endif
-            <tr class="total-row"><td><strong>{{ $esGuiaPendiente ? 'Total sin IVA' : 'Total' }}</strong></td><td class="derecha"><strong>{{ $fmtMoneda($esGuiaPendiente ? $totalSinIva : ($calculo['total'] ?? 0), $comprobante->moneda) }}</strong></td></tr>
-        </table>
-        @if(!empty($calculo['seleccion']) || !empty($calculo['por_relacion'][0]['seleccion'] ?? null))
-        <div style="font-size:7pt; color:#555; margin-top:4pt;">
-            Cálculo: {{ ($calculo['seleccion']['usar_bulto'] ?? true) ? 'bulto' : '' }} {{ ($calculo['seleccion']['usar_palet'] ?? true) ? 'palet' : '' }} {{ ($calculo['seleccion']['usar_valor'] ?? true) ? '%valor' : '' }} {{ ($calculo['seleccion']['usar_servicio_minimo'] ?? true) ? 'mínimo' : '' }}
-        </div>
-        @endif
-        @endif
-
         <h3 style="font-size:8pt;margin:4pt 0 2pt;">Pedidos incluidos</h3>
         <table class="pedidos-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Origen</th>
-                    <th>Destino / detalle</th>
-                    @if($esGuiaPendiente)<th>Remito</th>@endif
-                    <th class="num">Bultos</th>
-                    <th class="num">Palets</th>
-                    @if($esGuiaPendiente)<th class="num">Valor declarado</th>@endif
+                    <th style="width:10%;text-align:center;">Cant.</th>
+                    <th>Descripción</th>
                     @if($esGuiaPendiente)<th class="num">Importe sin IVA</th>@endif
                 </tr>
             </thead>
             <tbody>
                 @forelse($comprobante->pedidos as $pedidoIndex => $pedido)
                     @php
+                        $seleccionPedido = $calculo['seleccion'] ?? $detalle['seleccion'] ?? [];
+                        $partesDescripcion = [];
+                        if (($seleccionPedido['usar_bulto'] ?? true) && (int) ($pedido->bultos ?? 0) > 0) {
+                            $partesDescripcion[] = $pedido->bultos.' bulto'.((int) $pedido->bultos > 1 ? 's' : '');
+                        }
+                        if (($seleccionPedido['usar_palet'] ?? true) && (int) ($pedido->palets ?? 0) > 0) {
+                            $partesDescripcion[] = $pedido->palets.' palet'.((int) $pedido->palets > 1 ? 's' : '');
+                        }
+                        $descripcionPedido = implode(', ', $partesDescripcion);
+                        if (! empty($pedido->observacion)) {
+                            $descripcionPedido .= ($descripcionPedido !== '' ? ' — ' : '').trim($pedido->observacion);
+                        }
+                        if ($descripcionPedido === '') {
+                            $descripcionPedido = 'Servicio de flete';
+                        }
+                        $cantidadPedido = (int) ($pedido->bultos ?? 0) + (int) ($pedido->palets ?? 0);
+                        if ($cantidadPedido <= 0) {
+                            $cantidadPedido = 1;
+                        }
                         $directItem = $detalle['items'][$pedidoIndex] ?? null;
                         if (!empty($detalle['carga_directa']) && is_array($directItem)) {
                             $importeLineaSinIva = (float) ($directItem['importe'] ?? 0)
@@ -692,20 +683,38 @@
                         }
                     @endphp
                     <tr>
-                        <td>{{ $pedido->id }}</td>
-                        <td>{{ $pedido->remitente?->razon_social ?? '-' }}</td>
-                        <td>{{ $pedido->destinatario?->razon_social ?? '-' }}@if($esGuiaPendiente && $pedido->observacion)<br><span class="helper">{{ $pedido->observacion }}</span>@endif<br><span class="helper">{{ $pedido->paga === 'origen' ? 'Pago Origen' : 'Pago Destino' }}</span></td>
-                        @if($esGuiaPendiente)<td>{{ $pedido->remito_numero ?: '-' }}</td>@endif
-                        <td class="num">{{ $pedido->bultos }}</td>
-                        <td class="num">{{ $pedido->palets ?: '-' }}</td>
-                        @if($esGuiaPendiente)<td class="num">{{ $fmtMoneda($pedido->valor_declarado) }}</td>@endif
+                        <td class="num">{{ $cantidadPedido }}</td>
+                        <td>{{ $descripcionPedido }}</td>
                         @if($esGuiaPendiente)<td class="num">{{ $fmtMoneda($importeLineaSinIva) }}</td>@endif
                     </tr>
                 @empty
-                    <tr><td colspan="{{ $esGuiaPendiente ? 8 : 5 }}">Sin pedidos.</td></tr>
+                    <tr><td colspan="{{ $esGuiaPendiente ? 3 : 2 }}">Sin pedidos.</td></tr>
                 @endforelse
             </tbody>
         </table>
+
+        @php
+            $subtotalGuia = (float) ($calculo['subtotal_gravado'] ?? $comprobante->subtotal ?? $totalSinIva);
+            $totalGuia = (float) ($esGuiaPendiente ? $totalSinIva : ($calculo['total'] ?? $comprobante->total ?? 0));
+        @endphp
+        <table class="calc-table">
+            <tr><td>Remitos</td><td class="derecha" style="white-space:normal;overflow-wrap:anywhere;">{{ $remitosList->isNotEmpty() ? $remitosList->implode(', ') : '—' }}</td></tr>
+            <tr><td>Valor declarado total</td><td class="derecha">{{ $fmtMoneda($totalValorDeclarado, $comprobante->moneda) }}</td></tr>
+            @if(isset($calculo['flete']))<tr><td>Flete</td><td class="derecha">{{ $fmtMoneda($calculo['flete'], $comprobante->moneda) }}</td></tr>@endif
+            @if(array_key_exists('seguro', $calculo) || array_key_exists('total_seguro', $calculo) || $totalSeguro > 0)
+                <tr><td>Seguro</td><td class="derecha">{{ $fmtMoneda($totalSeguro, $comprobante->moneda) }}</td></tr>
+            @endif
+            @if(!empty($calculo['comision_cr']) && (float) $calculo['comision_cr'] > 0)
+                <tr><td>Comisión CR</td><td class="derecha">{{ $fmtMoneda($calculo['comision_cr'], $comprobante->moneda) }}</td></tr>
+            @endif
+            <tr><td>Subtotal</td><td class="derecha">{{ $fmtMoneda($subtotalGuia, $comprobante->moneda) }}</td></tr>
+            <tr class="total-row"><td><strong>{{ $esGuiaPendiente ? 'Total sin IVA' : 'Total general' }}</strong></td><td class="derecha"><strong>{{ $fmtMoneda($totalGuia, $comprobante->moneda) }}</strong></td></tr>
+        </table>
+        @if(!empty($calculo['seleccion']) || !empty($calculo['por_relacion'][0]['seleccion'] ?? null))
+            <div style="font-size:7pt;color:#555;margin-top:4pt;">
+                Cálculo: {{ ($calculo['seleccion']['usar_bulto'] ?? true) ? 'bulto' : '' }} {{ ($calculo['seleccion']['usar_palet'] ?? true) ? 'palet' : '' }} {{ ($calculo['seleccion']['usar_valor'] ?? true) ? '%valor' : '' }} {{ ($calculo['seleccion']['usar_servicio_minimo'] ?? true) ? 'mínimo' : '' }}
+            </div>
+        @endif
 
         <div class="legal-legends guia-legal">
             Esta empresa recibe bultos cerrados sin verificar contenido, cantidad y calidad, no responsabilizándose por faltantes o deficiencias que observe el destinatario en su interior. El seguro cubre daños provenientes de choque, incendio y/o vuelco, y en caso de robo el 80% del valor declarado.
