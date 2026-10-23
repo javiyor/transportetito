@@ -28,6 +28,8 @@ class ComprobantePrintController extends Controller
             'deposito:id,nombre',
             'entregaCuenta.tercero:id,cuit,razon_social,domicilio_fiscal',
             'facturarCuenta.tercero:id,cuit,razon_social,domicilio_fiscal',
+            'entregaCuenta.localidadRel:id,nombre',
+            'facturarCuenta.localidadRel:id,nombre',
             'pedidos.remitente:id,razon_social,cuit,domicilio_fiscal',
             'pedidos.destinatario:id,razon_social,cuit,domicilio_fiscal',
             'comprobanteOrigen:id,tipo,arca_tipo_cbte,arca_numero,arca_cae,fecha_emision,moneda,total',

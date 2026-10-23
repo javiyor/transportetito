@@ -137,8 +137,10 @@
             width: 50%;
             vertical-align: top;
             border: 1px solid #000;
-            padding: 6pt;
+            padding: 5pt 7pt;
             font-size: 8pt;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
         }
         .partes-table .titulo-col {
             font-weight: bold;
@@ -146,7 +148,15 @@
             text-transform: uppercase;
             border-bottom: 1px solid #000;
             padding-bottom: 3pt;
-            margin-bottom: 3pt;
+            margin: 0 0 4pt;
+        }
+        .partes-table .party-line { margin: 2pt 0 0; }
+        .partes-table .party-name { display: block; margin-bottom: 2pt; }
+
+        .partes-table, .bottom-row, .legal-legends, .footer-row,
+        .items-table tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         /* ===== ITEMS TABLE ===== */
@@ -178,16 +188,16 @@
             display: flex;
             gap: 6pt;
             margin-bottom: 8pt;
-            min-height: 60pt;
+            align-items: stretch;
         }
         .bottom-col {
             border: 1px solid #000;
             padding: 5pt;
             font-size: 7.5pt;
         }
-        .bottom-col.remitos { flex: 1; }
-        .bottom-col.observaciones { flex: 1.2; }
-        .bottom-col.importes { flex: 0.9; }
+        .bottom-col.remitos { flex: 0.8; }
+        .bottom-col.observaciones { flex: 1; }
+        .bottom-col.importes { flex: 1.2; min-width: 52mm; }
 
         .bottom-col .col-title {
             font-weight: bold;
@@ -199,10 +209,14 @@
         }
 
         .importe-line {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: baseline;
+            column-gap: 7pt;
             padding: 1pt 0;
         }
+        .importe-line > :first-child { text-align: left; }
+        .importe-line > :last-child { text-align: right; white-space: nowrap; }
         .importe-line.total {
             font-weight: bold;
             font-size: 9pt;
@@ -217,16 +231,6 @@
         }
 
         /* ===== VALOR DECLARADO ===== */
-        .valor-declarado-line {
-            border-top: 1px solid #000;
-            border-bottom: 1px solid #000;
-            padding: 3pt 6pt;
-            margin-bottom: 8pt;
-            font-size: 8pt;
-            display: flex;
-            justify-content: space-between;
-        }
-
         /* ===== LEGAL LEGENDS ===== */
         .legal-legends {
             border-top: 1px solid #000;
@@ -411,17 +415,52 @@
         $tipoLabel = 'COMPROBANTE';
     }
 
-    // Letter from tipo suffix or arca_tipo_cbte
-    $letter = '';
-    if (preg_match('/_(a|b|c|e|m)$/', $comprobante->tipo, $m)) {
+    // Resolve the printed letter and official ARCA code. WSFE stores symbolic
+    // values such as FB, while imports may store the numeric code directly.
+    $tipoArcaRaw = strtoupper(trim((string) $comprobante->arca_tipo_cbte));
+    $datosTipoArca = [
+        'FA' => ['letra' => 'A', 'codigo' => '01'], 'NDA' => ['letra' => 'A', 'codigo' => '02'], 'NCA' => ['letra' => 'A', 'codigo' => '03'],
+        'FB' => ['letra' => 'B', 'codigo' => '06'], 'NDB' => ['letra' => 'B', 'codigo' => '07'], 'NCB' => ['letra' => 'B', 'codigo' => '08'],
+        'FC' => ['letra' => 'C', 'codigo' => '11'], 'NDC' => ['letra' => 'C', 'codigo' => '12'], 'NCC' => ['letra' => 'C', 'codigo' => '13'],
+        'FE' => ['letra' => 'E', 'codigo' => '19'], 'NDE' => ['letra' => 'E', 'codigo' => '20'], 'NCE' => ['letra' => 'E', 'codigo' => '21'],
+        'FM' => ['letra' => 'M', 'codigo' => '51'], 'NDM' => ['letra' => 'M', 'codigo' => '52'], 'NCM' => ['letra' => 'M', 'codigo' => '53'],
+        'FCA' => ['letra' => 'A', 'codigo' => '201'], 'FCB' => ['letra' => 'B', 'codigo' => '206'], 'FCC' => ['letra' => 'C', 'codigo' => '211'],
+    ];
+    $letter = $datosTipoArca[$tipoArcaRaw]['letra'] ?? '';
+    if ($letter === '' && preg_match('/_(a|b|c|e|m)$/', $comprobante->tipo, $m)) {
         $letter = strtoupper($m[1]);
-    } elseif ($comprobante->arca_tipo_cbte) {
-        $cod = (int) $comprobante->arca_tipo_cbte;
-        if ($cod >= 1 && $cod <= 5) $letter = 'A';
-        elseif ($cod >= 6 && $cod <= 10) $letter = 'B';
-        elseif ($cod >= 11 && $cod <= 15) $letter = 'C';
-        elseif ($cod >= 19 && $cod <= 23) $letter = 'E';
-        else $letter = 'M';
+    }
+    $codigoArca = null;
+    if ($tipoArcaRaw !== '' && ctype_digit($tipoArcaRaw)) {
+        $codigoArca = str_pad($tipoArcaRaw, 2, '0', STR_PAD_LEFT);
+    } elseif ($letter !== '') {
+        $categoriaCodigo = match (true) {
+            str_starts_with((string) $comprobante->tipo, 'nota_credito') && in_array($tipoArcaRaw, ['FCA', 'FCB', 'FCC'], true) => 'nota_credito_credito',
+            str_starts_with((string) $comprobante->tipo, 'nota_debito') && in_array($tipoArcaRaw, ['FCA', 'FCB', 'FCC'], true) => 'nota_debito_credito',
+            str_starts_with((string) $comprobante->tipo, 'nota_credito'), str_starts_with($tipoArcaRaw, 'NC') => 'nota_credito',
+            str_starts_with((string) $comprobante->tipo, 'nota_debito'), str_starts_with($tipoArcaRaw, 'ND') => 'nota_debito',
+            str_starts_with((string) $comprobante->tipo, 'factura_credito'), in_array($tipoArcaRaw, ['FCA', 'FCB', 'FCC'], true) => 'factura_credito',
+            default => 'factura',
+        };
+        $codigosPorCategoria = [
+            'A' => ['factura' => '01', 'nota_debito' => '02', 'nota_credito' => '03', 'factura_credito' => '201', 'nota_debito_credito' => '202', 'nota_credito_credito' => '203'],
+            'B' => ['factura' => '06', 'nota_debito' => '07', 'nota_credito' => '08', 'factura_credito' => '206', 'nota_debito_credito' => '207', 'nota_credito_credito' => '208'],
+            'C' => ['factura' => '11', 'nota_debito' => '12', 'nota_credito' => '13', 'factura_credito' => '211', 'nota_debito_credito' => '212', 'nota_credito_credito' => '213'],
+            'E' => ['factura' => '19', 'nota_debito' => '20', 'nota_credito' => '21'],
+            'M' => ['factura' => '51', 'nota_debito' => '52', 'nota_credito' => '53'],
+        ];
+        $codigoArca = $codigosPorCategoria[$letter][$categoriaCodigo] ?? ($datosTipoArca[$tipoArcaRaw]['codigo'] ?? null);
+    }
+    if ($letter === '' && ctype_digit($tipoArcaRaw)) {
+        $codNumerico = (int) $tipoArcaRaw;
+        $letter = match (true) {
+            in_array($codNumerico, [1, 2, 3, 4, 5, 201, 202, 203], true) => 'A',
+            in_array($codNumerico, [6, 7, 8, 9, 10, 206, 207, 208], true) => 'B',
+            in_array($codNumerico, [11, 12, 13, 211, 212, 213], true) => 'C',
+            in_array($codNumerico, [19, 20, 21], true) => 'E',
+            in_array($codNumerico, [51, 52, 53], true) => 'M',
+            default => '',
+        };
     }
 
     // Format helpers
@@ -442,10 +481,11 @@
         return implode(' ', $parts);
     };
 
-    // IVA percentage
-    $ivaPct = ($calculo['parametros']['iva_pct'] ?? null) !== null
-        ? ((float) $calculo['parametros']['iva_pct'] * 100)
-        : 21;
+    // IVA percentage supports both ratio (0.21) and percent (21) formats.
+    $ivaPctRaw = $calculo['parametros']['iva_pct'] ?? $calculo['iva_pct'] ?? null;
+    $ivaPct = $ivaPctRaw === null
+        ? 21
+        : ((float) $ivaPctRaw <= 1 ? (float) $ivaPctRaw * 100 : (float) $ivaPctRaw);
 
     // Remito numbers list
     $remitosList = $comprobante->pedidos->pluck('remito_numero')->filter()->unique()->values();
@@ -456,7 +496,14 @@
         if (!empty($pedido->observacion)) $observaciones->push($pedido->observacion);
     }
     $obsText = $observaciones->unique()->implode('; ');
-    $totalValorDeclarado = $comprobante->pedidos->sum(fn($p) => (float) $p->valor_declarado);
+    $totalValorDeclarado = $comprobante->pedidos->isNotEmpty()
+        ? $comprobante->pedidos->sum(fn($p) => (float) $p->valor_declarado)
+        : (float) ($calculo['valor_declarado'] ?? 0);
+    $itemsDetalle = is_array($detalle['items'] ?? null) ? $detalle['items'] : [];
+    $totalSeguro = (float) ($calculo['seguro'] ?? $calculo['total_seguro'] ?? array_sum(array_map(
+        fn($item) => (float) (is_array($item) ? ($item['seguro'] ?? 0) : 0),
+        $itemsDetalle
+    )));
     $totalSinIva = round((float) ($calculo['subtotal_gravado'] ?? $calculo['total_importe'] ?? $comprobante->subtotal ?? $comprobante->total ?? 0), 2);
     $origenes = $comprobante->pedidos->map(fn($p) => $p->remitente)->filter()->unique('id')->values();
     $destinos = $comprobante->pedidos->map(fn($p) => $p->destinatario)->filter()->unique('id')->values();
@@ -623,11 +670,6 @@
             </div>
 
             {{-- CENTER: Document type + letter + ARCA code --}}
-            @php
-                $codigoArca = $comprobante->arca_tipo_cbte
-                    ? str_pad((string) $comprobante->arca_tipo_cbte, 2, '0', STR_PAD_LEFT)
-                    : null;
-            @endphp
             <div class="header-center">
                 <div style="font-size:8pt;font-weight:bold;letter-spacing:3pt;">ORIGINAL</div>
                 <div class="doc-type">{{ $tipoLabel }}</div>
@@ -715,23 +757,33 @@
             <tr>
                 <td>
                     <div class="titulo-col">Remitente / Cliente</div>
-                    <strong>{{ $comprobante->facturarCuenta?->tercero?->razon_social ?? '-' }}</strong><br>
-                    CUIT: {{ $comprobante->facturarCuenta?->tercero?->cuit ?? '-' }}<br>
-                    @php $dFact = $domicilioStr($comprobante->facturarCuenta?->tercero); @endphp
-                    @if($dFact) Domicilio: {{ $dFact }}<br> @endif
-                    @if($comprobante->facturarCuenta?->direccion)
-                        {{ $comprobante->facturarCuenta->direccion }}<br>
-                    @endif
+                    @php
+                        $cuentaFact = $comprobante->facturarCuenta;
+                        $terceroFact = $cuentaFact?->tercero;
+                        $domicilioFact = (array) ($terceroFact?->domicilio_fiscal ?? []);
+                        $direccionFact = trim((string) ($cuentaFact?->direccion ?: $domicilioStr($terceroFact)));
+                        $localidadFact = trim((string) ($cuentaFact?->localidad ?: $cuentaFact?->localidadRel?->nombre ?: ($domicilioFact['ciudad'] ?? '')));
+                    @endphp
+                    <strong class="party-name">{{ $terceroFact?->razon_social ?? '-' }}</strong>
+                    <div class="party-line"><strong>CUIT:</strong> {{ $terceroFact?->cuit ?? '-' }}</div>
+                    <div class="party-line"><strong>Dirección:</strong> {{ $direccionFact ?: '-' }}</div>
+                    <div class="party-line"><strong>Localidad:</strong> {{ $localidadFact ?: '-' }}</div>
+                    <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaFact?->telefono ?: '-' }}</div>
                 </td>
                 <td>
                     <div class="titulo-col">Destinatario / Entrega</div>
-                    <strong>{{ $comprobante->entregaCuenta?->tercero?->razon_social ?? '-' }}</strong><br>
-                    CUIT: {{ $comprobante->entregaCuenta?->tercero?->cuit ?? '-' }}<br>
-                    @php $dEnt = $domicilioStr($comprobante->entregaCuenta?->tercero); @endphp
-                    @if($dEnt) Domicilio: {{ $dEnt }}<br> @endif
-                    @if($comprobante->entregaCuenta?->direccion)
-                        {{ $comprobante->entregaCuenta->direccion }}<br>
-                    @endif
+                    @php
+                        $cuentaEnt = $comprobante->entregaCuenta;
+                        $terceroEnt = $cuentaEnt?->tercero;
+                        $domicilioEnt = (array) ($terceroEnt?->domicilio_fiscal ?? []);
+                        $direccionEnt = trim((string) ($cuentaEnt?->direccion ?: $domicilioStr($terceroEnt)));
+                        $localidadEnt = trim((string) ($cuentaEnt?->localidad ?: $cuentaEnt?->localidadRel?->nombre ?: ($domicilioEnt['ciudad'] ?? '')));
+                    @endphp
+                    <strong class="party-name">{{ $terceroEnt?->razon_social ?? '-' }}</strong>
+                    <div class="party-line"><strong>CUIT:</strong> {{ $terceroEnt?->cuit ?? '-' }}</div>
+                    <div class="party-line"><strong>Dirección:</strong> {{ $direccionEnt ?: '-' }}</div>
+                    <div class="party-line"><strong>Localidad:</strong> {{ $localidadEnt ?: '-' }}</div>
+                    <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaEnt?->telefono ?: '-' }}</div>
                 </td>
             </tr>
         </table>
@@ -742,7 +794,6 @@
                 <tr>
                     <th style="width:8%;text-align:center;">Cant.</th>
                     <th>Descripción</th>
-                    <th style="width:16%;text-align:right;">Val. Declarado</th>
                     <th style="width:16%;text-align:right;">Importe</th>
                 </tr>
             </thead>
@@ -754,7 +805,7 @@
                         if (($sel['usar_bulto'] ?? true) && ($pedido->bultos ?? 0) > 0) $partes[] = $pedido->bultos.' bulto'.($pedido->bultos>1?'s':'');
                         if (($sel['usar_palet'] ?? true) && ($pedido->palets ?? 0) > 0) $partes[] = $pedido->palets.' palet'.($pedido->palets>1?'s':'');
                         // Solo descripcion de lo facturado: bultos/palets + observacion (ej: servicio de retiro).
-                        // Origen/destino ya estan en el encabezado y el valor declarado en su columna/total.
+                        // Origen/destino ya estan en el encabezado; el valor declarado figura en importes.
                         $descripcion = $partes ? implode(', ', $partes) : '';
                         if (!empty($pedido->observacion)) $descripcion .= ($descripcion !== '' ? ' — ' : '').trim($pedido->observacion);
                         if ($descripcion === '') $descripcion = 'Servicio de flete';
@@ -773,14 +824,12 @@
                     <tr>
                         <td style="text-align:center;">{{ $cantLinea }}</td>
                         <td>{{ $descripcion }}</td>
-                        <td style="text-align:right;">{{ $fmtNum($pedido->valor_declarado) }}</td>
                         <td style="text-align:right;">{{ $fmtNum($pedidoImporteNeto) }}</td>
                     </tr>
                 @empty
                     <tr>
                         <td style="text-align:center;">-</td>
                         <td>Servicio de flete segun factura</td>
-                        <td style="text-align:right;">$ 0,00</td>
                         <td style="text-align:right;">{{ $fmtNum($comprobante->total ?? 0) }}</td>
                     </tr>
                 @endforelse
@@ -789,6 +838,41 @@
 
         {{-- ===== BOTTOM 3-COLUMN LAYOUT ===== --}}
         <div class="bottom-row">
+            {{-- IMPORTES --}}
+            <div class="bottom-col importes">
+                <div class="col-title">Importes</div>
+                <div class="importe-line">
+                    <span>Valor declarado total</span>
+                    <span>{{ $fmtMoneda($totalValorDeclarado, $comprobante->moneda) }}</span>
+                </div>
+                <div class="importe-line">
+                    <span>Subtotal gravado</span>
+                    <span>{{ $fmtMoneda($calculo['subtotal_gravado'] ?? $comprobante->subtotal ?? 0, $comprobante->moneda) }}</span>
+                </div>
+                @if((float) ($calculo['seguro'] ?? $calculo['total_seguro'] ?? $totalSeguro) > 0)
+                <div class="importe-line">
+                    <span>Seguro</span>
+                    <span>{{ $fmtMoneda($totalSeguro, $comprobante->moneda) }}</span>
+                </div>
+                @endif
+                @if((float) ($calculo['iva'] ?? $comprobante->iva_total ?? 0) > 0)
+                <div class="importe-line">
+                    <span>IVA {{ number_format($ivaPct, $ivaPct == (int) $ivaPct ? 0 : 1, ',', '.') }}%</span>
+                    <span>{{ $fmtMoneda($calculo['iva'] ?? $comprobante->iva_total ?? 0, $comprobante->moneda) }}</span>
+                </div>
+                @endif
+                @if(!empty($calculo['tributos_total']) && (float)$calculo['tributos_total'] > 0)
+                <div class="importe-line">
+                    <span>Tributos</span>
+                    <span>{{ $fmtMoneda($calculo['tributos_total'], $comprobante->moneda) }}</span>
+                </div>
+                @endif
+                <div class="importe-line total">
+                    <span>TOTAL</span>
+                    <span>{{ $fmtMoneda($calculo['total'] ?? $comprobante->total ?? 0, $comprobante->moneda) }}</span>
+                </div>
+            </div>
+
             {{-- REMITOS --}}
             <div class="bottom-col remitos">
                 <div class="col-title">Remitos</div>
@@ -812,39 +896,6 @@
                     <div class="helper">—</div>
                 @endif
             </div>
-
-            {{-- IMPORTES --}}
-            <div class="bottom-col importes">
-                <div class="col-title">Importes</div>
-                <div class="importe-line">
-                    <span>Subtotal gravado</span>
-                    <span>{{ $fmtMoneda($calculo['subtotal_gravado'] ?? 0) }}</span>
-                </div>
-                <div class="importe-line">
-                    <span>IVA {{ number_format($ivaPct, 0) }}%</span>
-                    <span>{{ $fmtMoneda($calculo['iva'] ?? 0) }}</span>
-                </div>
-                @if(!empty($calculo['tributos_total']) && (float)$calculo['tributos_total'] > 0)
-                <div class="importe-line">
-                    <span>Tributos</span>
-                    <span>{{ $fmtMoneda($calculo['tributos_total']) }}</span>
-                </div>
-                @endif
-                <div class="importe-line total">
-                    <span>TOTAL</span>
-                    <span>{{ $fmtMoneda($calculo['total'] ?? 0) }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- ===== VALOR DECLARADO ===== --}}
-        <div class="valor-declarado-line">
-            <span><strong>Valor declarado total:</strong> {{ $fmtMoneda($totalValorDeclarado) }}</span>
-            @if($comprobante->pedidos->isNotEmpty())
-            <span><strong>Total bultos:</strong> {{ $calculo['bultos'] ?? $comprobante->pedidos->sum('bultos') }}
-                @if(($calculo['palets'] ?? 0) > 0) &nbsp;|&nbsp; <strong>Palets:</strong> {{ $calculo['palets'] }} @endif
-            </span>
-            @endif
         </div>
 
         {{-- ===== LEGAL LEGENDS ===== --}}
