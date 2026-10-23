@@ -297,6 +297,30 @@
             padding-top: 4pt;
             font-size: 7pt;
         }
+        .signature-block {
+            margin-top: 12pt;
+            font-size: 7pt;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .signature-block .signature-line {
+            width: 82%;
+            border-top: 1px solid #000;
+            margin: 18pt auto 5pt;
+            padding-top: 3pt;
+            text-align: center;
+        }
+        .signature-fields {
+            display: flex;
+            gap: 12pt;
+            margin: 8pt 4pt 0;
+        }
+        .signature-fields > div {
+            flex: 1;
+            border-bottom: 1px solid #000;
+            min-height: 16pt;
+            padding-bottom: 2pt;
+        }
 
         /* ===== NO-PRINT BUTTON ===== */
         .no-print { margin-bottom: 12pt; }
@@ -332,6 +356,9 @@
             display: flex;
             justify-content: space-between;
         }
+        .guia-party { width: 50%; min-width: 0; overflow-wrap: anywhere; }
+        .guia-party-line { margin-top: 2pt; }
+        .guia-legal { margin: 10pt 0 6pt; }
 
         .calc-table {
             width: 100%;
@@ -546,37 +573,86 @@
         <div class="guia-cliente-box">
             @if($esGuiaPendiente)
                 <div style="display:flex;gap:12pt;">
-                    <div style="width:50%;"><strong>Origen</strong>
+                    <div class="guia-party"><strong>Remitente / Origen</strong>
                         @forelse($origenes as $tercero)
-                            <div>{{ $tercero->razon_social }} · CUIT {{ $tercero->cuit ?: '-' }}</div>
-                            @if($domicilioStr($tercero))<div class="helper">{{ $domicilioStr($tercero) }}</div>@endif
+                            @php
+                                $cuentaOrigen = $comprobante->pedidos->firstWhere('remitente_tercero_id', $tercero->id)?->remitenteCuenta;
+                                $domicilioOrigen = (array) ($tercero->domicilio_fiscal ?? []);
+                                $direccionOrigen = trim((string) ($cuentaOrigen?->direccion ?: $domicilioStr($tercero)));
+                                $localidadOrigen = trim((string) ($cuentaOrigen?->localidad ?: $cuentaOrigen?->localidadRel?->nombre ?: ($domicilioOrigen['ciudad'] ?? '')));
+                            @endphp
+                            <div class="guia-party-line"><strong>{{ $tercero->razon_social ?: '-' }}</strong></div>
+                            <div class="guia-party-line"><strong>CUIT:</strong> {{ $tercero->cuit ?: '-' }}</div>
+                            <div class="guia-party-line"><strong>Dirección:</strong> {{ $direccionOrigen ?: '-' }}</div>
+                            <div class="guia-party-line"><strong>Localidad:</strong> {{ $localidadOrigen ?: '-' }}</div>
+                            <div class="guia-party-line"><strong>Teléfono:</strong> {{ $cuentaOrigen?->telefono ?: '-' }}</div>
                         @empty<div>-</div>@endforelse
                     </div>
-                    <div style="width:50%;"><strong>Destino</strong>
+                    <div class="guia-party"><strong>Destinatario / Entrega</strong>
                         @forelse($destinos as $tercero)
-                            <div>{{ $tercero->razon_social }} · CUIT {{ $tercero->cuit ?: '-' }}</div>
-                            @if($domicilioStr($tercero))<div class="helper">{{ $domicilioStr($tercero) }}</div>@endif
+                            @php
+                                $cuentaDestino = $comprobante->pedidos->firstWhere('destinatario_tercero_id', $tercero->id)?->destinatarioCuenta;
+                                $domicilioDestino = (array) ($tercero->domicilio_fiscal ?? []);
+                                $direccionDestino = trim((string) ($cuentaDestino?->direccion ?: $domicilioStr($tercero)));
+                                $localidadDestino = trim((string) ($cuentaDestino?->localidad ?: $cuentaDestino?->localidadRel?->nombre ?: ($domicilioDestino['ciudad'] ?? '')));
+                            @endphp
+                            <div class="guia-party-line"><strong>{{ $tercero->razon_social ?: '-' }}</strong></div>
+                            <div class="guia-party-line"><strong>CUIT:</strong> {{ $tercero->cuit ?: '-' }}</div>
+                            <div class="guia-party-line"><strong>Dirección:</strong> {{ $direccionDestino ?: '-' }}</div>
+                            <div class="guia-party-line"><strong>Localidad:</strong> {{ $localidadDestino ?: '-' }}</div>
+                            <div class="guia-party-line"><strong>Teléfono:</strong> {{ $cuentaDestino?->telefono ?: '-' }}</div>
                         @empty<div>-</div>@endforelse
                     </div>
                 </div>
             @else
-                <div class="row"><strong>Cliente:</strong> <span>{{ $comprobante->facturarCuenta?->tercero?->razon_social ?? '-' }}</span></div>
-                <div class="row"><strong>CUIT:</strong> <span>{{ $comprobante->facturarCuenta?->tercero?->cuit ?? '-' }}</span></div>
-                <div class="row"><strong>Entrega:</strong> <span>{{ $comprobante->entregaCuenta?->tercero?->razon_social ?? '-' }}</span></div>
+                @php
+                    $cuentaFactGuia = $comprobante->facturarCuenta;
+                    $terceroFactGuia = $cuentaFactGuia?->tercero;
+                    $domicilioFactGuia = (array) ($terceroFactGuia?->domicilio_fiscal ?? []);
+                    $direccionFactGuia = trim((string) ($cuentaFactGuia?->direccion ?: $domicilioStr($terceroFactGuia)));
+                    $localidadFactGuia = trim((string) ($cuentaFactGuia?->localidad ?: $cuentaFactGuia?->localidadRel?->nombre ?: ($domicilioFactGuia['ciudad'] ?? '')));
+                    $cuentaEntGuia = $comprobante->entregaCuenta;
+                    $terceroEntGuia = $cuentaEntGuia?->tercero;
+                    $domicilioEntGuia = (array) ($terceroEntGuia?->domicilio_fiscal ?? []);
+                    $direccionEntGuia = trim((string) ($cuentaEntGuia?->direccion ?: $domicilioStr($terceroEntGuia)));
+                    $localidadEntGuia = trim((string) ($cuentaEntGuia?->localidad ?: $cuentaEntGuia?->localidadRel?->nombre ?: ($domicilioEntGuia['ciudad'] ?? '')));
+                @endphp
+                <div style="display:flex;gap:12pt;">
+                    <div class="guia-party">
+                        <strong>Remitente / Cliente</strong>
+                        <div class="guia-party-line"><strong>Nombre:</strong> {{ $terceroFactGuia?->razon_social ?? '-' }}</div>
+                        <div class="guia-party-line"><strong>CUIT:</strong> {{ $terceroFactGuia?->cuit ?? '-' }}</div>
+                        <div class="guia-party-line"><strong>Dirección:</strong> {{ $direccionFactGuia ?: '-' }}</div>
+                        <div class="guia-party-line"><strong>Localidad:</strong> {{ $localidadFactGuia ?: '-' }}</div>
+                        <div class="guia-party-line"><strong>Teléfono:</strong> {{ $cuentaFactGuia?->telefono ?: '-' }}</div>
+                    </div>
+                    <div class="guia-party">
+                        <strong>Destinatario / Entrega</strong>
+                        <div class="guia-party-line"><strong>Nombre:</strong> {{ $terceroEntGuia?->razon_social ?? '-' }}</div>
+                        <div class="guia-party-line"><strong>CUIT:</strong> {{ $terceroEntGuia?->cuit ?? '-' }}</div>
+                        <div class="guia-party-line"><strong>Dirección:</strong> {{ $direccionEntGuia ?: '-' }}</div>
+                        <div class="guia-party-line"><strong>Localidad:</strong> {{ $localidadEntGuia ?: '-' }}</div>
+                        <div class="guia-party-line"><strong>Teléfono:</strong> {{ $cuentaEntGuia?->telefono ?: '-' }}</div>
+                    </div>
+                </div>
             @endif
         </div>
 
         @if(!empty($calculo))
         <table class="calc-table">
             @if(isset($calculo['flete']))<tr><td>Flete</td><td class="derecha">{{ $fmtMoneda($calculo['flete']) }}</td></tr>@endif
-            @if(isset($calculo['seguro']))<tr><td>Seguro</td><td class="derecha">{{ $fmtMoneda($calculo['seguro']) }}</td></tr>@endif
+            @if(array_key_exists('seguro', $calculo) || array_key_exists('total_seguro', $calculo) || $totalSeguro > 0)
+                <tr><td>Seguro</td><td class="derecha">{{ $fmtMoneda($totalSeguro, $comprobante->moneda) }}</td></tr>
+            @endif
+            <tr><td>Valor declarado total</td><td class="derecha">{{ $fmtMoneda($totalValorDeclarado, $comprobante->moneda) }}</td></tr>
+            <tr><td>Remitos</td><td class="derecha">{{ $remitosList->isNotEmpty() ? $remitosList->implode(', ') : '—' }}</td></tr>
             @if(!empty($calculo['comision_cr']) && (float)$calculo['comision_cr'] > 0)
             <tr><td>Comisión CR</td><td class="derecha">{{ $fmtMoneda($calculo['comision_cr']) }}</td></tr>
             @endif
             @if(isset($calculo['valor_neto_total']))
             <tr><td>Valor neto total (valor * %)</td><td class="derecha">{{ $fmtMoneda($calculo['valor_neto_total']) }}</td></tr>
             @endif
-            <tr class="total-row"><td><strong>{{ $esGuiaPendiente ? 'Total sin IVA' : 'Total' }}</strong></td><td class="derecha"><strong>{{ $fmtMoneda($esGuiaPendiente ? $totalSinIva : ($calculo['total'] ?? 0)) }}</strong></td></tr>
+            <tr class="total-row"><td><strong>{{ $esGuiaPendiente ? 'Total sin IVA' : 'Total' }}</strong></td><td class="derecha"><strong>{{ $fmtMoneda($esGuiaPendiente ? $totalSinIva : ($calculo['total'] ?? 0), $comprobante->moneda) }}</strong></td></tr>
         </table>
         @if(!empty($calculo['seleccion']) || !empty($calculo['por_relacion'][0]['seleccion'] ?? null))
         <div style="font-size:7pt; color:#555; margin-top:4pt;">
@@ -631,11 +707,19 @@
             </tbody>
         </table>
 
-        @if(!$esGuiaPendiente)
-            <div style="border-top:1px solid #999;padding-top:4pt;margin-top:8pt;text-align:center;font-size:7pt;color:#666;">
-                {{ $empresa->razon_social }} - CUIT {{ $empresa->cuit }}
+        <div class="legal-legends guia-legal">
+            Esta empresa recibe bultos cerrados sin verificar contenido, cantidad y calidad, no responsabilizándose por faltantes o deficiencias que observe el destinatario en su interior. El seguro cubre daños provenientes de choque, incendio y/o vuelco, y en caso de robo el 80% del valor declarado.
+        </div>
+        <div class="signature-block">
+            <div class="signature-line">Firma</div>
+            <div class="signature-fields">
+                <div>DNI:</div>
+                <div>Aclaración:</div>
             </div>
-        @endif
+        </div>
+        <div style="border-top:1px solid #999;padding-top:4pt;margin-top:8pt;text-align:center;font-size:7pt;color:#666;">
+            {{ $empresa->razon_social }} - CUIT {{ $empresa->cuit }}
+        </div>
 
         </div>{{-- /content --}}
     </div>{{-- /page-border --}}
@@ -895,6 +979,13 @@
                 @else
                     <div class="helper">—</div>
                 @endif
+                <div class="signature-block">
+                    <div class="signature-line">Firma</div>
+                    <div class="signature-fields">
+                        <div>DNI:</div>
+                        <div>Aclaración:</div>
+                    </div>
+                </div>
             </div>
         </div>
 

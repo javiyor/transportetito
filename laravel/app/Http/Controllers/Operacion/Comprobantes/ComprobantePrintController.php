@@ -32,6 +32,8 @@ class ComprobantePrintController extends Controller
             'facturarCuenta.localidadRel:id,nombre',
             'pedidos.remitente:id,razon_social,cuit,domicilio_fiscal',
             'pedidos.destinatario:id,razon_social,cuit,domicilio_fiscal',
+            'pedidos.remitenteCuenta.localidadRel:id,nombre',
+            'pedidos.destinatarioCuenta.localidadRel:id,nombre',
             'comprobanteOrigen:id,tipo,arca_tipo_cbte,arca_numero,arca_cae,fecha_emision,moneda,total',
         ]);
 
