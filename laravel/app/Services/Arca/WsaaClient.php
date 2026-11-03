@@ -24,9 +24,9 @@ class WsaaClient
         return $this->login($empresa, 'wsfe');
     }
 
-    public function loginPadronA5(Empresa $empresa): array
+    public function loginConstanciaInscripcion(Empresa $empresa): array
     {
-        return $this->login($empresa, 'ws_sr_padron_a5');
+        return $this->login($empresa, 'ws_sr_constancia_inscripcion');
     }
 
     private function login(Empresa $empresa, string $service): array

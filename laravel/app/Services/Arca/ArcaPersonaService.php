@@ -16,7 +16,7 @@ class ArcaPersonaService
 
     public function getPersona(Empresa $empresa, string $cuit): array
     {
-        $auth = $this->wsaa->loginPadronA5($empresa);
+        $auth = $this->wsaa->loginConstanciaInscripcion($empresa);
         $env = (string) ($empresa->arca_env ?: 'homologacion');
         $wsdl = (string) config("arca.ws_sr_padron_a5.$env.wsdl");
 
