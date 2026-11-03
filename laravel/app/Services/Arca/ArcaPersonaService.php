@@ -54,51 +54,95 @@ class ArcaPersonaService
             throw new RuntimeException('PersonaServiceA5 getPersona fallo: '.$e->getMessage(), 0, $e);
         }
 
-        $persona = $result?->persona ?? null;
+        $personaReturn = $result?->personaReturn ?? null;
+        $datosGenerales = $personaReturn?->datosGenerales ?? null;
 
-        if (! $persona) {
-            return ['found' => false];
-        }
+        if (! $datosGenerales) {
+            $error = $this->formatErrors($personaReturn?->errorConstancia?->error ?? null);
 
-        $domicilio = null;
-        if (! empty($persona->domicilio)) {
-            $dom = $persona->domicilio;
-            $domicilio = [
-                'direccion' => (string) ($dom->direccion ?? ''),
-                'localidad' => (string) ($dom->localidad ?? ''),
-                'provincia' => (string) ($dom->provincia ?? ''),
-                'codigo_postal' => (string) ($dom->codigoPostal ?? ''),
+            return [
+                'found' => false,
+                'error' => $error ?: 'ARCA no devolvió datos generales para el CUIT consultado.',
             ];
         }
 
-        $condicionIvaNombre = $this->mapCondicionIva((int) ($persona->impuesto->id ?? 0));
+        $cuitPersona = (string) ($datosGenerales->idPersona ?? $cuitDigits);
+        if (preg_replace('/\D+/', '', $cuitPersona) !== $cuitDigits) {
+            return [
+                'found' => false,
+                'error' => 'ARCA devolvió una persona con CUIT distinto al consultado.',
+            ];
+        }
+
+        $domicilio = null;
+        if (! empty($datosGenerales->domicilioFiscal)) {
+            $dom = $datosGenerales->domicilioFiscal;
+            $domicilio = [
+                'direccion' => (string) ($dom->direccion ?? ''),
+                'localidad' => (string) ($dom->localidad ?? ''),
+                'provincia' => (string) ($dom->descripcionProvincia ?? ''),
+                'codigo_postal' => (string) ($dom->codPostal ?? ''),
+            ];
+        }
+
+        $razonSocial = trim((string) ($datosGenerales->razonSocial ?? ''));
+        if ($razonSocial === '') {
+            $razonSocial = trim((string) ($datosGenerales->apellido ?? '').' '.(string) ($datosGenerales->nombre ?? ''));
+        }
 
         return [
             'found' => true,
-            'cuit' => (string) ($persona->idPersona ?? $cuit),
-            'razon_social' => (string) ($persona->nombre ?? ''),
-            'condicion_iva' => $condicionIvaNombre,
+            'cuit' => $cuitPersona,
+            'razon_social' => $razonSocial,
+            'condicion_iva' => $this->mapCondicionIva($personaReturn),
             'domicilio' => $domicilio,
         ];
     }
 
-    private function mapCondicionIva(int $codigo): string
+    private function mapCondicionIva(object $personaReturn): string
     {
-        return match ($codigo) {
-            1 => 'IVA Responsable Inscripto',
-            2 => 'IVA Responsable no Inscripto',
-            3 => 'IVA no Responsable',
-            4 => 'IVA Sujeto Exento',
-            5 => 'Consumidor Final',
-            6 => 'Monotributo',
-            7 => 'Sujeto no Categorizado',
-            8 => 'Proveedor del Exterior',
-            9 => 'Cliente del Exterior',
-            10 => 'Liberado (Ley 19640)',
-            11 => 'IVA Responsable Inscripto (Agente de Percepción)',
-            12 => 'Pequeño Contribuyente Eventual',
-            13 => 'Monotributista Social',
-            default => '',
-        };
+        $datosMonotributo = $personaReturn->datosMonotributo ?? null;
+        if ($datosMonotributo && (
+            ! empty($datosMonotributo->categoriaMonotributo)
+            || ! empty($datosMonotributo->actividadMonotributista)
+            || ! empty($datosMonotributo->impuesto)
+        )) {
+            return 'Monotributo';
+        }
+
+        $impuestos = $personaReturn->datosRegimenGeneral->impuesto ?? null;
+        foreach ($this->asList($impuestos) as $impuesto) {
+            $id = (int) ($impuesto->idImpuesto ?? 0);
+            $descripcion = mb_strtolower(trim((string) ($impuesto->descripcionImpuesto ?? '')));
+            if (str_contains($descripcion, 'exent')) {
+                return 'IVA Exento';
+            }
+            if ($id === 30 || str_contains($descripcion, 'iva responsable inscripto')) {
+                return 'IVA Responsable Inscripto';
+            }
+            if (str_contains($descripcion, 'iva no responsable')) {
+                return 'IVA no Responsable';
+            }
+        }
+
+        return '';
+    }
+
+    /** @return array<int, mixed> */
+    private function asList(mixed $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        return is_array($value) ? $value : [$value];
+    }
+
+    private function formatErrors(mixed $errors): string
+    {
+        return implode('; ', array_filter(array_map(
+            static fn ($error) => trim((string) $error),
+            $this->asList($errors),
+        )));
     }
 }

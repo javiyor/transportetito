@@ -55,20 +55,18 @@ const filtered = (list) => {
 
 const filteredOrigen = computed(() => filtered(props.cuentas)(searchOrigen.value.toLowerCase().trim()));
 const filteredDestino = computed(() => filtered(props.cuentas)(searchDestino.value.toLowerCase().trim()));
-const cuentaFacturada = computed(() => {
-    const cuentaId = form.facturar_a_destino ? form.destino_cuenta_id : form.origen_cuenta_id;
-    return (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(cuentaId)) || null;
+const cuentasAValidar = computed(() => {
+    const ids = [form.origen_cuenta_id, form.destino_cuenta_id].filter(Boolean);
+    return [...new Set(ids)].map((id) => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(id))).filter(Boolean);
 });
 const cuitCheckModal = ref({
     show: false,
     loading: false,
     updating: false,
     error: '',
-    cuentaId: null,
-    cuentaNombre: '',
-    cuit: '',
+    cuentaIds: [],
     key: '',
-    cambios: [],
+    checks: [],
 });
 const cuitVerificadoKey = ref('');
 
@@ -282,24 +280,30 @@ const submit = () => {
 };
 
 const verificarCuitYEnviar = async () => {
-    const cuenta = cuentaFacturada.value;
-    const cuit = String(cuenta?.tercero?.cuit || '').replace(/\D/g, '');
-    const key = `${cuenta?.id || ''}:${cuit}`;
+    const cuentas = cuentasAValidar.value;
+    const faltanCuentas = !form.origen_cuenta_id || !form.destino_cuenta_id;
+    const cuentaInvalida = cuentas.find((cuenta) => String(cuenta.tercero?.cuit || '').replace(/\D/g, '').length !== 11);
 
-    if (!cuenta || cuit.length !== 11) {
+    if (faltanCuentas || !cuentas.length || cuentaInvalida) {
+        const cuenta = cuentaInvalida || null;
         cuitCheckModal.value = {
             show: true,
             loading: false,
             updating: false,
-            error: 'La cuenta que se va a facturar no tiene un CUIT válido de 11 dígitos. Corrija los datos del cliente antes de emitir.',
-            cuentaId: cuenta?.id || null,
-            cuentaNombre: cuenta?.nombre_cuenta || cuenta?.tercero?.razon_social || '',
-            cuit,
-            key,
-            cambios: [],
+            error: faltanCuentas || !cuentas.length
+                ? 'Seleccione remitente y destinatario antes de emitir.'
+                : `La cuenta ${cuenta.nombre_cuenta || cuenta.tercero?.razon_social || ''} no tiene un CUIT válido de 11 dígitos. Corrija los datos del cliente antes de emitir.`,
+            cuentaIds: cuentas.map((item) => item.id),
+            key: '',
+            checks: [],
         };
         return;
     }
+
+    const key = cuentas
+        .map((cuenta) => `${cuenta.id}:${String(cuenta.tercero?.cuit || '').replace(/\D/g, '')}`)
+        .sort()
+        .join('|');
 
     if (cuitVerificadoKey.value === key) {
         submit();
@@ -311,15 +315,14 @@ const verificarCuitYEnviar = async () => {
         loading: true,
         updating: false,
         error: '',
-        cuentaId: cuenta.id,
-        cuentaNombre: cuenta.nombre_cuenta || cuenta.tercero?.razon_social || '',
-        cuit,
+        cuentaIds: cuentas.map((cuenta) => cuenta.id),
         key,
-        cambios: [],
+        checks: [],
     };
 
     try {
-        const url = route('facturacion.carga-directa.verificar-cuit', { cuenta_id: cuenta.id });
+        const query = cuentas.map((cuenta) => `cuenta_ids[]=${encodeURIComponent(cuenta.id)}`).join('&');
+        const url = route('facturacion.carga-directa.verificar-cuit') + '?' + query;
         const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const result = await response.json();
 
@@ -329,9 +332,9 @@ const verificarCuitYEnviar = async () => {
 
         if (cuitCheckModal.value.key !== key) return;
         cuitCheckModal.value.loading = false;
-        cuitCheckModal.value.cambios = result.cambios || [];
+        cuitCheckModal.value.checks = result.checks || [];
 
-        if (!cuitCheckModal.value.cambios.length) {
+        if (!cuitCheckModal.value.checks.some((check) => check.cambios?.length)) {
             cuitVerificadoKey.value = key;
             cuitCheckModal.value.show = false;
             submit();
@@ -344,12 +347,15 @@ const verificarCuitYEnviar = async () => {
 };
 
 const confirmarActualizacionArca = () => {
-    if (!cuitCheckModal.value.cuentaId || cuitCheckModal.value.updating) return;
+    const cuentaIds = cuitCheckModal.value.checks
+        .filter((check) => check.cambios?.length)
+        .map((check) => check.cuenta_id);
+    if (!cuentaIds.length || cuitCheckModal.value.updating) return;
 
     cuitCheckModal.value.updating = true;
     let continuarConFactura = false;
     router.post(route('facturacion.carga-directa.actualizar-datos-arca'), {
-        cuenta_id: cuitCheckModal.value.cuentaId,
+        cuenta_ids: cuentaIds,
     }, {
         preserveScroll: true,
         preserveState: true,
@@ -692,44 +698,51 @@ const confirmarActualizacionArca = () => {
             <template #title>Verificación de CUIT en ARCA</template>
             <template #content>
                 <div class="space-y-3">
-                    <p class="text-sm text-gray-700">
-                        Cliente a facturar: <strong>{{ cuitCheckModal.cuentaNombre || '—' }}</strong>
-                        <span v-if="cuitCheckModal.cuit">· CUIT {{ cuitCheckModal.cuit }}</span>
-                    </p>
+                    <p class="text-sm text-gray-700">Se verifican ante ARCA los CUIT de remitente y destinatario antes de emitir.</p>
                     <div v-if="cuitCheckModal.loading" class="rounded-md bg-blue-50 p-3 text-sm text-blue-800">
-                        Consultando el padrón de ARCA antes de emitir...
+                        Consultando los CUIT de remitente y destinatario en el padrón de ARCA...
                     </div>
                     <div v-if="cuitCheckModal.error" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
                         {{ cuitCheckModal.error }}
                     </div>
-                    <template v-else-if="!cuitCheckModal.loading && cuitCheckModal.cambios.length">
-                        <p class="text-sm text-gray-700">ARCA informa datos distintos. ¿Querés actualizar el cliente antes de facturar?</p>
-                        <div class="overflow-x-auto rounded-md border border-gray-200">
-                            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600">Dato</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600">Actual</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600">Según ARCA</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 bg-white">
-                                    <tr v-for="cambio in cuitCheckModal.cambios" :key="cambio.campo">
-                                        <td class="px-3 py-2 font-medium text-gray-800">{{ cambio.campo }}</td>
-                                        <td class="px-3 py-2 text-gray-600">{{ cambio.actual }}</td>
-                                        <td class="px-3 py-2 text-gray-900">{{ cambio.arca }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <template v-else-if="!cuitCheckModal.loading && cuitCheckModal.checks.length">
+                        <p v-if="cuitCheckModal.checks.some((check) => check.cambios?.length)" class="text-sm text-gray-700">
+                            ARCA informa diferencias. Confirmá si querés actualizar los datos antes de facturar.
+                        </p>
+                        <div v-for="check in cuitCheckModal.checks" :key="check.cuenta_id" class="rounded-md border border-gray-200">
+                            <div class="border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-800">
+                                {{ check.cuenta_nombre || 'Cliente' }} · CUIT {{ check.cuit }}
+                            </div>
+                            <div v-if="!check.cambios?.length" class="px-3 py-2 text-sm text-green-700">Los datos coinciden con ARCA.</div>
+                            <div v-else class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead class="bg-white">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-600">Dato</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-600">Actual</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-600">Según ARCA</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 bg-white">
+                                        <tr v-for="cambio in check.cambios" :key="cambio.campo">
+                                            <td class="px-3 py-2 font-medium text-gray-800">{{ cambio.campo }}</td>
+                                            <td class="px-3 py-2 text-gray-600">{{ cambio.actual }}</td>
+                                            <td class="px-3 py-2 text-gray-900">{{ cambio.arca }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <p class="text-xs text-gray-500">Al confirmar, se actualizan los datos del cliente y de la cuenta seleccionada. Luego continúa la facturación.</p>
+                        <p v-if="cuitCheckModal.checks.some((check) => check.cambios?.length)" class="text-xs text-gray-500">
+                            Al confirmar, se actualizan las cuentas con diferencias y continúa la facturación.
+                        </p>
                     </template>
                 </div>
             </template>
             <template #footer>
                 <SecondaryButton type="button" :disabled="cuitCheckModal.updating" @click="cuitCheckModal.show = false">Cancelar</SecondaryButton>
                 <PrimaryButton
-                    v-if="!cuitCheckModal.loading && !cuitCheckModal.error && cuitCheckModal.cambios.length"
+                    v-if="!cuitCheckModal.loading && !cuitCheckModal.error && cuitCheckModal.checks.some((check) => check.cambios?.length)"
                     type="button"
                     class="ms-3"
                     :disabled="cuitCheckModal.updating"
