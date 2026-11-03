@@ -224,9 +224,16 @@ const translateLabel = (label) => {
                                 <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.estado }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
                                 <div class="mt-0.5"><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ c.empresa?.razon_social || '-' }}</span></div>
                             </div>
-                            <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</a>
-                            <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-xs text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
-                            <div v-else-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="text-xs text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
+                            <div class="flex flex-col items-end gap-1">
+                                <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</a>
+                                <Link
+                                    v-if="c.tipo === 'factura_interna' && c.arca_cae && c.arca_reintento_permitido"
+                                    :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
+                                    class="text-xs text-emerald-700 hover:text-emerald-900"
+                                >Nota de crédito</Link>
+                                <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-xs text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
+                                <div v-else-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="text-xs text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
+                            </div>
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
@@ -311,6 +318,11 @@ const translateLabel = (label) => {
                                 <td class="px-2 py-1 text-right whitespace-nowrap">
                                     <div class="flex justify-end gap-2">
                                         <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
+                                        <Link
+                                            v-if="c.tipo === 'factura_interna' && c.arca_cae && c.arca_reintento_permitido"
+                                            :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
+                                            class="text-emerald-700 hover:text-emerald-900"
+                                        >Nota de crédito</Link>
                                         <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                                     </div>
                                     <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="mt-0.5 text-[10px] text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>

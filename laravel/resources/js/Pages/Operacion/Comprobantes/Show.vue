@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -103,6 +103,13 @@ const tipoLabel = (tipo, comprobante) => {
 };
 
 const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion || props.comprobante?.detalle_facturacion?.cotizacion || null;
+
+onMounted(async () => {
+    if (window.location.hash === '#nota-credito') {
+        await nextTick();
+        document.getElementById('nota-credito')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+});
 </script>
 
 <template>
@@ -212,7 +219,7 @@ const cotizacion = props.comprobante?.detalle_facturacion?.calculo?.cotizacion |
                 </ul>
             </div>
 
-            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" class="bg-white shadow sm:rounded-lg p-4">
+            <div v-if="comprobante.tipo === 'factura_interna' && comprobante.arca_cae" id="nota-credito" class="scroll-mt-24 bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nota de credito</h3>
                 <p class="mt-1 text-sm text-gray-600">Genera una nota de credito vinculada a esta factura fiscal. Queda auditada.</p>
                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
