@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -13,6 +14,7 @@ const props = defineProps({
     cuentas: Array,
     tarifaDefaults: Object,
 });
+const tarifaActiva = ref({ ...(props.tarifaDefaults || {}) });
 
 const page = usePage();
 const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
@@ -53,6 +55,26 @@ const filtered = (list) => {
 
 const filteredOrigen = computed(() => filtered(props.cuentas)(searchOrigen.value.toLowerCase().trim()));
 const filteredDestino = computed(() => filtered(props.cuentas)(searchDestino.value.toLowerCase().trim()));
+const cuentaFacturada = computed(() => {
+    const cuentaId = form.facturar_a_destino ? form.destino_cuenta_id : form.origen_cuenta_id;
+    return (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(cuentaId)) || null;
+});
+const cuitCheckModal = ref({
+    show: false,
+    loading: false,
+    updating: false,
+    error: '',
+    cuentaId: null,
+    cuentaNombre: '',
+    cuit: '',
+    key: '',
+    cambios: [],
+});
+const cuitVerificadoKey = ref('');
+
+watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], () => {
+    cuitVerificadoKey.value = '';
+});
 
 const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
     form[field] = cuenta.id;
@@ -77,6 +99,26 @@ const parseNum = (v) => {
 const recalcularImporte = (it) => {
     const vd = Number(it.valor_declarado) || 0;
     it.importe = Math.round(vd * defaultPct * 100) / 100;
+    recalcularSeguro(it);
+};
+
+const calcularSeguro = (valorDeclarado) => {
+    const tarifa = tarifaActiva.value || {};
+    if (tarifa.usar_seguro === false) return 0;
+
+    let seguro = (Number(valorDeclarado) || 0) * (Number(tarifa.seguro_pct) || 0);
+    if (tarifa.seguro_minimo !== null && tarifa.seguro_minimo !== undefined && tarifa.seguro_minimo !== '') {
+        seguro = Math.max(Number(tarifa.seguro_minimo) || 0, seguro);
+    }
+    if (tarifa.seguro_tope !== null && tarifa.seguro_tope !== undefined && tarifa.seguro_tope !== '') {
+        seguro = Math.min(Number(tarifa.seguro_tope) || 0, seguro);
+    }
+
+    return Math.round((seguro + Number.EPSILON) * 100) / 100;
+};
+
+const recalcularSeguro = (it) => {
+    it.seguro = calcularSeguro(it.valor_declarado);
 };
 
 let nextKey = 1;
@@ -90,7 +132,7 @@ const agregarItem = () => {
         tipo: 'bultos',
         valor_declarado: 0,
         importe: 0,
-        seguro: 0,
+        seguro: calcularSeguro(0),
         cr: 0,
         remito: '',
     });
@@ -100,20 +142,46 @@ agregarItem();
 
 const cotizaciones = ref([]);
 const cotizacionesLoading = ref(false);
+let pairLookupId = 0;
 
 const buscarCotizaciones = async () => {
+    const lookupId = ++pairLookupId;
     if (!form.origen_cuenta_id || !form.destino_cuenta_id) {
         cotizaciones.value = [];
+        tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
+        items.value.forEach(recalcularSeguro);
+        cotizacionesLoading.value = false;
         return;
     }
     cotizacionesLoading.value = true;
+    tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
+    items.value.forEach(recalcularSeguro);
     try {
-        const res = await fetch(route('facturacion.carga-directa.cotizaciones') + '?origen_cuenta_id=' + form.origen_cuenta_id + '&destino_cuenta_id=' + form.destino_cuenta_id);
-        cotizaciones.value = await res.json();
+        const query = '?origen_cuenta_id=' + encodeURIComponent(form.origen_cuenta_id) + '&destino_cuenta_id=' + encodeURIComponent(form.destino_cuenta_id);
+        const [cotizacionesResult, tarifaResult] = await Promise.allSettled([
+            fetch(route('facturacion.carga-directa.cotizaciones') + query),
+            fetch(route('facturacion.carga-directa.tarifa') + query),
+        ]);
+        if (lookupId !== pairLookupId) return;
+
+        cotizaciones.value = cotizacionesResult.status === 'fulfilled' && cotizacionesResult.value.ok
+            ? await cotizacionesResult.value.json()
+            : [];
+
+        if (tarifaResult.status === 'fulfilled' && tarifaResult.value.ok) {
+            tarifaActiva.value = { ...(props.tarifaDefaults || {}), ...(await tarifaResult.value.json()) };
+        } else {
+            tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
+        }
+        items.value.forEach(recalcularSeguro);
     } catch {
-        cotizaciones.value = [];
+        if (lookupId === pairLookupId) {
+            cotizaciones.value = [];
+            tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
+            items.value.forEach(recalcularSeguro);
+        }
     } finally {
-        cotizacionesLoading.value = false;
+        if (lookupId === pairLookupId) cotizacionesLoading.value = false;
     }
 };
 
@@ -132,14 +200,15 @@ const importarCotizacion = (cq) => {
                 importe = Math.round((Number(it.valor_declarado) || 0) / totalVd * flete * 100) / 100;
             }
         }
+        const valorDeclarado = Number(it.valor_declarado) || 0;
         return {
             key: nextKey++,
             descripcion: it.descripcion || '',
             cantidad: Number(it.cantidad) || 1,
             tipo: it.tipo || 'bultos',
-            valor_declarado: Number(it.valor_declarado) || 0,
+            valor_declarado: valorDeclarado,
             importe: importe,
-            seguro: Number(it.seguro) || 0,
+            seguro: calcularSeguro(valorDeclarado),
             cr: Number(it.cr) || 0,
             remito: it.remito || '',
         };
@@ -186,7 +255,7 @@ const resetForNext = () => {
         tipo: 'bultos',
         valor_declarado: 0,
         importe: 0,
-        seguro: 0,
+        seguro: calcularSeguro(0),
         cr: 0,
         remito: '',
     }];
@@ -209,6 +278,93 @@ const submit = () => {
     form.post(route('facturacion.carga-directa.store'), {
         preserveScroll: true,
         onSuccess: () => resetForNext(),
+    });
+};
+
+const verificarCuitYEnviar = async () => {
+    const cuenta = cuentaFacturada.value;
+    const cuit = String(cuenta?.tercero?.cuit || '').replace(/\D/g, '');
+    const key = `${cuenta?.id || ''}:${cuit}`;
+
+    if (!cuenta || cuit.length !== 11) {
+        cuitCheckModal.value = {
+            show: true,
+            loading: false,
+            updating: false,
+            error: 'La cuenta que se va a facturar no tiene un CUIT válido de 11 dígitos. Corrija los datos del cliente antes de emitir.',
+            cuentaId: cuenta?.id || null,
+            cuentaNombre: cuenta?.nombre_cuenta || cuenta?.tercero?.razon_social || '',
+            cuit,
+            key,
+            cambios: [],
+        };
+        return;
+    }
+
+    if (cuitVerificadoKey.value === key) {
+        submit();
+        return;
+    }
+
+    cuitCheckModal.value = {
+        show: true,
+        loading: true,
+        updating: false,
+        error: '',
+        cuentaId: cuenta.id,
+        cuentaNombre: cuenta.nombre_cuenta || cuenta.tercero?.razon_social || '',
+        cuit,
+        key,
+        cambios: [],
+    };
+
+    try {
+        const url = route('facturacion.carga-directa.verificar-cuit', { cuenta_id: cuenta.id });
+        const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const result = await response.json();
+
+        if (!response.ok || !result.found) {
+            throw new Error(result.error || 'No se pudo validar el CUIT ante ARCA.');
+        }
+
+        if (cuitCheckModal.value.key !== key) return;
+        cuitCheckModal.value.loading = false;
+        cuitCheckModal.value.cambios = result.cambios || [];
+
+        if (!cuitCheckModal.value.cambios.length) {
+            cuitVerificadoKey.value = key;
+            cuitCheckModal.value.show = false;
+            submit();
+        }
+    } catch (error) {
+        if (cuitCheckModal.value.key !== key) return;
+        cuitCheckModal.value.loading = false;
+        cuitCheckModal.value.error = error?.message || 'No se pudo validar el CUIT ante ARCA.';
+    }
+};
+
+const confirmarActualizacionArca = () => {
+    if (!cuitCheckModal.value.cuentaId || cuitCheckModal.value.updating) return;
+
+    cuitCheckModal.value.updating = true;
+    let continuarConFactura = false;
+    router.post(route('facturacion.carga-directa.actualizar-datos-arca'), {
+        cuenta_id: cuitCheckModal.value.cuentaId,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            cuitVerificadoKey.value = cuitCheckModal.value.key;
+            cuitCheckModal.value.show = false;
+            continuarConFactura = true;
+        },
+        onError: (errors) => {
+            cuitCheckModal.value.error = errors.cuit_arca || 'No se pudieron actualizar los datos desde ARCA.';
+        },
+        onFinish: () => {
+            cuitCheckModal.value.updating = false;
+            if (continuarConFactura) submit();
+        },
     });
 };
 </script>
@@ -236,7 +392,7 @@ const submit = () => {
             </div>
             <div v-if="flashError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
-                <form @submit.prevent="submit" class="space-y-3">
+                <form @submit.prevent="verificarCuitYEnviar" class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="relative">
                             <div class="flex items-center justify-between">
@@ -395,8 +551,11 @@ const submit = () => {
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <InputLabel :for="'seguro-' + it.key" value="Seguro" />
-                                        <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                        <InputLabel :for="'seguro-' + it.key" value="Seguro (automático)" />
+                                        <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-1 block w-full" readonly />
+                                        <div class="mt-0.5 text-[10px] text-gray-500 text-right">
+                                            {{ tarifaActiva.usar_seguro === false ? 'Desactivado por tarifa' : `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% del valor declarado` }}
+                                        </div>
                                         <div v-if="it.seguro !== '' && it.seguro !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.seguro) }}</div>
                                     </div>
                                     <div>
@@ -448,7 +607,10 @@ const submit = () => {
                                             <div v-if="it.importe !== '' && it.importe !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.importe) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
+                                            <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" readonly />
+                                            <div class="text-[10px] text-gray-500 text-right leading-none mt-0.5">
+                                                {{ tarifaActiva.usar_seguro === false ? 'Desactivado' : `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% tarifa` }}
+                                            </div>
                                             <div v-if="it.seguro !== '' && it.seguro !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.seguro) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
@@ -519,11 +681,64 @@ const submit = () => {
                             <SecondaryButton type="button">Cancelar</SecondaryButton>
                         </Link>
                         <PrimaryButton :disabled="form.processing || !form.origen_cuenta_id || !form.destino_cuenta_id || items.length === 0">
-                            Emitir factura
+                            Verificar CUIT y emitir factura
                         </PrimaryButton>
                     </div>
                 </form>
             </div>
         </div>
+
+        <DialogModal :show="cuitCheckModal.show" max-width="3xl" :closeable="!cuitCheckModal.updating" @close="cuitCheckModal.show = false">
+            <template #title>Verificación de CUIT en ARCA</template>
+            <template #content>
+                <div class="space-y-3">
+                    <p class="text-sm text-gray-700">
+                        Cliente a facturar: <strong>{{ cuitCheckModal.cuentaNombre || '—' }}</strong>
+                        <span v-if="cuitCheckModal.cuit">· CUIT {{ cuitCheckModal.cuit }}</span>
+                    </p>
+                    <div v-if="cuitCheckModal.loading" class="rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+                        Consultando el padrón de ARCA antes de emitir...
+                    </div>
+                    <div v-if="cuitCheckModal.error" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                        {{ cuitCheckModal.error }}
+                    </div>
+                    <template v-else-if="!cuitCheckModal.loading && cuitCheckModal.cambios.length">
+                        <p class="text-sm text-gray-700">ARCA informa datos distintos. ¿Querés actualizar el cliente antes de facturar?</p>
+                        <div class="overflow-x-auto rounded-md border border-gray-200">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-medium text-gray-600">Dato</th>
+                                        <th class="px-3 py-2 text-left font-medium text-gray-600">Actual</th>
+                                        <th class="px-3 py-2 text-left font-medium text-gray-600">Según ARCA</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 bg-white">
+                                    <tr v-for="cambio in cuitCheckModal.cambios" :key="cambio.campo">
+                                        <td class="px-3 py-2 font-medium text-gray-800">{{ cambio.campo }}</td>
+                                        <td class="px-3 py-2 text-gray-600">{{ cambio.actual }}</td>
+                                        <td class="px-3 py-2 text-gray-900">{{ cambio.arca }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500">Al confirmar, se actualizan los datos del cliente y de la cuenta seleccionada. Luego continúa la facturación.</p>
+                    </template>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton type="button" :disabled="cuitCheckModal.updating" @click="cuitCheckModal.show = false">Cancelar</SecondaryButton>
+                <PrimaryButton
+                    v-if="!cuitCheckModal.loading && !cuitCheckModal.error && cuitCheckModal.cambios.length"
+                    type="button"
+                    class="ms-3"
+                    :disabled="cuitCheckModal.updating"
+                    @click="confirmarActualizacionArca"
+                >
+                    {{ cuitCheckModal.updating ? 'Actualizando...' : 'Actualizar y emitir factura' }}
+                </PrimaryButton>
+                <PrimaryButton v-else-if="cuitCheckModal.error" type="button" class="ms-3" @click="cuitCheckModal.show = false">Cerrar</PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>
