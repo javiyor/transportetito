@@ -198,6 +198,8 @@
         .bottom-col.remitos { flex: 0.8; }
         .bottom-col.observaciones { flex: 1; }
         .bottom-col.importes { flex: 1.2; min-width: 52mm; }
+        .bottom-col.observaciones { overflow-wrap: anywhere; }
+        .arca-observacion { border-top: 1px dotted #999; margin-top: 3pt; padding-top: 3pt; }
 
         .bottom-col .col-title {
             font-weight: bold;
@@ -983,9 +985,14 @@
                 <div class="col-title">Observaciones</div>
                 @if($obsText)
                     <div>{{ $obsText }}</div>
-                @elseif($comprobante->motivo)
+                @endif
+                @if($comprobante->motivo)
                     <div>{{ $comprobante->motivo }}</div>
-                @else
+                @endif
+                @if($comprobante->arca_error)
+                    <div class="arca-observacion"><strong>Observaciones de ARCA:</strong> {{ $comprobante->arca_error }}</div>
+                @endif
+                @if(!$obsText && !$comprobante->motivo && !$comprobante->arca_error)
                     <div class="helper">—</div>
                 @endif
                 <div class="signature-block">
@@ -1031,9 +1038,9 @@
                     </div>
                 @endif
                 <div class="cae-data">
-                    @if($comprobante->arca_cae)
-                        <strong>CAE N°:</strong> {{ $comprobante->arca_cae }}<br>
-                        <strong>CAE Vto.:</strong> {{ optional($comprobante->arca_cae_vto)->format('d/m/Y') ?? '-' }}<br>
+                    @if($comprobante->arca_cae || $comprobante->arca_resultado === 'A')
+                        <strong>CAE N°:</strong> {{ $comprobante->arca_cae ?: '-' }}<br>
+                        <strong>Vencimiento CAE:</strong> {{ $comprobante->arca_cae_vto ? $comprobante->arca_cae_vto->format('d/m/Y') : 'No informado' }}<br>
                     @else
                         <strong>CAE:</strong> Pendiente de autorización<br>
                     @endif
