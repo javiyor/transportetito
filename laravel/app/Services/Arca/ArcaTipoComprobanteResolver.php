@@ -89,11 +89,12 @@ class ArcaTipoComprobanteResolver
     {
         $v = mb_strtolower(trim((string) $value));
         $v = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $v);
+        $v = preg_replace('/^iva\s+/', '', $v) ?? $v;
 
         return match (true) {
             in_array($v, ['ri', 'responsable inscripto', 'responsable_inscripto'], true) => 'ri',
             in_array($v, ['monotributo', 'monotributista', 'mt'], true) => 'monotributo',
-            in_array($v, ['exento', 'iva exento', 'iva_exento'], true) => 'exento',
+            in_array($v, ['exento', 'sujeto exento', 'iva exento', 'iva_exento'], true) => 'exento',
             in_array($v, ['consumidor final', 'consumidor_final', 'cf'], true) => 'consumidor_final',
             default => $v,
         };
