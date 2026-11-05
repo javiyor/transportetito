@@ -28,6 +28,7 @@ const form = useForm({
     destino_cuenta_id: '',
     facturar_a_destino: true,
     fecha_emision: new Date().toISOString().slice(0, 10),
+    tipo_arca: '',
     observacion: '',
     servicio_minimo: '',
     servicio_retiro: '',
@@ -140,22 +141,29 @@ agregarItem();
 
 const cotizaciones = ref([]);
 const cotizacionesLoading = ref(false);
+const arcaTipoOpciones = ref([]);
 let pairLookupId = 0;
 
 const buscarCotizaciones = async () => {
     const lookupId = ++pairLookupId;
     if (!form.origen_cuenta_id || !form.destino_cuenta_id) {
         cotizaciones.value = [];
+        arcaTipoOpciones.value = [];
+        form.tipo_arca = '';
         tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
         items.value.forEach(recalcularSeguro);
         cotizacionesLoading.value = false;
         return;
     }
     cotizacionesLoading.value = true;
+    arcaTipoOpciones.value = [];
+    form.tipo_arca = '';
     tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
     items.value.forEach(recalcularSeguro);
     try {
-        const query = '?origen_cuenta_id=' + encodeURIComponent(form.origen_cuenta_id) + '&destino_cuenta_id=' + encodeURIComponent(form.destino_cuenta_id);
+        const query = '?origen_cuenta_id=' + encodeURIComponent(form.origen_cuenta_id)
+            + '&destino_cuenta_id=' + encodeURIComponent(form.destino_cuenta_id)
+            + '&facturar_a_destino=' + (form.facturar_a_destino ? '1' : '0');
         const [cotizacionesResult, tarifaResult] = await Promise.allSettled([
             fetch(route('facturacion.carga-directa.cotizaciones') + query),
             fetch(route('facturacion.carga-directa.tarifa') + query),
@@ -167,15 +175,23 @@ const buscarCotizaciones = async () => {
             : [];
 
         if (tarifaResult.status === 'fulfilled' && tarifaResult.value.ok) {
-            tarifaActiva.value = { ...(props.tarifaDefaults || {}), ...(await tarifaResult.value.json()) };
+            const dataTarifa = await tarifaResult.value.json();
+            tarifaActiva.value = { ...(props.tarifaDefaults || {}), ...dataTarifa };
+            arcaTipoOpciones.value = dataTarifa.arca_tipo_opciones || [];
         } else {
             tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
+            arcaTipoOpciones.value = [];
+        }
+        if (!arcaTipoOpciones.value.some((opcion) => opcion.code === form.tipo_arca)) {
+            form.tipo_arca = arcaTipoOpciones.value[0]?.code || '';
         }
         items.value.forEach(recalcularSeguro);
     } catch {
         if (lookupId === pairLookupId) {
             cotizaciones.value = [];
             tarifaActiva.value = { ...(props.tarifaDefaults || {}) };
+            arcaTipoOpciones.value = [];
+            form.tipo_arca = '';
             items.value.forEach(recalcularSeguro);
         }
     } finally {
@@ -183,7 +199,7 @@ const buscarCotizaciones = async () => {
     }
 };
 
-watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id], buscarCotizaciones);
+watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], buscarCotizaciones);
 
 const importarCotizacion = (cq) => {
     if (!cq.items || !cq.items.length) return;
@@ -272,6 +288,7 @@ const submit = () => {
         cr: Number(it.cr) || 0,
         remito: it.remito,
     }));
+    form.tipo_arca = form.tipo_arca || arcaTipoOpciones.value[0]?.code || '';
 
     form.post(route('facturacion.carga-directa.store'), {
         preserveScroll: true,
@@ -367,9 +384,12 @@ const confirmarActualizacionArca = () => {
         onError: (errors) => {
             cuitCheckModal.value.error = errors.cuit_arca || 'No se pudieron actualizar los datos desde ARCA.';
         },
-        onFinish: () => {
+        onFinish: async () => {
             cuitCheckModal.value.updating = false;
-            if (continuarConFactura) submit();
+            if (continuarConFactura) {
+                await buscarCotizaciones();
+                submit();
+            }
         },
     });
 };
@@ -484,6 +504,20 @@ const confirmarActualizacionArca = () => {
                                 <span class="text-sm text-gray-700 font-medium">Facturar a destino</span>
                                 <span class="text-xs text-gray-400">(si no, se factura a origen)</span>
                             </label>
+                        </div>
+
+                        <div v-if="form.origen_cuenta_id && form.destino_cuenta_id" class="sm:col-span-2">
+                            <InputLabel for="tipo_arca" value="Comprobante fiscal ARCA" />
+                            <select id="tipo_arca" v-model="form.tipo_arca" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" :disabled="cotizacionesLoading || !arcaTipoOpciones.length">
+                                <option v-for="opcion in arcaTipoOpciones" :key="opcion.code" :value="opcion.code">{{ opcion.label }}</option>
+                            </select>
+                            <div v-if="arcaTipoOpciones.length" class="mt-1 text-xs text-gray-500">
+                                Sugerido según la condición IVA de la empresa y del cliente seleccionado para facturar.
+                            </div>
+                            <div v-else-if="!cotizacionesLoading" class="mt-1 text-xs text-red-600">
+                                No hay tipos de comprobante ARCA disponibles para esta empresa y cliente.
+                            </div>
+                            <InputError :message="form.errors.tipo_arca" />
                         </div>
                     </div>
 
@@ -686,7 +720,7 @@ const confirmarActualizacionArca = () => {
                         <Link :href="route('facturacion.manifiestos.index')">
                             <SecondaryButton type="button">Cancelar</SecondaryButton>
                         </Link>
-                        <PrimaryButton :disabled="form.processing || !form.origen_cuenta_id || !form.destino_cuenta_id || items.length === 0">
+                        <PrimaryButton :disabled="form.processing || !form.origen_cuenta_id || !form.destino_cuenta_id || !form.tipo_arca || !arcaTipoOpciones.length || items.length === 0">
                             Verificar CUIT y emitir factura
                         </PrimaryButton>
                     </div>

@@ -16,30 +16,30 @@ class ArcaTipoComprobanteResolver
         if ($emisor === 'ri') {
             if ($cliente === 'ri') {
                 $out = [
-                    ['code' => 'FA', 'label' => 'Factura A'],
+                    ['code' => 'FA', 'label' => 'Factura A (código ARCA 01)'],
                 ];
                 if ($permiteCredito) {
-                    $out[] = ['code' => 'FCA', 'label' => 'Factura de Credito A'];
+                    $out[] = ['code' => 'FCA', 'label' => 'Factura de Crédito A (código ARCA 201)'];
                 }
 
                 return $out;
             }
 
             $out = [
-                ['code' => 'FB', 'label' => 'Factura B'],
+                ['code' => 'FB', 'label' => 'Factura B (código ARCA 06)'],
             ];
             if ($permiteCredito) {
-                $out[] = ['code' => 'FCB', 'label' => 'Factura de Credito B'];
+                $out[] = ['code' => 'FCB', 'label' => 'Factura de Crédito B (código ARCA 206)'];
             }
 
             return $out;
         }
 
         $out = [
-            ['code' => 'FC', 'label' => 'Factura C'],
+            ['code' => 'FC', 'label' => 'Factura C (código ARCA 11)'],
         ];
         if ($permiteCredito) {
-            $out[] = ['code' => 'FCC', 'label' => 'Factura de Credito C'];
+            $out[] = ['code' => 'FCC', 'label' => 'Factura de Crédito C (código ARCA 211)'];
         }
 
         return $out;

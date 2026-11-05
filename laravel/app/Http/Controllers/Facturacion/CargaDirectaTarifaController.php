@@ -3,14 +3,20 @@
 namespace App\Http\Controllers\Facturacion;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\TerceroCuenta;
+use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Facturacion\TarifaResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CargaDirectaTarifaController extends Controller
 {
-    public function __invoke(Request $request, TarifaResolver $tarifaResolver): JsonResponse
+    public function __invoke(
+        Request $request,
+        TarifaResolver $tarifaResolver,
+        ArcaTipoComprobanteResolver $arcaTipos,
+    ): JsonResponse
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         abort_unless($empresaId > 0, 403);
@@ -25,7 +31,19 @@ class CargaDirectaTarifaController extends Controller
             ->findOrFail($data['origen_cuenta_id']);
         $cuentaDestino = TerceroCuenta::query()
             ->where('empresa_id', $empresaId)
+            ->with('tercero:id,cuit,condicion_iva')
             ->findOrFail($data['destino_cuenta_id']);
+        $cuentaOrigen->loadMissing('tercero:id,cuit,condicion_iva');
+
+        $facturarADestino = $request->boolean('facturar_a_destino', true);
+        $cuentaFacturacion = $facturarADestino ? $cuentaDestino : $cuentaOrigen;
+        $empresa = Empresa::query()->findOrFail($empresaId);
+        $opcionesArca = $arcaTipos->opcionesFactura(
+            $empresa->condicion_iva,
+            $cuentaFacturacion->tercero?->condicion_iva,
+            (float) $request->query('total', 0),
+            $cuentaFacturacion->tercero?->cuit,
+        );
 
         $tarifa = $tarifaResolver->resolve(
             $empresaId,
@@ -38,6 +56,7 @@ class CargaDirectaTarifaController extends Controller
             'seguro_pct' => (float) ($tarifa['seguro_pct'] ?? 0),
             'seguro_minimo' => $tarifa['seguro_minimo'] ?? null,
             'seguro_tope' => $tarifa['seguro_tope'] ?? null,
+            'arca_tipo_opciones' => $opcionesArca,
         ]);
     }
 }

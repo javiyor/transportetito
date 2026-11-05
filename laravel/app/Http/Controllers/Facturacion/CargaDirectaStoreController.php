@@ -37,6 +37,7 @@ class CargaDirectaStoreController extends Controller
             'destino_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'facturar_a_destino' => ['required', 'boolean'],
             'fecha_emision' => ['required', 'date'],
+            'tipo_arca' => ['required', 'string', 'in:FA,FB,FC,FCA,FCB,FCC'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.descripcion' => ['nullable', 'string', 'max:500'],
@@ -73,6 +74,18 @@ class CargaDirectaStoreController extends Controller
             (int) $cuentaOrigen->tercero_id,
             (int) $cuentaDestino->tercero_id,
         );
+        $cuentaFacturacion = $facturarCuentaId === (int) $cuentaOrigen->id ? $cuentaOrigen : $cuentaDestino;
+        $opcionesArca = $arcaTipos->opcionesFactura(
+            $empresa->condicion_iva,
+            $cuentaFacturacion->tercero?->condicion_iva,
+            (float) array_sum(array_map(fn ($item) => (float) ($item['importe'] ?? 0), $data['items'])),
+            $cuentaFacturacion->tercero?->cuit,
+        );
+        $tiposArcaPermitidos = array_column($opcionesArca, 'code');
+        if (! in_array((string) $data['tipo_arca'], $tiposArcaPermitidos, true)) {
+            return back()->withErrors(['tipo_arca' => 'El comprobante seleccionado no está permitido para la condición IVA del cliente.'])->withInput();
+        }
+        $tipoArca = (string) $data['tipo_arca'];
 
         $pedidoRecords = [];
         $itemsData = [];
@@ -261,22 +274,8 @@ class CargaDirectaStoreController extends Controller
         }
 
         $autorizacionError = null;
-        $tipoArca = null;
         if ($comprobante->requiere_autorizacion_arca) {
-            $cuentaFacturacion = $facturarCuentaId === $cuentaOrigen->id ? $cuentaOrigen : $cuentaDestino;
-            $opciones = $arcaTipos->opcionesFactura(
-                $empresa->condicion_iva,
-                $cuentaFacturacion->tercero?->condicion_iva,
-                (float) $comprobante->total,
-                $cuentaFacturacion->tercero?->cuit,
-            );
-            $tipoArca = $opciones[0]['code'] ?? null;
-
             try {
-                if (! $tipoArca) {
-                    throw new \RuntimeException('No se pudo determinar el tipo de comprobante ARCA para el cliente.');
-                }
-
                 // Autorizar usando el mismo depósito/PV operativo seleccionado para esta carga.
                 $wsfe->autorizarComprobante($comprobante, $deposito, $tipoArca);
                 $comprobante->refresh();
@@ -315,6 +314,10 @@ class CargaDirectaStoreController extends Controller
 
         if ($autorizacionError) {
             $redirect->with('flash.error', "Factura #{$comprobante->id} creada pero no se pudo autorizar en ARCA: {$autorizacionError}. Podés reintentar desde Comprobantes.");
+        }
+
+        if ($comprobante->arca_cae) {
+            return redirect()->route('operacion.comprobantes.print', $comprobante);
         }
 
         return $redirect;
