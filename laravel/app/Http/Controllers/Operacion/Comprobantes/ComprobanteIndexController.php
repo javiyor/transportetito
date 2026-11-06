@@ -56,7 +56,8 @@ class ComprobanteIndexController extends Controller
                 'notasCredito:id,comprobante_origen_id,estado,total',
             ])
             ->whereIn('empresa_id', $fEmpresaId > 0 ? [$fEmpresaId] : $empresaIds)
-            ->orderByDesc('arca_punto_venta')
+            ->orderByDesc('fecha_emision')
+            ->orderBy('empresa_id')
             ->orderByDesc('arca_numero')
             ->orderByDesc('id');
 
