@@ -15,12 +15,18 @@ use Illuminate\Support\Facades\Schema;
 
 class DeduplicarTercerosPorCuit extends Command
 {
-    protected $signature = 'terceros:deduplicar-cuit {--cuit= : Procesar solo este CUIT} {--apply : Aplicar las fusiones; por defecto solo muestra una vista previa}';
+    protected $signature = 'terceros:deduplicar-cuit {--cuit= : Procesar solo este CUIT} {--dry-run : Mostrar una vista previa sin modificar datos} {--apply : Aplicar las fusiones}';
 
     protected $description = 'Consolida terceros y cuentas duplicados por CUIT, conservando los registros más antiguos';
 
     public function handle(): int
     {
+        if ($this->option('apply') && $this->option('dry-run')) {
+            $this->error('No combine --apply con --dry-run.');
+
+            return self::FAILURE;
+        }
+
         $cuitFiltro = $this->option('cuit') !== null
             ? Tercero::soloDigitos((string) $this->option('cuit'))
             : null;
