@@ -523,7 +523,11 @@
     // Observaciones
     $observaciones = collect();
     foreach ($comprobante->pedidos as $pedido) {
-        if (!empty($pedido->observacion)) $observaciones->push($pedido->observacion);
+        $observacionPedido = trim((string) ($pedido->observacion ?? ''));
+        $esDescripcionDeUnidad = in_array(mb_strtolower($observacionPedido), ['bulto', 'bultos', 'palet', 'palets', 'pallet', 'pallets'], true);
+        if ($observacionPedido !== '' && ! $esDescripcionDeUnidad) {
+            $observaciones->push($observacionPedido);
+        }
     }
     $obsText = $observaciones->unique()->implode('; ');
     $totalValorDeclarado = $comprobante->pedidos->isNotEmpty()
