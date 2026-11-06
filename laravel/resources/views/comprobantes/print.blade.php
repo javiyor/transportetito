@@ -2,7 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>{{ ($comprobante->tipo === 'guia_envio' || ($comprobante->requiere_autorizacion_arca && ! $comprobante->arca_cae)) ? 'Guía' : 'Factura' }} #{{ $comprobante->id }}</title>
+    @php
+        $nombreArchivoEmpresa = trim((string) ($comprobante->empresa?->razon_social ?? 'Empresa'));
+        $nombreArchivoCliente = trim((string) ($comprobante->facturarCuenta?->tercero?->razon_social ?? 'Cliente'));
+        $nombreArchivoNumero = $comprobante->arca_numero
+            ? str_pad((string) ($comprobante->arca_punto_venta ?? 0), 4, '0', STR_PAD_LEFT).'-'.str_pad((string) $comprobante->arca_numero, 8, '0', STR_PAD_LEFT)
+            : (string) ($comprobante->numero_interno ? '#'.$comprobante->numero_interno : '#'.$comprobante->id);
+        $nombreArchivo = str_replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], '-', implode(' - ', array_filter([
+            $nombreArchivoEmpresa,
+            $nombreArchivoNumero,
+            $nombreArchivoCliente,
+        ])));
+        $nombreArchivo = preg_replace('/\s+/u', ' ', trim($nombreArchivo)) ?: 'Comprobante-'.$comprobante->id;
+    @endphp
+    <title>{{ $nombreArchivo }}</title>
     <style>
         @page {
             size: A4;
@@ -196,11 +209,8 @@
             padding: 5pt;
             font-size: 7.5pt;
         }
-        .bottom-col.remitos { flex: 0.8; }
-        .bottom-col.observaciones { flex: 1; }
-        .bottom-col.importes { flex: 1.2; min-width: 52mm; }
-        .bottom-col.observaciones { overflow-wrap: anywhere; }
-        .arca-observacion { border-top: 1px dotted #999; margin-top: 3pt; padding-top: 3pt; }
+        .bottom-col.remitos { flex: 0.9; }
+        .bottom-col.importes { flex: 1.1; min-width: 52mm; }
 
         .bottom-col .col-title {
             font-weight: bold;
@@ -292,13 +302,6 @@
             display: inline-block;
             padding-bottom: 2pt;
             margin-bottom: 8pt;
-        }
-        .firma-line {
-            border-top: 1px solid #000;
-            width: 80%;
-            margin: 20pt auto 4pt;
-            padding-top: 4pt;
-            font-size: 7pt;
         }
         .signature-block {
             margin-top: 12pt;
@@ -520,16 +523,6 @@
     // Remito numbers list
     $remitosList = $comprobante->pedidos->pluck('remito_numero')->filter()->unique()->values();
 
-    // Observaciones
-    $observaciones = collect();
-    foreach ($comprobante->pedidos as $pedido) {
-        $observacionPedido = trim((string) ($pedido->observacion ?? ''));
-        $esDescripcionDeUnidad = in_array(mb_strtolower($observacionPedido), ['bulto', 'bultos', 'palet', 'palets', 'pallet', 'pallets'], true);
-        if ($observacionPedido !== '' && ! $esDescripcionDeUnidad) {
-            $observaciones->push($observacionPedido);
-        }
-    }
-    $obsText = $observaciones->unique()->implode('; ');
     $totalValorDeclarado = $comprobante->pedidos->isNotEmpty()
         ? $comprobante->pedidos->sum(fn($p) => (float) $p->valor_declarado)
         : (float) ($calculo['valor_declarado'] ?? 0);
@@ -966,7 +959,7 @@
             </tbody>
         </table>
 
-        {{-- ===== BOTTOM 3-COLUMN LAYOUT ===== --}}
+        {{-- ===== BOTTOM SUMMARY ===== --}}
         <div class="bottom-row">
             {{-- IMPORTES --}}
             <div class="bottom-col importes">
@@ -1015,29 +1008,6 @@
                 @endif
             </div>
 
-            {{-- OBSERVACIONES --}}
-            <div class="bottom-col observaciones">
-                <div class="col-title">Observaciones</div>
-                @if($obsText)
-                    <div>{{ $obsText }}</div>
-                @endif
-                @if($comprobante->motivo)
-                    <div>{{ $comprobante->motivo }}</div>
-                @endif
-                @if($comprobante->arca_error)
-                    <div class="arca-observacion"><strong>Observaciones de ARCA:</strong> {{ $comprobante->arca_error }}</div>
-                @endif
-                @if(!$obsText && !$comprobante->motivo && !$comprobante->arca_error)
-                    <div class="helper">—</div>
-                @endif
-                <div class="signature-block">
-                    <div class="signature-line">Firma</div>
-                    <div class="signature-fields">
-                        <div>DNI:</div>
-                        <div>Aclaración:</div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         {{-- ===== LEGAL LEGENDS ===== --}}
@@ -1090,8 +1060,13 @@
             <div class="footer-right">
                 <div class="original-label">ORIGINAL</div>
                 <div style="font-size:8pt;">Recibí Conforme</div>
-                <div class="firma-line">Firma y aclaración</div>
-
+                <div class="signature-block">
+                    <div class="signature-line">Firma</div>
+                    <div class="signature-fields">
+                        <div>DNI:</div>
+                        <div>Aclaración:</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1100,5 +1075,10 @@
 
 @endif
 
+@if($autoPrint)
+<script>
+    window.addEventListener('load', () => window.setTimeout(() => window.print(), 250));
+</script>
+@endif
 </body>
 </html>

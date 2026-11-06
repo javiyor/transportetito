@@ -221,7 +221,7 @@ const translateLabel = (label) => {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">#{{ c.id }} <span class="text-xs font-normal text-gray-500">· {{ formatFecha(c.fecha_emision) }}</span></div>
-                                <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.estado }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
+                                <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
                                 <div class="mt-0.5"><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ c.empresa?.razon_social || '-' }}</span></div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
@@ -230,7 +230,7 @@ const translateLabel = (label) => {
                                     v-if="c.tipo === 'factura_interna' && c.arca_cae && c.arca_reintento_permitido"
                                     :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
                                     class="text-xs text-emerald-700 hover:text-emerald-900"
-                                >Nota de crédito</Link>
+                                >N.C.</Link>
                                 <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-xs text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                                 <div v-else-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="text-xs text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
                             </div>
@@ -296,12 +296,12 @@ const translateLabel = (label) => {
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
-                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">IVA</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Saldo acred.</th>
-                                <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="px-2 pr-0 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Saldo acred.</th>
+                                <th class="px-1 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Ver</th>
+                                <th class="px-1 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -323,22 +323,23 @@ const translateLabel = (label) => {
                                         <span v-if="parte.facturado" class="shrink-0 font-semibold text-emerald-700" title="La factura se emitió a este cliente">✓</span>
                                     </div>
                                 </td>
-                                <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ c.estado }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 text-right">{{ formatNum(c.subtotal) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-blue-700 text-right">{{ formatNum(c.iva_total) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-900 font-semibold text-right">{{ c.moneda }} {{ formatNum(c.total) }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-gray-700 text-right">
+                                <td class="px-2 pr-0 py-1 whitespace-nowrap text-gray-700 text-right">
                                     <span v-if="c.credit_summary?.saldo_acreditable !== null">{{ c.moneda }} {{ formatNum(c.credit_summary?.saldo_acreditable) }}</span>
                                     <span v-else>-</span>
                                 </td>
-                                <td class="px-2 py-1 text-right whitespace-nowrap">
-                                    <div class="flex justify-end gap-2">
-                                        <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
+                                <td class="px-1 py-1 text-right whitespace-nowrap">
+                                    <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-indigo-600 hover:text-indigo-800">Ver</a>
+                                </td>
+                                <td class="px-1 py-1 text-right whitespace-nowrap">
+                                    <div class="flex justify-end gap-1">
                                         <Link
                                             v-if="c.tipo === 'factura_interna' && c.arca_cae && c.arca_reintento_permitido"
                                             :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
                                             class="text-emerald-700 hover:text-emerald-900"
-                                        >Nota de crédito</Link>
+                                        >N.C.</Link>
                                         <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                                     </div>
                                     <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="mt-0.5 text-[10px] text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>

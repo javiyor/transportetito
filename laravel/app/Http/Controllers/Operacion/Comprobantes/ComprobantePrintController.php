@@ -41,6 +41,7 @@ class ComprobantePrintController extends Controller
         return response()->view('comprobantes.print', [
             'comprobante' => $comprobante,
             'qrDataUri' => $qrService->generar($comprobante),
+            'autoPrint' => $request->boolean('autoprint'),
         ]);
     }
 }

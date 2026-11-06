@@ -15,10 +15,11 @@ use App\Services\Arca\WsfeClient;
 use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Facturacion\TarifaResolver;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 class CargaDirectaStoreController extends Controller
 {
@@ -28,7 +29,7 @@ class CargaDirectaStoreController extends Controller
         ContabilizadorService $contabilizador,
         WsfeClient $wsfe,
         ArcaTipoComprobanteResolver $arcaTipos,
-    ): RedirectResponse {
+    ): Response {
         $empresaId = (int) $request->user()->current_empresa_id;
         abort_unless($empresaId, 403);
 
@@ -317,7 +318,10 @@ class CargaDirectaStoreController extends Controller
         }
 
         if ($comprobante->arca_cae) {
-            return redirect()->route('operacion.comprobantes.print', $comprobante);
+            return Inertia::location(route('operacion.comprobantes.print', [
+                'comprobante' => $comprobante->id,
+                'autoprint' => 1,
+            ]));
         }
 
         return $redirect;
