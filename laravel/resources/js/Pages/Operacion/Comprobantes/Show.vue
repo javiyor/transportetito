@@ -8,7 +8,6 @@ import { formatFecha } from '@/Utils/format.js';
 
 const props = defineProps({
     comprobante: Object,
-    auditLogs: Array,
     cuentas: Array,
     creditSummary: Object,
     motivoOptions: Array,
@@ -330,16 +329,6 @@ onMounted(async () => {
                 </div>
             </div>
 
-            <div v-if="(auditLogs || []).length" class="bg-white shadow sm:rounded-lg p-4">
-                <h3 class="text-base font-semibold text-gray-900">Auditoria</h3>
-                <div class="mt-4 space-y-3">
-                    <div v-for="log in auditLogs" :key="log.id" class="rounded border border-gray-200 px-4 py-3">
-                        <div class="text-sm font-medium text-gray-900">{{ log.action }}</div>
-                        <div class="text-xs text-gray-500">{{ log.user?.name || 'Sistema' }} · {{ String(log.created_at || '').replace('T', ' ').slice(0, 19) }}</div>
-                        <pre class="mt-2 text-xs text-gray-700 whitespace-pre-wrap">{{ JSON.stringify(log.context || {}, null, 2) }}</pre>
-                    </div>
-                </div>
-            </div>
         </div>
     </AppLayout>
 </template>

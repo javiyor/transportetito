@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Operacion\Comprobantes;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
@@ -59,13 +58,6 @@ class ComprobanteShowController extends Controller
             );
         }
 
-        $auditLogs = AuditLog::query()
-            ->with('user:id,name,email')
-            ->where('subject_type', Comprobante::class)
-            ->where('subject_id', $comprobante->id)
-            ->latest('id')
-            ->get();
-
         $cuentas = TerceroCuenta::query()
             ->where('empresa_id', $currentEmpresaId)
             ->with('tercero:id,cuit,razon_social')
@@ -80,7 +72,6 @@ class ComprobanteShowController extends Controller
         return Inertia::render('Operacion/Comprobantes/Show', [
             'comprobante' => $comprobante,
             'arcaTipoOpciones' => $arcaTipoOpciones,
-            'auditLogs' => $auditLogs,
             'cuentas' => $cuentas,
             'creditSummary' => [
                 'total_origen' => round(abs((float) $comprobante->total), 2),
