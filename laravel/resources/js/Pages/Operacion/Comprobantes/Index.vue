@@ -237,12 +237,18 @@ const translateLabel = (label) => {
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Facturar</div>
-                                <div class="font-medium text-gray-900">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Remitente</div>
+                                <div v-for="parte in c.remitentes" :key="parte.key" class="flex items-center gap-1 font-medium text-gray-900">
+                                    <span>{{ parte.razon_social }}</span>
+                                    <span v-if="parte.facturado" class="text-xs font-semibold text-emerald-700" title="La factura se emitió a este cliente">✓ Facturado</span>
+                                </div>
                             </div>
                             <div>
-                                <div class="text-xs uppercase tracking-wider text-gray-500">Entrega</div>
-                                <div class="font-medium text-gray-900">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Destinatario / entrega</div>
+                                <div v-for="parte in c.destinatarios" :key="parte.key" class="flex items-center gap-1 font-medium text-gray-900">
+                                    <span>{{ parte.razon_social }}</span>
+                                    <span v-if="parte.facturado" class="text-xs font-semibold text-emerald-700" title="La factura se emitió a este cliente">✓ Facturado</span>
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
@@ -288,8 +294,8 @@ const translateLabel = (label) => {
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Nro</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Facturar</th>
-                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
                                 <th class="px-2 py-1.5 text-right font-medium text-gray-500 uppercase tracking-wider">IVA</th>
@@ -305,8 +311,18 @@ const translateLabel = (label) => {
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-indigo-700 truncate max-w-[120px]">{{ c.empresa?.razon_social || '-' }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-gray-700 truncate max-w-[120px]">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-gray-700 truncate max-w-[120px]">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</td>
+                                <td class="px-2 py-1 text-gray-700 max-w-[180px]">
+                                    <div v-for="parte in c.remitentes" :key="parte.key" class="flex items-center gap-1 whitespace-nowrap">
+                                        <span class="truncate">{{ parte.razon_social }}</span>
+                                        <span v-if="parte.facturado" class="shrink-0 font-semibold text-emerald-700" title="La factura se emitió a este cliente">✓</span>
+                                    </div>
+                                </td>
+                                <td class="px-2 py-1 text-gray-700 max-w-[180px]">
+                                    <div v-for="parte in c.destinatarios" :key="parte.key" class="flex items-center gap-1 whitespace-nowrap">
+                                        <span class="truncate">{{ parte.razon_social }}</span>
+                                        <span v-if="parte.facturado" class="shrink-0 font-semibold text-emerald-700" title="La factura se emitió a este cliente">✓</span>
+                                    </div>
+                                </td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ c.estado }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 text-right">{{ formatNum(c.subtotal) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-blue-700 text-right">{{ formatNum(c.iva_total) }}</td>

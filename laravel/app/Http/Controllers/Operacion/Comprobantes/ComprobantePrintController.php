@@ -30,6 +30,7 @@ class ComprobantePrintController extends Controller
             'facturarCuenta.tercero:id,cuit,razon_social,domicilio_fiscal',
             'entregaCuenta.localidadRel:id,nombre',
             'facturarCuenta.localidadRel:id,nombre',
+            'pedidos' => fn ($query) => $query->orderBy('pedidos.id'),
             'pedidos.remitente:id,razon_social,cuit,domicilio_fiscal',
             'pedidos.destinatario:id,razon_social,cuit,domicilio_fiscal',
             'pedidos.remitenteCuenta.localidadRel:id,nombre',

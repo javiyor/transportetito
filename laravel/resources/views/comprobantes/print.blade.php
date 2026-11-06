@@ -152,6 +152,7 @@
         }
         .partes-table .party-line { margin: 2pt 0 0; }
         .partes-table .party-name { display: block; margin-bottom: 2pt; }
+        .party-person { margin: 0 0 5pt; }
 
         .partes-table, .bottom-row, .legal-legends, .footer-row,
         .items-table tr {
@@ -851,34 +852,66 @@
         <table class="partes-table">
             <tr>
                 <td>
-                    <div class="titulo-col">Remitente / Cliente</div>
-                    @php
-                        $cuentaFact = $comprobante->facturarCuenta;
-                        $terceroFact = $cuentaFact?->tercero;
-                        $domicilioFact = (array) ($terceroFact?->domicilio_fiscal ?? []);
-                        $direccionFact = trim((string) ($cuentaFact?->direccion ?: $domicilioStr($terceroFact)));
-                        $localidadFact = trim((string) ($cuentaFact?->localidad ?: $cuentaFact?->localidadRel?->nombre ?: ($domicilioFact['ciudad'] ?? '')));
-                    @endphp
-                    <strong class="party-name">{{ $terceroFact?->razon_social ?? '-' }}</strong>
-                    <div class="party-line"><strong>CUIT:</strong> {{ $terceroFact?->cuit ?? '-' }}</div>
-                    <div class="party-line"><strong>Dirección:</strong> {{ $direccionFact ?: '-' }}</div>
-                    <div class="party-line"><strong>Localidad:</strong> {{ $localidadFact ?: '-' }}</div>
-                    <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaFact?->telefono ?: '-' }}</div>
+                    <div class="titulo-col">Remitente / Origen</div>
+                    @forelse($origenes as $terceroOrigen)
+                        @php
+                            $cuentaOrigen = $comprobante->pedidos->firstWhere('remitente_tercero_id', $terceroOrigen->id)?->remitenteCuenta;
+                            $domicilioOrigen = (array) ($terceroOrigen->domicilio_fiscal ?? []);
+                            $direccionOrigen = trim((string) ($cuentaOrigen?->direccion ?: $domicilioStr($terceroOrigen)));
+                            $localidadOrigen = trim((string) ($cuentaOrigen?->localidad ?: $cuentaOrigen?->localidadRel?->nombre ?: ($domicilioOrigen['ciudad'] ?? '')));
+                        @endphp
+                        <div class="party-person">
+                            <strong class="party-name">{{ $terceroOrigen->razon_social ?: '-' }}</strong>
+                            <div class="party-line"><strong>CUIT:</strong> {{ $terceroOrigen->cuit ?: '-' }}</div>
+                            <div class="party-line"><strong>Dirección:</strong> {{ $direccionOrigen ?: '-' }}</div>
+                            <div class="party-line"><strong>Localidad:</strong> {{ $localidadOrigen ?: '-' }}</div>
+                            <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaOrigen?->telefono ?: '-' }}</div>
+                        </div>
+                    @empty
+                        @php
+                            $cuentaFact = $comprobante->facturarCuenta;
+                            $terceroFact = $cuentaFact?->tercero;
+                            $domicilioFact = (array) ($terceroFact?->domicilio_fiscal ?? []);
+                            $direccionFact = trim((string) ($cuentaFact?->direccion ?: $domicilioStr($terceroFact)));
+                            $localidadFact = trim((string) ($cuentaFact?->localidad ?: $cuentaFact?->localidadRel?->nombre ?: ($domicilioFact['ciudad'] ?? '')));
+                        @endphp
+                        <strong class="party-name">{{ $terceroFact?->razon_social ?? '-' }}</strong>
+                        <div class="party-line"><strong>CUIT:</strong> {{ $terceroFact?->cuit ?? '-' }}</div>
+                        <div class="party-line"><strong>Dirección:</strong> {{ $direccionFact ?: '-' }}</div>
+                        <div class="party-line"><strong>Localidad:</strong> {{ $localidadFact ?: '-' }}</div>
+                        <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaFact?->telefono ?: '-' }}</div>
+                    @endforelse
                 </td>
                 <td>
                     <div class="titulo-col">Destinatario / Entrega</div>
-                    @php
-                        $cuentaEnt = $comprobante->entregaCuenta;
-                        $terceroEnt = $cuentaEnt?->tercero;
-                        $domicilioEnt = (array) ($terceroEnt?->domicilio_fiscal ?? []);
-                        $direccionEnt = trim((string) ($cuentaEnt?->direccion ?: $domicilioStr($terceroEnt)));
-                        $localidadEnt = trim((string) ($cuentaEnt?->localidad ?: $cuentaEnt?->localidadRel?->nombre ?: ($domicilioEnt['ciudad'] ?? '')));
-                    @endphp
-                    <strong class="party-name">{{ $terceroEnt?->razon_social ?? '-' }}</strong>
-                    <div class="party-line"><strong>CUIT:</strong> {{ $terceroEnt?->cuit ?? '-' }}</div>
-                    <div class="party-line"><strong>Dirección:</strong> {{ $direccionEnt ?: '-' }}</div>
-                    <div class="party-line"><strong>Localidad:</strong> {{ $localidadEnt ?: '-' }}</div>
-                    <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaEnt?->telefono ?: '-' }}</div>
+                    @forelse($destinos as $terceroDestino)
+                        @php
+                            $cuentaDestino = $comprobante->pedidos->firstWhere('destinatario_tercero_id', $terceroDestino->id)?->destinatarioCuenta;
+                            $domicilioDestino = (array) ($terceroDestino->domicilio_fiscal ?? []);
+                            $direccionDestino = trim((string) ($cuentaDestino?->direccion ?: $domicilioStr($terceroDestino)));
+                            $localidadDestino = trim((string) ($cuentaDestino?->localidad ?: $cuentaDestino?->localidadRel?->nombre ?: ($domicilioDestino['ciudad'] ?? '')));
+                        @endphp
+                        <div class="party-person">
+                            <strong class="party-name">{{ $terceroDestino->razon_social ?: '-' }}</strong>
+                            <div class="party-line"><strong>CUIT:</strong> {{ $terceroDestino->cuit ?: '-' }}</div>
+                            <div class="party-line"><strong>Dirección:</strong> {{ $direccionDestino ?: '-' }}</div>
+                            <div class="party-line"><strong>Localidad:</strong> {{ $localidadDestino ?: '-' }}</div>
+                            <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaDestino?->telefono ?: '-' }}</div>
+                        </div>
+                    @empty
+                        @php
+                            $cuentaEnt = $comprobante->entregaCuenta;
+                            $terceroEnt = $cuentaEnt?->tercero;
+                            $domicilioEnt = (array) ($terceroEnt?->domicilio_fiscal ?? []);
+                            $direccionEnt = trim((string) ($cuentaEnt?->direccion ?: $domicilioStr($terceroEnt)));
+                            $localidadEnt = trim((string) ($cuentaEnt?->localidad ?: $cuentaEnt?->localidadRel?->nombre ?: ($domicilioEnt['ciudad'] ?? '')));
+                        @endphp
+                        <strong class="party-name">{{ $terceroEnt?->razon_social ?? '-' }}</strong>
+                        <div class="party-line"><strong>CUIT:</strong> {{ $terceroEnt?->cuit ?? '-' }}</div>
+                        <div class="party-line"><strong>Dirección:</strong> {{ $direccionEnt ?: '-' }}</div>
+                        <div class="party-line"><strong>Localidad:</strong> {{ $localidadEnt ?: '-' }}</div>
+                        <div class="party-line"><strong>Teléfono:</strong> {{ $cuentaEnt?->telefono ?: '-' }}</div>
+                    @endforelse
                 </td>
             </tr>
         </table>
@@ -887,9 +920,7 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width:8%;text-align:center;">Cant.</th>
-                    <th>Descripción</th>
-                    <th style="width:16%;text-align:right;">Importe</th>
+                    <th>Descripción / importe</th>
                 </tr>
             </thead>
             <tbody>
@@ -899,16 +930,20 @@
                         $partes = [];
                         if (($sel['usar_bulto'] ?? true) && ($pedido->bultos ?? 0) > 0) $partes[] = $pedido->bultos.' bulto'.($pedido->bultos>1?'s':'');
                         if (($sel['usar_palet'] ?? true) && ($pedido->palets ?? 0) > 0) $partes[] = $pedido->palets.' palet'.($pedido->palets>1?'s':'');
-                        // Solo descripcion de lo facturado: bultos/palets + observacion (ej: servicio de retiro).
-                        // Origen/destino ya estan en el encabezado; el valor declarado figura en importes.
+                        // El origen/destino ya se imprimen en el encabezado.
                         $descripcion = $partes ? implode(', ', $partes) : '';
-                        if (!empty($pedido->observacion)) $descripcion .= ($descripcion !== '' ? ' — ' : '').trim($pedido->observacion);
+                        $observacionPedido = trim((string) ($pedido->observacion ?? ''));
+                        $observacionEsTipoBulto = in_array(mb_strtolower($observacionPedido), ['bulto', 'bultos', 'palet', 'palets', 'pallet', 'pallets'], true);
+                        if ($observacionPedido !== '' && ! $observacionEsTipoBulto) {
+                            $descripcion .= ($descripcion !== '' ? ' — ' : '').$observacionPedido;
+                        }
                         if ($descripcion === '') $descripcion = 'Servicio de flete';
-                        $cantLinea = (int) ($pedido->bultos ?? 0) + (int) ($pedido->palets ?? 0);
-                        if ($cantLinea <= 0) $cantLinea = 1;
-                        // Importe neto sin IVA por pedido (proporcional al valor neto total)
+                        // En carga directa cada pedido conserva su importe original; las demás facturas se prorratean.
                         $pedidoImporteNeto = 0;
-                        if (!empty($calculo['valor_neto_total']) && ($calculo['valor_declarado'] ?? 0) > 0) {
+                        $directItem = $detalle['items'][$loop->index] ?? null;
+                        if (!empty($detalle['carga_directa']) && is_array($directItem)) {
+                            $pedidoImporteNeto = (float) ($directItem['importe'] ?? 0);
+                        } elseif (!empty($calculo['valor_neto_total']) && ($calculo['valor_declarado'] ?? 0) > 0) {
                             $pedidoImporteNeto = (float)$pedido->valor_declarado / (float)$calculo['valor_declarado'] * (float)$calculo['valor_neto_total'];
                         } elseif (!empty($calculo['subtotal_gravado']) && count($comprobante->pedidos) > 0) {
                             $pedidoImporteNeto = (float)$calculo['subtotal_gravado'] / count($comprobante->pedidos);
@@ -917,15 +952,11 @@
                         }
                     @endphp
                     <tr>
-                        <td style="text-align:center;">{{ $cantLinea }}</td>
-                        <td>{{ $descripcion }}</td>
-                        <td style="text-align:right;">{{ $fmtNum($pedidoImporteNeto) }}</td>
+                        <td>{{ $descripcion }} — {{ $fmtMoneda($pedidoImporteNeto, $comprobante->moneda) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td style="text-align:center;">-</td>
-                        <td>Servicio de flete segun factura</td>
-                        <td style="text-align:right;">{{ $fmtNum($comprobante->total ?? 0) }}</td>
+                        <td>Servicio de flete según factura — {{ $fmtMoneda($comprobante->total ?? 0, $comprobante->moneda) }}</td>
                     </tr>
                 @endforelse
             </tbody>

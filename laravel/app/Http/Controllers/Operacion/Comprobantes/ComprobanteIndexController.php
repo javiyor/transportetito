@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\Empresa;
+use App\Models\Pedido;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
 use Illuminate\Http\Request;
@@ -47,6 +48,11 @@ class ComprobanteIndexController extends Controller
                 'empresa:id,razon_social,condicion_iva',
                 'entregaCuenta.tercero:id,cuit,razon_social,condicion_iva',
                 'facturarCuenta.tercero:id,cuit,razon_social,condicion_iva',
+                'pedidos:id,remitente_tercero_id,destinatario_tercero_id,remitente_cuenta_id,destinatario_cuenta_id',
+                'pedidos.remitente:id,razon_social,cuit',
+                'pedidos.destinatario:id,razon_social,cuit',
+                'pedidos.remitenteCuenta:id,tercero_id',
+                'pedidos.destinatarioCuenta:id,tercero_id',
                 'notasCredito:id,comprobante_origen_id,estado,total',
             ])
             ->whereIn('empresa_id', $fEmpresaId > 0 ? [$fEmpresaId] : $empresaIds)
@@ -98,8 +104,62 @@ class ComprobanteIndexController extends Controller
             $creditoEmitido = round((float) $comprobante->notasCredito
                 ->where('estado', '!=', 'anulada')
                 ->sum(fn (Comprobante $nota) => abs((float) $nota->total)), 2);
+            $cuentaFacturadaId = (int) ($comprobante->facturar_cuenta_id ?? 0);
+            $terceroFacturadoId = (int) ($comprobante->facturarCuenta?->tercero_id ?? 0);
+            $mapearParte = function (?Pedido $pedido, string $tipo) use ($cuentaFacturadaId, $terceroFacturadoId) {
+                $cuenta = $tipo === 'remitente' ? $pedido?->remitenteCuenta : $pedido?->destinatarioCuenta;
+                $tercero = $tipo === 'remitente' ? $pedido?->remitente : $pedido?->destinatario;
+                if (! $tercero && ! $cuenta?->tercero_id) {
+                    return null;
+                }
 
-            return array_merge($comprobante->toArray(), [
+                $terceroId = (int) ($tercero?->id ?? $cuenta?->tercero_id ?? 0);
+
+                return [
+                    'key' => 'tercero-'.$terceroId,
+                    'razon_social' => $tercero?->razon_social ?: '-',
+                    'cuit' => $tercero?->cuit ?: '-',
+                    'facturado' => ($cuenta && (int) $cuenta->id === $cuentaFacturadaId)
+                        || ($terceroId > 0 && $terceroId === $terceroFacturadoId),
+                ];
+            };
+            $agruparPartes = fn ($partes) => $partes
+                ->filter()
+                ->groupBy('key')
+                ->map(function ($grupo) {
+                    $parte = $grupo->first();
+                    $parte['facturado'] = $grupo->contains(fn ($item) => (bool) $item['facturado']);
+
+                    return $parte;
+                })
+                ->values();
+            $remitentes = $agruparPartes($comprobante->pedidos->map(fn (Pedido $pedido) => $mapearParte($pedido, 'remitente')));
+            $destinatarios = $agruparPartes($comprobante->pedidos->map(fn (Pedido $pedido) => $mapearParte($pedido, 'destinatario')));
+
+            if ($comprobante->pedidos->isEmpty()) {
+                $terceroFacturado = $comprobante->facturarCuenta?->tercero;
+                $terceroEntrega = $comprobante->entregaCuenta?->tercero;
+                $remitentes = collect($terceroFacturado ? [[
+                    'key' => 'tercero-'.$terceroFacturado->id,
+                    'razon_social' => $terceroFacturado->razon_social ?: '-',
+                    'cuit' => $terceroFacturado->cuit ?: '-',
+                    'facturado' => true,
+                ]] : []);
+                $destinatarios = collect($terceroEntrega ? [[
+                    'key' => 'tercero-'.$terceroEntrega->id,
+                    'razon_social' => $terceroEntrega->razon_social ?: '-',
+                    'cuit' => $terceroEntrega->cuit ?: '-',
+                    'facturado' => (int) $comprobante->entrega_cuenta_id === $cuentaFacturadaId
+                        || (int) ($terceroEntrega->id ?? 0) === $terceroFacturadoId,
+                ]] : []);
+            }
+
+            $comprobanteData = $comprobante->toArray();
+            unset($comprobanteData['pedidos']);
+
+            return array_merge($comprobanteData, [
+                'remitentes' => $remitentes,
+                'destinatarios' => $destinatarios,
                 'arca_tipo_opciones' => (string) $comprobante->tipo === 'factura_interna'
                     && ! $comprobante->arca_cae
                     && $comprobante->requiere_autorizacion_arca

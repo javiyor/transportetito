@@ -15,6 +15,8 @@ use App\Services\Arca\ArcaPersonaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TerceroAdminController extends Controller
@@ -176,10 +178,37 @@ class TerceroAdminController extends Controller
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
 
-        $cuenta = TerceroCuenta::query()->firstOrCreate(
-            ['empresa_id' => $data['empresa_id'], 'numero_cliente' => (int) $data['numero_cliente']],
-            [
+        $cuenta = DB::transaction(function () use ($data, $tercero, $cuentaContableProveedorId) {
+            // Serialize additions for this CUIT so parallel requests reuse one account per company.
+            Tercero::query()->whereKey($tercero->id)->lockForUpdate()->firstOrFail();
+
+            $existente = TerceroCuenta::query()
+                ->where('empresa_id', (int) $data['empresa_id'])
+                ->where('tercero_id', $tercero->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existente) {
+                return $existente;
+            }
+
+            $numeroOcupado = TerceroCuenta::query()
+                ->where('empresa_id', (int) $data['empresa_id'])
+                ->where('numero_cliente', (int) $data['numero_cliente'])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($numeroOcupado) {
+                throw ValidationException::withMessages([
+                    'numero_cliente' => 'Ese número de cliente ya está asignado a otro CUIT en esta empresa.',
+                ]);
+            }
+
+            return TerceroCuenta::query()->create([
+                'empresa_id' => (int) $data['empresa_id'],
                 'tercero_id' => $tercero->id,
+                'numero_cliente' => (int) $data['numero_cliente'],
                 'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
@@ -190,26 +219,29 @@ class TerceroAdminController extends Controller
                 'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
                 'cuenta_contable_proveedor_id' => $cuentaContableProveedorId,
                 'activo' => true,
-            ]
-        );
+            ]);
+        });
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
-            'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
-            'localidad' => $data['localidad'] ?: null,
-            'barrio' => $data['barrio'] ?: null,
-            'provincia_id' => $data['provincia_id'] ?: null,
-            'localidad_id' => $data['localidad_id'] ?: null,
-            'email' => $data['email'] ?: null,
-            'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? false),
-            'cobrador_user_id' => $data['cobrador_user_id'] ? (int) $data['cobrador_user_id'] : null,
-            'cuenta_contable_proveedor_id' => $cuentaContableProveedorId,
+            'nombre_cuenta' => $data['nombre_cuenta'] ?: $cuenta->nombre_cuenta,
+            'localidad' => $data['localidad'] ?: $cuenta->localidad,
+            'barrio' => $data['barrio'] ?: $cuenta->barrio,
+            'provincia_id' => $data['provincia_id'] ?: $cuenta->provincia_id,
+            'localidad_id' => $data['localidad_id'] ?: $cuenta->localidad_id,
+            'email' => $data['email'] ?: $cuenta->email,
+            'enviar_comprobantes_por_email' => (bool) ($data['enviar_comprobantes_por_email'] ?? $cuenta->enviar_comprobantes_por_email),
+            'cobrador_user_id' => isset($data['cobrador_user_id']) ? (int) $data['cobrador_user_id'] : $cuenta->cobrador_user_id,
+            'cuenta_contable_proveedor_id' => $cuentaContableProveedorId ?? $cuenta->cuenta_contable_proveedor_id,
         ]);
 
-        TerceroEmpresa::query()->updateOrCreate(
-            ['empresa_id' => $data['empresa_id'], 'tercero_cuenta_id' => $cuenta->id],
-            ['es_cliente' => (bool) $data['es_cliente'], 'es_proveedor' => (bool) $data['es_proveedor']]
-        );
+        $relacionEmpresa = TerceroEmpresa::query()->firstOrNew([
+            'empresa_id' => $data['empresa_id'],
+            'tercero_cuenta_id' => $cuenta->id,
+        ]);
+        $relacionEmpresa->es_cliente = (bool) $relacionEmpresa->es_cliente || (bool) $data['es_cliente'];
+        $relacionEmpresa->es_proveedor = (bool) $relacionEmpresa->es_proveedor || (bool) $data['es_proveedor'];
+        $relacionEmpresa->save();
 
         return back();
     }
@@ -256,6 +288,19 @@ class TerceroAdminController extends Controller
                 'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
             ]
         );
+
+        $cuentaExistente = TerceroCuenta::query()
+            ->where('empresa_id', (int) $data['empresa_id'])
+            ->where('tercero_id', $tercero->id)
+            ->where('id', '!=', $cuenta->id)
+            ->orderBy('id')
+            ->first();
+
+        if ($cuentaExistente) {
+            return back()->withErrors([
+                'cuit' => 'Ya existe otro cliente con este CUIT en la empresa (cuenta #'.$cuentaExistente->numero_cliente.'). Consolidá los duplicados antes de reasignar esta cuenta.',
+            ])->withInput();
+        }
 
         $tercero->update([
             'razon_social' => $data['razon_social'],
