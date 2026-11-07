@@ -194,8 +194,7 @@
             font-size: 8pt;
             vertical-align: top;
         }
-        .items-table .col-cant { width: 10%; text-align: center; }
-        .items-table .col-importe { width: 18%; text-align: right; white-space: nowrap; }
+        .items-table .col-importe { width: 38mm; text-align: right; white-space: nowrap; }
 
         /* ===== BOTTOM 3-COLUMN LAYOUT ===== */
         .bottom-row {
@@ -209,8 +208,8 @@
             padding: 5pt;
             font-size: 7.5pt;
         }
-        .bottom-col.remitos { flex: 0.9; }
-        .bottom-col.importes { flex: 1.1; min-width: 52mm; }
+        .bottom-col.remitos { flex: 1; order: 1; }
+        .bottom-col.importes { flex: 0 0 82mm; min-width: 82mm; padding-right: 6pt; order: 2; }
 
         .bottom-col .col-title {
             font-weight: bold;
@@ -223,7 +222,7 @@
 
         .importe-line {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) 38mm;
             align-items: baseline;
             column-gap: 7pt;
             padding: 1pt 0;
@@ -917,7 +916,8 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>Descripción / importe</th>
+                    <th>Descripción</th>
+                    <th class="col-importe">Importe</th>
                 </tr>
             </thead>
             <tbody>
@@ -949,11 +949,13 @@
                         }
                     @endphp
                     <tr>
-                        <td>{{ $descripcion }} — {{ $fmtMoneda($pedidoImporteNeto, $comprobante->moneda) }}</td>
+                        <td>{{ $descripcion }}</td>
+                        <td class="col-importe">{{ $fmtMoneda($pedidoImporteNeto, $comprobante->moneda) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td>Servicio de flete según factura — {{ $fmtMoneda($comprobante->total ?? 0, $comprobante->moneda) }}</td>
+                        <td>Servicio de flete según factura</td>
+                        <td class="col-importe">{{ $fmtMoneda($comprobante->total ?? 0, $comprobante->moneda) }}</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -968,16 +970,16 @@
                     <span>Valor declarado total</span>
                     <span>{{ $fmtMoneda($totalValorDeclarado, $comprobante->moneda) }}</span>
                 </div>
-                <div class="importe-line">
-                    <span>Subtotal gravado</span>
-                    <span>{{ $fmtMoneda($calculo['subtotal_gravado'] ?? $comprobante->subtotal ?? 0, $comprobante->moneda) }}</span>
-                </div>
                 @if((float) ($calculo['seguro'] ?? $calculo['total_seguro'] ?? $totalSeguro) > 0)
                 <div class="importe-line">
                     <span>Seguro</span>
                     <span>{{ $fmtMoneda($totalSeguro, $comprobante->moneda) }}</span>
                 </div>
                 @endif
+                <div class="importe-line">
+                    <span>Subtotal gravado</span>
+                    <span>{{ $fmtMoneda($calculo['subtotal_gravado'] ?? $comprobante->subtotal ?? 0, $comprobante->moneda) }}</span>
+                </div>
                 @if((float) ($calculo['iva'] ?? $comprobante->iva_total ?? 0) > 0)
                 <div class="importe-line">
                     <span>IVA {{ number_format($ivaPct, $ivaPct == (int) $ivaPct ? 0 : 1, ',', '.') }}%</span>
