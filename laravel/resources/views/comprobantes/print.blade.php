@@ -787,7 +787,8 @@
         <select id="invoice-copy-count">
             <option value="1">1 — Original</option>
             <option value="2">2 — Original y Duplicado</option>
-            <option value="3" selected>3 — Original, Duplicado y Triplicado</option>
+            <option value="original-triplicado" selected>Original y Triplicado — una hoja A4</option>
+            <option value="3">3 — Original, Duplicado y Triplicado</option>
         </select>
         <button type="button" onclick="printInvoiceCopies()">Imprimir / Guardar PDF</button>
     </div>
@@ -1143,7 +1144,7 @@
 @endif
 <script>
     function printInvoiceCopies() {
-        const count = Number(document.getElementById('invoice-copy-count')?.value || 1);
+        const selection = document.getElementById('invoice-copy-count')?.value || '1';
         const source = document.getElementById('invoice-copy-source');
         if (!source) {
             window.print();
@@ -1164,7 +1165,7 @@
             return copy;
         };
 
-        if (count === 1) {
+        if (selection === '1') {
             const sheet = document.createElement('section');
             sheet.className = 'copy-full-sheet';
             sheet.append(makeCopy('ORIGINAL'));
@@ -1172,7 +1173,10 @@
         } else {
             const pair = document.createElement('section');
             pair.className = 'copy-pair-sheet';
-            ['ORIGINAL', 'DUPLICADO'].forEach((label) => {
+            const pairLabels = selection === 'original-triplicado'
+                ? ['ORIGINAL', 'TRIPLICADO']
+                : ['ORIGINAL', 'DUPLICADO'];
+            pairLabels.forEach((label) => {
                 const slot = document.createElement('div');
                 slot.className = 'copy-slot';
                 slot.append(makeCopy(label));
@@ -1180,7 +1184,7 @@
             });
             copies.append(pair);
 
-            if (count === 3) {
+            if (selection === '3') {
                 const triplicate = document.createElement('section');
                 triplicate.className = 'copy-full-sheet';
                 triplicate.append(makeCopy('TRIPLICADO'));
