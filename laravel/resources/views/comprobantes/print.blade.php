@@ -21,6 +21,14 @@
             size: A4;
             margin: 10mm;
         }
+        @page invoicePair {
+            size: A4 landscape;
+            margin: 5mm;
+        }
+        @page invoiceFull {
+            size: A4 portrait;
+            margin: 10mm;
+        }
         *, *::before, *::after { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -336,7 +344,39 @@
 
         /* ===== NO-PRINT BUTTON ===== */
         .no-print { margin-bottom: 12pt; }
-        @media print { .no-print { display: none; } }
+        .print-copies { display: none; }
+        .copy-pair-sheet { page: invoicePair; }
+        .copy-full-sheet { page: invoiceFull; }
+        .copy-pair-sheet {
+            display: flex;
+            width: 287mm;
+            height: 200mm;
+            overflow: hidden;
+        }
+        .copy-slot {
+            position: relative;
+            width: 143.5mm;
+            height: 200mm;
+            overflow: hidden;
+        }
+        .copy-slot:first-child { border-right: 1px dotted #444; }
+        .copy-slot .page-border {
+            position: absolute;
+            top: 0;
+            left: 0.7mm;
+            width: 190mm;
+            min-height: 267mm;
+            transform: scale(.748);
+            transform-origin: top left;
+        }
+        .copy-full-sheet { break-before: page; page-break-before: always; }
+        @media print {
+            .no-print { display: none !important; }
+            body.printing-copies { width: auto; }
+            body.printing-copies #invoice-copy-source { display: none !important; }
+            body.printing-copies .print-copies { display: block; }
+            body.printing-copies .copy-pair-sheet { display: flex; }
+        }
 
         /* ===== GUIA STYLES (kept compact) ===== */
         .guia-header-centered {
@@ -413,10 +453,6 @@
     </style>
 </head>
 <body>
-    <div class="no-print" style="margin-bottom:12pt;">
-        <button onclick="window.print()">Imprimir / Guardar PDF</button>
-    </div>
-
 @php
     $empresa = $comprobante->empresa;
     $detalle = $comprobante->detalle_facturacion ?? [];
@@ -555,6 +591,9 @@
     {{-- ================================================================ --}}
     {{--  GUIA NO FISCAL  --}}
     {{-- ================================================================ --}}
+    <div class="no-print" style="margin-bottom:12pt;">
+        <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    </div>
     <div class="page-border">
         <div class="watermark">{{ $esGuiaPendiente ? 'GUÍA' : 'GUÍA NO FISCAL' }}</div>
         <div class="content">
@@ -743,7 +782,16 @@
     {{-- ================================================================ --}}
     {{--  FACTURA / NOTA DE CRÉDITO / NOTA DE DÉBITO  --}}
     {{-- ================================================================ --}}
-    <div class="page-border">
+    <div class="no-print" style="margin-bottom:12pt;">
+        <label for="invoice-copy-count">Copias a imprimir:</label>
+        <select id="invoice-copy-count">
+            <option value="1">1 — Original</option>
+            <option value="2">2 — Original y Duplicado</option>
+            <option value="3" selected>3 — Original, Duplicado y Triplicado</option>
+        </select>
+        <button type="button" onclick="printInvoiceCopies()">Imprimir / Guardar PDF</button>
+    </div>
+    <div class="page-border" id="invoice-copy-source">
         <div class="watermark">ORIGINAL</div>
         <div class="content">
 
@@ -1090,8 +1138,65 @@
 
 @if($autoPrint)
 <script>
-    window.addEventListener('load', () => window.setTimeout(() => window.print(), 250));
+    window.addEventListener('load', () => document.getElementById('invoice-copy-count')?.focus());
 </script>
 @endif
+<script>
+    function printInvoiceCopies() {
+        const count = Number(document.getElementById('invoice-copy-count')?.value || 1);
+        const source = document.getElementById('invoice-copy-source');
+        if (!source) {
+            window.print();
+            return;
+        }
+
+        const copies = document.createElement('div');
+        copies.className = 'print-copies';
+
+        const makeCopy = (label) => {
+            const copy = source.cloneNode(true);
+            copy.removeAttribute('id');
+            copy.querySelector('.watermark').textContent = label;
+            const headerCopyLabel = copy.querySelector('.header-center > div:first-child');
+            if (headerCopyLabel) headerCopyLabel.textContent = label;
+            const footerCopyLabel = copy.querySelector('.original-label');
+            if (footerCopyLabel) footerCopyLabel.textContent = label;
+            return copy;
+        };
+
+        if (count === 1) {
+            const sheet = document.createElement('section');
+            sheet.className = 'copy-full-sheet';
+            sheet.append(makeCopy('ORIGINAL'));
+            copies.append(sheet);
+        } else {
+            const pair = document.createElement('section');
+            pair.className = 'copy-pair-sheet';
+            ['ORIGINAL', 'DUPLICADO'].forEach((label) => {
+                const slot = document.createElement('div');
+                slot.className = 'copy-slot';
+                slot.append(makeCopy(label));
+                pair.append(slot);
+            });
+            copies.append(pair);
+
+            if (count === 3) {
+                const triplicate = document.createElement('section');
+                triplicate.className = 'copy-full-sheet';
+                triplicate.append(makeCopy('TRIPLICADO'));
+                copies.append(triplicate);
+            }
+        }
+
+        document.body.classList.add('printing-copies');
+        document.body.append(copies);
+        const cleanup = () => {
+            document.body.classList.remove('printing-copies');
+            copies.remove();
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+        window.print();
+    }
+</script>
 </body>
 </html>
