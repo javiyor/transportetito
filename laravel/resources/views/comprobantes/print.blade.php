@@ -244,6 +244,13 @@
 
         /* ===== VALOR DECLARADO ===== */
         /* ===== LEGAL LEGENDS ===== */
+        .invoice-observation {
+            border: 1px solid #999;
+            padding: 4pt 6pt;
+            margin-bottom: 6pt;
+            font-size: 7pt;
+            white-space: pre-line;
+        }
         .legal-legends {
             border-top: 1px solid #000;
             border-bottom: 1px solid #000;
@@ -1011,6 +1018,10 @@
             </div>
 
         </div>
+
+        @if(trim((string) ($detalle['observacion'] ?? '')) !== '')
+            <div class="invoice-observation"><strong>Observaciones:</strong> {{ $detalle['observacion'] }}</div>
+        @endif
 
         {{-- ===== LEGAL LEGENDS ===== --}}
         <div class="legal-legends">

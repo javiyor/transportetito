@@ -31,13 +31,13 @@ class FacturasListController extends Controller
         $empresas = Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']);
 
         $zonas = Zona::query()
-            ->where('empresa_id', $empresaId)
+            ->when($empresaFiltro > 0, fn ($q) => $q->where('empresa_id', $empresaFiltro))
             ->where('activo', true)
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
 
         $localidades = TerceroCuenta::query()
-            ->where('empresa_id', $empresaId)
+            ->when($empresaFiltro > 0, fn ($q) => $q->where('empresa_id', $empresaFiltro))
             ->whereNotNull('localidad')
             ->where('localidad', '!=', '')
             ->distinct()

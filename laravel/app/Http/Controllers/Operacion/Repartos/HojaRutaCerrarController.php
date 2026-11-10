@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Operacion\Repartos;
 
 use App\Http\Controllers\Controller;
 use App\Mail\EntregaNotificacionMail;
+use App\Mail\HojaRutaCierreMail;
 use App\Models\HojaRuta;
 use App\Models\PreRecibo;
 use App\Models\PreReciboAplicacion;
@@ -115,22 +116,43 @@ class HojaRutaCerrarController extends Controller
         });
 
         // Send notifications after closing (best-effort, outside transaction)
-        $notifResults = $this->enviarNotificaciones($hoja);
+        $notifResults = $this->enviarNotificaciones($hoja, $empresa);
 
         $msg = "Hoja cerrada. Pre-recibos generados: $created.";
         if ($notifResults['email_count'] > 0 || $notifResults['whatsapp_count'] > 0) {
             $msg .= " Notificaciones: {$notifResults['email_count']} email(s), {$notifResults['whatsapp_count']} WhatsApp(s).";
+        }
+        if (! $notifResults['empresa_email_configurado']) {
+            $msg .= ' Aviso de cierre no enviado: la empresa no tiene email configurado.';
+        } elseif (! $notifResults['empresa_email_enviado']) {
+            $msg .= ' No se pudo enviar el aviso de cierre por email; revisar el log de la aplicación.';
         }
 
         return redirect()->route('operacion.repartos.hojas.show', $hoja)
             ->with('success', $msg);
     }
 
-    private function enviarNotificaciones(HojaRuta $hoja): array
+    private function enviarNotificaciones(HojaRuta $hoja, Empresa $empresa): array
     {
         $emailCount = 0;
         $whatsappCount = 0;
         $resultados = [];
+        $empresaEmailEnviado = false;
+
+        $empresaEmail = trim((string) $empresa->email);
+        if ($empresaEmail !== '') {
+            try {
+                Mail::to($empresaEmail)->send(new HojaRutaCierreMail($hoja));
+                $emailCount++;
+                $empresaEmailEnviado = true;
+            } catch (\Throwable $e) {
+                Log::error('Error enviando aviso de cierre de hoja de ruta', [
+                    'hoja_ruta_id' => $hoja->id,
+                    'to' => $empresaEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         $hoja->load(['items' => function ($q) {
             $q->with('entregaCuenta:id,email,whatsapp_numero,tercero_id');
@@ -188,6 +210,8 @@ class HojaRutaCerrarController extends Controller
         return [
             'email_count' => $emailCount,
             'whatsapp_count' => $whatsappCount,
+            'empresa_email_configurado' => $empresaEmail !== '',
+            'empresa_email_enviado' => $empresaEmailEnviado,
         ];
     }
 }

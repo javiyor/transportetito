@@ -162,14 +162,14 @@ const vehiculoLabel = computed(() => {
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex shrink-0 items-center gap-1 whitespace-nowrap">
                     <Link :href="route('operacion.repartos.facturas')" class="inline-flex">
-                        <SecondaryButton>Volver</SecondaryButton>
+                        <SecondaryButton class="!px-2 !py-1 !text-xs">Volver</SecondaryButton>
                     </Link>
-                    <Link :href="route('operacion.repartos.hojas.print', hoja.id)" target="_blank" class="inline-flex">
-                        <SecondaryButton>Imprimir</SecondaryButton>
-                    </Link>
-                    <PrimaryButton v-if="hoja.estado !== 'cerrada'" :disabled="closeForm.processing" @click.prevent="cerrar">Cerrar hoja</PrimaryButton>
+                    <a :href="route('operacion.repartos.hojas.print', hoja.id)" target="_blank" rel="noopener" class="inline-flex">
+                        <SecondaryButton class="!px-2 !py-1 !text-xs">Imprimir</SecondaryButton>
+                    </a>
+                    <PrimaryButton v-if="hoja.estado !== 'cerrada'" class="!px-2 !py-1 !text-xs" :disabled="closeForm.processing" @click.prevent="cerrar">Cerrar hoja</PrimaryButton>
                 </div>
             </div>
         </template>
@@ -225,13 +225,13 @@ const vehiculoLabel = computed(() => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="it in hoja.items" :key="it.id" class="hover:bg-gray-50">
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">{{ it.orden }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
+                                <td class="px-2 py-1 text-xs text-gray-700">
                                     <div class="font-medium text-gray-900">{{ it.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                     <div class="text-xs text-gray-500">CUIT {{ it.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ it.entrega_cuenta?.numero_cliente || '-' }}</div>
                                     <div class="text-xs text-gray-500">{{ it.direccion || it.entrega_cuenta?.direccion || '' }} {{ it.localidad || it.entrega_cuenta?.localidad ? '· ' + (it.localidad || it.entrega_cuenta?.localidad) : '' }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
+                                <td class="px-2 py-1 whitespace-nowrap text-xs text-gray-700">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
+                                <td class="px-2 py-1 text-xs text-gray-700">
                                     <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
                                         :class="{
                                             'bg-yellow-100 text-yellow-800': it.estado_entrega === 'pendiente',
@@ -255,30 +255,30 @@ const vehiculoLabel = computed(() => {
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
+                                <td class="px-2 py-1 text-xs text-gray-700">
                                     <TextInput
                                         :disabled="hoja.estado === 'cerrada'"
                                         :model-value="it.observacion_operador || ''"
                                         type="text"
-                                        class="block w-full text-sm"
+                                        class="block w-full !py-1 text-xs"
                                         placeholder="(opcional)"
                                         @change="setObs(it.id, $event.target.value)"
                                     />
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                    <div class="flex justify-end gap-2 flex-wrap">
+                                <td class="px-2 py-1 whitespace-nowrap text-right text-xs">
+                                    <div class="flex justify-end gap-1 flex-nowrap">
                                         <TextInput
                                             v-if="hoja.estado !== 'cerrada'"
                                             :model-value="it.orden"
                                             type="number"
                                             min="1"
-                                            class="w-20 text-xs"
+                                            class="w-14 !px-1 !py-1 text-[10px]"
                                             @change="setOrden(it.id, parseInt($event.target.value, 10))"
                                         />
-                                        <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="openDelivery(it)">
+                                        <SecondaryButton class="!px-1.5 !py-1 !text-[10px]" v-if="hoja.estado !== 'cerrada'" @click.prevent="openDelivery(it)">
                                             {{ it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia' ? 'Editar' : 'Entregar' }}
                                         </SecondaryButton>
-                                        <SecondaryButton class="text-xs" v-if="hoja.estado !== 'cerrada'" @click.prevent="setEntrega(it.id, 'no_entregado')">No entregado</SecondaryButton>
+                                        <SecondaryButton class="!px-1.5 !py-1 !text-[10px]" v-if="hoja.estado !== 'cerrada'" @click.prevent="setEntrega(it.id, 'no_entregado')">No entregado</SecondaryButton>
                                     </div>
                                 </td>
                             </tr>

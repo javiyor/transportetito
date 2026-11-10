@@ -25,6 +25,7 @@ const filterForm = useForm({
     localidad: props.filters?.localidad || '',
     fecha: props.filters?.fecha || '',
     tipo: props.filters?.tipo || 'todos',
+    empresa_id: props.filters?.empresa_id || '',
     comprobante_ids: [],
 });
 
@@ -75,7 +76,7 @@ const submitCreate = () => {
 const applyFilters = () => {
     router.get(
         route('operacion.repartos.facturas'),
-        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos' },
+        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos', empresa_id: filterForm.empresa_id || null },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -111,7 +112,14 @@ const ordenDe = (id) => {
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-2">
             <div class="bg-white shadow sm:rounded-lg p-2">
-                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                <div class="grid grid-cols-2 sm:grid-cols-7 gap-2">
+                    <div>
+                        <div class="text-[11px] font-medium text-gray-700 mb-0.5">Empresa</div>
+                        <select v-model="filterForm.empresa_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" @change="filterForm.zona_id = ''; filterForm.localidad = ''">
+                            <option value="">Todas las empresas</option>
+                            <option v-for="empresa in empresas" :key="empresa.id" :value="empresa.id">{{ empresa.razon_social }}</option>
+                        </select>
+                    </div>
                     <div>
                         <div class="text-[11px] font-medium text-gray-700 mb-0.5">Zona</div>
                         <select v-model="filterForm.zona_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
