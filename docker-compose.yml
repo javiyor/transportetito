@@ -129,6 +129,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     mem_limit: 256m
     ports:
       - "63790:6379"
