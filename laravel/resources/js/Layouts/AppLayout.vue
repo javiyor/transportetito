@@ -681,7 +681,7 @@ const applyPwaUpdate = () => {
                                     {{ $page.props.auth.user.name }}
                                 </div>
                                 <div class="font-medium text-sm text-gray-500">
-                                    {{ $page.props.auth.user.email }}
+                                    {{ $page.props.auth.user.username ? '@' + $page.props.auth.user.username : ($page.props.auth.user.email || '') }}
                                 </div>
                             </div>
                         </div>

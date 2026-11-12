@@ -2,15 +2,18 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Auth\UniqueEmailEloquentUserProvider;
+use App\Services\WhatsApp\WhatsAppClient;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(\App\Services\WhatsApp\WhatsAppClient::class, function () {
-            return new \App\Services\WhatsApp\WhatsAppClient;
+        $this->app->singleton(WhatsAppClient::class, function () {
+            return new WhatsAppClient;
         });
     }
 
@@ -19,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Auth::provider('eloquent-unique-email', function ($app, array $config) {
+            return new UniqueEmailEloquentUserProvider($app['hash'], $config['model']);
+        });
+
         URL::forceScheme('https');
 
         //

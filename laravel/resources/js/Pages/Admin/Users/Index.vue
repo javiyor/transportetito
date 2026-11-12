@@ -22,11 +22,12 @@ const page = usePage();
 
 const createForm = useForm({
     name: '',
+    username: '',
     email: '',
 });
 
 const tempPassword = computed(() => page.props.tt?.flash?.tempPassword || null);
-const tempPasswordEmail = computed(() => page.props.tt?.flash?.tempPasswordEmail || null);
+const tempPasswordUsername = computed(() => page.props.tt?.flash?.tempPasswordUsername || null);
 const showingTempPassword = ref(false);
 
 watch(tempPassword, (value) => {
@@ -95,7 +96,7 @@ const toggleUbicacion = (user) => {
 const resetPassword = (user) => {
     openConfirm(
         'Resetear password',
-        `Se genera un password temporal para ${user.email}. Se mostrara una sola vez.`,
+        `Se genera un password temporal para ${user.username}. Se mostrara una sola vez.`,
         () => {
             closeConfirm();
             useForm({}).post(route('admin.users.password.reset', user.id), { preserveScroll: true });
@@ -106,7 +107,7 @@ const resetPassword = (user) => {
 const blockUser = (user) => {
     openConfirm(
         'Bloquear usuario',
-        `Se bloqueara ${user.email} y se desloguea en el proximo request.`,
+        `Se bloqueara ${user.username} y se desloguea en el proximo request.`,
         () => {
             closeConfirm();
             useForm({}).post(route('admin.users.block', user.id), { preserveScroll: true });
@@ -118,11 +119,12 @@ const unblockUser = (user) => {
     useForm({}).post(route('admin.users.unblock', user.id), { preserveScroll: true });
 };
 
-const editNameForm = useForm({ name: '' });
+const editNameForm = useForm({ name: '', username: '' });
 const editandoUsuario = ref(null);
 
 const abrirEditarNombre = (user) => {
     editNameForm.name = user.name;
+    editNameForm.username = user.username;
     editandoUsuario.value = user.id;
 };
 
@@ -223,7 +225,7 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Crear usuario</h3>
 
-                <form class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4" @submit.prevent="submitCreate">
+                <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submitCreate">
                     <div>
                         <InputLabel for="name" value="Nombre" />
                         <TextInput id="name" v-model="createForm.name" type="text" class="mt-1 block w-full" required />
@@ -231,8 +233,16 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                     </div>
 
                     <div>
+                        <InputLabel for="username" value="Nombre de usuario para ingresar" />
+                        <TextInput id="username" v-model="createForm.username" type="text" class="mt-1 block w-full" required autocomplete="username" />
+                        <p class="mt-1 text-xs text-gray-500">Único; se puede usar en lugar del email para iniciar sesión.</p>
+                        <InputError class="mt-2" :message="createForm.errors.username" />
+                    </div>
+
+                    <div>
                         <InputLabel for="email" value="Email" />
-                        <TextInput id="email" v-model="createForm.email" type="email" class="mt-1 block w-full" required />
+                        <TextInput id="email" v-model="createForm.email" type="email" class="mt-1 block w-full" />
+                        <p class="mt-1 text-xs text-gray-500">Opcional; puede repetirse.</p>
                         <InputError class="mt-2" :message="createForm.errors.email" />
                     </div>
 
@@ -265,7 +275,8 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                             <tr v-for="user in users.data" :key="user.id">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900">{{ user.name }}</div>
-                                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                    <div class="text-sm text-gray-600">Usuario: {{ user.username }}</div>
+                                    <div class="text-sm text-gray-500">{{ user.email || 'Sin email' }}</div>
                                 </td>
 
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
@@ -274,7 +285,8 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                                         <span v-else class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Activo</span>
                                     </div>
                                     <div class="mt-2 flex gap-2">
-                                        <span v-if="user.email_verified_at" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Verificado</span>
+                                        <span v-if="!user.email" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Sin email</span>
+                                        <span v-else-if="user.email_verified_at" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Verificado</span>
                                         <span v-else class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">No verificado</span>
 
                                     </div>
@@ -398,7 +410,7 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
 
         <DialogModal :show="!!editandoUsuario" @close="cerrarEditarNombre">
             <template #title>
-                Editar nombre de usuario
+                Editar usuario
             </template>
             <template #content>
                 <div class="space-y-4">
@@ -406,6 +418,11 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
                         <InputLabel value="Nombre" />
                         <TextInput v-model="editNameForm.name" type="text" class="mt-1 block w-full" />
                         <InputError class="mt-2" :message="editNameForm.errors.name" />
+                    </div>
+                    <div>
+                        <InputLabel value="Nombre de usuario para ingresar" />
+                        <TextInput v-model="editNameForm.username" type="text" class="mt-1 block w-full" autocomplete="username" />
+                        <InputError class="mt-2" :message="editNameForm.errors.username" />
                     </div>
                 </div>
             </template>
@@ -424,7 +441,7 @@ const canSeeAdminNav = computed(() => (page.props.tt?.roles || []).includes('adm
             <template #content>
                 <div class="text-sm text-gray-700">
                     <p>
-                        Email: <span class="font-mono">{{ tempPasswordEmail }}</span>
+                        Usuario: <span class="font-mono">{{ tempPasswordUsername }}</span>
                     </p>
                     <p class="mt-2">
                         Contrasena: <span class="font-mono">{{ tempPassword }}</span>

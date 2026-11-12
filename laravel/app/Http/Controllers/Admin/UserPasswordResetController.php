@@ -23,7 +23,7 @@ class UserPasswordResetController extends Controller
         $request->session()->flash('flash.bannerStyle', 'success');
         $request->session()->flash('flash.banner', 'Password reseteado. Mostramos el password temporal una sola vez.');
         $request->session()->flash('tt.temp_password', $password);
-        $request->session()->flash('tt.temp_password_email', $user->email);
+        $request->session()->flash('tt.temp_password_username', $user->username);
 
         return redirect()->route('admin.users.index');
     }

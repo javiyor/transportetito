@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
@@ -32,6 +33,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
         'must_change_password',
@@ -71,6 +73,11 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'envia_ubicacion' => 'boolean',
         ];
+    }
+
+    public function setUsernameAttribute(string $value): void
+    {
+        $this->attributes['username'] = Str::lower(trim($value));
     }
 
     public function currentEmpresa(): BelongsTo

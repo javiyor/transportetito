@@ -14,7 +14,7 @@ defineProps({
 });
 
 const form = useForm({
-    name: '',
+    login: '',
     password: '',
     remember: false,
 });
@@ -43,17 +43,18 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Usuario" />
+                <InputLabel for="login" value="Usuario o email" />
                 <TextInput
-                    id="name"
-                    v-model="form.name"
+                    id="login"
+                    v-model="form.login"
                     type="text"
                     class="mt-1 block w-full"
                     required
                     autofocus
                     autocomplete="username"
                 />
-                <InputError class="mt-2" :message="form.errors.name" />
+                <InputError class="mt-2" :message="form.errors.login" />
+                <p class="mt-1 text-xs text-gray-500">Si el email está compartido por varios usuarios, ingresá con tu nombre de usuario.</p>
             </div>
 
             <div class="mt-4">

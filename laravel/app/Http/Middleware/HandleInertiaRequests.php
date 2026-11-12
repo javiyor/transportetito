@@ -72,7 +72,7 @@ class HandleInertiaRequests extends Middleware
                     'error' => fn () => $request->session()->get('flash.error'),
                     'hoja_resumen' => fn () => $request->session()->get('flash.hoja_resumen'),
                     'tempPassword' => fn () => $request->session()->get('tt.temp_password'),
-                    'tempPasswordEmail' => fn () => $request->session()->get('tt.temp_password_email'),
+                    'tempPasswordUsername' => fn () => $request->session()->get('tt.temp_password_username'),
                     'importResult' => fn () => $request->session()->get('tt.import_result'),
                     'importError' => fn () => $request->session()->get('tt.import_error'),
                 ],
@@ -81,7 +81,7 @@ class HandleInertiaRequests extends Middleware
                     : 0,
                 'alertasVehiculosCount' => fn () => $user && $user->current_empresa_id
                     ? VehiculoControl::query()
-                        ->whereHas('vehiculo', fn($q) => $q->where('empresa_id', $user->current_empresa_id))
+                        ->whereHas('vehiculo', fn ($q) => $q->where('empresa_id', $user->current_empresa_id))
                         ->whereBetween('fecha_vencimiento', [now()->toDateString(), now()->addDays(10)->toDateString()])
                         ->count()
                     : 0,

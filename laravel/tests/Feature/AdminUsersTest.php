@@ -39,6 +39,38 @@ class AdminUsersTest extends TestCase
             ->assertOk();
     }
 
+    public function test_admin_can_create_users_without_email_or_with_a_repeated_email(): void
+    {
+        $this->seed(RolesSeeder::class);
+
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        User::factory()->create(['email' => 'shared@example.com']);
+
+        Sanctum::actingAs($admin);
+
+        $this->post(route('admin.users.store'), [
+            'name' => 'Usuario con email repetido',
+            'username' => 'chofer-compartido',
+            'email' => 'shared@example.com',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'username' => 'chofer-compartido',
+            'email' => 'shared@example.com',
+        ]);
+
+        $this->post(route('admin.users.store'), [
+            'name' => 'Usuario sin email',
+            'username' => 'chofer-sin-email',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'username' => 'chofer-sin-email',
+            'email' => null,
+        ]);
+    }
+
     public function test_admin_can_assign_multiple_roles_to_user(): void
     {
         $this->seed(RolesSeeder::class);

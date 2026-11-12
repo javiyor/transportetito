@@ -16,7 +16,7 @@ const props = defineProps({
 const form = useForm({
     _method: 'PUT',
     name: props.user.name,
-    email: props.user.email,
+    email: props.user.email || '',
     photo: null,
 });
 
@@ -150,9 +150,9 @@ const clearPhotoFileInput = () => {
                     v-model="form.email"
                     type="email"
                     class="mt-1 block w-full"
-                    required
                     autocomplete="username"
                 />
+                <p class="mt-1 text-xs text-gray-500">Opcional. El inicio de sesión se hace con tu nombre de usuario.</p>
                 <InputError :message="form.errors.email" class="mt-2" />
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
