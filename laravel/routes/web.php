@@ -42,6 +42,7 @@ use App\Http\Controllers\Operacion\Comprobantes\ComprobantePrintController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaCreditoStoreController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaDebitoStoreController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteUpdateController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteEnviarEmailController;
 use App\Http\Controllers\Cobranzas\ReciboAnularController;
 use App\Http\Controllers\Operacion\Manifiestos\ManifiestoBackfillCuentasController;
 use App\Http\Controllers\DashboardController;
@@ -274,6 +275,7 @@ Route::middleware([
         Route::middleware(['role:facturacion|admin'])->post('/manifiestos/{manifiesto}/backfill-cuentas', ManifiestoBackfillCuentasController::class)->name('manifiestos.backfill-cuentas');
 
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/autorizar-arca', ComprobanteAutorizarArcaController::class)->name('comprobantes.autorizar-arca');
+        Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/enviar-email', ComprobanteEnviarEmailController::class)->name('comprobantes.enviar-email');
         Route::middleware(['role:facturacion|admin'])->put('/comprobantes/{comprobante}', ComprobanteUpdateController::class)->name('comprobantes.update');
 
         Route::get('/import/carga', [ImportCargaController::class, 'index'])->name('import.carga.index');

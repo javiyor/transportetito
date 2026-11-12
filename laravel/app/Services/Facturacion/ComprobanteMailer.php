@@ -21,14 +21,23 @@ class ComprobanteMailer
             return;
         }
 
-        $url = URL::temporarySignedRoute('comprobantes.publico', now()->addDays(30), [
-            'comprobante' => $comprobante->id,
-        ]);
+        $this->enviarA($comprobante, $cuenta->email);
+    }
 
+    public function enviarA(Comprobante $comprobante, string $email): bool
+    {
         try {
-            Mail::to($cuenta->email)->send(new ComprobanteEmitidoMail($comprobante, $url));
+            $url = URL::temporarySignedRoute('comprobantes.publico', now()->addDays(30), [
+                'comprobante' => $comprobante->id,
+            ]);
+
+            Mail::to($email)->send(new ComprobanteEmitidoMail($comprobante, $url));
+
+            return true;
         } catch (Throwable) {
             // best effort: no bloquear emision por mail no configurado
+
+            return false;
         }
     }
 }

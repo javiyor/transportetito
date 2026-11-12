@@ -39,6 +39,7 @@ class CargaDirectaStoreController extends Controller
             'facturar_a_destino' => ['required', 'boolean'],
             'fecha_emision' => ['required', 'date'],
             'tipo_arca' => ['required', 'string', 'in:FA,FB,FC,FCA,FCB,FCC'],
+            'enviar_email' => ['sometimes', 'boolean'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.descripcion' => ['nullable', 'string', 'max:500'],
@@ -307,7 +308,13 @@ class CargaDirectaStoreController extends Controller
         }
 
         $comprobante->load('facturarCuenta');
-        $mailer->enviarSiCorresponde($comprobante);
+        if (array_key_exists('enviar_email', $data)) {
+            if ($data['enviar_email'] && $comprobante->facturarCuenta?->email) {
+                $mailer->enviarA($comprobante, $comprobante->facturarCuenta->email);
+            }
+        } else {
+            $mailer->enviarSiCorresponde($comprobante);
+        }
 
         $redirect = redirect()
             ->route('facturacion.carga-directa.create')

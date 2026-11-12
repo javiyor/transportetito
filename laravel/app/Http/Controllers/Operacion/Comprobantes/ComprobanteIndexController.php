@@ -159,6 +159,10 @@ class ComprobanteIndexController extends Controller
             unset($comprobanteData['pedidos']);
 
             return array_merge($comprobanteData, [
+                'email_facturacion' => $comprobante->facturarCuenta?->email,
+                'puede_enviar_email' => (int) $comprobante->empresa_id === $empresaId
+                    && $comprobante->estado === 'emitida'
+                    && (! $comprobante->requiere_autorizacion_arca || (bool) $comprobante->arca_cae),
                 'remitentes' => $remitentes,
                 'destinatarios' => $destinatarios,
                 'arca_tipo_opciones' => (string) $comprobante->tipo === 'factura_interna'

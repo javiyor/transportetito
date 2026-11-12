@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { formatNum } from '@/Utils/format.js';
@@ -10,6 +10,8 @@ const props = defineProps({
     empresas: Array,
     comprobantes: Object,
 });
+const page = usePage();
+const emailEnviandoId = ref(null);
 
 const form = useForm({
     tipo: props.filters?.tipo || 'todos',
@@ -31,6 +33,16 @@ const applyFilters = () => {
 
 const reintentandoId = ref(null);
 const copiadoArcaId = ref(null);
+const enviarEmail = (comprobante) => {
+    if (!comprobante.email_facturacion || !comprobante.puede_enviar_email) return;
+
+    emailEnviandoId.value = comprobante.id;
+    router.post(route('operacion.comprobantes.enviar-email', comprobante.id), {}, {
+        preserveScroll: true,
+        onFinish: () => { emailEnviandoId.value = null; },
+    });
+};
+
 const reintentarArca = (comprobante) => {
     const tipo = comprobante.arca_tipo_opciones?.[0]?.code;
     if (!tipo) return;
@@ -171,6 +183,13 @@ const translateLabel = (label) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="page.props.tt?.flash?.success" class="rounded-md bg-green-50 p-3 text-sm text-green-800">
+                {{ page.props.tt.flash.success }}
+            </div>
+            <div v-if="page.props.tt?.flash?.error" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                {{ page.props.tt.flash.error }}
+            </div>
+
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div>
@@ -226,6 +245,13 @@ const translateLabel = (label) => {
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <a :href="route('operacion.comprobantes.print', c.id)" target="_blank" class="text-sm text-indigo-600 hover:text-indigo-800">Ver</a>
+                                <button
+                                    v-if="c.email_facturacion && c.puede_enviar_email"
+                                    type="button"
+                                    class="text-xs text-indigo-700 hover:text-indigo-900 disabled:opacity-50"
+                                    :disabled="emailEnviandoId === c.id"
+                                    @click="enviarEmail(c)"
+                                >{{ emailEnviandoId === c.id ? 'Enviando...' : 'Enviar email' }}</button>
                                 <Link
                                     v-if="c.tipo === 'factura_interna' && c.arca_cae && c.arca_reintento_permitido"
                                     :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
@@ -335,6 +361,14 @@ const translateLabel = (label) => {
                                 </td>
                                 <td class="px-1 py-1 text-right whitespace-nowrap">
                                     <div class="flex justify-end gap-1">
+                                        <button
+                                            v-if="c.email_facturacion && c.puede_enviar_email"
+                                            type="button"
+                                            class="text-indigo-700 hover:text-indigo-900 disabled:opacity-50"
+                                            :disabled="emailEnviandoId === c.id"
+                                            :title="'Enviar a ' + c.email_facturacion"
+                                            @click.stop="enviarEmail(c)"
+                                        >{{ emailEnviandoId === c.id ? 'Enviando...' : 'Email' }}</button>
                                         <Link
                                             v-if="c.tipo === 'factura_interna' && c.arca_cae && c.arca_reintento_permitido"
                                             :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"

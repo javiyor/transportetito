@@ -27,6 +27,7 @@ const form = useForm({
     origen_cuenta_id: '',
     destino_cuenta_id: '',
     facturar_a_destino: true,
+    enviar_email: false,
     fecha_emision: new Date().toISOString().slice(0, 10),
     tipo_arca: '',
     observacion: '',
@@ -60,6 +61,10 @@ const cuentasAValidar = computed(() => {
     const ids = [form.origen_cuenta_id, form.destino_cuenta_id].filter(Boolean);
     return [...new Set(ids)].map((id) => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(id))).filter(Boolean);
 });
+const cuentaFacturada = computed(() => {
+    const id = form.facturar_a_destino ? form.destino_cuenta_id : form.origen_cuenta_id;
+    return (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(id)) || null;
+});
 const cuitCheckModal = ref({
     show: false,
     loading: false,
@@ -73,6 +78,7 @@ const cuitVerificadoKey = ref('');
 
 watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], () => {
     cuitVerificadoKey.value = '';
+    form.enviar_email = !!cuentaFacturada.value?.email;
 });
 
 const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
@@ -503,6 +509,22 @@ const confirmarActualizacionArca = () => {
                                 />
                                 <span class="text-sm text-gray-700 font-medium">Facturar a destino</span>
                                 <span class="text-xs text-gray-400">(si no, se factura a origen)</span>
+                            </label>
+                        </div>
+
+                        <div v-if="cuentaFacturada" class="sm:col-span-2 rounded-md border border-gray-200 p-3">
+                            <label class="flex items-start gap-2 text-sm text-gray-700">
+                                <input
+                                    v-model="form.enviar_email"
+                                    type="checkbox"
+                                    class="mt-0.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                    :disabled="!cuentaFacturada.email"
+                                />
+                                <span>
+                                    Enviar factura por email al emitir
+                                    <span v-if="cuentaFacturada.email" class="block text-xs text-gray-500">{{ cuentaFacturada.email }}</span>
+                                    <span v-else class="block text-xs text-gray-500">La cuenta facturada no tiene email cargado.</span>
+                                </span>
                             </label>
                         </div>
 
