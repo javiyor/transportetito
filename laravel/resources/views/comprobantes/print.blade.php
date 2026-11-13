@@ -255,9 +255,10 @@
         .invoice-observation {
             border: 1px solid #999;
             padding: 4pt 6pt;
-            margin-bottom: 6pt;
+            margin-top: 6pt;
             font-size: 7pt;
             white-space: pre-line;
+            overflow-wrap: anywhere;
         }
         .legal-legends {
             border-top: 1px solid #000;
@@ -457,6 +458,7 @@
     $empresa = $comprobante->empresa;
     $detalle = $comprobante->detalle_facturacion ?? [];
     $calculo = $detalle['calculo'] ?? [];
+    $observacionGeneral = trim((string) ($detalle['observacion'] ?? $detalle['observaciones'] ?? $comprobante->motivo ?? ''));
 
     // Fallback for imported comprobantes without detalle_facturacion.calculo
     if (empty($calculo) && $comprobante->total) {
@@ -1068,10 +1070,6 @@
 
         </div>
 
-        @if(trim((string) ($detalle['observacion'] ?? '')) !== '')
-            <div class="invoice-observation"><strong>Observaciones:</strong> {{ $detalle['observacion'] }}</div>
-        @endif
-
         {{-- ===== LEGAL LEGENDS ===== --}}
         <div class="legal-legends">
             "Los datos consignados en el presente comprobante son correctos y completos. El presente documento
@@ -1131,6 +1129,10 @@
                 </div>
             </div>
         </div>
+
+        @if($observacionGeneral !== '')
+            <div class="invoice-observation"><strong>Observaciones:</strong> {{ $observacionGeneral }}</div>
+        @endif
 
         </div>{{-- /content --}}
     </div>{{-- /page-border --}}
