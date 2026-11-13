@@ -87,6 +87,14 @@ const tipoLabel = (tipo) => {
     return tipo || '-';
 };
 
+const remitentesDe = (factura) => {
+    const remitentes = [...new Set((factura.pedidos || [])
+        .map((pedido) => pedido.remitente?.razon_social)
+        .filter(Boolean))];
+
+    return remitentes.join(', ') || '-';
+};
+
 const toggleAll = (checked) => {
     filterForm.comprobante_ids = checked ? props.facturas.map((f) => f.id) : [];
 };
@@ -180,9 +188,16 @@ const ordenDe = (id) => {
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
                             <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Remitente</div>
+                                <div class="font-medium text-gray-900">{{ remitentesDe(f) }}</div>
+                            </div>
+                            <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Entrega</div>
                                 <div class="font-medium text-gray-900">{{ f.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
-                                <div class="text-xs text-gray-500">{{ f.entrega_cuenta?.localidad ? f.entrega_cuenta.localidad : '' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500">Localidad destinatario</div>
+                                <div class="text-xs text-gray-500">{{ f.entrega_cuenta?.localidad || '-' }}</div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
@@ -200,7 +215,7 @@ const ordenDe = (id) => {
                 </div>
 
                 <div class="hidden sm:block overflow-x-auto">
-                    <table class="min-w-full w-full divide-y divide-gray-200 text-[10px] leading-none">
+                    <table class="min-w-[900px] w-full divide-y divide-gray-200 text-[10px] leading-none">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
@@ -209,7 +224,9 @@ const ordenDe = (id) => {
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">#</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Localidad destinatario</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                 <th class="sticky right-0 bg-gray-50 px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
@@ -222,15 +239,17 @@ const ordenDe = (id) => {
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-bold text-center" :class="ordenDe(f.id) ? 'text-indigo-700' : 'text-gray-300'">{{ ordenDe(f.id) || '-' }}</td>
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-mono text-gray-900">{{ f.id }}</td>
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700">{{ tipoLabel(f.tipo) }}</td>
+                                <td class="max-w-[180px] truncate px-1 py-0.5 text-[10px] text-gray-700" :title="remitentesDe(f)">{{ remitentesDe(f) }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700">
                                     <div class="font-medium text-gray-900 truncate max-w-[200px] leading-none">{{ f.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                     <div class="text-[9px] text-gray-500 leading-none">CUIT {{ f.entrega_cuenta?.tercero?.cuit || '-' }}</div>
                                 </td>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700">{{ f.entrega_cuenta?.localidad || '-' }}</td>
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700 font-mono">{{ f.moneda }} {{ f.total }}</td>
                                 <td class="sticky right-0 bg-white px-1 py-0.5 whitespace-nowrap text-right text-[10px] text-gray-500">{{ ordenDe(f.id) ? '#' + ordenDe(f.id) : 'Seleccionar' }}</td>
                             </tr>
                             <tr v-if="!filteredFacturas.length">
-                                <td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
+                                <td colspan="9" class="px-2 py-4 text-center text-xs text-gray-500">No hay comprobantes para los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>

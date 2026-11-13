@@ -16,6 +16,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -328,6 +330,76 @@ class TerceroAdminController extends Controller
         );
 
         return back();
+    }
+
+    public function destroy(TerceroCuenta $cuenta): RedirectResponse
+    {
+        try {
+            $motivo = DB::transaction(function () use ($cuenta): ?string {
+                $cuenta = TerceroCuenta::query()->whereKey($cuenta->id)->lockForUpdate()->firstOrFail();
+                $relacionEmpresa = TerceroEmpresa::query()
+                    ->where('empresa_id', $cuenta->empresa_id)
+                    ->where('tercero_cuenta_id', $cuenta->id)
+                    ->first();
+
+                if (! $relacionEmpresa?->es_cliente || $relacionEmpresa->es_proveedor) {
+                    return 'Solo se pueden eliminar cuentas que sean exclusivamente de cliente.';
+                }
+
+                $usos = [];
+                $referencias = [
+                    'movimientos de cuenta corriente' => fn () => DB::table('cta_cte_movimientos')->where('tercero_cuenta_id', $cuenta->id)->exists(),
+                    'comprobantes' => fn () => DB::table('comprobantes')->where(fn ($q) => $q->where('facturar_cuenta_id', $cuenta->id)->orWhere('entrega_cuenta_id', $cuenta->id))->exists(),
+                    'recibos' => fn () => DB::table('recibos')->where('tercero_cuenta_id', $cuenta->id)->exists(),
+                    'pre-recibos' => fn () => DB::table('pre_recibos')->where('tercero_cuenta_id', $cuenta->id)->exists(),
+                    'pedidos' => fn () => DB::table('pedidos')->where(fn ($q) => $q->where('remitente_cuenta_id', $cuenta->id)->orWhere('destinatario_cuenta_id', $cuenta->id))->exists(),
+                    'hojas de ruta' => fn () => DB::table('hoja_ruta_items')->where('entrega_cuenta_id', $cuenta->id)->exists(),
+                    'comprobantes de proveedor' => fn () => DB::table('proveedor_comprobantes')->where('tercero_cuenta_id', $cuenta->id)->exists(),
+                    'órdenes de pago' => fn () => DB::table('ordenes_pago')->where('tercero_cuenta_id', $cuenta->id)->exists(),
+                    'cotizaciones' => fn () => DB::table('cotizaciones')->where(fn ($q) => $q->where('tercero_cuenta_id', $cuenta->id)->orWhere('tercero_destino_id', $cuenta->id))->exists(),
+                    'asientos contables' => fn () => DB::table('asiento_lineas')->where('tercero_cuenta_id', $cuenta->id)->exists(),
+                ];
+
+                foreach ($referencias as $descripcion => $existe) {
+                    if ($existe()) {
+                        $usos[] = $descripcion;
+                    }
+                }
+
+                if ($usos !== []) {
+                    return 'No se puede eliminar: la cuenta tiene movimientos o registros asociados ('.implode(', ', $usos).'). Se conservó sin cambios.';
+                }
+
+                $tercero = $cuenta->tercero;
+                TerceroEmpresa::query()
+                    ->where('empresa_id', $cuenta->empresa_id)
+                    ->where('tercero_cuenta_id', $cuenta->id)
+                    ->delete();
+                $cuenta->delete();
+
+                if ($tercero
+                    && ! $tercero->cuentas()->exists()
+                    && ! DB::table('pedidos')->where(fn ($q) => $q->where('remitente_tercero_id', $tercero->id)->orWhere('destinatario_tercero_id', $tercero->id))->exists()
+                    && ! DB::table('tarifas_relaciones')->where(fn ($q) => $q->where('remitente_tercero_id', $tercero->id)->orWhere('destinatario_tercero_id', $tercero->id))->exists()) {
+                    $tercero->delete();
+                }
+
+                return null;
+            });
+        } catch (QueryException $exception) {
+            Log::warning('No se pudo eliminar una cuenta de tercero', [
+                'cuenta_id' => $cuenta->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return back()->with('flash.error', 'No se pudo eliminar la cuenta porque tiene registros asociados.');
+        }
+
+        if ($motivo !== null) {
+            return back()->with('flash.error', $motivo);
+        }
+
+        return back()->with('flash.success', 'Cliente eliminado.');
     }
 
     public function lookupArcaCuit(Request $request, ArcaPersonaService $arca): JsonResponse

@@ -49,6 +49,8 @@ class FacturasListController extends Controller
                 'empresa:id,razon_social',
                 'entregaCuenta.tercero:id,cuit,razon_social',
                 'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta,direccion,localidad,cp,telefono,zona_id',
+                'pedidos:id,remitente_tercero_id',
+                'pedidos.remitente:id,razon_social',
             ])
             ->where('estado', 'emitida')
             ->where('disponible_para_hoja_ruta', true)

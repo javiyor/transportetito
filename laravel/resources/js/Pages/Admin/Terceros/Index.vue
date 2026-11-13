@@ -1,5 +1,5 @@
 <script setup>
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
@@ -8,7 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     empresas: Array,
@@ -24,6 +24,10 @@ const props = defineProps({
     compartidos: Boolean,
     search: String,
 });
+const page = usePage();
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
+const eliminandoId = ref(null);
 
 const cuentasDeEmpresa = (empresaId) => (props.cuentasContables || []).filter((c) => String(c.empresa_id) === String(empresaId || ''));
 const cuentaLabel = (c) => (c ? `${c.codigo} - ${c.nombre}` : '-');
@@ -191,6 +195,17 @@ const submitEdit = () => {
     editForm.put(route('admin.terceros.update', editId.value), { preserveScroll: true, onSuccess: () => (editing.value = false) });
 };
 
+const eliminarCuenta = (cuenta) => {
+    if (!cuenta.es_cliente || cuenta.es_proveedor || eliminandoId.value) return;
+    if (!window.confirm(`¿Eliminar el cliente "${cuenta.tercero?.razon_social || cuenta.nombre_cuenta || ''}"? Solo se eliminará si no tiene movimientos ni registros asociados.`)) return;
+
+    eliminandoId.value = cuenta.id;
+    router.delete(route('admin.terceros.destroy', cuenta.id), {
+        preserveScroll: true,
+        onFinish: () => { eliminandoId.value = null; },
+    });
+};
+
 const provinciaNombre = (id) => {
     const p = props.provincias.find((x) => x.id === id);
     return p ? p.nombre : '';
@@ -212,6 +227,9 @@ const localidadNombre = (c) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-3 sm:px-4 lg:px-6 space-y-4">
+            <div v-if="flashSuccess" class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{{ flashError }}</div>
+
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-sm font-semibold text-gray-900">Nueva cuenta</h3>
 
@@ -341,7 +359,10 @@ const localidadNombre = (c) => {
                                     <span v-for="(name, i) in c.shared_empresas" :key="i" class="inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-800">{{ name }}</span>
                                 </div>
                             </div>
-                            <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
+                            <div class="flex shrink-0 gap-1">
+                                <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
+                                <button v-if="c.es_cliente && !c.es_proveedor" type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="eliminandoId === c.id" @click="eliminarCuenta(c)">{{ eliminandoId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
+                            </div>
                         </div>
                         <div class="mt-2 grid grid-cols-1 gap-2 text-xs">
                             <div>
@@ -431,7 +452,10 @@ const localidadNombre = (c) => {
                                     <span v-if="!c.es_cliente && !c.es_proveedor && !c.enviar_comprobantes_por_email" class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-800">-</span>
                                 </td>
                                 <td class="sticky right-0 bg-white px-3 py-2 text-right text-xs">
-                                    <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
+                                    <div class="flex justify-end gap-1">
+                                        <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
+                                        <button v-if="c.es_cliente && !c.es_proveedor" type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="eliminandoId === c.id" @click="eliminarCuenta(c)">{{ eliminandoId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">

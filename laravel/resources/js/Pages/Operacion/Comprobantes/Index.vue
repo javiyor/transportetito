@@ -53,6 +53,16 @@ const reintentarArca = (comprobante) => {
     });
 };
 
+const tieneRechazoArca = (comprobante) => {
+    const resultado = String(comprobante.arca_resultado || '').toUpperCase();
+
+    return !comprobante.arca_cae
+        && (!!comprobante.arca_motivo || resultado === 'R' || resultado === 'ERROR');
+};
+
+const textoRechazoArca = (comprobante) => comprobante.arca_motivo
+    || `ARCA respondió con resultado ${comprobante.arca_resultado}, sin detallar la causa.`;
+
 const copiarErrorArca = async (comprobante) => {
     const texto = String(comprobante.arca_motivo || '');
     if (!texto) return;
@@ -303,9 +313,9 @@ const translateLabel = (label) => {
                                     <span v-else>-</span>
                                 </div>
                             </div>
-                            <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_motivo" class="text-xs text-red-700">
-                                <div class="break-words whitespace-pre-wrap">Motivo ARCA: {{ c.arca_motivo }}</div>
-                                <button type="button" class="mt-1 text-xs font-medium text-indigo-700 hover:text-indigo-900" @click="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
+                            <div v-if="tieneRechazoArca(c)" class="text-xs text-red-700">
+                                <div class="break-words whitespace-pre-wrap">{{ c.tipo === 'nota_credito_interna' ? 'ARCA rechazó la nota de crédito:' : 'Motivo de rechazo ARCA:' }} {{ textoRechazoArca(c) }}</div>
+                                <button v-if="c.arca_motivo" type="button" class="mt-1 text-xs font-medium text-indigo-700 hover:text-indigo-900" @click="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
                             </div>
                         </div>
                     </div>
@@ -377,9 +387,9 @@ const translateLabel = (label) => {
                                         <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                                     </div>
                                     <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="mt-0.5 text-[10px] text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
-                                    <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_motivo" class="mt-1 max-w-[320px] text-[10px] text-red-700">
-                                        <div class="break-words whitespace-pre-wrap">{{ c.arca_motivo }}</div>
-                                        <button type="button" class="mt-0.5 font-medium text-indigo-700 hover:text-indigo-900" @click.stop="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
+                                    <div v-if="tieneRechazoArca(c)" class="mt-1 max-w-[320px] text-[10px] text-red-700">
+                                        <div class="break-words whitespace-pre-wrap">{{ c.tipo === 'nota_credito_interna' ? 'ARCA rechazó la nota de crédito: ' : 'Motivo de rechazo ARCA: ' }}{{ textoRechazoArca(c) }}</div>
+                                        <button v-if="c.arca_motivo" type="button" class="mt-0.5 font-medium text-indigo-700 hover:text-indigo-900" @click.stop="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
                                     </div>
                                 </td>
                             </tr>
