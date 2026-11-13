@@ -214,7 +214,7 @@ const applyPwaUpdate = () => {
                                 <div v-if="($page.props.tt?.roles || []).includes('admin')" class="hidden sm:flex sm:items-center">
                                     <Dropdown align="left" width="40">
                                         <template #trigger>
-                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('admin.users.*') || route().current('admin.empresas.*') || route().current('admin.bancos.*') || route().current('admin.plan-cuentas.*') || route().current('admin.reparto.*') || route().current('admin.blanqueo.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
+                                            <button type="button" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out" :class="route().current('admin.users.*') || route().current('admin.empresas.*') || route().current('admin.bancos.*') || route().current('admin.plan-cuentas.*') || route().current('admin.reparto.*') || route().current('admin.blanqueo.*') || route().current('admin.correo.*') ? 'border-indigo-400 text-gray-900 focus:outline-none focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300'">
                                                 Configuracion
                                                 <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -229,6 +229,7 @@ const applyPwaUpdate = () => {
                                             <DropdownLink :href="route('admin.bancos.index')">Bancos</DropdownLink>
                                             <DropdownLink :href="route('admin.plan-cuentas.index')">Plan de Cuentas</DropdownLink>
                                             <DropdownLink :href="route('admin.arca.index')">ARCA</DropdownLink>
+                                            <DropdownLink :href="route('admin.correo.index')">Correo electrónico</DropdownLink>
                                             <hr class="my-1 border-gray-200" />
                                             <DropdownLink :href="route('admin.blanqueo.ventas')" class="!text-red-600">Blanqueo Ventas</DropdownLink>
                                             <DropdownLink :href="route('admin.blanqueo.compras')" class="!text-red-600">Blanqueo Compras</DropdownLink>
@@ -642,6 +643,13 @@ const applyPwaUpdate = () => {
                             :active="route().current('admin.arca.*')"
                         >
                             ARCA
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="($page.props.tt?.roles || []).includes('admin')"
+                            :href="route('admin.correo.index')"
+                            :active="route().current('admin.correo.*')"
+                        >
+                            Correo electrónico
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="($page.props.tt?.roles || []).includes('admin')"

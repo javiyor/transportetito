@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\UserHorariosUpdateController;
 use App\Http\Controllers\Admin\UserUbicacionUpdateController;
 use App\Http\Controllers\Admin\RepartoMapController;
 use App\Http\Controllers\Admin\CurrentEmpresaUpdateController;
+use App\Http\Controllers\Admin\CorreoConfigController;
 use App\Http\Controllers\Admin\EmpresaAdminController;
 use App\Http\Controllers\Admin\DepositoAdminController;
 use App\Http\Controllers\Admin\TerceroAdminController;
@@ -176,6 +177,10 @@ Route::middleware([
         Route::post('/empresas', [EmpresaAdminController::class, 'store'])->name('empresas.store');
         Route::put('/empresas/{empresa}', [EmpresaAdminController::class, 'update'])->name('empresas.update');
         Route::delete('/empresas/{empresa}', [EmpresaAdminController::class, 'destroy'])->name('empresas.destroy');
+
+        Route::get('/correo', [CorreoConfigController::class, 'index'])->name('correo.index');
+        Route::put('/correo', [CorreoConfigController::class, 'update'])->name('correo.update');
+        Route::post('/correo/test', [CorreoConfigController::class, 'test'])->name('correo.test');
 
         Route::get('/depositos', [DepositoAdminController::class, 'index'])->name('depositos.index');
         Route::post('/depositos', [DepositoAdminController::class, 'store'])->name('depositos.store');
