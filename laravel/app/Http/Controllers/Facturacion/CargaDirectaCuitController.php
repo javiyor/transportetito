@@ -27,7 +27,15 @@ class CargaDirectaCuitController extends Controller
             $cuenta = $this->cuentaActiva($request, $cuentaId);
             $persona = $this->consultarPersona($request, $cuenta, $arca);
             if ($persona instanceof JsonResponse) {
-                return $persona;
+                $checks[] = [
+                    'cuenta_id' => $cuenta->id,
+                    'cuenta_nombre' => $cuenta->nombre_cuenta ?: $cuenta->tercero?->razon_social,
+                    'cuit' => $cuenta->tercero?->cuit,
+                    'cambios' => [],
+                    'error' => $persona->getData(true)['error'] ?? 'No se pudo verificar el CUIT en ARCA.',
+                ];
+
+                continue;
             }
 
             $checks[] = [
@@ -35,6 +43,7 @@ class CargaDirectaCuitController extends Controller
                 'cuenta_nombre' => $cuenta->nombre_cuenta ?: $cuenta->tercero?->razon_social,
                 'cuit' => $persona['cuit'] ?? $cuenta->tercero?->cuit,
                 'cambios' => $this->diferencias($cuenta, $persona),
+                'error' => null,
             ];
         }
 
@@ -44,13 +53,24 @@ class CargaDirectaCuitController extends Controller
     public function actualizar(Request $request, ArcaPersonaService $arca): RedirectResponse
     {
         $cuentaIds = $this->validarCuentaIds($request);
+        $cuentaFacturadaId = (int) $request->validate([
+            'cuenta_facturada_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+        ])['cuenta_facturada_id'];
+        $this->cuentaActiva($request, $cuentaFacturadaId);
         $actualizaciones = [];
+        $avisos = [];
 
         foreach ($cuentaIds as $cuentaId) {
             $cuenta = $this->cuentaActiva($request, $cuentaId);
             $persona = $this->consultarPersona($request, $cuenta, $arca);
             if ($persona instanceof JsonResponse) {
-                return back()->withErrors(['cuit_arca' => $persona->getData(true)['error'] ?? 'No se pudo consultar el padrón ARCA.']);
+                $error = $persona->getData(true)['error'] ?? 'No se pudo consultar el padrón ARCA.';
+                if ($cuentaId === $cuentaFacturadaId) {
+                    return back()->withErrors(['cuit_arca' => $error]);
+                }
+
+                $avisos[] = ($cuenta->nombre_cuenta ?: $cuenta->tercero?->razon_social ?: 'El otro cliente').': no se pudieron verificar los datos en ARCA.';
+                continue;
             }
 
             $actualizaciones[] = [$cuenta, $persona];
@@ -62,7 +82,15 @@ class CargaDirectaCuitController extends Controller
             }
         });
 
-        return back()->with('success', 'Los datos del cliente fueron actualizados según ARCA.');
+        $response = back();
+        if ($actualizaciones !== []) {
+            $response->with('flash.success', 'Los datos verificados fueron actualizados según ARCA.');
+        }
+        if ($avisos !== []) {
+            $response->with('flash.warning', implode(' ', $avisos));
+        }
+
+        return $response;
     }
 
     /** @return array<int, int> */
