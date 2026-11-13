@@ -9,6 +9,7 @@ use App\Services\Moneda\MonedaAfipMapper;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use SoapClient;
 use SoapFault;
@@ -55,6 +56,15 @@ class WsfeClient
             throw new RuntimeException('Deposito central sin punto de venta.');
         }
 
+        Log::info('Preparando autorización de comprobante en WSFE', [
+            'comprobante_id' => $comprobante->id,
+            'empresa_id' => $empresa->id,
+            'tipo' => $comprobante->tipo,
+            'tipo_arca' => $tipoArca,
+            'tipo_cbte' => $tipoCbte,
+            'punto_venta' => $puntoVenta,
+        ]);
+
         $ultimo = $this->getUltimoAutorizado($empresa, $puntoVenta, $tipoCbte);
         $nro = $ultimo + 1;
 
@@ -73,9 +83,19 @@ class WsfeClient
 
         $detalleFacturacion = (array) ($comprobante->detalle_facturacion ?? []);
         $calculo = (array) (($detalleFacturacion['calculo'] ?? []) ?: []);
+        $esNotaCredito = (string) $comprobante->tipo === 'nota_credito_interna';
+        $comprobanteOrigen = $esNotaCredito || (string) $comprobante->tipo === 'nota_debito_interna'
+            ? $comprobante->comprobanteOrigen()->first()
+            : null;
         $importeTotal = abs((float) $comprobante->total);
         $subtotalGravado = abs((float) ($calculo['subtotal_gravado'] ?? 0));
         $importeIva = abs((float) ($calculo['iva'] ?? 0));
+        $importeTributos = 0.0;
+        $subtotalOrigen = $subtotalGravado;
+        $ivaOrigen = $importeIva;
+        $tributosOrigen = abs((float) ($calculo['tributos_total'] ?? 0));
+        $totalOrigen = abs((float) ($calculo['total'] ?? $comprobanteOrigen?->total ?? 0));
+        $prorratearNotaCredito = $esNotaCredito && $subtotalOrigen > 0 && $totalOrigen > 0;
         $ivaPctExplicito = array_key_exists('iva_pct', $calculo);
         $ivaPct = $ivaPctExplicito ? (float) $calculo['iva_pct'] : null;
         if ($ivaPct !== null && $ivaPct > 0 && $ivaPct <= 1) {
@@ -92,6 +112,15 @@ class WsfeClient
         if ($ivaPct === null) {
             $ivaPct = $subtotalGravado > 0 ? round(($importeIva / $subtotalGravado) * 100, 2) : 0.0;
         }
+
+        if ($prorratearNotaCredito) {
+            $factorNotaCredito = $importeTotal / $totalOrigen;
+            $importeIva = round($ivaOrigen * $factorNotaCredito, 2);
+            $importeTributos = round($tributosOrigen * $factorNotaCredito, 2);
+            // La NC lleva importes proporcionales al importe autorizado y debe cuadrar con ImpTotal.
+            $subtotalGravado = round($importeTotal - $importeIva - $importeTributos, 2);
+        }
+
         $importeNeto = $subtotalGravado;
         $cotizacion = (array) (($detalleFacturacion['calculo']['cotizacion'] ?? $detalleFacturacion['cotizacion'] ?? []) ?: []);
         $moneda = strtoupper((string) ($comprobante->moneda ?: 'ARS'));
@@ -123,7 +152,7 @@ class WsfeClient
             'ImpNeto' => $importeNeto,
             'ImpOpEx' => 0,
             'ImpIVA' => $importeIva,
-            'ImpTrib' => 0,
+            'ImpTrib' => $importeTributos,
             'MonId' => $monId,
             'MonCotiz' => $monCotiz,
             'FchServDesde' => $fechaYmd,
@@ -140,8 +169,8 @@ class WsfeClient
             ],
         ];
 
-        if (in_array((string) $comprobante->tipo, ['nota_credito_interna', 'nota_debito_interna'], true)) {
-            $origen = $comprobante->comprobanteOrigen()->first();
+        if ($esNotaCredito || (string) $comprobante->tipo === 'nota_debito_interna') {
+            $origen = $comprobanteOrigen;
             if (! $origen || ! $origen->arca_punto_venta || ! $origen->arca_numero) {
                 throw new RuntimeException('El comprobante fiscal derivado no tiene comprobante origen fiscal asociado.');
             }
@@ -171,6 +200,20 @@ class WsfeClient
         ];
 
         $requestId = 'wsfe-'.bin2hex(random_bytes(8));
+
+        Log::info('Enviando solicitud FECAESolicitar a WSFE', [
+            'comprobante_id' => $comprobante->id,
+            'empresa_id' => $empresa->id,
+            'request_id' => $requestId,
+            'tipo_cbte' => $tipoCbte,
+            'punto_venta' => $puntoVenta,
+            'numero' => $nro,
+            'comprobante_origen_id' => $comprobanteOrigen?->id,
+            'importe_total' => $detalleRequest['ImpTotal'],
+            'importe_neto' => $detalleRequest['ImpNeto'],
+            'importe_iva' => $detalleRequest['ImpIVA'],
+            'importe_tributos' => $detalleRequest['ImpTrib'],
+        ]);
 
         try {
             $res = $client->FECAESolicitar([
@@ -203,11 +246,20 @@ class WsfeClient
         }
 
         if ($resultado !== 'A' || $cae === '') {
+            $motivoRechazo = $errorMsg ?: ($obsMsg ?: 'WSFE rechazo o sin CAE');
             $comprobante->forceFill([
                 'arca_request_id' => $requestId,
                 'arca_resultado' => $resultado !== '' ? $resultado : 'R',
-                'arca_error' => $errorMsg ?: ($obsMsg ?: 'WSFE rechazo o sin CAE'),
+                'arca_error' => $motivoRechazo,
             ])->save();
+
+            Log::warning('WSFE rechazó el comprobante', [
+                'comprobante_id' => $comprobante->id,
+                'empresa_id' => $empresa->id,
+                'request_id' => $requestId,
+                'resultado' => $resultado ?: 'R',
+                'motivo' => $motivoRechazo,
+            ]);
 
             throw new RuntimeException('WSFE rechazo: '.($errorMsg ?: ($obsMsg ?: $resultado)));
         }
