@@ -33,6 +33,7 @@ const applyFilters = () => {
 
 const reintentandoId = ref(null);
 const copiadoArcaId = ref(null);
+const errorReintentoArca = ref('');
 const tipoArcaParaReintento = (comprobante) => comprobante.arca_tipo_opciones?.[0]?.code || comprobante.arca_tipo_reintento || null;
 const enviarEmail = (comprobante) => {
     if (!comprobante.email_facturacion || !comprobante.puede_enviar_email) return;
@@ -47,9 +48,11 @@ const enviarEmail = (comprobante) => {
 const reintentarArca = (comprobante) => {
     const tipo = tipoArcaParaReintento(comprobante);
     if (!tipo) return;
+    errorReintentoArca.value = '';
     reintentandoId.value = comprobante.id;
     router.post(route('operacion.comprobantes.autorizar-arca', comprobante.id), { tipo }, {
         preserveScroll: true,
+        onError: (errors) => { errorReintentoArca.value = errors.tipo || 'No se pudo iniciar el reintento de autorización ARCA.'; },
         onFinish: () => { reintentandoId.value = null; },
     });
 };
@@ -199,6 +202,9 @@ const translateLabel = (label) => {
             </div>
             <div v-if="page.props.tt?.flash?.error" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
                 {{ page.props.tt.flash.error }}
+            </div>
+            <div v-if="errorReintentoArca" class="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                {{ errorReintentoArca }}
             </div>
 
             <div class="bg-white shadow sm:rounded-lg p-4">

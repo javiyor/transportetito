@@ -19,15 +19,15 @@ class ComprobanteAutorizarArcaController extends Controller
         abort_unless((int) $comprobante->empresa_id === $empresaId, 404);
 
         if (! in_array((string) $comprobante->tipo, ['factura_interna', 'nota_credito_interna', 'nota_debito_interna'], true)) {
-            return back()->with('error', 'Este comprobante no es fiscal para autorizar en ARCA.');
+            return back()->with('flash.error', 'Este comprobante no es fiscal para autorizar en ARCA.');
         }
 
         if ((bool) $comprobante->requiere_autorizacion_arca !== true) {
-            return back()->with('error', 'Este comprobante no requiere autorizacion ARCA.');
+            return back()->with('flash.error', 'Este comprobante no requiere autorizacion ARCA.');
         }
 
         if (! empty($comprobante->arca_cae)) {
-            return back()->with('error', 'El comprobante ya tiene CAE y no se puede volver a autorizar.');
+            return back()->with('flash.error', 'El comprobante ya tiene CAE y no se puede volver a autorizar.');
         }
 
         $data = $request->validate([
@@ -44,7 +44,7 @@ class ComprobanteAutorizarArcaController extends Controller
             ))->pluck('code')->all();
 
             if (! in_array((string) $data['tipo'], $permitidos, true)) {
-                return back()->with('error', 'El tipo ARCA seleccionado no corresponde a la condicion IVA del cliente.');
+                return back()->with('flash.error', 'El tipo ARCA seleccionado no corresponde a la condicion IVA del cliente.');
             }
         }
 
@@ -55,7 +55,7 @@ class ComprobanteAutorizarArcaController extends Controller
             ->first();
 
         if (! $depositoCentral) {
-            return back()->with('error', 'No hay deposito central configurado para esta empresa.');
+            return back()->with('flash.error', 'No hay depósito central configurado para esta empresa; no se envió la solicitud a ARCA.');
         }
 
         try {
@@ -77,7 +77,7 @@ class ComprobanteAutorizarArcaController extends Controller
                 ],
             ]);
 
-            return back()->with('error', $e->getMessage());
+            return back()->with('flash.error', $e->getMessage());
         }
 
         $comprobante->refresh();
@@ -95,6 +95,6 @@ class ComprobanteAutorizarArcaController extends Controller
             ],
         ]);
 
-        return back()->with('success', 'Comprobante autorizado en ARCA (CAE generado).');
+        return back()->with('flash.success', 'Comprobante autorizado en ARCA (CAE generado).');
     }
 }
