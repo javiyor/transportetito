@@ -4,6 +4,7 @@ namespace App\Services\Facturacion;
 
 use App\Mail\ComprobanteEmitidoMail;
 use App\Models\Comprobante;
+use App\Services\Mail\MailConfigurationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -11,6 +12,8 @@ use Throwable;
 
 class ComprobanteMailer
 {
+    public function __construct(private MailConfigurationService $mailConfiguration) {}
+
     public function enviarSiCorresponde(Comprobante $comprobante): void
     {
         $cuenta = $comprobante->facturarCuenta;
@@ -27,6 +30,7 @@ class ComprobanteMailer
 
     public function enviarA(Comprobante $comprobante, string $email): bool
     {
+        $this->mailConfiguration->loadAndApply();
         $mailer = (string) config('mail.default');
         if ($mailer === 'log') {
             Log::warning('No se entregó el comprobante: el mailer activo solo registra mensajes en logs', [
