@@ -38,6 +38,20 @@ bash scripts/setup-auth.sh
 - En VPS: https://transportetito.5amsoftware.com.ar (Caddy maneja HTTPS)
 - En local (sin DNS): podes cambiar el Caddyfile o comentar el servicio caddy y exponer nginx.
 
+## Deploy de actualizaciones
+
+En el VPS, con el checkout limpio y ubicado en `main`, ejecutar desde la carpeta del repo:
+
+```bash
+bash scripts/deploy.sh
+```
+
+El script activa mantenimiento, actualiza desde `origin/main`, reconstruye assets,
+aplica migraciones pendientes, limpia cachés y reinicia los procesos Laravel. Si
+falla antes de actualizar el código (o después de completar las migraciones),
+intenta volver a habilitar la aplicación. Si las migraciones fallan tras actualizar,
+la deja en mantenimiento para no atender solicitudes con código y esquema incompatibles.
+
 ## Estado
 
 Este repo inicia la estructura (infra + esquema de datos + modulos base). La emision real ARCA requiere cargar cert/key (homologacion/produccion) desde la UI y configurar WSAA/WSFE.
