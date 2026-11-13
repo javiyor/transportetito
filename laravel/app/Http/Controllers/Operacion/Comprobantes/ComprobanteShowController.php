@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion\Comprobantes;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
@@ -58,6 +59,17 @@ class ComprobanteShowController extends Controller
             );
         }
 
+        $arcaFallo = AuditLog::query()
+            ->where('subject_type', Comprobante::class)
+            ->where('subject_id', $comprobante->id)
+            ->where('action', 'comprobante.arca_autorizacion_fallida')
+            ->orderByDesc('id')
+            ->first();
+        $arcaResultado = strtoupper((string) $comprobante->arca_resultado);
+        $arcaMotivo = $comprobante->arca_error
+            ?: ($arcaFallo?->context['mensaje'] ?? null)
+            ?: (in_array($arcaResultado, ['R', 'ERROR'], true) ? 'ARCA registró un rechazo sin devolver el detalle de la causa.' : null);
+
         $cuentas = TerceroCuenta::query()
             ->where('empresa_id', $currentEmpresaId)
             ->with('tercero:id,cuit,razon_social')
@@ -71,6 +83,7 @@ class ComprobanteShowController extends Controller
 
         return Inertia::render('Operacion/Comprobantes/Show', [
             'comprobante' => $comprobante,
+            'arcaMotivo' => $arcaMotivo,
             'arcaTipoOpciones' => $arcaTipoOpciones,
             'cuentas' => $cuentas,
             'creditSummary' => [

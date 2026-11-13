@@ -54,6 +54,7 @@ class ComprobanteIndexController extends Controller
                 'pedidos.remitenteCuenta:id,tercero_id',
                 'pedidos.destinatarioCuenta:id,tercero_id',
                 'notasCredito:id,comprobante_origen_id,estado,total',
+                'comprobanteOrigen:id,arca_tipo_cbte',
             ])
             ->whereIn('empresa_id', $fEmpresaId > 0 ? [$fEmpresaId] : $empresaIds)
             ->orderByDesc('fecha_emision')
@@ -175,6 +176,11 @@ class ComprobanteIndexController extends Controller
                         $comprobante->facturarCuenta?->tercero?->cuit,
                     )
                     : [],
+                'arca_tipo_reintento' => (string) $comprobante->tipo === 'nota_credito_interna'
+                    && ! $comprobante->arca_cae
+                    && $comprobante->requiere_autorizacion_arca
+                    ? $comprobante->comprobanteOrigen?->arca_tipo_cbte
+                    : null,
                 'arca_motivo' => $comprobante->arca_error ?: ($motivosAutorizacion[$comprobante->id] ?? null),
                 'arca_reintento_permitido' => (int) $comprobante->empresa_id === $empresaId,
                 'credit_summary' => [

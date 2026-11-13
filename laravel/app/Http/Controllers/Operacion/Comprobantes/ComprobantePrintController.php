@@ -42,6 +42,9 @@ class ComprobantePrintController extends Controller
             'comprobante' => $comprobante,
             'qrDataUri' => $qrService->generar($comprobante),
             'autoPrint' => $request->boolean('autoprint'),
+            'flashSuccess' => $request->session()->get('flash.success'),
+            'flashError' => $request->session()->get('flash.error'),
+            'flashWarning' => $request->session()->get('flash.warning'),
         ]);
     }
 }

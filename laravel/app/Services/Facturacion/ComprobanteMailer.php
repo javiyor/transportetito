@@ -4,6 +4,7 @@ namespace App\Services\Facturacion;
 
 use App\Mail\ComprobanteEmitidoMail;
 use App\Models\Comprobante;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Throwable;
@@ -26,16 +27,41 @@ class ComprobanteMailer
 
     public function enviarA(Comprobante $comprobante, string $email): bool
     {
+        $mailer = (string) config('mail.default');
+        if ($mailer === 'log') {
+            Log::warning('No se entregó el comprobante: el mailer activo solo registra mensajes en logs', [
+                'comprobante_id' => $comprobante->id,
+                'empresa_id' => $comprobante->empresa_id,
+                'facturar_cuenta_id' => $comprobante->facturar_cuenta_id,
+                'mailer' => $mailer,
+            ]);
+
+            return false;
+        }
+
         try {
             $url = URL::temporarySignedRoute('comprobantes.publico', now()->addDays(30), [
                 'comprobante' => $comprobante->id,
             ]);
 
             Mail::to($email)->send(new ComprobanteEmitidoMail($comprobante, $url));
+            Log::info('Comprobante aceptado por el transporte de correo', [
+                'comprobante_id' => $comprobante->id,
+                'empresa_id' => $comprobante->empresa_id,
+                'facturar_cuenta_id' => $comprobante->facturar_cuenta_id,
+                'mailer' => $mailer,
+            ]);
 
             return true;
-        } catch (Throwable) {
-            // best effort: no bloquear emision por mail no configurado
+        } catch (Throwable $exception) {
+            Log::error('Falló el envío del comprobante por correo', [
+                'comprobante_id' => $comprobante->id,
+                'empresa_id' => $comprobante->empresa_id,
+                'facturar_cuenta_id' => $comprobante->facturar_cuenta_id,
+                'mailer' => $mailer,
+                'exception' => $exception::class,
+                'error' => $exception->getMessage(),
+            ]);
 
             return false;
         }

@@ -24,7 +24,7 @@ class CargaDirectaCreateController extends Controller
             ->where('activo', true)
             ->with('tercero:id,razon_social,cuit,condicion_iva,condicion_iva_id,domicilio_fiscal')
             ->orderBy('nombre_cuenta')
-            ->get(['id', 'tercero_id', 'nombre_cuenta', 'direccion', 'localidad', 'barrio', 'cp', 'email']);
+            ->get(['id', 'tercero_id', 'nombre_cuenta', 'direccion', 'localidad', 'barrio', 'cp', 'telefono', 'email']);
 
         $tarifaDefaults = TarifaResolver::DEFAULTS;
 

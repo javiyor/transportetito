@@ -33,6 +33,7 @@ const applyFilters = () => {
 
 const reintentandoId = ref(null);
 const copiadoArcaId = ref(null);
+const tipoArcaParaReintento = (comprobante) => comprobante.arca_tipo_opciones?.[0]?.code || comprobante.arca_tipo_reintento || null;
 const enviarEmail = (comprobante) => {
     if (!comprobante.email_facturacion || !comprobante.puede_enviar_email) return;
 
@@ -44,7 +45,7 @@ const enviarEmail = (comprobante) => {
 };
 
 const reintentarArca = (comprobante) => {
-    const tipo = comprobante.arca_tipo_opciones?.[0]?.code;
+    const tipo = tipoArcaParaReintento(comprobante);
     if (!tipo) return;
     reintentandoId.value = comprobante.id;
     router.post(route('operacion.comprobantes.autorizar-arca', comprobante.id), { tipo }, {
@@ -251,6 +252,7 @@ const translateLabel = (label) => {
                             <div>
                                 <div class="text-sm font-semibold text-gray-900">#{{ c.id }} <span class="text-xs font-normal text-gray-500">· {{ formatFecha(c.fecha_emision) }}</span></div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
+                                <Link v-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen_id" :href="route('operacion.comprobantes.show', c.comprobante_origen_id)" class="text-xs text-indigo-600 hover:text-indigo-800">De factura #{{ c.comprobante_origen_id }}</Link>
                                 <div class="mt-0.5"><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ c.empresa?.razon_social || '-' }}</span></div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
@@ -267,8 +269,8 @@ const translateLabel = (label) => {
                                     :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
                                     class="text-xs text-emerald-700 hover:text-emerald-900"
                                 >N.C.</Link>
-                                <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-xs text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
-                                <div v-else-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="text-xs text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
+                                <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && tipoArcaParaReintento(c) && c.arca_reintento_permitido" type="button" class="text-xs text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
+                                <div v-else-if="c.requiere_autorizacion_arca && !c.arca_cae && tipoArcaParaReintento(c) && !c.arca_reintento_permitido" class="text-xs text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
                             </div>
                         </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 text-sm">
@@ -315,6 +317,7 @@ const translateLabel = (label) => {
                             </div>
                             <div v-if="tieneRechazoArca(c)" class="text-xs text-red-700">
                                 <div class="break-words whitespace-pre-wrap">{{ c.tipo === 'nota_credito_interna' ? 'ARCA rechazó la nota de crédito:' : 'Motivo de rechazo ARCA:' }} {{ textoRechazoArca(c) }}</div>
+                                <Link v-if="c.tipo === 'nota_credito_interna'" :href="route('operacion.comprobantes.show', c.id)" class="mt-1 inline-block text-xs font-medium text-indigo-700 hover:text-indigo-900">Ver detalle del rechazo</Link>
                                 <button v-if="c.arca_motivo" type="button" class="mt-1 text-xs font-medium text-indigo-700 hover:text-indigo-900" @click="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
                             </div>
                         </div>
@@ -343,7 +346,10 @@ const translateLabel = (label) => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in comprobantes.data" :key="c.id" class="text-[11px]">
                                 <td class="px-2 py-1 whitespace-nowrap font-mono text-gray-900">#{{ c.id }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ tipoLabel(c) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-gray-700">
+                                    <div>{{ tipoLabel(c) }}</div>
+                                    <Link v-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen_id" :href="route('operacion.comprobantes.show', c.comprobante_origen_id)" class="text-[10px] text-indigo-600 hover:text-indigo-800">Factura #{{ c.comprobante_origen_id }}</Link>
+                                </td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-indigo-700 truncate max-w-[120px]">{{ c.empresa?.razon_social || '-' }}</td>
@@ -384,11 +390,12 @@ const translateLabel = (label) => {
                                             :href="route('operacion.comprobantes.show', c.id) + '#nota-credito'"
                                             class="text-emerald-700 hover:text-emerald-900"
                                         >N.C.</Link>
-                                        <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && c.arca_reintento_permitido" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
+                                        <button v-if="c.requiere_autorizacion_arca && !c.arca_cae && tipoArcaParaReintento(c) && c.arca_reintento_permitido" type="button" class="text-amber-700 hover:text-amber-900" :disabled="reintentandoId === c.id" @click.stop="reintentarArca(c)">{{ reintentandoId === c.id ? 'Enviando...' : 'Reintentar ARCA' }}</button>
                                     </div>
-                                    <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && c.arca_tipo_opciones?.length && !c.arca_reintento_permitido" class="mt-0.5 text-[10px] text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
+                                    <div v-if="c.requiere_autorizacion_arca && !c.arca_cae && tipoArcaParaReintento(c) && !c.arca_reintento_permitido" class="mt-0.5 text-[10px] text-gray-500">Cambie a la empresa emisora para reintentar ARCA.</div>
                                     <div v-if="tieneRechazoArca(c)" class="mt-1 max-w-[320px] text-[10px] text-red-700">
                                         <div class="break-words whitespace-pre-wrap">{{ c.tipo === 'nota_credito_interna' ? 'ARCA rechazó la nota de crédito: ' : 'Motivo de rechazo ARCA: ' }}{{ textoRechazoArca(c) }}</div>
+                                        <Link v-if="c.tipo === 'nota_credito_interna'" :href="route('operacion.comprobantes.show', c.id)" class="mt-0.5 inline-block font-medium text-indigo-700 hover:text-indigo-900">Ver detalle del rechazo</Link>
                                         <button v-if="c.arca_motivo" type="button" class="mt-0.5 font-medium text-indigo-700 hover:text-indigo-900" @click.stop="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
                                     </div>
                                 </td>

@@ -20,6 +20,7 @@ const tarifaActiva = ref({ ...(props.tarifaDefaults || {}) });
 const page = usePage();
 const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
 const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
+const flashWarning = computed(() => page.props.tt?.flash?.warning || page.props.flash?.warning || null);
 
 const defaultPct = Number(props.tarifaDefaults?.tarifa_valor_declarado_pct) || 0.03;
 const ivaPct = props.empresa?.factura_sin_iva ? 0 : (Number(props.tarifaDefaults?.iva_pct) || 0.21);
@@ -91,6 +92,7 @@ const cuentaEditForm = useForm({
     localidad: '',
     barrio: '',
     cp: '',
+    telefono: '',
     email: '',
 });
 
@@ -106,6 +108,7 @@ const abrirEdicionCuenta = (cuenta) => {
     cuentaEditForm.localidad = cuenta.localidad || cuenta.tercero?.domicilio_fiscal?.ciudad || '';
     cuentaEditForm.barrio = cuenta.barrio || '';
     cuentaEditForm.cp = cuenta.cp || cuenta.tercero?.domicilio_fiscal?.codigo_postal || '';
+    cuentaEditForm.telefono = cuenta.telefono || '';
     cuentaEditForm.email = cuenta.email || '';
     cuentaEditForm.clearErrors();
     cuentaEditando.value = true;
@@ -532,6 +535,7 @@ const confirmarActualizacionArca = () => {
                 <Link :href="route('facturacion.manifiestos.index')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold whitespace-nowrap">Ver comprobantes →</Link>
             </div>
             <div v-if="flashError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
+            <div v-if="flashWarning" class="mb-3 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">{{ flashWarning }}</div>
             <div v-if="edicionError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ edicionError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <form @submit.prevent="verificarCuitYEnviar" class="space-y-3">
@@ -918,6 +922,11 @@ const confirmarActualizacionArca = () => {
                             <InputLabel for="edicion_cp" value="Código postal" />
                             <TextInput id="edicion_cp" v-model="cuentaEditForm.cp" type="text" class="mt-1 block w-full" />
                             <InputError :message="cuentaEditForm.errors.cp" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_telefono" value="Teléfono" />
+                            <TextInput id="edicion_telefono" v-model="cuentaEditForm.telefono" type="tel" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.telefono" class="mt-1" />
                         </div>
                     </div>
                 </form>

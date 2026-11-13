@@ -18,9 +18,20 @@ class ExternalCargaImporter
     public function importSince(Empresa $empresa, string $sinceDate, ?Deposito $depositoOrigenSeleccionado = null): array
     {
         $since = CarbonImmutable::parse($sinceDate)->startOfDay();
+        $clienteColumns = DB::connection('mysql_external')->getSchemaBuilder()->getColumnListing('clientes');
+        $direccionOrigenColumn = $this->externalColumn($clienteColumns, 'o', ['dirclie', 'dircli', 'direccion', 'direccion_cliente', 'dir_clie', 'domclie', 'domicli', 'domicilio', 'domicilio_cliente', 'direccion_fiscal', 'address'], 'direccion_origen');
+        $direccionDestinoColumn = $this->externalColumn($clienteColumns, 'd', ['dirclie', 'dircli', 'direccion', 'direccion_cliente', 'dir_clie', 'domclie', 'domicli', 'domicilio', 'domicilio_cliente', 'direccion_fiscal', 'address'], 'direccion_destino');
+        $telefonoOrigenColumn = $this->externalColumn($clienteColumns, 'o', ['telclie', 'telcli', 'telefono', 'telefono_cliente', 'telefonocliente', 'telef', 'tel', 'celclie', 'celularclie', 'celular', 'mobile'], 'telefono_origen');
+        $telefonoDestinoColumn = $this->externalColumn($clienteColumns, 'd', ['telclie', 'telcli', 'telefono', 'telefono_cliente', 'telefonocliente', 'telef', 'tel', 'celclie', 'celularclie', 'celular', 'mobile'], 'telefono_destino');
+        $contactColumns = [
+            'direccion_origen' => $direccionOrigenColumn,
+            'direccion_destino' => $direccionDestinoColumn,
+            'telefono_origen' => $telefonoOrigenColumn,
+            'telefono_destino' => $telefonoDestinoColumn,
+        ];
 
         $envios = DB::connection('mysql_external')->select(
-            <<<'SQL'
+            <<<SQL
 select
   e.id as envio_id,
   e.fecha as envio_fecha,
@@ -44,11 +55,7 @@ SQL,
             [$since->toDateString()]
         );
 
-        $existingCargas = Pedido::query()
-            ->whereNotNull('external_carga_id')
-            ->pluck('external_carga_id')
-            ->all();
-        $existingCargaMap = array_fill_keys(array_map('intval', $existingCargas), true);
+        $existingCargaMap = [];
 
         $createdEnvios = 0;
         $createdPedidos = 0;
@@ -107,7 +114,7 @@ SQL,
                     $createdEnvios++;
                 }
 
-                $res = $this->importCargasForEnvio($empresa, $manifiesto, $envioId, $existingCargaMap);
+                $res = $this->importCargasForEnvio($empresa, $manifiesto, $envioId, $contactColumns, $existingCargaMap);
                 $createdPedidos += $res['created'];
                 $skippedPedidos += $res['skipped'];
             } catch (\Throwable $e) {
@@ -132,10 +139,15 @@ SQL,
         ];
     }
 
-    private function importCargasForEnvio(Empresa $empresa, ManifiestoIngreso $manifiesto, int $envioId, array &$existingCargaMap): array
+    private function importCargasForEnvio(Empresa $empresa, ManifiestoIngreso $manifiesto, int $envioId, array $contactColumns, array &$existingCargaMap): array
     {
+        $direccionOrigenColumn = $contactColumns['direccion_origen'];
+        $direccionDestinoColumn = $contactColumns['direccion_destino'];
+        $telefonoOrigenColumn = $contactColumns['telefono_origen'];
+        $telefonoDestinoColumn = $contactColumns['telefono_destino'];
+
         $rows = DB::connection('mysql_external')->select(
-            <<<'SQL'
+            <<<SQL
 select
   c.id as id,
   c.fecha as fecha,
@@ -152,7 +164,11 @@ select
   o.numclie as idorigen,
   d.numclie as iddest,
   o.nomclie as nomorigen,
-  d.nomclie as nomdest
+  d.nomclie as nomdest,
+  {$direccionOrigenColumn},
+  {$direccionDestinoColumn},
+  {$telefonoOrigenColumn},
+  {$telefonoDestinoColumn}
 from carga c
 inner join clientes o on c.idproveedor = o.numclie
 inner join clientes d on c.idcliente = d.numclie
@@ -163,13 +179,38 @@ SQL,
             [$envioId]
         );
 
+        $externalIds = collect($rows)->pluck('id')->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        if ($externalIds->isNotEmpty()) {
+            $existingCargas = Pedido::query()
+                ->whereIn('external_carga_id', $externalIds)
+                ->get(['external_carga_id', 'empresa_id', 'remitente_cuenta_id', 'destinatario_cuenta_id']);
+
+            foreach ($existingCargas as $existingCarga) {
+                $externalId = (int) $existingCarga->external_carga_id;
+                $existingCargaMap[$externalId][(int) $existingCarga->empresa_id] ??= $existingCarga;
+            }
+        }
+
         $created = 0;
         $skipped = 0;
 
         foreach ($rows as $row) {
             $externalId = (int) $row->id;
 
-            if ($externalId === 0 || isset($existingCargaMap[$externalId])) {
+            if ($externalId === 0) {
+                continue;
+            }
+
+            $existingByCompany = $existingCargaMap[$externalId] ?? [];
+            if (isset($existingByCompany[(int) $empresa->id])) {
+                $existingCarga = $existingByCompany[(int) $empresa->id];
+                $this->actualizarContactoCuenta($existingCarga->remitente_cuenta_id, $empresa, (string) ($row->direccion_origen ?? ''), (string) ($row->telefono_origen ?? ''));
+                $this->actualizarContactoCuenta($existingCarga->destinatario_cuenta_id, $empresa, (string) ($row->direccion_destino ?? ''), (string) ($row->telefono_destino ?? ''));
+                $skipped++;
+                continue;
+            }
+
+            if ($existingByCompany !== []) {
                 $skipped++;
                 continue;
             }
@@ -185,8 +226,22 @@ SQL,
                 (int) ($row->iddest ?? 0)
             );
 
-            $remitenteCuenta = $this->firstOrCreateCuenta($empresa, $remitente, (int) ($row->idorigen ?? 0), (string) ($row->nomorigen ?? ''));
-            $destinatarioCuenta = $this->firstOrCreateCuenta($empresa, $destinatario, (int) ($row->iddest ?? 0), (string) ($row->nomdest ?? ''));
+            $remitenteCuenta = $this->firstOrCreateCuenta(
+                $empresa,
+                $remitente,
+                (int) ($row->idorigen ?? 0),
+                (string) ($row->nomorigen ?? ''),
+                (string) ($row->direccion_origen ?? ''),
+                (string) ($row->telefono_origen ?? ''),
+            );
+            $destinatarioCuenta = $this->firstOrCreateCuenta(
+                $empresa,
+                $destinatario,
+                (int) ($row->iddest ?? 0),
+                (string) ($row->nomdest ?? ''),
+                (string) ($row->direccion_destino ?? ''),
+                (string) ($row->telefono_destino ?? ''),
+            );
 
             if ($remitenteCuenta) {
                 $this->markCuentaAsCliente($empresa, $remitenteCuenta);
@@ -220,7 +275,10 @@ SQL,
                 'external_retiro' => (bool) ($row->retiro ?? false),
             ]);
 
-            $existingCargaMap[$externalId] = true;
+            $existingCargaMap[$externalId][(int) $empresa->id] = (object) [
+                'remitente_cuenta_id' => $remitenteCuenta?->id,
+                'destinatario_cuenta_id' => $destinatarioCuenta?->id,
+            ];
             $created++;
         }
 
@@ -314,7 +372,14 @@ SQL,
         }
     }
 
-    private function firstOrCreateCuenta(Empresa $empresa, Tercero $tercero, int $numeroCliente, string $nombreCuenta): ?TerceroCuenta
+    private function firstOrCreateCuenta(
+        Empresa $empresa,
+        Tercero $tercero,
+        int $numeroCliente,
+        string $nombreCuenta,
+        string $direccion,
+        string $telefono,
+    ): ?TerceroCuenta
     {
         if ($numeroCliente <= 0) {
             return null;
@@ -330,11 +395,21 @@ SQL,
             ->first();
 
         if ($existing) {
+            $updates = [];
             if (! $existing->nombre_cuenta && $nombre) {
-                $existing->update(['nombre_cuenta' => $nombre]);
+                $updates['nombre_cuenta'] = $nombre;
+            }
+            if (! $existing->direccion && trim($direccion) !== '') {
+                $updates['direccion'] = trim($direccion);
+            }
+            if (! $existing->telefono && trim($telefono) !== '') {
+                $updates['telefono'] = trim($telefono);
+            }
+            if ($updates !== []) {
+                $existing->update($updates);
             }
 
-            return $existing;
+            return $existing->fresh() ?? $existing;
         }
 
         // El numero externo puede estar ocupado por otra cuenta: usar max+1 como fallback
@@ -355,9 +430,60 @@ SQL,
             [
                 'tercero_id' => $tercero->id,
                 'nombre_cuenta' => $nombre,
+                'direccion' => trim($direccion) !== '' ? trim($direccion) : null,
+                'telefono' => trim($telefono) !== '' ? trim($telefono) : null,
                 'activo' => true,
             ]
         );
+    }
+
+    private function actualizarContactoCuenta(?int $cuentaId, Empresa $empresa, string $direccion, string $telefono): void
+    {
+        if (! $cuentaId) {
+            return;
+        }
+
+        $cuenta = TerceroCuenta::query()
+            ->where('empresa_id', $empresa->id)
+            ->find($cuentaId);
+        if (! $cuenta) {
+            return;
+        }
+
+        $updates = [];
+        if (! $cuenta->direccion && trim($direccion) !== '') {
+            $updates['direccion'] = trim($direccion);
+        }
+        if (! $cuenta->telefono && trim($telefono) !== '') {
+            $updates['telefono'] = trim($telefono);
+        }
+        if ($updates !== []) {
+            $cuenta->update($updates);
+        }
+    }
+
+    /** @param array<int, string> $columns @param array<int, string> $candidates */
+    private function externalColumn(array $columns, string $tableAlias, array $candidates, string $outputAlias): string
+    {
+        $columnByLowercase = [];
+        foreach ($columns as $column) {
+            $columnByLowercase[strtolower((string) $column)] = (string) $column;
+        }
+
+        foreach ($candidates as $candidate) {
+            $column = $columnByLowercase[strtolower($candidate)] ?? null;
+            if ($column !== null) {
+                $quotedColumn = str_replace('`', '``', $column);
+
+                return "{$tableAlias}.`{$quotedColumn}` as `{$outputAlias}`";
+            }
+        }
+
+        Log::warning('No se encontró una columna compatible en clientes externos', [
+            'campo_importacion' => $outputAlias,
+        ]);
+
+        return "NULL as `{$outputAlias}`";
     }
 
     private function markCuentaAsCliente(Empresa $empresa, TerceroCuenta $cuenta): void

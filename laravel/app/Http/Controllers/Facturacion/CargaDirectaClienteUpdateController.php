@@ -23,6 +23,7 @@ class CargaDirectaClienteUpdateController extends Controller
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
             'cp' => ['nullable', 'string', 'max:32'],
+            'telefono' => ['nullable', 'string', 'max:64'],
             'email' => ['nullable', 'email', 'max:255'],
         ]);
 
@@ -49,6 +50,7 @@ class CargaDirectaClienteUpdateController extends Controller
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
                 'cp' => $data['cp'] ?: null,
+                'telefono' => $data['telefono'] ?: null,
                 'email' => $data['email'] ?: null,
             ])->save();
         });

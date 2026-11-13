@@ -308,20 +308,44 @@ class CargaDirectaStoreController extends Controller
         }
 
         $comprobante->load('facturarCuenta');
+        $emailSolicitado = false;
+        $emailResultado = null;
+        $emailDestino = null;
+        $mailDriver = (string) config('mail.default');
         if (array_key_exists('enviar_email', $data)) {
-            if ($data['enviar_email'] && $comprobante->facturarCuenta?->email) {
-                $mailer->enviarA($comprobante, $comprobante->facturarCuenta->email);
+            $emailSolicitado = (bool) $data['enviar_email'];
+            if ($emailSolicitado) {
+                $emailDestino = trim((string) $comprobante->facturarCuenta?->email);
+                $emailResultado = $emailDestino !== '' ? $mailer->enviarA($comprobante, $emailDestino) : false;
             }
         } else {
             $mailer->enviarSiCorresponde($comprobante);
         }
 
+        $mensajeExito = "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').")" . ($comprobante->arca_cae ? " y autorizada en ARCA (CAE {$comprobante->arca_cae}). " : '. ') . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : '');
+        $mensajeError = $autorizacionError
+            ? "Factura #{$comprobante->id} creada pero no se pudo autorizar en ARCA: {$autorizacionError}. Podés reintentar desde Comprobantes."
+            : null;
+
+        if ($emailSolicitado) {
+            if (! $emailResultado) {
+                $detalleCorreo = $mailDriver === 'log'
+                    ? 'MAIL_MAILER está en "log" y no entrega mensajes; configurá SMTP en laravel/.env.'
+                    : ($emailDestino
+                        ? "No se pudo enviar a {$emailDestino}; revisá MAIL_HOST/MAIL_PORT/credenciales y los logs del contenedor app."
+                        : 'La cuenta facturada no tiene un email cargado.');
+                $mensajeError = trim(($mensajeError ? $mensajeError.' ' : '').'No se envió la factura por email. '.$detalleCorreo);
+            } else {
+                $mensajeExito .= " El transporte de correo aceptó el mensaje para {$emailDestino}.";
+            }
+        }
+
         $redirect = redirect()
             ->route('facturacion.carga-directa.create')
-            ->with('flash.success', "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').")" . ($comprobante->arca_cae ? " y autorizada en ARCA (CAE {$comprobante->arca_cae}). " : '. ') . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : ''));
+            ->with('flash.success', $mensajeExito);
 
-        if ($autorizacionError) {
-            $redirect->with('flash.error', "Factura #{$comprobante->id} creada pero no se pudo autorizar en ARCA: {$autorizacionError}. Podés reintentar desde Comprobantes.");
+        if ($mensajeError) {
+            $redirect->with('flash.error', $mensajeError);
         }
 
         if ($comprobante->arca_cae) {

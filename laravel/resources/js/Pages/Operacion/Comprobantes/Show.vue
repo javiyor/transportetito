@@ -8,6 +8,7 @@ import { formatFecha } from '@/Utils/format.js';
 
 const props = defineProps({
     comprobante: Object,
+    arcaMotivo: String,
     cuentas: Array,
     creditSummary: Object,
     motivoOptions: Array,
@@ -139,7 +140,7 @@ onMounted(async () => {
         <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div v-if="comprobante.requiere_autorizacion_arca && !comprobante.arca_cae" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <div class="font-semibold">Pendiente de autorización ARCA</div>
-                <div v-if="comprobante.arca_error" class="mt-1">{{ comprobante.arca_error }}</div>
+                <div v-if="arcaMotivo" class="mt-1"><strong>Causa del rechazo:</strong> {{ arcaMotivo }}</div>
             </div>
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

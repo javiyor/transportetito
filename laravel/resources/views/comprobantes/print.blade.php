@@ -345,6 +345,10 @@
 
         /* ===== NO-PRINT BUTTON ===== */
         .no-print { margin-bottom: 12pt; }
+        .mail-notice { padding: 8px 10px; border: 1px solid; border-radius: 4px; margin-bottom: 10px; font: 13px/1.4 sans-serif; }
+        .mail-notice.success { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
+        .mail-notice.error { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
+        .mail-notice.warning { color: #854d0e; background: #fffbeb; border-color: #fde68a; }
         .print-copies { display: none; }
         .copy-pair-sheet { page: invoicePair; }
         .copy-full-sheet { page: invoiceFull; }
@@ -373,6 +377,7 @@
         .copy-full-sheet { break-before: page; page-break-before: always; }
         @media print {
             .no-print { display: none !important; }
+            .mail-notice { display: none !important; }
             body.printing-copies { width: auto; }
             body.printing-copies #invoice-copy-source { display: none !important; }
             body.printing-copies .print-copies { display: block; }
@@ -784,6 +789,15 @@
     {{-- ================================================================ --}}
     {{--  FACTURA / NOTA DE CRÉDITO / NOTA DE DÉBITO  --}}
     {{-- ================================================================ --}}
+    @if($flashSuccess ?? false)
+        <div class="mail-notice success no-print">{{ $flashSuccess }}</div>
+    @endif
+    @if($flashError ?? false)
+        <div class="mail-notice error no-print">{{ $flashError }}</div>
+    @endif
+    @if($flashWarning ?? false)
+        <div class="mail-notice warning no-print">{{ $flashWarning }}</div>
+    @endif
     <div class="no-print" style="margin-bottom:12pt;">
         <label for="invoice-copy-count">Copias a imprimir:</label>
         <select id="invoice-copy-count">
