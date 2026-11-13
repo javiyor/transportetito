@@ -191,6 +191,13 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                 <span>${{ formatNum(c.docs_total) }}</span>
                             </div>
                         </div>
+                        <div v-if="expandedRows[c.id] && c.notas_credito?.length" class="border-t border-gray-100 pt-1 mt-1">
+                            <div class="text-[10px] uppercase tracking-wider text-green-700 mb-0.5">Notas de crédito</div>
+                            <div v-for="nota in c.notas_credito" :key="nota.id" class="flex items-center justify-between text-[11px] py-0.5 leading-none">
+                                <span class="truncate">{{ tipoLabel(nota.tipo) }} #{{ nota.id }} · {{ nota.fecha_emision }}</span>
+                                <span class="font-mono font-medium text-green-700">{{ nota.moneda }} {{ formatNum(nota.total) }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
@@ -234,10 +241,11 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                         <Link class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.show', c.id)">Ver</Link>
                                     </td>
                                 </tr>
-                                <tr v-if="expandedRows[c.id] && c.docs_pendientes?.length" :class="c.resaltar ? 'bg-red-50/50' : 'bg-gray-50'">
+                                <tr v-if="expandedRows[c.id] && (c.docs_pendientes?.length || c.notas_credito?.length)" :class="c.resaltar ? 'bg-red-50/50' : 'bg-gray-50'">
                                     <td colspan="8" class="px-6 py-3">
-                                        <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Documentos pendientes</div>
-                                        <table class="w-full text-xs">
+                                        <div v-if="c.docs_pendientes?.length">
+                                            <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Documentos pendientes</div>
+                                            <table class="w-full text-xs">
                                             <thead>
                                                 <tr class="text-gray-400 uppercase tracking-wider">
                                                     <th class="text-left py-1 pr-4">Tipo</th>
@@ -258,7 +266,29 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                                     <td class="py-1 text-right font-mono text-gray-900">${{ formatNum(c.docs_total) }}</td>
                                                 </tr>
                                             </tbody>
-                                        </table>
+                                            </table>
+                                        </div>
+                                        <div v-if="c.notas_credito?.length" class="mt-3">
+                                            <div class="text-xs font-medium text-green-700 uppercase tracking-wider mb-2">Notas de crédito</div>
+                                            <table class="w-full text-xs">
+                                                <thead>
+                                                    <tr class="text-gray-400 uppercase tracking-wider">
+                                                        <th class="text-left py-1 pr-4">Nota de crédito</th>
+                                                        <th class="text-left py-1 pr-4">Fecha</th>
+                                                        <th class="text-left py-1 pr-4">CAE</th>
+                                                        <th class="text-right py-1">Importe</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr v-for="nota in c.notas_credito" :key="nota.id" class="border-t border-gray-200">
+                                                        <td class="py-1 pr-4 font-medium text-gray-900">{{ tipoLabel(nota.tipo) }} #{{ nota.id }}</td>
+                                                        <td class="py-1 pr-4 text-gray-600">{{ nota.fecha_emision }}</td>
+                                                        <td class="py-1 pr-4 text-gray-600 font-mono">{{ nota.arca_cae || 'Pendiente ARCA' }}</td>
+                                                        <td class="py-1 text-right font-mono text-green-700">{{ nota.moneda }} {{ formatNum(nota.total) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </td>
                                 </tr>
                             </template>

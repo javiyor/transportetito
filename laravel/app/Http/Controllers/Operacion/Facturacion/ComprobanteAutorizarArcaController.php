@@ -61,6 +61,11 @@ class ComprobanteAutorizarArcaController extends Controller
         try {
             $wsfe->autorizarComprobante($comprobante, $depositoCentral, (string) $data['tipo']);
         } catch (\Throwable $e) {
+            $comprobante->forceFill([
+                'arca_error' => $comprobante->arca_error ?: $e->getMessage(),
+                'arca_resultado' => $comprobante->arca_resultado ?: 'error',
+            ])->save();
+
             AuditLog::query()->create([
                 'user_id' => $request->user()->id,
                 'action' => 'comprobante.arca_autorizacion_fallida',

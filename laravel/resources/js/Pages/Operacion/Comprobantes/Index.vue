@@ -320,6 +320,9 @@ const translateLabel = (label) => {
                                 <Link v-if="c.tipo === 'nota_credito_interna'" :href="route('operacion.comprobantes.show', c.id)" class="mt-1 inline-block text-xs font-medium text-indigo-700 hover:text-indigo-900">Ver detalle del rechazo</Link>
                                 <button v-if="c.arca_motivo" type="button" class="mt-1 text-xs font-medium text-indigo-700 hover:text-indigo-900" @click="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
                             </div>
+                            <div v-else-if="c.tipo === 'nota_credito_interna' && c.requiere_autorizacion_arca && !c.arca_cae" class="text-xs text-amber-800">
+                                Nota de crédito pendiente de ARCA; todavía no hay una respuesta de rechazo registrada.
+                            </div>
                         </div>
                     </div>
                     <div v-if="!comprobantes.data.length" class="rounded-lg border border-gray-200 bg-white px-6 py-4 text-center text-sm text-gray-500">Sin comprobantes.</div>
@@ -397,6 +400,9 @@ const translateLabel = (label) => {
                                         <div class="break-words whitespace-pre-wrap">{{ c.tipo === 'nota_credito_interna' ? 'ARCA rechazó la nota de crédito: ' : 'Motivo de rechazo ARCA: ' }}{{ textoRechazoArca(c) }}</div>
                                         <Link v-if="c.tipo === 'nota_credito_interna'" :href="route('operacion.comprobantes.show', c.id)" class="mt-0.5 inline-block font-medium text-indigo-700 hover:text-indigo-900">Ver detalle del rechazo</Link>
                                         <button v-if="c.arca_motivo" type="button" class="mt-0.5 font-medium text-indigo-700 hover:text-indigo-900" @click.stop="copiarErrorArca(c)">{{ copiadoArcaId === c.id ? 'Copiado' : 'Copiar error completo' }}</button>
+                                    </div>
+                                    <div v-else-if="c.tipo === 'nota_credito_interna' && c.requiere_autorizacion_arca && !c.arca_cae" class="mt-1 text-[10px] text-amber-800">
+                                        Nota de crédito pendiente de ARCA; todavía no hay una respuesta de rechazo registrada.
                                     </div>
                                 </td>
                             </tr>

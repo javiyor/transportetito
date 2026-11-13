@@ -115,6 +115,9 @@ class CuentaCorrienteIndexController extends Controller
         });
 
         $comprobantesPorCuenta = $comprobantesPendientes->groupBy('facturar_cuenta_id');
+        $notasCreditoPorCuenta = $comprobantes
+            ->filter(fn (Comprobante $comprobante) => str_starts_with((string) $comprobante->tipo, 'nota_credito') && $comprobante->estado !== 'anulada')
+            ->groupBy('facturar_cuenta_id');
 
         $zonas = Zona::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
@@ -144,7 +147,7 @@ class CuentaCorrienteIndexController extends Controller
             ->get()
             ->groupBy(fn($a) => $a->recibo->tercero_cuenta_id);
 
-        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $aplicacionesSum, $notasSum, $reciboAcuentaPorCuenta) {
+        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $notasCreditoPorCuenta, $aplicacionesSum, $notasSum, $reciboAcuentaPorCuenta) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
             // vencido = suma de pendientes vencidos (factura/ND positivo, NC/pago_a_cuenta negativo)
@@ -176,6 +179,16 @@ class CuentaCorrienteIndexController extends Controller
                 })
                 ->filter(fn ($d) => $d['total'] > 0.01)
                 ->values();
+            $notasCredito = collect($notasCreditoPorCuenta->get($cuenta->id, collect()))
+                ->map(fn (Comprobante $nota) => [
+                    'id' => $nota->id,
+                    'tipo' => $nota->tipo,
+                    'total' => (float) $nota->total,
+                    'moneda' => $nota->moneda,
+                    'fecha_emision' => $nota->fecha_emision?->format('Y-m-d'),
+                    'arca_cae' => $nota->arca_cae,
+                ])
+                ->values();
 
             return [
                 'id' => $cuenta->id,
@@ -190,7 +203,8 @@ class CuentaCorrienteIndexController extends Controller
                 'vencido_30' => $vencido30,
                 'resaltar' => $vencido30 > 0,
                 'docs_pendientes' => $docsPendientes,
-                'docs_count' => $docsPendientes->count(),
+                'notas_credito' => $notasCredito,
+                'docs_count' => $docsPendientes->count() + $notasCredito->count(),
                 'docs_total' => round($docsPendientes->sum('total'), 2),
             ];
         })->filter(function (array $row) use ($filtro) {
