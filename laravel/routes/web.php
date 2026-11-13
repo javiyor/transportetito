@@ -302,6 +302,7 @@ Route::middleware([
         Route::post('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceStoreController::class)->name('manual.store');
         Route::get('/carga-directa', \App\Http\Controllers\Facturacion\CargaDirectaCreateController::class)->name('carga-directa.create');
         Route::post('/carga-directa', \App\Http\Controllers\Facturacion\CargaDirectaStoreController::class)->name('carga-directa.store');
+        Route::put('/carga-directa/cuentas/{cuenta}', \App\Http\Controllers\Facturacion\CargaDirectaClienteUpdateController::class)->name('carga-directa.cuentas.update');
         Route::get('/carga-directa/tarifa', \App\Http\Controllers\Facturacion\CargaDirectaTarifaController::class)->name('carga-directa.tarifa');
         Route::get('/carga-directa/verificar-cuit', [\App\Http\Controllers\Facturacion\CargaDirectaCuitController::class, 'consultar'])->name('carga-directa.verificar-cuit');
         Route::post('/carga-directa/actualizar-datos-arca', [\App\Http\Controllers\Facturacion\CargaDirectaCuitController::class, 'actualizar'])->name('carga-directa.actualizar-datos-arca');

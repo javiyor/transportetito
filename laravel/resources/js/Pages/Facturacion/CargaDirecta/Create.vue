@@ -12,6 +12,7 @@ import InputError from '@/Components/InputError.vue';
 const props = defineProps({
     empresa: Object,
     cuentas: Array,
+    condicionesIva: Array,
     tarifaDefaults: Object,
 });
 const tarifaActiva = ref({ ...(props.tarifaDefaults || {}) });
@@ -65,6 +66,8 @@ const cuentaFacturada = computed(() => {
     const id = form.facturar_a_destino ? form.destino_cuenta_id : form.origen_cuenta_id;
     return (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(id)) || null;
 });
+const cuentaOrigenSeleccionada = computed(() => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(form.origen_cuenta_id)) || null);
+const cuentaDestinoSeleccionada = computed(() => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(form.destino_cuenta_id)) || null);
 const cuitCheckModal = ref({
     show: false,
     loading: false,
@@ -75,6 +78,84 @@ const cuitCheckModal = ref({
     checks: [],
 });
 const cuitVerificadoKey = ref('');
+const cuentaEditandoId = ref(null);
+const arcaActualizandoId = ref(null);
+const cuentaEditando = ref(false);
+const edicionError = ref('');
+const cuentaEditForm = useForm({
+    razon_social: '',
+    condicion_iva_id: '',
+    nombre_cuenta: '',
+    direccion: '',
+    localidad: '',
+    barrio: '',
+    cp: '',
+    email: '',
+});
+
+const abrirEdicionCuenta = (cuenta) => {
+    cuentaEditandoId.value = cuenta.id;
+    edicionError.value = '';
+    cuentaEditForm.razon_social = cuenta.tercero?.razon_social || '';
+    cuentaEditForm.condicion_iva_id = cuenta.tercero?.condicion_iva_id
+        || props.condicionesIva?.find((condicion) => condicion.nombre === cuenta.tercero?.condicion_iva)?.id
+        || '';
+    cuentaEditForm.nombre_cuenta = cuenta.nombre_cuenta || '';
+    cuentaEditForm.direccion = cuenta.direccion || cuenta.tercero?.domicilio_fiscal?.calle || '';
+    cuentaEditForm.localidad = cuenta.localidad || cuenta.tercero?.domicilio_fiscal?.ciudad || '';
+    cuentaEditForm.barrio = cuenta.barrio || '';
+    cuentaEditForm.cp = cuenta.cp || cuenta.tercero?.domicilio_fiscal?.codigo_postal || '';
+    cuentaEditForm.email = cuenta.email || '';
+    cuentaEditForm.clearErrors();
+    cuentaEditando.value = true;
+};
+
+const guardarEdicionCuenta = () => {
+    if (!cuentaEditandoId.value) return;
+    edicionError.value = '';
+    cuentaEditForm.put(route('facturacion.carga-directa.cuentas.update', cuentaEditandoId.value), {
+        preserveScroll: true,
+        onSuccess: async () => {
+            cuentaEditando.value = false;
+            cuitVerificadoKey.value = '';
+            await buscarCotizaciones();
+        },
+        onError: () => {
+            edicionError.value = 'Revisá los datos ingresados e intentá nuevamente.';
+        },
+    });
+};
+
+const actualizarCuentaDesdeArca = (cuenta) => {
+    if (!cuenta?.id || arcaActualizandoId.value) return;
+    if (!window.confirm(`¿Actualizar los datos de ${cuenta.nombre_cuenta || cuenta.tercero?.razon_social || 'este cliente'} según el padrón de ARCA?`)) return;
+
+    edicionError.value = '';
+    arcaActualizandoId.value = cuenta.id;
+    router.post(route('facturacion.carga-directa.actualizar-datos-arca'), { cuenta_id: cuenta.id }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            cuitVerificadoKey.value = '';
+            buscarCotizaciones();
+        },
+        onError: (errors) => {
+            edicionError.value = errors.cuit_arca || 'No se pudieron actualizar los datos desde ARCA.';
+        },
+        onFinish: () => { arcaActualizandoId.value = null; },
+    });
+};
+
+watch(() => props.cuentas, () => {
+    const actualizarSeleccion = (id, search, selected) => {
+        const cuenta = (props.cuentas || []).find((item) => String(item.id) === String(id));
+        if (!cuenta) return;
+        const label = cuenta.nombre_cuenta || cuenta.tercero?.razon_social || '';
+        selected.value = label;
+        search.value = label;
+    };
+    actualizarSeleccion(form.origen_cuenta_id, searchOrigen, selectedOrigen);
+    actualizarSeleccion(form.destino_cuenta_id, searchDestino, selectedDestino);
+}, { deep: true });
 
 watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], () => {
     cuitVerificadoKey.value = '';
@@ -423,13 +504,18 @@ const confirmarActualizacionArca = () => {
                 <Link :href="route('facturacion.manifiestos.index')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold whitespace-nowrap">Ver comprobantes →</Link>
             </div>
             <div v-if="flashError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
+            <div v-if="edicionError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ edicionError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <form @submit.prevent="verificarCuitYEnviar" class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="relative">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <InputLabel value="Origen (Remitente)" />
-                                <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
+                                <div class="flex items-center gap-2">
+                                    <button v-if="cuentaOrigenSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline" @click="abrirEdicionCuenta(cuentaOrigenSeleccionada)">Editar</button>
+                                    <button v-if="cuentaOrigenSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaOrigenSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaOrigenSeleccionada)">{{ arcaActualizandoId === cuentaOrigenSeleccionada.id ? 'Consultando ARCA...' : 'Actualizar ARCA' }}</button>
+                                    <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
+                                </div>
                             </div>
                             <TextInput
                                 v-model="searchOrigen"
@@ -461,9 +547,13 @@ const confirmarActualizacionArca = () => {
                         </div>
 
                         <div class="relative">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <InputLabel value="Destino (Destinatario / Entrega)" />
-                                <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
+                                <div class="flex items-center gap-2">
+                                    <button v-if="cuentaDestinoSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline" @click="abrirEdicionCuenta(cuentaDestinoSeleccionada)">Editar</button>
+                                    <button v-if="cuentaDestinoSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaDestinoSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaDestinoSeleccionada)">{{ arcaActualizandoId === cuentaDestinoSeleccionada.id ? 'Consultando ARCA...' : 'Actualizar ARCA' }}</button>
+                                    <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
+                                </div>
                             </div>
                             <TextInput
                                 v-model="searchDestino"
@@ -749,6 +839,68 @@ const confirmarActualizacionArca = () => {
                 </form>
             </div>
         </div>
+
+        <DialogModal :show="cuentaEditando" max-width="2xl" @close="cuentaEditando = false">
+            <template #title>Editar datos del cliente</template>
+            <template #content>
+                <form class="space-y-4" @submit.prevent="guardarEdicionCuenta">
+                    <div class="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                        CUIT: {{ (props.cuentas || []).find((cuenta) => cuenta.id === cuentaEditandoId)?.tercero?.cuit || 'Sin CUIT' }}
+                    </div>
+                    <div>
+                        <InputLabel for="edicion_razon_social" value="Razón social" />
+                        <TextInput id="edicion_razon_social" v-model="cuentaEditForm.razon_social" type="text" class="mt-1 block w-full" />
+                        <InputError :message="cuentaEditForm.errors.razon_social" class="mt-1" />
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <InputLabel for="edicion_nombre_cuenta" value="Nombre de cuenta" />
+                            <TextInput id="edicion_nombre_cuenta" v-model="cuentaEditForm.nombre_cuenta" type="text" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.nombre_cuenta" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_condicion_iva" value="Condición frente al IVA" />
+                            <select id="edicion_condicion_iva" v-model="cuentaEditForm.condicion_iva_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                                <option value="">Sin especificar</option>
+                                <option v-for="condicion in condicionesIva" :key="condicion.id" :value="condicion.id">{{ condicion.nombre }}</option>
+                            </select>
+                            <InputError :message="cuentaEditForm.errors.condicion_iva_id" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_email" value="Email" />
+                            <TextInput id="edicion_email" v-model="cuentaEditForm.email" type="email" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.email" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_direccion" value="Dirección" />
+                            <TextInput id="edicion_direccion" v-model="cuentaEditForm.direccion" type="text" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.direccion" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_localidad" value="Localidad" />
+                            <TextInput id="edicion_localidad" v-model="cuentaEditForm.localidad" type="text" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.localidad" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_barrio" value="Barrio" />
+                            <TextInput id="edicion_barrio" v-model="cuentaEditForm.barrio" type="text" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.barrio" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_cp" value="Código postal" />
+                            <TextInput id="edicion_cp" v-model="cuentaEditForm.cp" type="text" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.cp" class="mt-1" />
+                        </div>
+                    </div>
+                </form>
+            </template>
+            <template #footer>
+                <SecondaryButton type="button" :disabled="cuentaEditForm.processing" @click="cuentaEditando = false">Cancelar</SecondaryButton>
+                <PrimaryButton type="button" class="ms-3" :disabled="cuentaEditForm.processing" @click="guardarEdicionCuenta">
+                    {{ cuentaEditForm.processing ? 'Guardando...' : 'Guardar datos' }}
+                </PrimaryButton>
+            </template>
+        </DialogModal>
 
         <DialogModal :show="cuitCheckModal.show" max-width="3xl" :closeable="!cuitCheckModal.updating" @close="cuitCheckModal.show = false">
             <template #title>Verificación de CUIT en ARCA</template>
