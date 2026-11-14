@@ -1,6 +1,6 @@
 <p>Hola,</p>
 
-<p>Se emitio el comprobante <strong>#{{ $comprobante->id }}</strong>.</p>
+<p>Se emitió el comprobante <strong>{{ $numeroComprobante }}</strong>.</p>
 
 <ul>
     <li>Tipo: {{ $comprobante->tipo === 'guia_envio' ? 'Guia no fiscal' : 'Factura' }}</li>

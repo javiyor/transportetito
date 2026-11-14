@@ -37,6 +37,9 @@ class ComprobanteEmitidoMail extends Mailable
             'nota_credito_interna' => 'Nota de credito',
             default => 'Factura',
         };
+        $numero = $this->comprobante->arca_numero
+            ? str_pad((string) ($this->comprobante->arca_punto_venta ?? 0), 4, '0', STR_PAD_LEFT).'-'.str_pad((string) $this->comprobante->arca_numero, 8, '0', STR_PAD_LEFT)
+            : (string) ($this->comprobante->numero_interno ? '#'.$this->comprobante->numero_interno : '#'.$this->comprobante->id);
 
         $printHtml = View::make('comprobantes.print', [
             'comprobante' => $this->comprobante,
@@ -48,8 +51,10 @@ class ComprobanteEmitidoMail extends Mailable
         ])->render();
 
         return $this
-            ->subject($tipo.' emitida #'.$this->comprobante->id)
-            ->view('emails.comprobantes.emitido')
+            ->subject($tipo.' emitida '.$numero)
+            ->view('emails.comprobantes.emitido', [
+                'numeroComprobante' => $numero,
+            ])
             ->attachData($printHtml, 'comprobante-'.$this->comprobante->id.'.html', [
                 'mime' => 'text/html',
             ]);

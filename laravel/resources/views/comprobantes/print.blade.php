@@ -260,6 +260,12 @@
             white-space: pre-line;
             overflow-wrap: anywhere;
         }
+        .invoice-payment-origin {
+            margin-top: 6pt;
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
         .legal-legends {
             border-top: 1px solid #000;
             border-bottom: 1px solid #000;
@@ -1143,6 +1149,10 @@
                 </div>
             </div>
         </div>
+
+        @if(!empty($detalle['carga_directa']) && array_key_exists('facturar_a_destino', $detalle) && ! $detalle['facturar_a_destino'])
+            <div class="invoice-payment-origin">Pago en Origen</div>
+        @endif
 
         @if($observacionGeneral !== '')
             <div class="invoice-observation"><strong>Observaciones:</strong> {{ $observacionGeneral }}</div>
