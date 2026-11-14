@@ -16,6 +16,7 @@ class ComprobanteEmitidoMail extends Mailable
     public function __construct(
         public Comprobante $comprobante,
         public string $url,
+        public ?string $qrDataUri = null,
     ) {
     }
 
@@ -39,6 +40,11 @@ class ComprobanteEmitidoMail extends Mailable
 
         $printHtml = View::make('comprobantes.print', [
             'comprobante' => $this->comprobante,
+            'qrDataUri' => $this->qrDataUri,
+            'autoPrint' => false,
+            'flashSuccess' => null,
+            'flashError' => null,
+            'flashWarning' => null,
         ])->render();
 
         return $this

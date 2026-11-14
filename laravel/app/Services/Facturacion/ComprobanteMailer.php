@@ -4,6 +4,7 @@ namespace App\Services\Facturacion;
 
 use App\Mail\ComprobanteEmitidoMail;
 use App\Models\Comprobante;
+use App\Services\Arca\ArcaQrService;
 use App\Services\Mail\MailConfigurationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -12,7 +13,10 @@ use Throwable;
 
 class ComprobanteMailer
 {
-    public function __construct(private MailConfigurationService $mailConfiguration) {}
+    public function __construct(
+        private MailConfigurationService $mailConfiguration,
+        private ArcaQrService $qrService,
+    ) {}
 
     public function enviarSiCorresponde(Comprobante $comprobante): void
     {
@@ -48,7 +52,17 @@ class ComprobanteMailer
                 'comprobante' => $comprobante->id,
             ]);
 
-            Mail::to($email)->send(new ComprobanteEmitidoMail($comprobante, $url));
+            $qrDataUri = null;
+            try {
+                $qrDataUri = $this->qrService->generar($comprobante);
+            } catch (Throwable $exception) {
+                Log::warning('No se pudo generar el QR de la factura para el email', [
+                    'comprobante_id' => $comprobante->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+
+            Mail::to($email)->send(new ComprobanteEmitidoMail($comprobante, $url, $qrDataUri));
             Log::info('Comprobante aceptado por el transporte de correo', [
                 'comprobante_id' => $comprobante->id,
                 'empresa_id' => $comprobante->empresa_id,
