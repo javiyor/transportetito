@@ -8,13 +8,14 @@ use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\Recibo;
 use App\Models\TerceroCuenta;
+use App\Services\Cobranzas\SaldoNotasCreditoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CuentaCorrienteShowController extends Controller
 {
-    public function __invoke(Request $request, TerceroCuenta $cuenta): Response
+    public function __invoke(Request $request, TerceroCuenta $cuenta, SaldoNotasCreditoService $saldoNotasCredito): Response
     {
         $empresaId = (int) $request->user()->current_empresa_id;
         abort_unless((int) $cuenta->empresa_id === $empresaId, 404);
@@ -92,25 +93,18 @@ class CuentaCorrienteShowController extends Controller
             ->groupBy('comprobante_id')
             ->pluck('sum_importe', 'comprobante_id');
 
-        $notasSum = Comprobante::query()
-            ->where('empresa_id', $empresaId)
-            ->whereIn('comprobante_origen_id', $comprobantesRaw->pluck('id'))
-            ->where('estado', '!=', 'anulada')
-            ->where('tipo', 'like', 'nota_credito%')
-            ->selectRaw('comprobante_origen_id, SUM(ABS(total)) as sum_notas')
-            ->groupBy('comprobante_origen_id')
-            ->pluck('sum_notas', 'comprobante_origen_id');
+        $saldosComprobantes = $saldoNotasCredito->calcular($comprobantesRaw, $aplicacionesSum->all());
 
-        $comprobantes = $comprobantesRaw->map(function ($c) use ($aplicacionesSum, $notasSum) {
+        $comprobantes = $comprobantesRaw->map(function ($c) use ($aplicacionesSum, $saldosComprobantes) {
             $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
-            $notas = (float) ($notasSum[$c->id] ?? 0);
-            $pendiente = round((float) $c->total - $aplicado - $notas, 2);
-            // Para NC, el pendiente no aplica (son créditos)
-            $isNota = str_contains($c->tipo ?? '', 'nota_credito') || (float) $c->total < 0;
-            $c->setAttribute('pendiente', $isNota ? 0 : $pendiente);
-            $c->setAttribute('is_pagada', !$isNota && $pendiente <= 0.01);
+            $saldo = $saldosComprobantes[$c->id] ?? ['pendiente' => 0, 'is_credit' => (float) $c->total < 0];
+            $pendiente = (float) $saldo['pendiente'];
+            $isCredito = (bool) $saldo['is_credit'];
+            $c->setAttribute('pendiente', $pendiente);
+            $c->setAttribute('is_credit', $isCredito);
+            $c->setAttribute('is_pagada', ! $isCredito && $pendiente <= 0.01);
             $c->setAttribute('aplicado', $aplicado);
-            $c->setAttribute('notas_aplicadas', $notas);
+            $c->setAttribute('notas_aplicadas', $isCredito ? max(0, abs((float) $c->total) - abs($pendiente)) : 0);
             return $c;
         });
 

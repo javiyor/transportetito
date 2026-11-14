@@ -8,13 +8,14 @@ use App\Models\CtaCteMovimiento;
 use App\Models\TerceroCuenta;
 use App\Models\User;
 use App\Models\Zona;
+use App\Services\Cobranzas\SaldoNotasCreditoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CuentaCorrienteIndexController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, SaldoNotasCreditoService $saldoNotasCredito): Response
     {
         $empresaId = (int) $request->user()->current_empresa_id;
         $user = $request->user();
@@ -87,7 +88,7 @@ class CuentaCorrienteIndexController extends Controller
             ->orderBy('fecha_emision')
             ->get(['id', 'facturar_cuenta_id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'comprobante_origen_id']);
 
-        // Calcular saldo pendiente real por comprobante (total - notas - recibos aplicados)
+        // Calcular saldo por comprobante, separando créditos disponibles de notas.
         $aplicacionesSum = \App\Models\ReciboAplicacion::query()
             ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
             ->where('recibos.estado', '!=', 'anulada')
@@ -96,27 +97,19 @@ class CuentaCorrienteIndexController extends Controller
             ->groupBy('comprobante_id')
             ->pluck('sum_importe', 'comprobante_id');
 
-        $notasSum = Comprobante::query()
-            ->where('empresa_id', $empresaId)
-            ->whereIn('comprobante_origen_id', $comprobantes->pluck('id'))
-            ->where('estado', '!=', 'anulada')
-            ->where('tipo', 'like', 'nota_credito%')
-            ->selectRaw('comprobante_origen_id, SUM(ABS(total)) as sum_notas')
-            ->groupBy('comprobante_origen_id')
-            ->pluck('sum_notas', 'comprobante_origen_id');
+        $saldosComprobantes = $saldoNotasCredito->calcular($comprobantes, $aplicacionesSum->all());
 
-        // Filtrar solo comprobantes de deuda (total >0) con saldo pendiente > 0.01
-        $comprobantesPendientes = $comprobantes->filter(function ($c) use ($aplicacionesSum, $notasSum) {
-            if ((float) $c->total <= 0) return false; // no contar NC como deuda pendiente
-            $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
-            $notas = (float) ($notasSum[$c->id] ?? 0);
-            $pendiente = (float) $c->total - $aplicado - $notas;
-            return $pendiente > 0.01;
-        });
+        $comprobantesPendientes = $comprobantes->filter(fn (Comprobante $comprobante) =>
+            ! ($saldosComprobantes[$comprobante->id]['is_credit'] ?? false)
+            && (float) ($saldosComprobantes[$comprobante->id]['pendiente'] ?? 0) > 0.01
+        );
 
         $comprobantesPorCuenta = $comprobantesPendientes->groupBy('facturar_cuenta_id');
         $notasCreditoPorCuenta = $comprobantes
-            ->filter(fn (Comprobante $comprobante) => str_starts_with((string) $comprobante->tipo, 'nota_credito') && $comprobante->estado !== 'anulada')
+            ->filter(fn (Comprobante $comprobante) =>
+                str_starts_with((string) $comprobante->tipo, 'nota_credito')
+                && $comprobante->estado !== 'anulada'
+            )
             ->groupBy('facturar_cuenta_id');
 
         $zonas = Zona::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
@@ -147,43 +140,38 @@ class CuentaCorrienteIndexController extends Controller
             ->get()
             ->groupBy(fn($a) => $a->recibo->tercero_cuenta_id);
 
-        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $notasCreditoPorCuenta, $aplicacionesSum, $notasSum, $reciboAcuentaPorCuenta) {
+        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $notasCreditoPorCuenta, $saldosComprobantes, $reciboAcuentaPorCuenta) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
             // vencido = suma de pendientes vencidos (factura/ND positivo, NC/pago_a_cuenta negativo)
             $pendientesVencidos = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
                 ->filter(fn($c) => ($c->fecha_emision?->format('Y-m-d') ?? '') <= $cutoff)
-                ->map(function($c) use ($aplicacionesSum, $notasSum) {
-                    $aplicado = (float)($aplicacionesSum[$c->id] ?? 0);
-                    $notas = (float)($notasSum[$c->id] ?? 0);
-                    return round((float)$c->total - $aplicado - $notas, 2);
-                })->filter(fn($p) => $p > 0.01)->sum();
+                ->sum(fn ($c) => max(0, (float) ($saldosComprobantes[$c->id]['pendiente'] ?? 0)));
             $creditosVencidos = $reciboAcuentaPorCuenta->get($cuenta->id, collect())
                 ->filter(fn($a) => $a->recibo->fecha <= $cutoff)
                 ->sum('importe');
             $vencido30 = round(max(0, $pendientesVencidos - $creditosVencidos), 2);
 
             $docsPendientes = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
-                ->map(function (Comprobante $c) use ($aplicacionesSum, $notasSum) {
-                    $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
-                    $notas = (float) ($notasSum[$c->id] ?? 0);
-                    $pendiente = round((float) $c->total - $aplicado - $notas, 2);
+                ->map(function (Comprobante $c) use ($saldosComprobantes) {
+                    $pendiente = (float) ($saldosComprobantes[$c->id]['pendiente'] ?? 0);
                     return [
                         'id' => $c->id,
                         'tipo' => $c->tipo,
-                        'total' => $pendiente > 0 ? $pendiente : 0,
+                        'total' => $pendiente,
                         'moneda' => $c->moneda,
                         'fecha_emision' => $c->fecha_emision?->format('Y-m-d'),
                         'arca_cae' => $c->arca_cae,
+                        'is_credit' => false,
                     ];
                 })
-                ->filter(fn ($d) => $d['total'] > 0.01)
                 ->values();
             $notasCredito = collect($notasCreditoPorCuenta->get($cuenta->id, collect()))
                 ->map(fn (Comprobante $nota) => [
                     'id' => $nota->id,
                     'tipo' => $nota->tipo,
                     'total' => (float) $nota->total,
+                    'pendiente' => (float) ($saldosComprobantes[$nota->id]['pendiente'] ?? 0),
                     'moneda' => $nota->moneda,
                     'fecha_emision' => $nota->fecha_emision?->format('Y-m-d'),
                     'arca_cae' => $nota->arca_cae,

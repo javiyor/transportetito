@@ -34,6 +34,14 @@ class ComprobanteAnularController extends Controller
             return back()->with('error', 'No se puede anular: el comprobante ya tiene cobranzas aplicadas.');
         }
 
+        $tieneImputacionesNotaCredito = DB::table('nota_credito_aplicaciones')
+            ->where('factura_id', $comprobante->id)
+            ->orWhere('nota_credito_id', $comprobante->id)
+            ->exists();
+        if ($tieneImputacionesNotaCredito) {
+            return back()->with('error', 'No se puede anular: tiene imputaciones de notas de crédito. Revertí primero esas imputaciones.');
+        }
+
         DB::transaction(function () use ($request, $comprobante) {
             if ((string) $comprobante->tipo !== 'nota_credito_interna') {
                 foreach ($comprobante->pedidos as $pedido) {

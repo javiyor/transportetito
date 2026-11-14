@@ -19,6 +19,11 @@ class PreReciboConfirmController extends Controller
             return redirect()->route('cobranzas.pre-recibos.show', $preRecibo);
         }
 
+        $erroresValidacion = $confirmer->erroresValidacion($preRecibo);
+        if ($erroresValidacion !== []) {
+            return back()->with('flash.error', implode(' ', $erroresValidacion));
+        }
+
         $data = $request->validate([
             'send_email' => ['nullable', 'boolean'],
         ]);

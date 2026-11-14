@@ -5,14 +5,16 @@ namespace App\Http\Controllers\Cobranzas;
 use App\Http\Controllers\Controller;
 use App\Models\PreRecibo;
 use App\Models\TerceroCuenta;
+use App\Models\User;
 use App\Models\Zona;
+use App\Services\Cobranzas\PreReciboConfirmer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PreReciboIndexController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, PreReciboConfirmer $confirmer): Response
     {
         $empresaId = (int) $request->user()->current_empresa_id;
 
@@ -20,6 +22,7 @@ class PreReciboIndexController extends Controller
         $zonaId = (int) ($request->get('zona_id') ?: 0);
         $localidad = trim((string) ($request->get('localidad') ?: ''));
         $barrio = trim((string) ($request->get('barrio') ?: ''));
+        $cobradorUserId = (int) ($request->get('cobrador_user_id') ?: 0);
         abort_unless(in_array($estado, ['borrador', 'confirmado'], true), 400);
 
         $query = PreRecibo::query()
@@ -48,9 +51,26 @@ class PreReciboIndexController extends Controller
             });
         }
 
-        $preRecibos = $query->paginate(30)->withQueryString();
+        if ($cobradorUserId > 0) {
+            $query->whereHas('cuenta', fn ($q) => $q->where('cobrador_user_id', $cobradorUserId));
+        }
 
-        $summaryItems = (clone $query)->get();
+        $summaryQuery = clone $query;
+        $preRecibos = (clone $query)
+            ->with(['items', 'aplicaciones'])
+            ->paginate(30)
+            ->withQueryString()
+            ->through(function (PreRecibo $preRecibo) use ($confirmer) {
+                $errores = $confirmer->erroresValidacion($preRecibo);
+                $datos = $preRecibo->toArray();
+                unset($datos['items'], $datos['aplicaciones']);
+                $datos['confirmable'] = $errores === [];
+                $datos['errores_confirmacion'] = $errores;
+
+                return $datos;
+            });
+
+        $summaryItems = $summaryQuery->with('items')->get();
         $summaryByZona = $summaryItems
             ->groupBy(fn ($p) => $p->cuenta?->zona?->nombre ?: 'Sin zona')
             ->map(fn ($items, $label) => [
@@ -67,6 +87,23 @@ class PreReciboIndexController extends Controller
                 'total' => round((float) $items->sum('total'), 2),
             ])
             ->values();
+        $summaryByMedio = $summaryItems
+            ->flatMap(fn (PreRecibo $preRecibo) => $preRecibo->items)
+            ->groupBy(fn ($item) => ($item->medio ?: 'sin especificar').'|'.($item->moneda ?: 'ARS'))
+            ->map(function ($items) {
+                $item = $items->first();
+
+                return [
+                    'medio' => $item->medio ?: 'sin especificar',
+                    'moneda' => $item->moneda ?: 'ARS',
+                    'cantidad' => $items->count(),
+                    'total' => round((float) $items->sum('importe'), 2),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
+
+        $cobradores = User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']);
 
         $zonas = Zona::query()
             ->where('empresa_id', $empresaId)
@@ -88,11 +125,14 @@ class PreReciboIndexController extends Controller
             'localidades' => $localidades,
             'summaryByZona' => $summaryByZona,
             'summaryByLocalidad' => $summaryByLocalidad,
+            'summaryByMedio' => $summaryByMedio,
+            'cobradores' => $cobradores,
             'filters' => [
                 'estado' => $estado,
                 'zona_id' => $zonaId ?: null,
                 'localidad' => $localidad !== '' ? $localidad : null,
                 'barrio' => $barrio !== '' ? $barrio : null,
+                'cobrador_user_id' => $cobradorUserId ?: null,
             ],
         ]);
     }

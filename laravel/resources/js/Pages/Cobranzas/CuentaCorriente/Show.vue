@@ -6,7 +6,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const page = usePage();
 
@@ -55,6 +55,15 @@ const comprobantesPendientes = computed(() => {
         return Math.abs(pend) > 0.01;
     });
 });
+const comprobantesSeleccionados = computed(() => (reciboForm.comprobante_ids || [])
+    .map((id) => props.comprobantes.find((comprobante) => String(comprobante.id) === String(id)))
+    .filter(Boolean));
+const notasCreditoSeleccionadas = computed(() => comprobantesSeleccionados.value.filter((comprobante) => esCredito(comprobante.tipo) && String(comprobante.tipo).startsWith('nota_credito')));
+const facturasSeleccionadas = computed(() => comprobantesSeleccionados.value.filter((comprobante) => !esCredito(comprobante.tipo) && parseFloat(comprobante.pendiente ?? comprobante.total) > 0.01));
+const imputandoCredito = ref(false);
+const errorImputacionCredito = ref('');
+const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
+const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 
 const selectedComprobantesTotal = computed(() => {
     return (reciboForm.comprobante_ids || []).reduce((sum, id) => {
@@ -68,9 +77,33 @@ const selectedComprobantesTotal = computed(() => {
 });
 
 const submitRecibo = () => {
+    if (notasCreditoSeleccionadas.value.length) {
+        errorImputacionCredito.value = 'Primero imputá las notas de crédito seleccionadas a las facturas.';
+        return;
+    }
     const realIds = reciboForm.comprobante_ids.filter(id => Number.isInteger(Number(id)));
     reciboForm.comprobante_ids = realIds;
     reciboForm.post(route('cobranzas.ctacte.recibos.store', props.cuenta.id), { preserveScroll: true });
+};
+
+const imputarNotasCredito = () => {
+    if (!notasCreditoSeleccionadas.value.length || !facturasSeleccionadas.value.length || imputandoCredito.value) return;
+
+    imputandoCredito.value = true;
+    errorImputacionCredito.value = '';
+    router.post(route('cobranzas.ctacte.notas-credito.imputar', props.cuenta.id), {
+        comprobante_ids: comprobantesSeleccionados.value.map((comprobante) => comprobante.id),
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            reciboForm.comprobante_ids = [];
+            errorImputacionCredito.value = '';
+        },
+        onError: (errors) => {
+            errorImputacionCredito.value = errors.comprobante_ids || 'No se pudieron imputar las notas de crédito seleccionadas.';
+        },
+        onFinish: () => { imputandoCredito.value = false; },
+    });
 };
 
 const agregarItem = () => {
@@ -145,6 +178,9 @@ const formatNum = (n) => {
         </template>
 
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
+            <div v-if="flashSuccess" class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">{{ flashSuccess }}</div>
+            <div v-if="flashError" class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{{ flashError }}</div>
+            <div v-if="errorImputacionCredito" class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{{ errorImputacionCredito }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><div class="text-xs text-gray-500">Zona</div><div class="text-sm font-medium text-gray-900">{{ cuenta.zona?.nombre || 'Sin zona' }}</div></div>
                 <div><div class="text-xs text-gray-500">Ciudad</div><div class="text-sm font-medium text-gray-900">{{ cuenta.localidad || 'Sin ciudad' }}</div></div>
@@ -175,8 +211,15 @@ const formatNum = (n) => {
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                         </fieldset>
                         <div v-if="reciboForm.comprobante_ids.length" class="text-xs font-semibold text-gray-700 flex items-center justify-between pt-1">
-                            <span>Total: {{ formatNum(selectedComprobantesTotal) }}</span>
-                            <button type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
+                            <span v-if="!notasCreditoSeleccionadas.length">Total: {{ formatNum(selectedComprobantesTotal) }}</span>
+                            <span v-else class="text-green-700">Crédito NC seleccionado: {{ formatNum(Math.abs(notasCreditoSeleccionadas.reduce((sum, nota) => sum + Number(nota.pendiente || 0), 0))) }}</span>
+                            <button v-if="!notasCreditoSeleccionadas.length" type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
+                        </div>
+                        <div v-if="notasCreditoSeleccionadas.length" class="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+                            Seleccioná las facturas destino y aplicá el crédito. Después, si queda saldo en efectivo o cheque, emití el recibo.
+                            <PrimaryButton class="mt-2 !px-2 !py-1 !text-xs" :disabled="imputandoCredito || !facturasSeleccionadas.length" @click="imputarNotasCredito">
+                                {{ imputandoCredito ? 'Imputando...' : 'Imputar créditos a facturas' }}
+                            </PrimaryButton>
                         </div>
                         <InputError :message="reciboForm.errors.comprobante_ids" />
 
@@ -222,7 +265,7 @@ const formatNum = (n) => {
                             </label>
                             <div class="flex items-center gap-2">
                                 <div class="text-xs font-semibold text-gray-900">Total: {{ formatNum(reciboTotal) }}</div>
-                                <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="reciboForm.processing" @click="submitRecibo">Emitir recibo</PrimaryButton>
+                                <PrimaryButton class="!text-xs !px-3 !py-1.5" :disabled="reciboForm.processing || notasCreditoSeleccionadas.length > 0" @click="submitRecibo">Emitir recibo</PrimaryButton>
                             </div>
                         </div>
                     </div>

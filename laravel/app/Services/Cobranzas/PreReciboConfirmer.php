@@ -16,13 +16,22 @@ use App\Models\ReciboItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 class PreReciboConfirmer
 {
     public function confirm(PreRecibo $preRecibo, int $userId): Recibo
     {
         return DB::transaction(function () use ($preRecibo, $userId) {
+            $preRecibo = PreRecibo::query()->whereKey($preRecibo->id)->lockForUpdate()->firstOrFail();
             $preRecibo->load(['items', 'aplicaciones']);
+
+            $erroresValidacion = $this->erroresValidacion($preRecibo);
+            if ($erroresValidacion !== []) {
+                throw ValidationException::withMessages([
+                    'pre_recibo' => implode(' ', $erroresValidacion),
+                ]);
+            }
 
             $maxInterno = Recibo::query()->where('empresa_id', $preRecibo->empresa_id)->max('numero_interno') ?? 0;
 
@@ -52,7 +61,7 @@ class PreReciboConfirmer
                     'detalle' => $item->detalle,
                 ]);
 
-                if (in_array($item->medio, ['cheque_propio', 'cheque_tercero'])) {
+                if (in_array($item->medio, ['cheque', 'cheque_propio', 'cheque_tercero'], true)) {
                     $detalle = $item->detalle ?? [];
                     Cheque::query()->create([
                         'empresa_id' => $preRecibo->empresa_id,
@@ -103,6 +112,51 @@ class PreReciboConfirmer
 
             return $recibo;
         });
+    }
+
+    /** @return array<int, string> */
+    public function erroresValidacion(PreRecibo $preRecibo): array
+    {
+        $preRecibo->loadMissing(['items', 'aplicaciones']);
+        $errores = [];
+
+        if ($preRecibo->estado !== 'borrador') {
+            $errores[] = 'El pre-recibo ya está confirmado.';
+        }
+        if ($preRecibo->items->isEmpty()) {
+            $errores[] = 'No tiene valores recibidos.';
+        }
+        if ($preRecibo->aplicaciones->isEmpty()) {
+            $errores[] = 'No tiene aplicaciones del cobro.';
+        }
+
+        $totalItems = round((float) $preRecibo->items->sum('importe'), 2);
+        $totalAplicaciones = round((float) $preRecibo->aplicaciones->sum('importe'), 2);
+        $totalEsperado = round((float) $preRecibo->total, 2);
+
+        if (abs($totalItems - $totalEsperado) > 0.01) {
+            $errores[] = 'La suma de los valores recibidos no coincide con el total.';
+        }
+        if (abs($totalAplicaciones - $totalEsperado) > 0.01) {
+            $errores[] = 'La suma de las imputaciones no coincide con el total recibido.';
+        }
+
+        $monedasItems = $preRecibo->items->pluck('moneda')->filter()->unique();
+        $monedasAplicaciones = $preRecibo->aplicaciones->pluck('moneda')->filter()->unique();
+        if ($monedasItems->count() > 1 || ($monedasItems->isNotEmpty() && $monedasItems->first() !== $preRecibo->moneda)) {
+            $errores[] = 'Los valores recibidos tienen monedas distintas a la moneda del pre-recibo.';
+        }
+        if ($monedasAplicaciones->count() > 1 || ($monedasAplicaciones->isNotEmpty() && $monedasAplicaciones->first() !== $preRecibo->moneda)) {
+            $errores[] = 'Las imputaciones tienen monedas distintas a la moneda del pre-recibo.';
+        }
+
+        $mediosPermitidos = ['ef', 'efectivo', 'transf', 'transferencia', 'cheque', 'cheque_propio', 'cheque_tercero'];
+        $mediosInvalidos = $preRecibo->items->pluck('medio')->reject(fn ($medio) => in_array($medio, $mediosPermitidos, true));
+        if ($mediosInvalidos->isNotEmpty()) {
+            $errores[] = 'Hay medios de cobro no reconocidos: '.$mediosInvalidos->unique()->implode(', ').'.';
+        }
+
+        return $errores;
     }
 
     public function sendEmail(Recibo $recibo): void
@@ -201,9 +255,9 @@ class PreReciboConfirmer
         $totalGross = $total + $retencionesSum;
 
         // Debe: medios de cobro (agrupado por tipo)
-        $sumaEfectivo = (float) $preRecibo->items->where('medio', 'efectivo')->sum('importe');
-        $sumaTransfer = (float) $preRecibo->items->where('medio', 'transferencia')->sum('importe');
-        $sumaCheques = (float) $preRecibo->items->whereIn('medio', ['cheque_propio', 'cheque_tercero'])->sum('importe');
+        $sumaEfectivo = (float) $preRecibo->items->whereIn('medio', ['ef', 'efectivo'])->sum('importe');
+        $sumaTransfer = (float) $preRecibo->items->whereIn('medio', ['transf', 'transferencia'])->sum('importe');
+        $sumaCheques = (float) $preRecibo->items->whereIn('medio', ['cheque', 'cheque_propio', 'cheque_tercero'])->sum('importe');
 
         if ($sumaEfectivo > 0) {
             AsientoLinea::query()->create([

@@ -195,7 +195,8 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                             <div class="text-[10px] uppercase tracking-wider text-green-700 mb-0.5">Notas de crédito</div>
                             <div v-for="nota in c.notas_credito" :key="nota.id" class="flex items-center justify-between text-[11px] py-0.5 leading-none">
                                 <span class="truncate">{{ tipoLabel(nota.tipo) }} #{{ nota.id }} · {{ nota.fecha_emision }}</span>
-                                <span class="font-mono font-medium text-green-700">{{ nota.moneda }} {{ formatNum(nota.total) }}</span>
+                                <span v-if="Math.abs(nota.pendiente || 0) > 0.01" class="font-mono font-medium text-green-700">Disponible: {{ nota.moneda }} {{ formatNum(Math.abs(nota.pendiente)) }}</span>
+                                <span v-else class="text-[10px] text-gray-500">Aplicada</span>
                             </div>
                         </div>
                     </div>
@@ -277,6 +278,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                                         <th class="text-left py-1 pr-4">Fecha</th>
                                                         <th class="text-left py-1 pr-4">CAE</th>
                                                         <th class="text-right py-1">Importe</th>
+                                                        <th class="text-right py-1">Disponible</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -285,6 +287,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                                         <td class="py-1 pr-4 text-gray-600">{{ nota.fecha_emision }}</td>
                                                         <td class="py-1 pr-4 text-gray-600 font-mono">{{ nota.arca_cae || 'Pendiente ARCA' }}</td>
                                                         <td class="py-1 text-right font-mono text-green-700">{{ nota.moneda }} {{ formatNum(nota.total) }}</td>
+                                                        <td class="py-1 text-right font-mono text-green-700">{{ nota.moneda }} {{ formatNum(Math.abs(nota.pendiente || 0)) }}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>

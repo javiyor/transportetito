@@ -108,6 +108,7 @@ const form = useForm({
     barrio: '',
     provincia_id: '',
     localidad_id: '',
+    telefono: '',
     email: '',
     enviar_comprobantes_por_email: false,
     cobrador_user_id: '',
@@ -136,7 +137,7 @@ watch(() => editForm.es_proveedor, (val) => {
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'telefono', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
     });
 };
 
@@ -153,6 +154,7 @@ const editForm = useForm({
     barrio: '',
     provincia_id: '',
     localidad_id: '',
+    telefono: '',
     email: '',
     enviar_comprobantes_por_email: false,
     cobrador_user_id: '',
@@ -173,6 +175,7 @@ const openEdit = (c) => {
     editForm.barrio = c.barrio || '';
     editForm.provincia_id = c.provincia_id || '';
     editForm.localidad_id = c.localidad_id || '';
+    editForm.telefono = c.telefono || '';
     editForm.email = c.email || '';
     editForm.enviar_comprobantes_por_email = !!c.enviar_comprobantes_por_email;
     editForm.cobrador_user_id = c.cobrador_user_id || '';
@@ -290,6 +293,12 @@ const localidadNombre = (c) => {
                     </div>
 
                     <div>
+                        <InputLabel value="Teléfono" />
+                        <TextInput v-model="form.telefono" type="tel" class="mt-1 block w-full" />
+                        <InputError class="mt-1" :message="form.errors.telefono" />
+                    </div>
+
+                    <div>
                         <InputLabel value="Email comprobantes" />
                         <TextInput v-model="form.email" type="email" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="form.errors.email" />
@@ -389,6 +398,10 @@ const localidadNombre = (c) => {
                                 <span class="text-xs uppercase tracking-wider text-gray-500">Email: </span>
                                 <span class="font-medium text-gray-900">{{ c.email || '-' }}</span>
                             </div>
+                            <div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Teléfono: </span>
+                                <span class="font-medium text-gray-900">{{ c.telefono || '-' }}</span>
+                            </div>
                             <div v-if="c.cobrador_user">
                                 <span class="text-xs uppercase tracking-wider text-gray-500">Cobrador: </span>
                                 <span class="font-medium text-gray-900">{{ c.cobrador_user.name }}</span>
@@ -420,6 +433,7 @@ const localidadNombre = (c) => {
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barrio</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrador</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flags</th>
                                 <th class="sticky right-0 bg-gray-50 px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accion</th>
@@ -444,6 +458,7 @@ const localidadNombre = (c) => {
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ localidadNombre(c) }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.barrio || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.email || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.telefono || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.cobrador_user?.name || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">
                                     <span v-if="c.es_cliente" class="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">Cliente</span>
@@ -459,7 +474,7 @@ const localidadNombre = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td :colspan="mostrarCompartidos ? 15 : 14" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
+                                <td :colspan="mostrarCompartidos ? 16 : 15" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -519,6 +534,11 @@ const localidadNombre = (c) => {
                                 <option v-for="l in editLocalidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
                             </select>
                             <InputError class="mt-1" :message="editForm.errors.localidad_id" />
+                        </div>
+                        <div>
+                            <InputLabel value="Teléfono" />
+                            <TextInput v-model="editForm.telefono" type="tel" class="mt-1 block w-full" />
+                            <InputError class="mt-1" :message="editForm.errors.telefono" />
                         </div>
                         <div>
                             <InputLabel value="Barrio" />

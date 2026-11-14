@@ -130,6 +130,9 @@ class BlanqueoController extends Controller
             DB::table('cta_cte_movimientos')->where('referencia_tipo', 'comprobante')->whereIn('referencia_id', $comprobanteIds)->delete();
             DB::table('recibo_aplicaciones')->whereIn('comprobante_id', $comprobanteIds)->delete();
             DB::table('pre_recibo_aplicaciones')->whereIn('comprobante_id', $comprobanteIds)->delete();
+            DB::table('nota_credito_aplicaciones')->where(fn ($q) => $q
+                ->whereIn('nota_credito_id', $comprobanteIds)
+                ->orWhereIn('factura_id', $comprobanteIds))->delete();
             DB::table('hoja_ruta_items')->whereIn('comprobante_id', $comprobanteIds)->delete();
             DB::table('comprobante_pedido')->whereIn('comprobante_id', $comprobanteIds)->delete();
             DB::table('comprobantes')->whereIn('comprobante_origen_id', $comprobanteIds)->update(['comprobante_origen_id' => null]);

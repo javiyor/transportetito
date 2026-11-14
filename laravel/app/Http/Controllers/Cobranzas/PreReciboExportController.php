@@ -16,6 +16,7 @@ class PreReciboExportController extends Controller
         $zonaId = (int) ($request->get('zona_id') ?: 0);
         $localidad = trim((string) ($request->get('localidad') ?: ''));
         $barrio = trim((string) ($request->get('barrio') ?: ''));
+        $cobradorUserId = (int) ($request->get('cobrador_user_id') ?: 0);
 
         $query = PreRecibo::query()
             ->where('empresa_id', $empresaId)
@@ -34,6 +35,9 @@ class PreReciboExportController extends Controller
             $query->whereHas('cuenta', function ($q) use ($barrio) {
                 $q->where('barrio', 'ilike', '%'.$barrio.'%')->orWhere('direccion', 'ilike', '%'.$barrio.'%');
             });
+        }
+        if ($cobradorUserId > 0) {
+            $query->whereHas('cuenta', fn ($q) => $q->where('cobrador_user_id', $cobradorUserId));
         }
 
         return response()->streamDownload(function () use ($query) {
