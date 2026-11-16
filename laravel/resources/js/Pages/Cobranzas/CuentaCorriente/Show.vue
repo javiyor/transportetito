@@ -170,7 +170,10 @@ const formatNum = (n) => {
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cuenta corriente</h2>
-                    <div class="mt-1 text-sm text-gray-600">{{ cuenta.tercero?.razon_social || '-' }} · CUIT {{ cuenta.tercero?.cuit || '-' }}</div>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <span class="rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-base font-semibold text-indigo-900">{{ cuenta.tercero?.razon_social || '-' }}</span>
+                        <span class="text-xs text-gray-500">CUIT {{ cuenta.tercero?.cuit || '-' }}</span>
+                    </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <a :href="route('cobranzas.ctacte.print', cuenta.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>

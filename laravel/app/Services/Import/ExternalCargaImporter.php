@@ -12,6 +12,7 @@ use App\Models\TerceroEmpresa;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ExternalCargaImporter
 {
@@ -183,7 +184,8 @@ SQL,
         if ($externalIds->isNotEmpty()) {
             $existingCargas = Pedido::query()
                 ->whereIn('external_carga_id', $externalIds)
-                ->get(['external_carga_id', 'empresa_id', 'remitente_cuenta_id', 'destinatario_cuenta_id']);
+                ->withCount('comprobantes')
+                ->get(['id', 'external_carga_id', 'empresa_id', 'remitente_cuenta_id', 'destinatario_cuenta_id', 'bultos', 'palets', 'external_facturado']);
 
             foreach ($existingCargas as $existingCarga) {
                 $externalId = (int) $existingCarga->external_carga_id;
@@ -201,9 +203,15 @@ SQL,
                 continue;
             }
 
+            $cantidades = $this->cantidadesPorUnidad(
+                max(0, (int) ($row->cantidad ?? 0)),
+                ($row->unidad ?? null) !== null ? (string) $row->unidad : null,
+            );
+
             $existingByCompany = $existingCargaMap[$externalId] ?? [];
             if (isset($existingByCompany[(int) $empresa->id])) {
                 $existingCarga = $existingByCompany[(int) $empresa->id];
+                $this->corregirPaletsImportadosComoBultos($existingCarga, $cantidades, (int) ($row->cantidad ?? 0));
                 $this->actualizarContactoCuenta($existingCarga->remitente_cuenta_id, $empresa, (string) ($row->direccion_origen ?? ''), (string) ($row->telefono_origen ?? ''));
                 $this->actualizarContactoCuenta($existingCarga->destinatario_cuenta_id, $empresa, (string) ($row->direccion_destino ?? ''), (string) ($row->telefono_destino ?? ''));
                 $skipped++;
@@ -262,9 +270,9 @@ SQL,
                 'destinatario_cuenta_id' => $destinatarioCuenta?->id,
                 'paga' => 'destino',
                 'remito_numero' => (string) ($row->remito ?? ''),
-                'bultos' => max(0, (int) ($row->cantidad ?? 0)),
+                'bultos' => $cantidades['bultos'],
                 'unidad' => ($row->unidad ?? null) !== null ? (string) $row->unidad : null,
-                'palets' => 0,
+                'palets' => $cantidades['palets'],
                 'valor_declarado' => (float) ($row->valordeclarado ?? 0),
                 'es_devolucion' => false,
                 'cr_importe' => null,
@@ -283,6 +291,43 @@ SQL,
         }
 
         return ['created' => $created, 'skipped' => $skipped];
+    }
+
+    /** @return array{bultos: int, palets: int} */
+    private function cantidadesPorUnidad(int $cantidad, ?string $unidad): array
+    {
+        $unidadNormalizada = Str::of($unidad ?? '')
+            ->lower()
+            ->ascii()
+            ->replaceMatches('/[^a-z0-9]/', '')
+            ->value();
+
+        $esPalet = in_array($unidadNormalizada, ['p', 'pl', 'plt', 'tarima', 'tarimas'], true)
+            || str_starts_with($unidadNormalizada, 'palet')
+            || str_starts_with($unidadNormalizada, 'pallet');
+
+        return $esPalet
+            ? ['bultos' => 0, 'palets' => max(0, $cantidad)]
+            : ['bultos' => max(0, $cantidad), 'palets' => 0];
+    }
+
+    /**
+     * Corrige importaciones previas que guardaron palets como bultos, sin tocar
+     * pedidos que ya fueron facturados ni cantidades modificadas manualmente.
+     *
+     * @param array{bultos: int, palets: int} $cantidades
+     */
+    private function corregirPaletsImportadosComoBultos(Pedido $pedido, array $cantidades, int $cantidadExterna): void
+    {
+        if ($pedido->comprobantes_count > 0 || $pedido->external_facturado) {
+            return;
+        }
+
+        if ($cantidades['palets'] === 0 || (int) $pedido->palets !== 0 || (int) $pedido->bultos !== max(0, $cantidadExterna)) {
+            return;
+        }
+
+        $pedido->forceFill($cantidades)->save();
     }
 
     private function resolveDepositoByName(Empresa $empresa, string $nombre): Deposito

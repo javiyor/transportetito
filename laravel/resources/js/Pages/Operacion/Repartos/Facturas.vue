@@ -197,7 +197,7 @@ const ordenDe = (id) => {
                             </div>
                             <div>
                                 <div class="text-xs uppercase tracking-wider text-gray-500">Localidad destinatario</div>
-                                <div class="text-xs text-gray-500">{{ f.entrega_cuenta?.localidad || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ f.localidad_destinatario || '-' }}</div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
@@ -244,7 +244,7 @@ const ordenDe = (id) => {
                                     <div class="font-medium text-gray-900 truncate max-w-[200px] leading-none">{{ f.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                     <div class="text-[9px] text-gray-500 leading-none">CUIT {{ f.entrega_cuenta?.tercero?.cuit || '-' }}</div>
                                 </td>
-                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700">{{ f.entrega_cuenta?.localidad || '-' }}</td>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700">{{ f.localidad_destinatario || '-' }}</td>
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700 font-mono">{{ f.moneda }} {{ f.total }}</td>
                                 <td class="sticky right-0 bg-white px-1 py-0.5 whitespace-nowrap text-right text-[10px] text-gray-500">{{ ordenDe(f.id) ? '#' + ordenDe(f.id) : 'Seleccionar' }}</td>
                             </tr>

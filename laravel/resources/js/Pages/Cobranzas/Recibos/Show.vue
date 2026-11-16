@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -15,6 +15,7 @@ const props = defineProps({
 const page = usePage();
 const flashSuccess = computed(() => page.props.tt?.flash?.success);
 const isAdmin = computed(() => (page.props.tt?.roles || []).includes('admin'));
+const imputacionesOpen = ref(false);
 
 const normalizarRet = (v) => {
     if (!v || typeof v === 'number' || typeof v === 'string') return { descripcion: '', importe: Number(v || 0) || '' };
@@ -197,7 +198,19 @@ const submitAnular = () => {
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Imputaciones</h3></div>
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-between p-4 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                    :aria-expanded="imputacionesOpen"
+                    aria-controls="recibo-imputaciones"
+                    @click="imputacionesOpen = !imputacionesOpen"
+                >
+                    <span class="text-base font-semibold text-gray-900">Imputaciones</span>
+                    <svg class="h-4 w-4 text-gray-500 transition-transform" :class="imputacionesOpen ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.22 7.47a.75.75 0 0 1 1.06 0L10 11.19l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div v-if="imputacionesOpen" id="recibo-imputaciones" class="border-t border-gray-200">
                 <div class="space-y-3 p-4 sm:hidden">
                     <div v-for="ap in (recibo.aplicaciones || [])" :key="ap.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
@@ -229,6 +242,7 @@ const submitAnular = () => {
                             </tr>
                         </tbody>
                     </table>
+                </div>
                 </div>
             </div>
 
