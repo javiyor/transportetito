@@ -234,7 +234,7 @@ const splitRelaciones = reactive({});
 const gruposFacturacion = computed(() => {
     detalleOverridesSnapshot.value;
 
-    const ensureDet = (entregaId, tarifaBase) => {
+    const ensureDet = (entregaId, tarifaBase, pedidos) => {
         if (!facturarPorEntrega.facturar_por_entrega?.[entregaId]) {
             facturarPorEntrega.facturar_por_entrega[entregaId] = '';
         }
@@ -256,16 +256,16 @@ const gruposFacturacion = computed(() => {
                 cr_importe_manual: null,
                 comision_cr_manual: null,
                 iva_pct: null,
-                usar_bulto: false,
-                usar_palet: false,
+                usar_bulto: pedidos.some((pedido) => Number(pedido.bultos || 0) > 0) && Number(tarifaBase?.tarifa_bulto || 0) > 0,
+                usar_palet: pedidos.some((pedido) => Number(pedido.palets || 0) > 0) && Number(tarifaBase?.tarifa_palet || 0) > 0,
                 usar_valor: true,
                 usar_seguro: tarifaBase?.usar_seguro !== false,
                 usar_servicio_minimo: false,
             };
         }
         const d = facturarPorEntrega.detalles_por_entrega[entregaId];
-        if (d.usar_bulto === undefined) d.usar_bulto = false;
-        if (d.usar_palet === undefined) d.usar_palet = false;
+        if (d.usar_bulto === undefined) d.usar_bulto = pedidos.some((pedido) => Number(pedido.bultos || 0) > 0) && Number(tarifaBase?.tarifa_bulto || 0) > 0;
+        if (d.usar_palet === undefined) d.usar_palet = pedidos.some((pedido) => Number(pedido.palets || 0) > 0) && Number(tarifaBase?.tarifa_palet || 0) > 0;
         if (d.usar_valor === undefined) d.usar_valor = true;
         if (d.usar_seguro === undefined) d.usar_seguro = tarifaBase?.usar_seguro !== false;
         if (d.usar_servicio_minimo === undefined) d.usar_servicio_minimo = false;
@@ -288,7 +288,7 @@ const gruposFacturacion = computed(() => {
         if (splitRelaciones[relKey]) {
             for (const p of pedidos) {
                 const entregaId = relKey + '-p' + p.id;
-                ensureDet(entregaId, tarifaBase);
+                ensureDet(entregaId, tarifaBase, [p]);
                 const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
                 const detalle = calcFactura([p], tarifaBase, override, sinIvaEntrega(entregaId));
                 const cuentas = new Map();
@@ -301,7 +301,7 @@ const gruposFacturacion = computed(() => {
             }
         } else {
             const entregaId = relKey;
-            ensureDet(entregaId, tarifaBase);
+            ensureDet(entregaId, tarifaBase, pedidos);
             const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
             const detalle = calcFactura(pedidos, tarifaBase, override, sinIvaEntrega(entregaId));
             const cuentas = new Map();
@@ -334,6 +334,70 @@ const detalleGrupo = (g) => {
     const override = facturarPorEntrega.detalles_por_entrega?.[g.entregaId] || null;
     const tarifaBase = resolveTarifa(g.remitenteId, g.destinatarioId);
     return calcFactura(pedidos, tarifaBase, override, sinIvaEntrega(g.entregaId));
+};
+
+const valoresNetoInput = reactive({});
+const tarifasBaseNeto = reactive({});
+const valorNetoInput = (g) => Object.prototype.hasOwnProperty.call(valoresNetoInput, g.entregaId)
+    ? valoresNetoInput[g.entregaId]
+    : Number(detalleGrupo(g).subtotalGravado || 0).toFixed(2);
+
+const actualizarTarifaDesdeValorNeto = (g, value) => {
+    valoresNetoInput[g.entregaId] = value;
+    if (value === '' || value === null || value === undefined) return;
+
+    const valorNeto = Number(value);
+    if (!Number.isFinite(valorNeto) || valorNeto < 0) return;
+
+    const detalleActual = detalleGrupo(g);
+    const fleteObjetivo = Math.max(0, valorNeto - detalleActual.seguro - detalleActual.comisionCr);
+    const detalle = facturarPorEntrega.detalles_por_entrega[g.entregaId];
+    const tarifaBase = resolveTarifa(g.remitenteId, g.destinatarioId);
+    const bultos = detalleActual.bultos;
+    const palets = detalleActual.palets;
+    if (!tarifasBaseNeto[g.entregaId]) {
+        tarifasBaseNeto[g.entregaId] = {
+            tarifa_bulto: Number(detalle.tarifa_bulto ?? detalleActual.parametros.tarifa_bulto ?? tarifaBase.tarifa_bulto ?? 0),
+            tarifa_palet: Number(detalle.tarifa_palet ?? detalleActual.parametros.tarifa_palet ?? tarifaBase.tarifa_palet ?? 0),
+        };
+    }
+    const tarifaBultoActual = tarifasBaseNeto[g.entregaId].tarifa_bulto;
+    const tarifaPaletActual = tarifasBaseNeto[g.entregaId].tarifa_palet;
+    const redondear = (importe) => Math.round((Number(importe) + Number.EPSILON) * 100) / 100;
+
+    if (bultos > 0 && palets > 0) {
+        const fleteBase = bultos * tarifaBultoActual + palets * tarifaPaletActual;
+        if (fleteBase > 0) {
+            const factor = fleteObjetivo / fleteBase;
+            detalle.tarifa_bulto = redondear(tarifaBultoActual * factor);
+            detalle.tarifa_palet = redondear(tarifaPaletActual * factor);
+        } else {
+            const tarifaPorUnidad = redondear(fleteObjetivo / (bultos + palets));
+            detalle.tarifa_bulto = tarifaPorUnidad;
+            detalle.tarifa_palet = tarifaPorUnidad;
+        }
+    } else if (bultos > 0) {
+        detalle.tarifa_bulto = redondear(fleteObjetivo / bultos);
+    } else if (palets > 0) {
+        detalle.tarifa_palet = redondear(fleteObjetivo / palets);
+    } else {
+        return;
+    }
+
+    detalle.usar_bulto = bultos > 0;
+    detalle.usar_palet = palets > 0;
+    detalle.usar_valor = false;
+    detalle.usar_servicio_minimo = false;
+};
+
+const terminarEdicionValorNeto = (g) => {
+    delete valoresNetoInput[g.entregaId];
+    delete tarifasBaseNeto[g.entregaId];
+};
+
+const limpiarValorNetoInput = (g) => {
+    delete valoresNetoInput[g.entregaId];
+    delete tarifasBaseNeto[g.entregaId];
 };
 
 const backfillForm = useForm({ confirm: true });
@@ -386,8 +450,8 @@ const initFacturarMap = () => {
             cr_importe_manual: null,
             comision_cr_manual: null,
             iva_pct: null,
-            usar_bulto: false,
-            usar_palet: false,
+            usar_bulto: g.pedidos.some((pedido) => Number(pedido.bultos || 0) > 0) && Number(resolveTarifa(g.remitenteId, g.destinatarioId).tarifa_bulto || 0) > 0,
+            usar_palet: g.pedidos.some((pedido) => Number(pedido.palets || 0) > 0) && Number(resolveTarifa(g.remitenteId, g.destinatarioId).tarifa_palet || 0) > 0,
             usar_valor: true,
             usar_seguro: resolveTarifa(g.remitenteId, g.destinatarioId).usar_seguro !== false,
             usar_servicio_minimo: false,
@@ -942,14 +1006,14 @@ const enviarPedido = () => {
                                         class="text-xs text-gray-700 underline"
                                         @click.prevent="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar = !facturarPorEntrega.detalles_por_entrega[g.entregaId].editar"
                                     >
-                                        {{ facturarPorEntrega.detalles_por_entrega[g.entregaId].editar ? 'Ocultar edicion' : 'Editar tarifa' }}
+                                        {{ facturarPorEntrega.detalles_por_entrega[g.entregaId].editar ? 'Ocultar edicion' : 'Editar importe' }}
                                     </button>
                                     <div v-if="!g.isSingleRelacion" class="text-[10px] text-gray-500">(mezcla)</div>
                                 </div>
                             </div>
 
                             <div v-if="facturarPorEntrega.detalles_por_entrega[g.entregaId].editar" class="border-t border-gray-100 p-4 bg-gray-50">
-                                <div class="text-xs font-medium text-gray-900 mb-2">Editar tarifa</div>
+                                <div class="text-xs font-medium text-gray-900 mb-2">Editar importe y tarifas</div>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                                     <div>
                                         <InputLabel value="Valor declarado total" />
@@ -960,14 +1024,14 @@ const enviarPedido = () => {
                                             <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_bulto" class="rounded border-gray-300" />
                                             <InputLabel value="Tarifa bulto" class="!mb-0" />
                                         </div>
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_bulto === false" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_bulto" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_bulto === false" @update:model-value="limpiarValorNetoInput(g)" />
                                     </div>
                                     <div>
                                         <div class="flex items-center gap-1">
                                             <input type="checkbox" v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_palet" class="rounded border-gray-300" />
                                             <InputLabel value="Tarifa palet" class="!mb-0" />
                                         </div>
-                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_palet === false" />
+                                        <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].tarifa_palet" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="(usa tarifa)" :disabled="facturarPorEntrega.detalles_por_entrega[g.entregaId].usar_palet === false" @update:model-value="limpiarValorNetoInput(g)" />
                                     </div>
                                     <div>
                                         <div class="flex items-center gap-1">
@@ -995,8 +1059,18 @@ const enviarPedido = () => {
                                         <TextInput v-model="facturarPorEntrega.detalles_por_entrega[g.entregaId].servicio_retiro" type="number" min="0" step="0.01" class="mt-0.5 block w-full text-xs" placeholder="0.00" />
                                     </div>
                                     <div>
-                                        <InputLabel value="Valor neto total" />
-                                        <TextInput :value="formatMoney(detalleGrupo(g).subtotalGravado)" type="text" class="mt-0.5 block w-full text-xs bg-gray-100" disabled />
+                                        <InputLabel value="Valor neto total (antes de IVA)" />
+                                        <TextInput
+                                            :model-value="valorNetoInput(g)"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="mt-0.5 block w-full text-xs"
+                                            :disabled="!detalleGrupo(g).bultos && !detalleGrupo(g).palets"
+                                            @update:model-value="actualizarTarifaDesdeValorNeto(g, $event)"
+                                            @blur="terminarEdicionValorNeto(g)"
+                                        />
+                                        <div class="mt-1 text-[10px] text-gray-500">Al cambiar el total se recalcula la tarifa por bulto o palet.</div>
                                     </div>
                                     <div v-if="!sinIvaEntrega(g.entregaId)">
                                         <InputLabel value="% IVA" />
