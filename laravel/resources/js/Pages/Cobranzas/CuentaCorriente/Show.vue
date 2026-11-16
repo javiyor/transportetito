@@ -20,6 +20,8 @@ const props = defineProps({
 
 const roles = computed(() => page.props.tt?.roles || []);
 const esSoloCobrador = computed(() => roles.value.includes('cobrador') && !roles.value.includes('cobranzas_admin') && !roles.value.includes('admin'));
+const comprobantesOpen = ref(false);
+const movimientosOpen = ref(false);
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
 const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
@@ -184,7 +186,10 @@ const formatNum = (n) => {
             <div class="bg-white shadow sm:rounded-lg p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div><div class="text-xs text-gray-500">Zona</div><div class="text-sm font-medium text-gray-900">{{ cuenta.zona?.nombre || 'Sin zona' }}</div></div>
                 <div><div class="text-xs text-gray-500">Ciudad</div><div class="text-sm font-medium text-gray-900">{{ cuenta.localidad || 'Sin ciudad' }}</div></div>
-                <div><div class="text-xs text-gray-500">Saldo total</div><div class="text-sm font-medium text-gray-900">{{ formatNum(saldos.saldo_total) }}</div></div>
+                <div class="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2">
+                    <div class="text-xs font-medium text-indigo-700">Saldo total</div>
+                    <div class="text-lg font-semibold leading-6 text-indigo-900">{{ formatNum(saldos.saldo_total) }}</div>
+                </div>
                 <div><div class="text-xs text-gray-500">Vencido +30</div><div class="text-sm font-medium" :class="saldos.vencido_30 > 0 ? 'text-red-700' : 'text-gray-900'">{{ formatNum(saldos.vencido_30) }}</div></div>
                 <div><div class="text-xs text-gray-500">Retenciones</div><div class="text-sm font-medium text-blue-700">{{ formatNum(saldos.retenciones) }}</div></div>
                 <div><div class="text-xs text-gray-500">Saldo a cancelar</div><div class="text-sm font-medium" :class="saldos.saldo_a_cancelar > 0 ? 'text-green-700' : 'text-gray-900'">{{ formatNum(saldos.saldo_a_cancelar) }}</div></div>
@@ -311,7 +316,19 @@ const formatNum = (n) => {
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-4 border-b border-gray-200"><h3 class="text-sm font-semibold text-gray-900">Comprobantes</h3></div>
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-between p-4 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                    :aria-expanded="comprobantesOpen"
+                    aria-controls="cuenta-comprobantes"
+                    @click="comprobantesOpen = !comprobantesOpen"
+                >
+                    <span class="text-sm font-semibold text-gray-900">Comprobantes</span>
+                    <svg class="h-4 w-4 text-gray-500 transition-transform" :class="comprobantesOpen ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.22 7.47a.75.75 0 0 1 1.06 0L10 11.19l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div v-if="comprobantesOpen" id="cuenta-comprobantes" class="border-t border-gray-200">
                 <div class="space-y-3 p-4 sm:hidden">
                         <div v-for="c in comprobantes" :key="c.id" class="rounded-lg border p-2" :class="c.is_pagada ? 'border-green-200 bg-green-50/40' : 'border-gray-200 bg-white'">
                         <div class="flex items-start justify-between gap-2">
@@ -330,10 +347,23 @@ const formatNum = (n) => {
                         <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pendiente</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
                             <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id" :class="c.is_pagada ? 'bg-green-50/40' : ''"><td class="px-2 py-1 text-xs text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td><td class="px-2 py-1 text-xs text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-2 py-1 text-xs text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-2 py-1 text-xs" :class="c.is_pagada ? 'text-green-700 font-medium' : 'text-amber-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</td><td class="px-2 py-1 text-xs"><span v-if="c.is_pagada" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">Pagada</span><span v-else-if="c.is_credit" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">Crédito</span><span v-else class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Pendiente</span></td><td class="px-2 py-1 text-right text-xs"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table>
                 </div>
+                </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                <div class="p-6 border-b border-gray-200"><h3 class="text-base font-semibold text-gray-900">Movimientos</h3></div>
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-between p-4 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                    :aria-expanded="movimientosOpen"
+                    aria-controls="cuenta-movimientos"
+                    @click="movimientosOpen = !movimientosOpen"
+                >
+                    <span class="text-sm font-semibold text-gray-900">Movimientos</span>
+                    <svg class="h-4 w-4 text-gray-500 transition-transform" :class="movimientosOpen ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.22 7.47a.75.75 0 0 1 1.06 0L10 11.19l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div v-if="movimientosOpen" id="cuenta-movimientos" class="border-t border-gray-200">
                 <div class="space-y-3 p-4 sm:hidden">
                     <div v-for="m in movimientos" :key="m.id" class="rounded-lg border border-gray-200 p-4">
                         <div class="flex items-start justify-between gap-3">
@@ -372,6 +402,7 @@ const formatNum = (n) => {
                         <thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs.</th><th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ref.</th></tr></thead>
                         <tbody class="bg-white divide-y divide-gray-200"><tr v-for="m in movimientos" :key="m.id"><td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td><td class="px-4 py-2 text-sm" :class="m.tipo === 'anulacion_recibo' ? 'text-red-700 font-medium' : 'text-gray-700'">{{ tipoLabel(m.tipo) }}</td><td class="px-4 py-2 text-sm text-gray-700"><template v-if="m.comprobante_tipo && m.comprobante_numero">{{ tipoLabel(m.comprobante_tipo) }} {{ m.comprobante_numero }}</template><span v-else class="text-gray-400">-</span></td><td class="px-4 py-2 text-sm text-gray-700">{{ m.moneda }} <span v-if="m.moneda !== 'ARS'" class="text-xs text-gray-500">({{ formatNum(m.cotizacion_ars) }})</span></td><td class="px-4 py-2 text-sm" :class="m.tipo === 'anulacion_recibo' ? 'text-red-700 font-medium' : 'text-gray-700'">{{ formatNum(m.importe_signed) }}</td><td class="px-4 py-2 text-sm text-gray-700">{{ m.observacion || '-' }}</td><td class="px-4 py-2 text-right text-sm"><Link v-if="m.referencia_tipo === 'comprobante' && m.referencia_id" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', m.referencia_id)">Comprobante</Link><span v-else-if="m.referencia_tipo === 'recibo' && m.referencia_id"><Link class="text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.show', m.referencia_id)">Recibo {{ m.recibo_numero || '' }}</Link><button class="ml-1 text-red-500 hover:text-red-700" @click="eliminarRecibo(m.referencia_id)" title="Eliminar recibo">&times;</button></span><span v-else>-</span></td></tr></tbody>
                     </table>
+                </div>
                 </div>
             </div>
         </div>

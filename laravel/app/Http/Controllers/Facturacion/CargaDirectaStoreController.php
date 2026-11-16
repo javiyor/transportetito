@@ -39,7 +39,6 @@ class CargaDirectaStoreController extends Controller
             'facturar_a_destino' => ['required', 'boolean'],
             'fecha_emision' => ['required', 'date'],
             'tipo_arca' => ['required', 'string', 'in:FA,FB,FC,FCA,FCB,FCC'],
-            'enviar_email' => ['sometimes', 'boolean'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.descripcion' => ['nullable', 'string', 'max:500'],
@@ -308,18 +307,16 @@ class CargaDirectaStoreController extends Controller
         }
 
         $comprobante->load('facturarCuenta');
-        $emailSolicitado = false;
+        $emailDestino = trim((string) $comprobante->facturarCuenta?->email);
+        $emailSolicitado = $emailDestino !== '';
         $emailResultado = null;
-        $emailDestino = null;
-        $mailDriver = (string) config('mail.default');
-        if (array_key_exists('enviar_email', $data)) {
-            $emailSolicitado = (bool) $data['enviar_email'];
-            if ($emailSolicitado) {
-                $emailDestino = trim((string) $comprobante->facturarCuenta?->email);
-                $emailResultado = $emailDestino !== '' ? $mailer->enviarA($comprobante, $emailDestino) : false;
-            }
-        } else {
-            $mailer->enviarSiCorresponde($comprobante);
+        $puedeEnviarEmail = $comprobante->estado === 'emitida'
+            && (! $comprobante->requiere_autorizacion_arca || (bool) $comprobante->arca_cae);
+
+        if ($emailSolicitado && $puedeEnviarEmail) {
+            $emailResultado = $mailer->enviarA($comprobante, $emailDestino);
+        } elseif ($emailSolicitado) {
+            $emailResultado = false;
         }
 
         $mensajeExito = "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').")" . ($comprobante->arca_cae ? " y autorizada en ARCA (CAE {$comprobante->arca_cae}). " : '. ') . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : '');
@@ -329,11 +326,14 @@ class CargaDirectaStoreController extends Controller
 
         if ($emailSolicitado) {
             if (! $emailResultado) {
-                $detalleCorreo = $mailDriver === 'log'
-                    ? 'MAIL_MAILER está en "log" y no entrega mensajes; configurá SMTP en laravel/.env.'
-                    : ($emailDestino
-                        ? "No se pudo enviar a {$emailDestino}; revisá MAIL_HOST/MAIL_PORT/credenciales y los logs del contenedor app."
-                        : 'La cuenta facturada no tiene un email cargado.');
+                if (! $puedeEnviarEmail) {
+                    $detalleCorreo = 'La factura se enviará cuando tenga autorización de ARCA.';
+                } else {
+                    $mailDriver = (string) config('mail.default');
+                    $detalleCorreo = $mailDriver === 'log'
+                        ? 'MAIL_MAILER está en "log" y no entrega mensajes; configurá SMTP en laravel/.env.'
+                        : "No se pudo enviar a {$emailDestino}; revisá MAIL_HOST/MAIL_PORT/credenciales y los logs del contenedor app.";
+                }
                 $mensajeError = trim(($mensajeError ? $mensajeError.' ' : '').'No se envió la factura por email. '.$detalleCorreo);
             } else {
                 $mensajeExito .= " El transporte de correo aceptó el mensaje para {$emailDestino}.";

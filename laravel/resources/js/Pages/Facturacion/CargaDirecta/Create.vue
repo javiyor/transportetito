@@ -29,7 +29,6 @@ const form = useForm({
     origen_cuenta_id: '',
     destino_cuenta_id: '',
     facturar_a_destino: true,
-    enviar_email: false,
     fecha_emision: new Date().toISOString().slice(0, 10),
     tipo_arca: '',
     observacion: '',
@@ -163,7 +162,6 @@ watch(() => props.cuentas, () => {
 
 watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], () => {
     cuitVerificadoKey.value = '';
-    form.enviar_email = !!cuentaFacturada.value?.email;
 });
 
 const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
@@ -635,19 +633,11 @@ const confirmarActualizacionArca = () => {
                         </div>
 
                         <div v-if="cuentaFacturada" class="sm:col-span-2 rounded-md border border-gray-200 p-3">
-                            <label class="flex items-start gap-2 text-sm text-gray-700">
-                                <input
-                                    v-model="form.enviar_email"
-                                    type="checkbox"
-                                    class="mt-0.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                    :disabled="!cuentaFacturada.email"
-                                />
-                                <span>
-                                    Enviar factura por email al emitir
-                                    <span v-if="cuentaFacturada.email" class="block text-xs text-gray-500">{{ cuentaFacturada.email }}</span>
-                                    <span v-else class="block text-xs text-gray-500">La cuenta facturada no tiene email cargado.</span>
-                                </span>
-                            </label>
+                            <div class="text-sm text-gray-700">
+                                <span v-if="cuentaFacturada.email">La factura se enviará por email al emitirla:</span>
+                                <span v-else>La cuenta facturada no tiene email cargado.</span>
+                                <span v-if="cuentaFacturada.email" class="block text-xs text-gray-500">{{ cuentaFacturada.email }}</span>
+                            </div>
                         </div>
 
                         <div v-if="form.origen_cuenta_id && form.destino_cuenta_id" class="sm:col-span-2">
