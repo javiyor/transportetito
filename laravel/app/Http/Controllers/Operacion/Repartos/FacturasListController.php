@@ -140,7 +140,7 @@ class FacturasListController extends Controller
                 'empresa_id' => $empresaFiltro ?: null,
             ],
             'facturas' => $comprobantes,
-            'vehiculos' => Vehiculo::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('patente')->get(['id', 'patente', 'marca', 'modelo']),
+            'vehiculos' => Vehiculo::query()->where('activo', true)->orderBy('patente')->get(['id', 'patente', 'marca', 'modelo']),
             'choferes' => User::query()->role('chofer')->orderBy('name')->get(['id', 'name', 'email']),
             'depositos' => Deposito::query()->where('empresa_id', $empresaId)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
