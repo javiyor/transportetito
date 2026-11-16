@@ -3,6 +3,7 @@
 namespace App\Services\Arca;
 
 use App\Models\Comprobante;
+use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 
@@ -23,7 +24,7 @@ class ArcaQrService
 
         $options = new QROptions([
             'outputType' => 'png',
-            'eccLevel' => 'M',
+            'eccLevel' => EccLevel::M,
             'scale' => 4,
             'imageBase64' => true,
         ]);
