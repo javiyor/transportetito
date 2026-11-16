@@ -5,6 +5,7 @@ namespace App\Services\Arca;
 use App\Models\Comprobante;
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QROptions;
 
 class ArcaQrService
@@ -23,7 +24,7 @@ class ArcaQrService
         if (!$json) return null;
 
         $options = new QROptions([
-            'outputType' => 'png',
+            'outputType' => QROutputInterface::MARKUP_SVG,
             'eccLevel' => EccLevel::M,
             'scale' => 4,
             'imageBase64' => true,
