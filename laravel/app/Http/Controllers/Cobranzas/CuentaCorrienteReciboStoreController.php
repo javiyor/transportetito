@@ -10,6 +10,7 @@ use App\Models\Recibo;
 use App\Models\ReciboAplicacion;
 use App\Models\ReciboItem;
 use App\Models\TerceroCuenta;
+use App\Services\Cobranzas\CuentaCorrienteAccess;
 use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use App\Mail\ReciboConfirmadoMail;
@@ -25,9 +26,9 @@ class CuentaCorrienteReciboStoreController extends Controller
         private ContabilizadorService $contabilizador
     ) {}
 
-    public function __invoke(Request $request, TerceroCuenta $cuenta, TipoCambioResolver $tipoCambioResolver): RedirectResponse
+    public function __invoke(Request $request, TerceroCuenta $cuenta, CuentaCorrienteAccess $access, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
-        abort_unless((int) $cuenta->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
+        abort_unless($access->puedeAcceder($request->user(), $cuenta), 404);
 
         $data = $request->validate([
             'fecha' => ['required', 'date'],

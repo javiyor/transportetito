@@ -7,14 +7,15 @@ use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\Empresa;
 use App\Models\TerceroCuenta;
+use App\Services\Cobranzas\CuentaCorrienteAccess;
 use Illuminate\Http\Request;
 
 class CuentaCorrientePrintController extends Controller
 {
-    public function __invoke(Request $request, TerceroCuenta $cuenta)
+    public function __invoke(Request $request, TerceroCuenta $cuenta, CuentaCorrienteAccess $access)
     {
-        $empresaId = (int) $request->user()->current_empresa_id;
-        abort_unless((int) $cuenta->empresa_id === $empresaId, 404);
+        abort_unless($access->puedeAcceder($request->user(), $cuenta), 404);
+        $empresaId = (int) $cuenta->empresa_id;
 
         $cuenta->load(['tercero:id,cuit,razon_social', 'zona:id,nombre']);
 

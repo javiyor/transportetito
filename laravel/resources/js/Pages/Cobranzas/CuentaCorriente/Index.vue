@@ -14,6 +14,7 @@ const props = defineProps({
     barrios: Array,
     cobradores: Array,
     reportMeta: Object,
+    puede_ver_todas_empresas: Boolean,
 });
 
 const form = useForm({
@@ -24,9 +25,11 @@ const form = useForm({
     localidad: props.filters?.localidad || '',
     barrio: props.filters?.barrio || '',
     cobrador_user_id: props.filters?.cobrador_user_id || '',
+    ver_todas_empresas: !!props.filters?.ver_todas_empresas,
 });
 
 const applyFilters = () => {
+    selectedIds.value = new Set();
     router.get(route('cobranzas.ctacte.index'), {
         filtro: form.filtro || 'todos',
         desde: form.desde || null,
@@ -35,6 +38,7 @@ const applyFilters = () => {
         localidad: form.localidad || null,
         barrio: form.barrio || null,
         cobrador_user_id: form.cobrador_user_id || null,
+        ver_todas_empresas: form.ver_todas_empresas ? 1 : null,
     }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
@@ -62,7 +66,10 @@ const selectAll = () => {
 const printSelected = () => {
     const ids = Array.from(selectedIds.value);
     if (!ids.length) return;
-    window.open(route('cobranzas.ctacte.print-selected', { ids: ids.join(',') }), '_blank');
+    window.open(route('cobranzas.ctacte.print-selected', {
+        ids: ids.join(','),
+        ver_todas_empresas: form.ver_todas_empresas ? 1 : null,
+    }), '_blank');
 };
 
 const toggleExpand = (id) => {
@@ -80,8 +87,8 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Cuentas corrientes</h2>
                 <div class="flex items-center gap-3 flex-wrap">
-                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos', desde: form.desde || null, hasta: form.hasta || null, zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null })">Exportar CSV</a>
-                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.listado-print', { zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null })" target="_blank">Imprimir listado</a>
+                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos', desde: form.desde || null, hasta: form.hasta || null, zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null, ver_todas_empresas: form.ver_todas_empresas ? 1 : null })">Exportar CSV</a>
+                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.listado-print', { zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null, ver_todas_empresas: form.ver_todas_empresas ? 1 : null })" target="_blank">Imprimir listado</a>
                     <button type="button" class="text-sm text-indigo-600 hover:text-indigo-800" :disabled="!selectedIds.size" @click="printSelected">Imprimir seleccionados ({{ selectedIds.size }})</button>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.pre-recibos.index')">Pre-recibos</Link>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.recibos.index')">Recibos</Link>
@@ -140,6 +147,12 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                     <div class="flex items-end">
                         <button type="button" class="inline-flex items-center px-3 py-1 bg-gray-100 border border-gray-200 rounded-md text-xs text-gray-800 hover:bg-gray-200" @click="applyFilters">Aplicar</button>
                     </div>
+                    <div v-if="puede_ver_todas_empresas" class="sm:col-span-8">
+                        <label class="inline-flex items-center gap-2 text-xs text-gray-700">
+                            <input v-model="form.ver_todas_empresas" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" @change="applyFilters" />
+                            Ver cuentas asignadas de todas las empresas
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -164,6 +177,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                             <div class="flex-1 min-w-0">
                                 <div class="text-xs font-semibold text-gray-900 truncate">{{ c.razon_social || '-' }}</div>
                                 <div class="text-[10px] text-gray-500 truncate">CUIT {{ c.cuit || '-' }} · {{ c.localidad || 'Sin ciudad' }} · {{ c.cobrador || '-' }}</div>
+                                <div v-if="form.ver_todas_empresas" class="text-[10px] font-medium text-indigo-700 truncate">{{ c.empresa || '-' }}</div>
                             </div>
                             <div class="flex items-center gap-1 shrink-0">
                                 <Link class="text-[11px] text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.show', c.id)">Ver</Link>
@@ -208,6 +222,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
                                     <input type="checkbox" :checked="selectedIds.size === cuentas.length && cuentas.length > 0" :indeterminate="selectedIds.size > 0 && selectedIds.size < cuentas.length" @change="selectAll" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
                                 </th>
+                                <th v-if="form.ver_todas_empresas" class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Cobrador</th>
@@ -223,6 +238,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                     <td class="px-1 py-1 text-gray-700">
                                         <input type="checkbox" :checked="selectedIds.has(c.id)" @change="toggleSelect(c.id)" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
                                     </td>
+                                    <td v-if="form.ver_todas_empresas" class="px-1 py-1 text-[10px] text-indigo-700 max-w-[100px] truncate">{{ c.empresa || '-' }}</td>
                                     <td class="px-1 py-1 text-[10px] text-gray-700">
                                         <div class="font-medium text-gray-900 truncate max-w-[160px] leading-none">{{ c.razon_social || '-' }}</div>
                                         <div class="text-[9px] text-gray-500 leading-none">CUIT {{ c.cuit || '-' }} · {{ c.numero_cliente || '-' }}</div>
@@ -243,7 +259,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                     </td>
                                 </tr>
                                 <tr v-if="expandedRows[c.id] && (c.docs_pendientes?.length || c.notas_credito?.length)" :class="c.resaltar ? 'bg-red-50/50' : 'bg-gray-50'">
-                                    <td colspan="8" class="px-6 py-3">
+                                    <td :colspan="form.ver_todas_empresas ? 9 : 8" class="px-6 py-3">
                                         <div v-if="c.docs_pendientes?.length">
                                             <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Documentos pendientes</div>
                                             <table class="w-full text-xs">
@@ -296,7 +312,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                                 </tr>
                             </template>
                             <tr v-if="!cuentas.length">
-                                <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Sin cuentas.</td>
+                                <td :colspan="form.ver_todas_empresas ? 9 : 8" class="px-6 py-4 text-center text-sm text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>

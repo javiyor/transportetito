@@ -174,6 +174,7 @@ const formatNum = (n) => {
                         <span class="rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-base font-semibold text-indigo-900">{{ cuenta.tercero?.razon_social || '-' }}</span>
                         <span class="text-xs text-gray-500">CUIT {{ cuenta.tercero?.cuit || '-' }}</span>
                     </div>
+                    <div v-if="cuenta.empresa?.razon_social" class="mt-1 text-xs text-gray-500">Empresa: {{ cuenta.empresa.razon_social }}</div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <a :href="route('cobranzas.ctacte.print', cuenta.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>

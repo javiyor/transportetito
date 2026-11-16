@@ -8,6 +8,7 @@ use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\Recibo;
 use App\Models\TerceroCuenta;
+use App\Services\Cobranzas\CuentaCorrienteAccess;
 use App\Services\Cobranzas\SaldoNotasCreditoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,12 +16,12 @@ use Inertia\Response;
 
 class CuentaCorrienteShowController extends Controller
 {
-    public function __invoke(Request $request, TerceroCuenta $cuenta, SaldoNotasCreditoService $saldoNotasCredito): Response
+    public function __invoke(Request $request, TerceroCuenta $cuenta, CuentaCorrienteAccess $access, SaldoNotasCreditoService $saldoNotasCredito): Response
     {
-        $empresaId = (int) $request->user()->current_empresa_id;
-        abort_unless((int) $cuenta->empresa_id === $empresaId, 404);
+        abort_unless($access->puedeAcceder($request->user(), $cuenta), 404);
+        $empresaId = (int) $cuenta->empresa_id;
 
-        $cuenta->load(['tercero:id,cuit,razon_social', 'zona:id,nombre']);
+        $cuenta->load(['empresa:id,razon_social', 'tercero:id,cuit,razon_social', 'zona:id,nombre']);
 
         $movimientos = CtaCteMovimiento::query()
             ->where('empresa_id', $empresaId)

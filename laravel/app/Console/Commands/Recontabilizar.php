@@ -21,6 +21,7 @@ class Recontabilizar extends Command
         {--desde= : Fecha desde (Y-m-d)}
         {--hasta= : Fecha hasta (Y-m-d)}
         {--empresa_id= : Solo una empresa}
+        {--recibo_id= : Solo un recibo (requiere --tipo=cobros)}
         {--dry-run : Solo mostrar que se procesaria sin crear asientos}
         {--force : Re-contabilizar incluso si ya existe asiento}';
 
@@ -34,6 +35,14 @@ class Recontabilizar extends Command
         $dryRun = (bool) $this->option('dry-run');
         $force = (bool) $this->option('force');
         $empresaId = $this->option('empresa_id') ? (int) $this->option('empresa_id') : null;
+        $reciboId = $this->option('recibo_id') ? (int) $this->option('recibo_id') : null;
+
+        if ($reciboId && $tipo !== 'cobros') {
+            $this->error('La opción --recibo_id requiere --tipo=cobros.');
+
+            return self::FAILURE;
+        }
+
         $procesados = 0;
         $omitidos = 0;
         $errores = 0;
@@ -46,7 +55,7 @@ class Recontabilizar extends Command
                 'ventas' => $this->recontabilizarVentas($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
                 'notas_credito' => $this->recontabilizarNotasCredito($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
                 'compras' => $this->recontabilizarCompras($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
-                'cobros' => $this->recontabilizarCobros($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
+                'cobros' => $this->recontabilizarCobros($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId, $reciboId),
                 'pagos' => $this->recontabilizarPagos($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
                 'gastos' => $this->recontabilizarGastos($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
                 'ingresos' => $this->recontabilizarIngresos($contabilizador, $desde, $hasta, $dryRun, $force, $empresaId),
@@ -119,9 +128,12 @@ class Recontabilizar extends Command
         return $this->procesarQuery($query, $contabilizador, 'contabilizarCompra', 'proveedor_comprobante', $dryRun, $force);
     }
 
-    private function recontabilizarCobros(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null): array
+    private function recontabilizarCobros(ContabilizadorService $contabilizador, ?string $desde, ?string $hasta, bool $dryRun, bool $force, ?int $empresaId = null, ?int $reciboId = null): array
     {
         $query = $this->porEmpresa(Recibo::query(), $empresaId)->where('estado', '!=', 'anulada');
+        if ($reciboId) {
+            $query->whereKey($reciboId);
+        }
 
         if ($desde) $query->whereDate('fecha', '>=', $desde);
         if ($hasta) $query->whereDate('fecha', '<=', $hasta);

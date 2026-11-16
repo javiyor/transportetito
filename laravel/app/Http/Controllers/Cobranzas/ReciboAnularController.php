@@ -8,16 +8,19 @@ use App\Models\AuditLog;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
 use App\Models\Recibo;
+use App\Services\Cobranzas\CuentaCorrienteAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReciboAnularController extends Controller
 {
-    public function __invoke(Request $request, Recibo $recibo): RedirectResponse
+    public function __invoke(Request $request, Recibo $recibo, CuentaCorrienteAccess $access): RedirectResponse
     {
-        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        abort_unless((int) $recibo->empresa_id === $empresaId, 404);
+        $cuenta = $recibo->cuenta()->firstOrFail();
+        abort_unless((int) $recibo->empresa_id === (int) $cuenta->empresa_id, 404);
+        abort_unless($access->puedeAcceder($request->user(), $cuenta), 404);
+        $empresaId = (int) $recibo->empresa_id;
 
         if ($recibo->estado === 'anulada') {
             return back()->with('error', 'El recibo ya esta anulado.');

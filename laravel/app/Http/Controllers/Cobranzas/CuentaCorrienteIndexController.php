@@ -19,6 +19,11 @@ class CuentaCorrienteIndexController extends Controller
     {
         $empresaId = (int) $request->user()->current_empresa_id;
         $user = $request->user();
+        $puedeVerTodasEmpresas = $user->hasRole('cobrador') && ! $user->hasRole('admin');
+        $verTodasEmpresas = $puedeVerTodasEmpresas && $request->boolean('ver_todas_empresas');
+        $empresaIds = $verTodasEmpresas
+            ? TerceroCuenta::query()->where('cobrador_user_id', $user->id)->distinct()->pluck('empresa_id')
+            : collect([$empresaId]);
         $cutoff = now()->subDays(30)->toDateString();
         $filtro = (string) ($request->query('filtro') ?: 'todos');
         $desde = (string) ($request->query('desde') ?: '');
@@ -29,14 +34,14 @@ class CuentaCorrienteIndexController extends Controller
         $cobradorUserId = (int) ($request->query('cobrador_user_id') ?: 0);
 
         $cuentas = TerceroCuenta::query()
-            ->with(['tercero:id,cuit,razon_social', 'zona:id,nombre', 'cobradorUser:id,name'])
-            ->where('empresa_id', $empresaId)
+            ->with(['empresa:id,razon_social', 'tercero:id,cuit,razon_social', 'zona:id,nombre', 'cobradorUser:id,name'])
+            ->when($verTodasEmpresas, fn ($q) => $q->whereIn('empresa_id', $empresaIds), fn ($q) => $q->where('empresa_id', $empresaId))
             ->whereHas('movimientosCtaCte')
-            ->whereExists(function ($q) use ($empresaId) {
+            ->whereExists(function ($q) {
                 $q->selectRaw('1')
                     ->from('tercero_empresa as te')
                     ->whereColumn('te.tercero_cuenta_id', 'tercero_cuentas.id')
-                    ->where('te.empresa_id', $empresaId)
+                    ->whereColumn('te.empresa_id', 'tercero_cuentas.empresa_id')
                     ->where('te.es_cliente', true);
             });
 
@@ -67,7 +72,7 @@ class CuentaCorrienteIndexController extends Controller
         $cuentaIds = $cuentas->pluck('id');
 
         $movimientosQuery = CtaCteMovimiento::query()
-            ->where('empresa_id', $empresaId)
+            ->whereIn('empresa_id', $empresaIds)
             ->whereIn('tercero_cuenta_id', $cuentaIds)
             ->orderBy('fecha');
 
@@ -82,7 +87,7 @@ class CuentaCorrienteIndexController extends Controller
             ->groupBy('tercero_cuenta_id');
 
         $comprobantes = Comprobante::query()
-            ->where('empresa_id', $empresaId)
+            ->whereIn('empresa_id', $empresaIds)
             ->whereIn('facturar_cuenta_id', $cuentaIds)
             ->where('estado', 'emitida')
             ->orderBy('fecha_emision')
@@ -112,10 +117,10 @@ class CuentaCorrienteIndexController extends Controller
             )
             ->groupBy('facturar_cuenta_id');
 
-        $zonas = Zona::query()->where('empresa_id', $empresaId)->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $zonas = Zona::query()->whereIn('empresa_id', $empresaIds)->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         $localidades = TerceroCuenta::query()
-            ->where('empresa_id', $empresaId)
+            ->whereIn('empresa_id', $empresaIds)
             ->whereNotNull('localidad')
             ->where('localidad', '!=', '')
             ->distinct()
@@ -123,7 +128,7 @@ class CuentaCorrienteIndexController extends Controller
             ->pluck('localidad');
 
         $barrios = TerceroCuenta::query()
-            ->where('empresa_id', $empresaId)
+            ->whereIn('empresa_id', $empresaIds)
             ->whereNotNull('barrio')
             ->where('barrio', '!=', '')
             ->distinct()
@@ -135,7 +140,7 @@ class CuentaCorrienteIndexController extends Controller
         // Para vencido incluir pagos a cuenta / NC como descuento
         $reciboAcuentaPorCuenta = \App\Models\ReciboAplicacion::query()
             ->where('modo', 'a_cuenta')
-            ->whereHas('recibo', fn($q) => $q->where('empresa_id', $empresaId)->where('estado', '!=', 'anulada'))
+            ->whereHas('recibo', fn($q) => $q->whereIn('empresa_id', $empresaIds)->where('estado', '!=', 'anulada'))
             ->with('recibo:id,tercero_cuenta_id,fecha')
             ->get()
             ->groupBy(fn($a) => $a->recibo->tercero_cuenta_id);
@@ -180,6 +185,7 @@ class CuentaCorrienteIndexController extends Controller
 
             return [
                 'id' => $cuenta->id,
+                'empresa' => $cuenta->empresa?->razon_social,
                 'numero_cliente' => $cuenta->numero_cliente,
                 'razon_social' => $cuenta->tercero?->razon_social,
                 'cuit' => $cuenta->tercero?->cuit,
@@ -220,6 +226,7 @@ class CuentaCorrienteIndexController extends Controller
             'localidades' => $localidades,
             'barrios' => $barrios,
             'cobradores' => $cobradores,
+            'puede_ver_todas_empresas' => $puedeVerTodasEmpresas,
             'filters' => [
                 'filtro' => $filtro,
                 'desde' => $desde !== '' ? $desde : null,
@@ -228,6 +235,7 @@ class CuentaCorrienteIndexController extends Controller
                 'localidad' => $localidad ?: null,
                 'barrio' => $barrio ?: null,
                 'cobrador_user_id' => $cobradorUserId ?: null,
+                'ver_todas_empresas' => $verTodasEmpresas,
             ],
             'reportMeta' => [
                 'vendedor_disponible' => false,

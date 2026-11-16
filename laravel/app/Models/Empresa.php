@@ -79,6 +79,17 @@ class Empresa extends Model
 
     public function getCuentaContable(string $clave): ?CuentaContable
     {
+        if ($clave === 'retenciones_iibb') {
+            $codigoRetencionesIibb = '1.03.003.004.100';
+
+            return CuentaContable::query()
+                ->where('empresa_id', $this->id)
+                ->where(fn ($query) => $query
+                    ->where('codigo', $codigoRetencionesIibb)
+                    ->orWhere('codigo_completo', $codigoRetencionesIibb))
+                ->first();
+        }
+
         return $this->configuracionContable()
             ->where('clave', $clave)
             ->first()?->cuentaContable;

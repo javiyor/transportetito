@@ -14,6 +14,10 @@ class CuentaCorrienteExportController extends Controller
     {
         $empresaId = (int) $request->user()->current_empresa_id;
         $user = $request->user();
+        $verTodasEmpresas = $user->hasRole('cobrador') && ! $user->hasRole('admin') && $request->boolean('ver_todas_empresas');
+        $empresaIds = $verTodasEmpresas
+            ? TerceroCuenta::query()->where('cobrador_user_id', $user->id)->distinct()->pluck('empresa_id')
+            : collect([$empresaId]);
         $tipoFiltro = (string) ($request->query('filtro') ?: 'todos');
         $cutoff = now()->subDays(30)->toDateString();
         $desde = (string) ($request->query('desde') ?: '');
@@ -24,8 +28,8 @@ class CuentaCorrienteExportController extends Controller
         $cobradorUserId = (int) ($request->query('cobrador_user_id') ?: 0);
 
         $cuentas = TerceroCuenta::query()
-            ->with(['tercero:id,cuit,razon_social', 'zona:id,nombre', 'cobradorUser:id,name'])
-            ->where('empresa_id', $empresaId)
+            ->with(['empresa:id,razon_social', 'tercero:id,cuit,razon_social', 'zona:id,nombre', 'cobradorUser:id,name'])
+            ->when($verTodasEmpresas, fn ($q) => $q->whereIn('empresa_id', $empresaIds), fn ($q) => $q->where('empresa_id', $empresaId))
             ->whereHas('movimientosCtaCte');
 
         if ($zonaId > 0) {
@@ -51,7 +55,7 @@ class CuentaCorrienteExportController extends Controller
         $cuentas = $cuentas->orderBy('numero_cliente')->get();
 
         $movimientosQuery = CtaCteMovimiento::query()
-            ->where('empresa_id', $empresaId)
+            ->whereIn('empresa_id', $empresaIds)
             ->whereIn('tercero_cuenta_id', $cuentas->pluck('id'))
             ->orderBy('fecha');
 
@@ -65,12 +69,13 @@ class CuentaCorrienteExportController extends Controller
         $movimientos = $movimientosQuery->get()
             ->groupBy('tercero_cuenta_id');
 
-        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff) {
+        $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $verTodasEmpresas) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
             $vencido30 = round(max(0, (float) $items->where('fecha', '<=', $cutoff)->sum('importe_signed')), 2);
 
             return [
+                'empresa' => $verTodasEmpresas ? $cuenta->empresa?->razon_social : null,
                 'numero_cliente' => $cuenta->numero_cliente,
                 'razon_social' => $cuenta->tercero?->razon_social,
                 'cuit' => $cuenta->tercero?->cuit,
@@ -92,9 +97,17 @@ class CuentaCorrienteExportController extends Controller
 
         return response()->streamDownload(function () use ($rows) {
             $fh = fopen('php://output', 'w');
-            fputcsv($fh, ['Nro cliente', 'Razon social', 'CUIT', 'Zona', 'Ciudad', 'Barrio', 'Cobrador', 'Saldo', 'Vencido +30']);
+            $headers = ['Nro cliente', 'Razon social', 'CUIT', 'Zona', 'Ciudad', 'Barrio', 'Cobrador', 'Saldo', 'Vencido +30'];
+            if (($rows->first()['empresa'] ?? null) !== null) {
+                array_unshift($headers, 'Empresa');
+            }
+            fputcsv($fh, $headers);
             foreach ($rows as $row) {
-                fputcsv($fh, [$row['numero_cliente'], $row['razon_social'], $row['cuit'], $row['zona'], $row['localidad'], $row['barrio'], $row['cobrador'], $row['saldo'], $row['vencido_30']]);
+                $values = [$row['numero_cliente'], $row['razon_social'], $row['cuit'], $row['zona'], $row['localidad'], $row['barrio'], $row['cobrador'], $row['saldo'], $row['vencido_30']];
+                if ($row['empresa'] !== null) {
+                    array_unshift($values, $row['empresa']);
+                }
+                fputcsv($fh, $values);
             }
             fclose($fh);
         }, 'cuentas_corrientes.csv', ['Content-Type' => 'text/csv']);

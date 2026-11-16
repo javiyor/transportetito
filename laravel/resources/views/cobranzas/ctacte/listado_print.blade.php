@@ -25,7 +25,7 @@
     <div class="actions"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
     <h1>Listado de cuentas corrientes</h1>
     <div class="meta">
-        {{ $empresa?->razon_social ?? 'S/E' }} &mdash; Generado {{ $fecha_generacion }}
+        {{ ($verTodasEmpresas ?? false) ? 'Todas las empresas' : ($empresa?->razon_social ?? 'S/E') }} &mdash; Generado {{ $fecha_generacion }}
         @if($cutoff) &mdash; Vencido +30 al {{ $cutoff }}@endif
     </div>
 
@@ -34,6 +34,7 @@
     <table>
         <thead>
             <tr>
+                @if($verTodasEmpresas ?? false)<th>Empresa</th>@endif
                 <th>Nro</th>
                 <th>Cliente</th>
                 <th>CUIT</th>
@@ -53,6 +54,7 @@
                     $totalVencido += $r->vencido_30;
                 @endphp
                 <tr>
+                    @if($verTodasEmpresas ?? false)<td>{{ $r->empresa ?? '-' }}</td>@endif
                     <td class="num">{{ $r->numero_cliente }}</td>
                     <td class="cliente-info">{{ $r->razon_social }}</td>
                     <td>{{ $r->cuit }}</td>
@@ -76,13 +78,13 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="10" style="text-align:center;padding:20px;color:#6b7280;">Sin resultados.</td></tr>
+                <tr><td colspan="{{ ($verTodasEmpresas ?? false) ? 11 : 10 }}" style="text-align:center;padding:20px;color:#6b7280;">Sin resultados.</td></tr>
             @endforelse
         </tbody>
         @if(count($rows))
         <tfoot>
             <tr class="total-row">
-                <td colspan="7" style="text-align:right;">Totales</td>
+                <td colspan="{{ ($verTodasEmpresas ?? false) ? 8 : 7 }}" style="text-align:right;">Totales</td>
                 <td class="num">{{ number_format($totalGeneral, 2, ',', '.') }}</td>
                 <td class="num">{{ number_format($totalVencido, 2, ',', '.') }}</td>
                 <td></td>

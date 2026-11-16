@@ -233,7 +233,7 @@ class PreReciboConfirmer
                     ?? $this->getOrCreateCuenta($preRecibo->empresa_id, '2303', $tipo, 'activo');
             } elseif ($claveRet === 'retenciones_iibb') {
                 $cuentaRet = Empresa::query()->find($preRecibo->empresa_id)?->getCuentaContable('retenciones_iibb')
-                    ?? $this->getOrCreateCuenta($preRecibo->empresa_id, '2311', $tipo, 'activo');
+                    ?? $this->getOrCreateCuenta($preRecibo->empresa_id, '1.03.003.004.100', 'Ret. ISIB Santa Fe', 'activo');
             }
             if ($claveRet === 'retenciones_iva' && ! $cuentaRet) {
                 throw new \RuntimeException("Cuenta contable no configurada para retención IVA (empresa {$preRecibo->empresa_id}).");
