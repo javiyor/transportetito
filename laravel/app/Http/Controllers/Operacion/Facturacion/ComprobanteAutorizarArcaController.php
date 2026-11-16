@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\Deposito;
+use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Arca\WsfeClient;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +14,7 @@ use Illuminate\Http\Request;
 
 class ComprobanteAutorizarArcaController extends Controller
 {
-    public function __invoke(Request $request, Comprobante $comprobante, WsfeClient $wsfe, ArcaTipoComprobanteResolver $arcaTipos): RedirectResponse
+    public function __invoke(Request $request, Comprobante $comprobante, WsfeClient $wsfe, ArcaTipoComprobanteResolver $arcaTipos, ComprobanteMailer $mailer): RedirectResponse
     {
         $empresaId = (int) $request->user()->current_empresa_id;
         abort_unless((int) $comprobante->empresa_id === $empresaId, 404);
@@ -82,6 +83,24 @@ class ComprobanteAutorizarArcaController extends Controller
 
         $comprobante->refresh();
 
+        $emailEnviado = false;
+        $emailError = null;
+        $detalleFacturacion = $comprobante->detalle_facturacion ?? [];
+        if (! empty($detalleFacturacion['envio_email_pendiente_cae']) && $comprobante->arca_cae) {
+            $comprobante->load('facturarCuenta');
+            $email = trim((string) $comprobante->facturarCuenta?->email);
+
+            if ($email === '') {
+                $emailError = 'Comprobante autorizado, pero la cuenta facturada ya no tiene un email cargado.';
+            } elseif ($mailer->enviarA($comprobante, $email)) {
+                unset($detalleFacturacion['envio_email_pendiente_cae']);
+                $comprobante->forceFill(['detalle_facturacion' => $detalleFacturacion])->save();
+                $emailEnviado = true;
+            } else {
+                $emailError = "Comprobante autorizado, pero no se pudo enviar a {$email}. Revisá la configuración de correo.";
+            }
+        }
+
         AuditLog::query()->create([
             'user_id' => $request->user()->id,
             'action' => 'comprobante.arca_autorizado',
@@ -95,6 +114,15 @@ class ComprobanteAutorizarArcaController extends Controller
             ],
         ]);
 
-        return back()->with('flash.success', 'Comprobante autorizado en ARCA (CAE generado).');
+        $mensaje = 'Comprobante autorizado en ARCA (CAE generado).';
+        if ($emailEnviado) {
+            $mensaje .= ' Se envió al email del cliente.';
+        }
+        $redirect = back()->with('flash.success', $mensaje);
+        if ($emailError) {
+            $redirect->with('flash.error', $emailError);
+        }
+
+        return $redirect;
     }
 }

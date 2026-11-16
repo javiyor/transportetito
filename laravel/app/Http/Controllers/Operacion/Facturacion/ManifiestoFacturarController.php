@@ -432,17 +432,54 @@ class ManifiestoFacturarController extends Controller
             $skipped = $pedidos->count() - count(array_unique($invoicedPedidoIds)) - $missingCuentas;
         });
 
+        $emailsEnviados = 0;
+        $emailsPendientes = 0;
+        $emailsFallidos = 0;
         if ($comprobanteIds !== []) {
             Comprobante::query()
                 ->with('facturarCuenta')
                 ->whereIn('id', $comprobanteIds)
                 ->get()
-                ->each(fn (Comprobante $comprobante) => $mailer->enviarSiCorresponde($comprobante));
+                ->each(function (Comprobante $comprobante) use ($mailer, &$emailsEnviados, &$emailsPendientes, &$emailsFallidos) {
+                    $email = trim((string) $comprobante->facturarCuenta?->email);
+                    if ($email === '') {
+                        return;
+                    }
+
+                    if ($comprobante->requiere_autorizacion_arca && ! $comprobante->arca_cae) {
+                        $detalle = $comprobante->detalle_facturacion ?? [];
+                        $detalle['envio_email_pendiente_cae'] = true;
+                        $comprobante->forceFill(['detalle_facturacion' => $detalle])->save();
+                        $emailsPendientes++;
+
+                        return;
+                    }
+
+                    if ($mailer->enviarA($comprobante, $email)) {
+                        $emailsEnviados++;
+                    } else {
+                        $emailsFallidos++;
+                    }
+                });
         }
 
-        return redirect()
+        $mensaje = "Facturacion minima: $created comprobante(s) creados. Omitidos: $skipped. Sin entrega: $missingCuentas. Sin seleccion: $missingSelection.";
+        if ($emailsEnviados > 0) {
+            $mensaje .= " Emails enviados: {$emailsEnviados}.";
+        }
+        if ($emailsPendientes > 0) {
+            $mensaje .= " Emails pendientes de autorización ARCA: {$emailsPendientes}.";
+        }
+
+        $redirect = redirect()
             ->route('operacion.manifiestos.show', $manifiesto)
-            ->with('success', "Facturacion minima: $created comprobante(s) creados. Omitidos: $skipped. Sin entrega: $missingCuentas. Sin seleccion: $missingSelection.")
+            ->with('success', $mensaje)
             ->with('comprobantes_creados', $comprobanteIds);
+
+        if ($emailsFallidos > 0) {
+            $redirect->with('error', "No se pudieron enviar {$emailsFallidos} email(s). Revisá la configuración de correo y los logs.");
+        }
+
+        return $redirect;
     }
 }
