@@ -33,6 +33,8 @@ class EmpresaAdminController extends Controller
             'cuit' => ['required', 'string', 'max:32', 'unique:empresas,cuit'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
+            'numero_inscripcion_ingresos_brutos' => ['nullable', 'string', 'max:64'],
+            'fecha_inicio_actividades' => ['nullable', 'date'],
             'moneda_base' => ['required', 'in:ARS,USD,EUR,BRL'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
@@ -56,7 +58,7 @@ class EmpresaAdminController extends Controller
             unset($data['logo']);
         }
 
-        foreach (['telefono', 'email', 'whatsapp', 'sitio_web', 'instagram_url', 'facebook_url', 'linkedin_url', 'condicion_iva'] as $k) {
+        foreach (['telefono', 'email', 'whatsapp', 'sitio_web', 'instagram_url', 'facebook_url', 'linkedin_url', 'condicion_iva', 'numero_inscripcion_ingresos_brutos', 'fecha_inicio_actividades'] as $k) {
             if (array_key_exists($k, $data) && trim((string) $data[$k]) === '') {
                 $data[$k] = null;
             }
@@ -82,6 +84,8 @@ class EmpresaAdminController extends Controller
             'cuit' => ['required', 'string', 'max:32', 'unique:empresas,cuit,'.$empresa->id],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
+            'numero_inscripcion_ingresos_brutos' => ['nullable', 'string', 'max:64'],
+            'fecha_inicio_actividades' => ['nullable', 'date'],
             'moneda_base' => ['required', 'in:ARS,USD,EUR,BRL'],
             'arca_pv_default' => ['required', 'integer', 'min:1'],
             'arca_env' => ['required', 'in:homologacion,produccion'],
@@ -108,7 +112,7 @@ class EmpresaAdminController extends Controller
             unset($data['logo']);
         }
 
-        foreach (['telefono', 'email', 'whatsapp', 'sitio_web', 'instagram_url', 'facebook_url', 'linkedin_url', 'condicion_iva'] as $k) {
+        foreach (['telefono', 'email', 'whatsapp', 'sitio_web', 'instagram_url', 'facebook_url', 'linkedin_url', 'condicion_iva', 'numero_inscripcion_ingresos_brutos', 'fecha_inicio_actividades'] as $k) {
             if (array_key_exists($k, $data) && trim((string) $data[$k]) === '') {
                 $data[$k] = null;
             }

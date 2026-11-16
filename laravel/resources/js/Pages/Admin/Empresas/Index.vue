@@ -23,6 +23,8 @@ const createForm = useForm({
     razon_social: '',
     cuit: '',
     condicion_iva_id: '',
+    numero_inscripcion_ingresos_brutos: '',
+    fecha_inicio_actividades: '',
     moneda_base: 'ARS',
     arca_pv_default: 2,
     arca_env: 'homologacion',
@@ -55,7 +57,7 @@ const submitCreate = () => {
     createForm.post(route('admin.empresas.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            createForm.reset('razon_social', 'cuit', 'condicion_iva_id', 'logo');
+            createForm.reset('razon_social', 'cuit', 'condicion_iva_id', 'numero_inscripcion_ingresos_brutos', 'fecha_inicio_actividades', 'logo');
             createLogoPreview.value = null;
         },
     });
@@ -67,6 +69,8 @@ const editForm = useForm({
     razon_social: '',
     cuit: '',
     condicion_iva_id: '',
+    numero_inscripcion_ingresos_brutos: '',
+    fecha_inicio_actividades: '',
     moneda_base: 'ARS',
     arca_pv_default: 2,
     arca_env: 'homologacion',
@@ -92,6 +96,8 @@ const openEdit = (e) => {
     editForm.razon_social = e.razon_social;
     editForm.cuit = e.cuit;
     editForm.condicion_iva_id = e.condicion_iva_id || '';
+    editForm.numero_inscripcion_ingresos_brutos = e.numero_inscripcion_ingresos_brutos || '';
+    editForm.fecha_inicio_actividades = e.fecha_inicio_actividades || '';
     editForm.moneda_base = e.moneda_base || 'ARS';
     editForm.arca_pv_default = e.arca_pv_default;
     editForm.arca_env = e.arca_env;
@@ -174,6 +180,16 @@ const confirmDelete = (e) => {
                             <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                         </select>
                         <InputError class="mt-2" :message="createForm.errors.condicion_iva_id" />
+                    </div>
+                    <div>
+                        <InputLabel value="N.º de inscripción en Ingresos Brutos" />
+                        <TextInput v-model="createForm.numero_inscripcion_ingresos_brutos" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="createForm.errors.numero_inscripcion_ingresos_brutos" />
+                    </div>
+                    <div>
+                        <InputLabel value="Fecha de inicio de actividades" />
+                        <TextInput v-model="createForm.fecha_inicio_actividades" type="date" class="mt-1 block w-full" />
+                        <InputError class="mt-2" :message="createForm.errors.fecha_inicio_actividades" />
                     </div>
                     <div>
                         <InputLabel value="Moneda base" />
@@ -330,6 +346,16 @@ const confirmDelete = (e) => {
                             <option v-for="c in condicionesIva" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                         </select>
                         <InputError class="mt-1 text-xs" :message="editForm.errors.condicion_iva_id" />
+                    </div>
+                    <div>
+                        <InputLabel value="N.º de inscripción en Ingresos Brutos" class="!text-xs" />
+                        <TextInput v-model="editForm.numero_inscripcion_ingresos_brutos" type="text" class="mt-0.5 block w-full text-sm py-1" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.numero_inscripcion_ingresos_brutos" />
+                    </div>
+                    <div>
+                        <InputLabel value="Fecha de inicio de actividades" class="!text-xs" />
+                        <TextInput v-model="editForm.fecha_inicio_actividades" type="date" class="mt-0.5 block w-full text-sm py-1" />
+                        <InputError class="mt-1 text-xs" :message="editForm.errors.fecha_inicio_actividades" />
                     </div>
                     <div>
                         <InputLabel value="Moneda base" class="!text-xs" />

@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Comprobante;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -48,15 +49,20 @@ class ComprobanteEmitidoMail extends Mailable
             'flashSuccess' => null,
             'flashError' => null,
             'flashWarning' => null,
+            'pdfMode' => true,
         ])->render();
+        $pdf = Pdf::loadHTML($printHtml)
+            ->setPaper('a4', 'portrait')
+            ->setOption('defaultMediaType', 'print')
+            ->output();
 
         return $this
             ->subject($tipo.' emitida '.$numero)
             ->view('emails.comprobantes.emitido', [
                 'numeroComprobante' => $numero,
             ])
-            ->attachData($printHtml, 'comprobante-'.$this->comprobante->id.'.html', [
-                'mime' => 'text/html',
+            ->attachData($pdf, 'comprobante-'.$this->comprobante->id.'.pdf', [
+                'mime' => 'application/pdf',
             ]);
     }
 }

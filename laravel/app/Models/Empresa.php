@@ -20,6 +20,8 @@ class Empresa extends Model
         'cuit',
         'condicion_iva',
         'condicion_iva_id',
+        'numero_inscripcion_ingresos_brutos',
+        'fecha_inicio_actividades',
         'arca_pv_default',
         'arca_env',
         'telefono',
@@ -38,6 +40,7 @@ class Empresa extends Model
     protected $casts = [
         'permite_guias_no_fiscales' => 'bool',
         'factura_sin_iva' => 'bool',
+        'fecha_inicio_actividades' => 'date:Y-m-d',
     ];
 
     protected $appends = [

@@ -463,6 +463,32 @@
 
         .helper { font-size: 7pt; color: #666; }
     </style>
+    @if($pdfMode ?? false)
+        <style>
+            body { font-family: 'DejaVu Sans', sans-serif; width: auto; }
+            .header-row, .bottom-row, .footer-row { display: block; width: 100%; font-size: 0; }
+            .header-left, .header-center, .header-right,
+            .bottom-col, .footer-left, .footer-right { display: inline-block; vertical-align: top; font-size: 7.5pt; }
+            .header-left { width: 40%; }
+            .header-center, .header-right { width: 29%; }
+            .bottom-col.remitos { width: 58%; }
+            .bottom-col.importes { width: 40%; min-width: 0; }
+            .importe-line { display: block; width: 100%; font-size: 0; }
+            .importe-line > :first-child, .importe-line > :last-child { display: inline-block; vertical-align: top; font-size: 7.5pt; }
+            .importe-line > :first-child { width: 58%; }
+            .importe-line > :last-child { width: 42%; white-space: normal; }
+            .footer-left { width: 59%; font-size: 0; }
+            .footer-left > img, .footer-left > .qr-box, .footer-left > .cae-data { display: inline-block; vertical-align: top; }
+            .footer-left > .cae-data { width: 62%; padding-left: 5pt; font-size: 7pt; }
+            .footer-right { width: 39%; }
+            .signature-fields { display: block; width: 100%; font-size: 0; }
+            .signature-fields > div { display: inline-block; width: 49%; font-size: 7pt; }
+            .guia-cliente-box .row { display: block; width: 100%; font-size: 0; }
+            .guia-party { display: inline-block; width: 49%; vertical-align: top; font-size: 8pt; }
+            .copy-pair-sheet, .copy-full-sheet, .print-copies { display: none !important; }
+            .watermark { transform: none; }
+        </style>
+    @endif
 </head>
 <body>
 @php
@@ -883,6 +909,14 @@
                     <span class="header-label">CUIT:</span>
                     <span class="header-data">{{ $empresa->cuit }}</span>
                 </div>
+                <div class="header-line" style="margin-top:2pt;">
+                    <span class="header-label">Ingresos Brutos:</span>
+                    <span class="header-data">{{ $empresa->numero_inscripcion_ingresos_brutos ?: '-' }}</span>
+                </div>
+                <div class="header-line" style="margin-top:2pt;">
+                    <span class="header-label">Inicio de actividades:</span>
+                    <span class="header-data">{{ optional($empresa->fecha_inicio_actividades)->format('d/m/Y') ?: '-' }}</span>
+                </div>
                 {{-- Moneda if not ARS --}}
                 @if($comprobante->moneda !== 'ARS')
                     <div class="header-line" style="margin-top:2pt;">
@@ -1086,19 +1120,14 @@
                 @else
                     <div class="helper">—</div>
                 @endif
+                @if(!empty($detalle['carga_directa']) && array_key_exists('facturar_a_destino', $detalle) && ! $detalle['facturar_a_destino'])
+                    <div class="invoice-payment-origin">Pago en Origen</div>
+                @endif
+                @if($observacionGeneral !== '')
+                    <div class="invoice-observation"><strong>Observaciones:</strong> {{ $observacionGeneral }}</div>
+                @endif
             </div>
 
-        </div>
-
-        {{-- ===== LEGAL LEGENDS ===== --}}
-        <div class="legal-legends">
-            "Los datos consignados en el presente comprobante son correctos y completos. El presente documento
-            reviste los requisitos establecidos por la Resolución General N° 4291 (AFIP) y normas complementarias.
-            El comprobante se emite en moneda {{ $comprobante->moneda ?? 'ARS' }}.
-            @if($comprobante->arca_resultado === 'A')
-            El crédito fiscal computable se encuentra condicionado a la efectiva registración de la operación
-            por parte del comprador, de acuerdo con lo establecido en la Ley de IVA."
-            @endif
         </div>
 
         {{-- ===== TÉRMINOS LEGALES ===== --}}
@@ -1149,14 +1178,6 @@
                 </div>
             </div>
         </div>
-
-        @if(!empty($detalle['carga_directa']) && array_key_exists('facturar_a_destino', $detalle) && ! $detalle['facturar_a_destino'])
-            <div class="invoice-payment-origin">Pago en Origen</div>
-        @endif
-
-        @if($observacionGeneral !== '')
-            <div class="invoice-observation"><strong>Observaciones:</strong> {{ $observacionGeneral }}</div>
-        @endif
 
         </div>{{-- /content --}}
     </div>{{-- /page-border --}}

@@ -12,6 +12,6 @@
 
 <p><a href="{{ $url }}">{{ $url }}</a></p>
 
-<p>Tambien se adjunta una version imprimible del comprobante.</p>
+<p>Se adjunta el comprobante en formato PDF.</p>
 
 <p>Transporte Tito</p>
