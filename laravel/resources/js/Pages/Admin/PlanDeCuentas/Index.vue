@@ -8,7 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 
 const props = defineProps({
     arbol: Array,
@@ -19,6 +19,59 @@ const props = defineProps({
 
 const expanded = ref(new Set());
 const filterTipo = ref(props.filtroTipo);
+const busquedaCuenta = ref('');
+let recargandoPlan = false;
+let ultimaRecargaPlan = 0;
+
+const recargarPlanAlVolver = () => {
+    if (document.visibilityState !== 'visible' || recargandoPlan) return;
+
+    const ahora = Date.now();
+    if (ahora - ultimaRecargaPlan < 1500) return;
+
+    ultimaRecargaPlan = ahora;
+    recargandoPlan = true;
+    router.reload({
+        only: ['arbol', 'totales'],
+        preserveState: true,
+        preserveScroll: true,
+        onFinish: () => { recargandoPlan = false; },
+    });
+};
+
+onMounted(() => {
+    document.addEventListener('visibilitychange', recargarPlanAlVolver);
+    window.addEventListener('focus', recargarPlanAlVolver);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', recargarPlanAlVolver);
+    window.removeEventListener('focus', recargarPlanAlVolver);
+});
+
+const arbolFiltrado = computed(() => {
+    const query = busquedaCuenta.value.trim().toLowerCase();
+    if (!query) return { nodes: props.arbol || [], autoExpanded: new Set() };
+
+    const autoExpanded = new Set();
+    const filtrar = (nodes) => (nodes || []).flatMap((node) => {
+        const children = filtrar(node.children || []);
+        const texto = [node.codigo, node.codigo_completo, node.codigo_corto, node.nombre]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+        const coincide = texto.includes(query);
+
+        if (!coincide && !children.length) return [];
+        if (children.length) autoExpanded.add(node.id);
+
+        return [{ ...node, children }];
+    });
+
+    return { nodes: filtrar(props.arbol), autoExpanded };
+});
+
+const expandedVisible = computed(() => new Set([...expanded.value, ...arbolFiltrado.value.autoExpanded]));
 
 const toggle = (id) => {
     const s = new Set(expanded.value);
@@ -166,6 +219,7 @@ const rowBg = (nivel) => ({
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Plan de Cuentas</h2>
                 <div class="flex items-center gap-3">
+                    <input v-model="busquedaCuenta" type="search" placeholder="Buscar código o cuenta..." class="w-56 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" />
                     <select v-model="filterTipo" @change="changeFilter" class="w-48 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                         <option value="">Todos los tipos</option>
                         <option v-for="t in tipoOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
@@ -214,19 +268,19 @@ const rowBg = (nivel) => ({
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <template v-for="node in arbol" :key="node.id">
+                            <template v-for="node in arbolFiltrado.nodes" :key="node.id">
                                 <TreeNode
                                     :node="node"
                                     :depth="0"
-                                    :expanded="expanded"
+                                    :expanded="expandedVisible"
                                     @toggle="toggle"
                                     @create="openCreate"
                                     @edit="openEdit"
                                     @delete="confirmDelete = $event"
                                 />
                             </template>
-                            <tr v-if="!arbol.length">
-                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Sin cuentas cargadas.</td>
+                            <tr v-if="!arbolFiltrado.nodes.length">
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">{{ busquedaCuenta ? 'No se encontraron cuentas.' : 'Sin cuentas cargadas.' }}</td>
                             </tr>
                         </tbody>
                     </table>

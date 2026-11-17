@@ -19,14 +19,29 @@ class PlanDeCuentasController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $tipoFiltro = $request->query('tipo', '');
 
+        $columnasArbol = ['id', 'parent_id', 'codigo', 'codigo_completo', 'codigo_corto', 'nombre', 'naturaleza', 'nivel', 'tipo', 'activo', 'contabilizable', 'orden'];
+
         $capitulos = CuentaContable::query()
             ->where('empresa_id', $empresaId)
             ->where('nivel', 'capitulo')
             ->when($tipoFiltro, fn ($q) => $q->where('tipo', $tipoFiltro))
             ->orderBy('orden')
-            ->get(['id', 'codigo', 'nombre', 'tipo', 'orden']);
+            ->get($columnasArbol);
 
-        $arbol = $this->ordenarPorNumeracion($capitulos)->map(fn ($c) => $this->buildTree($c, $empresaId));
+        // Show non-chapter roots too: a cuenta created without a parent (or
+        // whose parent belongs to another company) would otherwise be invisible.
+        $raicesSueltas = CuentaContable::query()
+            ->where('empresa_id', $empresaId)
+            ->where('nivel', '!=', 'capitulo')
+            ->where(function ($query) use ($empresaId) {
+                $query->whereNull('parent_id')
+                    ->orWhereDoesntHave('parent', fn ($parent) => $parent->where('empresa_id', $empresaId));
+            })
+            ->when($tipoFiltro, fn ($q) => $q->where('tipo', $tipoFiltro))
+            ->get($columnasArbol);
+
+        $arbol = $this->ordenarPorNumeracion($capitulos->concat($raicesSueltas))
+            ->map(fn ($c) => $this->buildTree($c, $empresaId));
 
         return Inertia::render('Admin/PlanDeCuentas/Index', [
             'arbol' => $arbol,
@@ -44,7 +59,7 @@ class PlanDeCuentasController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
         $data = $request->validate([
-            'parent_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
+            'parent_id' => ['nullable', 'integer', Rule::exists('cuentas_contables', 'id')->where('empresa_id', $empresaId)],
             'codigo' => ['required', 'string', 'max:50', Rule::unique('cuentas_contables')->where('empresa_id', $empresaId)],
             'nombre' => ['required', 'string', 'max:255'],
             'tipo' => ['required', 'in:activo,pasivo,patrimonio_neto,ingreso,egreso'],
@@ -54,8 +69,36 @@ class PlanDeCuentasController extends Controller
             'orden' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $parent = $data['parent_id'] ? CuentaContable::find($data['parent_id']) : null;
-        $codigoCompleto = $parent ? $parent->codigo_completo.'.'.$data['codigo'] : $data['codigo'];
+        $parent = ! empty($data['parent_id'])
+            ? CuentaContable::query()->where('empresa_id', $empresaId)->findOrFail($data['parent_id'])
+            : null;
+        $codigoIngresado = trim($data['codigo']);
+
+        // If a full hierarchical code is entered without selecting a parent,
+        // attach it to the existing account represented by its prefix.
+        if (! $parent && $data['nivel'] !== 'capitulo' && str_contains($codigoIngresado, '.')) {
+            $separador = strrpos($codigoIngresado, '.');
+            $codigoPadre = substr($codigoIngresado, 0, $separador);
+            $parent = CuentaContable::query()
+                ->where('empresa_id', $empresaId)
+                ->where(fn ($query) => $query
+                    ->where('codigo_completo', $codigoPadre)
+                    ->orWhere('codigo', $codigoPadre))
+                ->first();
+
+            if ($parent) {
+                $data['parent_id'] = $parent->id;
+            }
+        }
+
+        $codigoCompleto = $codigoIngresado;
+        if ($parent) {
+            $prefijoPadre = rtrim((string) ($parent->codigo_completo ?: $parent->codigo), '.').'.';
+            while (str_starts_with($codigoIngresado, $prefijoPadre)) {
+                $codigoIngresado = substr($codigoIngresado, strlen($prefijoPadre));
+            }
+            $codigoCompleto = $prefijoPadre.$codigoIngresado;
+        }
 
         CuentaContable::create([
             'empresa_id' => $empresaId,
@@ -190,7 +233,10 @@ class PlanDeCuentasController extends Controller
     private function ordenarPorNumeracion($cuentas)
     {
         return $cuentas->sort(function ($a, $b) {
-            return strcmp((string) ($a->codigo ?? $a['codigo'] ?? ''), (string) ($b->codigo ?? $b['codigo'] ?? ''));
+            return strcmp(
+                (string) ($a->codigo_completo ?? $a->codigo ?? ''),
+                (string) ($b->codigo_completo ?? $b->codigo ?? ''),
+            );
         })->values();
     }
 
