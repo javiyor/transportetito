@@ -474,7 +474,7 @@ class TerceroAdminController extends Controller
         $cleanCuit = preg_replace('/\D+/', '', $q) ?? '';
 
         $query = TerceroCuenta::query()
-            ->with('tercero:id,cuit,razon_social')
+            ->with('tercero:id,cuit,razon_social,empresa_facturadora_preferida_id')
             ->whereExists(function ($builder) {
                 $builder->selectRaw(1)
                     ->from('tercero_empresa')
@@ -497,6 +497,7 @@ class TerceroAdminController extends Controller
             'razon_social' => $c->tercero?->razon_social ?? '',
             'nombre_cuenta' => $c->nombre_cuenta,
             'cuit' => $c->tercero?->cuit ?? '',
+            'empresa_facturadora_preferida_id' => $c->tercero?->empresa_facturadora_preferida_id,
             'numero_cliente' => $c->numero_cliente,
             'label' => trim(($c->tercero?->razon_social ?? '') . ($c->nombre_cuenta ? ' / ' . $c->nombre_cuenta : '')),
         ]);

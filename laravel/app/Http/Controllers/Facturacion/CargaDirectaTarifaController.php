@@ -18,19 +18,27 @@ class CargaDirectaTarifaController extends Controller
         ArcaTipoComprobanteResolver $arcaTipos,
     ): JsonResponse
     {
-        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        abort_unless($empresaId > 0, 403);
+        $empresaCuentasId = (int) ($request->user()->current_empresa_id ?: 0);
+        abort_unless($empresaCuentasId > 0, 403);
 
         $data = $request->validate([
             'origen_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'destino_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+            'empresa_facturadora_id' => ['nullable', 'integer', 'exists:empresas,id'],
         ]);
 
+        $empresaId = (int) ($data['empresa_facturadora_id'] ?? $empresaCuentasId);
+        if (! $request->user()->hasRole('admin')) {
+            $empresaPermitida = $empresaId === $empresaCuentasId
+                || $request->user()->empresas()->where('empresas.id', $empresaId)->exists();
+            abort_unless($empresaPermitida, 403);
+        }
+
         $cuentaOrigen = TerceroCuenta::query()
-            ->where('empresa_id', $empresaId)
+            ->where('empresa_id', $empresaCuentasId)
             ->findOrFail($data['origen_cuenta_id']);
         $cuentaDestino = TerceroCuenta::query()
-            ->where('empresa_id', $empresaId)
+            ->where('empresa_id', $empresaCuentasId)
             ->with('tercero:id,cuit,condicion_iva')
             ->findOrFail($data['destino_cuenta_id']);
         $cuentaOrigen->loadMissing('tercero:id,cuit,condicion_iva');

@@ -54,8 +54,8 @@ class ManifiestoShowController extends Controller
                 $q->with([
                     'remitente:id,cuit,razon_social',
                     'destinatario:id,cuit,razon_social',
-                    'remitenteCuenta.tercero:id,razon_social,cuit',
-                    'destinatarioCuenta.tercero:id,razon_social,cuit',
+                    'remitenteCuenta.tercero:id,razon_social,cuit,empresa_facturadora_preferida_id',
+                    'destinatarioCuenta.tercero:id,razon_social,cuit,empresa_facturadora_preferida_id',
                     'comprobantes:id',
                 ])->orderByDesc('id');
             },

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\TerceroCuenta;
 
@@ -15,6 +16,7 @@ class Tercero extends Model
         'razon_social',
         'condicion_iva',
         'condicion_iva_id',
+        'empresa_facturadora_preferida_id',
         'domicilio_fiscal',
     ];
 
@@ -65,5 +67,10 @@ class Tercero extends Model
     public function cuentas(): HasMany
     {
         return $this->hasMany(TerceroCuenta::class, 'tercero_id');
+    }
+
+    public function empresaFacturadoraPreferida(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_facturadora_preferida_id');
     }
 }

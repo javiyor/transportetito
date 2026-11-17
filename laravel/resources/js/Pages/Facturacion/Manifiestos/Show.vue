@@ -228,8 +228,28 @@ const pedidosPendientes = computed(() => {
 const facturarPorEntrega = useForm({ confirm: true, facturar_por_entrega: {}, detalles_por_entrega: {}, empresa_por_entrega: {}, reparto_forzado_por_entrega: {} });
 
 const detalleOverridesSnapshot = computed(() => JSON.stringify(facturarPorEntrega.detalles_por_entrega || {}));
+const busquedaDestinatario = ref('');
+
+const destinatarioNombreGrupo = (grupo) => {
+    const pedido = grupo?.pedidos?.[0];
+    return pedido?.destinatario?.razon_social
+        || pedido?.destinatario_cuenta?.tercero?.razon_social
+        || 'Sin destinatario';
+};
+
+const destinatarioCuitGrupo = (grupo) => {
+    const pedido = grupo?.pedidos?.[0];
+    return pedido?.destinatario?.cuit || pedido?.destinatario_cuenta?.tercero?.cuit || '';
+};
 
 const splitRelaciones = reactive({});
+const configuracionInicialPorEntrega = reactive({});
+
+const serializarDetalleModificable = (detalle) => {
+    const copia = { ...(detalle || {}) };
+    delete copia.editar;
+    return JSON.stringify(copia);
+};
 
 const gruposFacturacion = computed(() => {
     detalleOverridesSnapshot.value;
@@ -292,8 +312,8 @@ const gruposFacturacion = computed(() => {
                 const override = facturarPorEntrega.detalles_por_entrega?.[entregaId] || null;
                 const detalle = calcFactura([p], tarifaBase, override, sinIvaEntrega(entregaId));
                 const cuentas = new Map();
-                if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
-                if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
+                if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '', empresa_facturadora_preferida_id: p.remitente_cuenta.tercero?.empresa_facturadora_preferida_id });
+                if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '', empresa_facturadora_preferida_id: p.destinatario_cuenta.tercero?.empresa_facturadora_preferida_id });
                 let suggested = '';
                 if (p.paga === 'origen' && p.remitente_cuenta) suggested = String(p.remitente_cuenta.id);
                 if (p.paga === 'destino' && p.destinatario_cuenta) suggested = String(p.destinatario_cuenta.id);
@@ -306,8 +326,8 @@ const gruposFacturacion = computed(() => {
             const detalle = calcFactura(pedidos, tarifaBase, override, sinIvaEntrega(entregaId));
             const cuentas = new Map();
             for (const p of pedidos) {
-                if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '' });
-                if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '' });
+                if (p.remitente_cuenta) cuentas.set(p.remitente_cuenta.id, { id: p.remitente_cuenta.id, label: `${p.remitente_cuenta.tercero?.razon_social || 'Remitente'} (Origen)`, cuit: p.remitente_cuenta.tercero?.cuit || '', empresa_facturadora_preferida_id: p.remitente_cuenta.tercero?.empresa_facturadora_preferida_id });
+                if (p.destinatario_cuenta) cuentas.set(p.destinatario_cuenta.id, { id: p.destinatario_cuenta.id, label: `${p.destinatario_cuenta.tercero?.razon_social || 'Destinatario'} (Destino)`, cuit: p.destinatario_cuenta.tercero?.cuit || '', empresa_facturadora_preferida_id: p.destinatario_cuenta.tercero?.empresa_facturadora_preferida_id });
             }
             const pagas = Array.from(new Set(pedidos.map((p) => p.paga)));
             let suggested = '';
@@ -319,7 +339,28 @@ const gruposFacturacion = computed(() => {
         }
     }
 
-    return out.sort((a, b) => (b.pedidos[0]?.id || 0) - (a.pedidos[0]?.id || 0));
+    return out.sort((a, b) => {
+        const porDestinatario = destinatarioNombreGrupo(a).localeCompare(destinatarioNombreGrupo(b), 'es', { sensitivity: 'base' });
+        if (porDestinatario !== 0) return porDestinatario;
+
+        return (a.pedidos[0]?.id || 0) - (b.pedidos[0]?.id || 0);
+    });
+});
+
+const gruposFacturacionVisibles = computed(() => {
+    const query = busquedaDestinatario.value.trim().toLocaleLowerCase('es');
+    if (!query) return gruposFacturacion.value;
+
+    return gruposFacturacion.value.filter((grupo) => {
+        const datosDestinatario = grupo.pedidos.flatMap((pedido) => [
+            pedido.destinatario?.razon_social,
+            pedido.destinatario?.cuit,
+            pedido.destinatario_cuenta?.tercero?.razon_social,
+            pedido.destinatario_cuenta?.tercero?.cuit,
+        ]).filter(Boolean).join(' ').toLocaleLowerCase('es');
+
+        return datosDestinatario.includes(query);
+    });
 });
 
 const onUsarSeguroChange = (g) => {
@@ -424,10 +465,17 @@ const initFacturarMap = () => {
     const det = {};
     const emp = {};
     const reparto = {};
+    const configuracionInicial = {};
     for (const g of gruposFacturacion.value) {
         const empresaId = props.manifiesto?.empresa?.id || '';
         map[g.entregaId] = g.suggested || '';
-        emp[g.entregaId] = String(empresaId);
+        const cuentaInicial = g.cuentas.find((cuenta) => String(cuenta.id) === String(map[g.entregaId]));
+        const empresaPreferidaId = cuentaInicial?.empresa_facturadora_preferida_id;
+        emp[g.entregaId] = String(
+            (props.empresas || []).some((empresa) => String(empresa.id) === String(empresaPreferidaId))
+                ? empresaPreferidaId
+                : empresaId
+        );
 
         const destCuentaId = g.pedidos[0]?.destinatario_cuenta_id;
         if (destCuentaId && reparto[destCuentaId] === undefined) {
@@ -456,14 +504,36 @@ const initFacturarMap = () => {
             usar_seguro: resolveTarifa(g.remitenteId, g.destinatarioId).usar_seguro !== false,
             usar_servicio_minimo: false,
         };
+        configuracionInicial[g.entregaId] = {
+            detalle: serializarDetalleModificable(det[g.entregaId]),
+            cuenta: String(map[g.entregaId] || ''),
+            empresa: String(emp[g.entregaId] || ''),
+            repartoForzado: Boolean(destCuentaId ? reparto[destCuentaId] : false),
+        };
     }
     facturarPorEntrega.facturar_por_entrega = map;
     facturarPorEntrega.detalles_por_entrega = det;
     facturarPorEntrega.empresa_por_entrega = emp;
     facturarPorEntrega.reparto_forzado_por_entrega = reparto;
+
+    for (const entregaId of Object.keys(configuracionInicialPorEntrega)) {
+        delete configuracionInicialPorEntrega[entregaId];
+    }
+    Object.assign(configuracionInicialPorEntrega, configuracionInicial);
 };
 
 initFacturarMap();
+
+const grupoModificado = (grupo) => {
+    const inicial = configuracionInicialPorEntrega[grupo.entregaId];
+    if (!inicial) return false;
+
+    const destinatarioId = destinatarioCuentaId(grupo);
+    return serializarDetalleModificable(facturarPorEntrega.detalles_por_entrega[grupo.entregaId]) !== inicial.detalle
+        || String(facturarPorEntrega.facturar_por_entrega[grupo.entregaId] || '') !== inicial.cuenta
+        || String(facturarPorEntrega.empresa_por_entrega[grupo.entregaId] || '') !== inicial.empresa
+        || Boolean(facturarPorEntrega.reparto_forzado_por_entrega?.[destinatarioId]) !== inicial.repartoForzado;
+};
 
 const faltanSelecciones = computed(() => {
     for (const g of gruposFacturacion.value) {
@@ -610,67 +680,16 @@ const destinatarioCuentaId = (g) => g.pedidos[0]?.destinatario_cuenta_id || g.en
 
 const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
 
-const busquedaCuentas = reactive({});
-const cuentasManuales = reactive({});
-const busquedaTimers = {};
-
-const initBusqueda = (g) => {
-    if (!busquedaCuentas[g.entregaId]) {
-        busquedaCuentas[g.entregaId] = { open: false, q: '', loading: false, results: [] };
-    }
-};
-
-const toggleBusqueda = (g) => {
-    initBusqueda(g);
-    const state = busquedaCuentas[g.entregaId];
-    state.open = !state.open;
-    if (state.open) {
-        const selectedId = facturarPorEntrega.facturar_por_entrega[g.entregaId];
-        const selected = g.cuentas.find((c) => String(c.id) === String(selectedId));
-        if (selected?.cuit) {
-            state.q = selected.cuit;
-            buscarCuentas(g);
-        }
-    }
-};
-
-const buscarCuentas = (g) => {
-    const state = busquedaCuentas[g.entregaId];
-    if (!state || state.q.length < 2) {
-        state.results = [];
-        return;
-    }
-    state.loading = true;
-    clearTimeout(busquedaTimers[g.entregaId]);
-    busquedaTimers[g.entregaId] = setTimeout(() => {
-        window.axios
-            .get(route('admin.terceros.lookup-cuentas'), {
-                params: { q: state.q },
-            })
-            .then((res) => {
-                state.results = res.data.results || [];
-            })
-            .catch(() => {
-                state.results = [];
-            })
-            .finally(() => {
-                state.loading = false;
-            });
-    }, 300);
-};
-
-const seleccionarCuentaManual = (g, cuenta) => {
-    facturarPorEntrega.facturar_por_entrega[g.entregaId] = String(cuenta.id);
-    cuentasManuales[g.entregaId] = cuenta;
-    busquedaCuentas[g.entregaId].open = false;
-};
-
 const cuentaSeleccionadaLabel = (g) => {
     const selectedId = facturarPorEntrega.facturar_por_entrega[g.entregaId];
-    if (!selectedId) return null;
-    const fromGroup = g.cuentas.find((c) => String(c.id) === String(selectedId));
-    if (fromGroup) return fromGroup;
-    return cuentasManuales[g.entregaId] || null;
+    return selectedId ? g.cuentas.find((cuenta) => String(cuenta.id) === String(selectedId)) || null : null;
+};
+
+const actualizarEmpresaPreferida = (g) => {
+    const empresaPreferidaId = cuentaSeleccionadaLabel(g)?.empresa_facturadora_preferida_id;
+    if ((props.empresas || []).some((empresa) => String(empresa.id) === String(empresaPreferidaId))) {
+        facturarPorEntrega.empresa_por_entrega[g.entregaId] = String(empresaPreferidaId);
+    }
 };
 
 const pedidosConErrorDeGrupo = (g) => (g?.pedidos || []).filter((p) => p.recepcion_estado === 'con_error');
@@ -850,11 +869,29 @@ const enviarPedido = () => {
                         <PrimaryButton :disabled="backfillForm.processing" @click.prevent="completarCuentas">Completar cuentas</PrimaryButton>
                     </div>
 
-                    <div class="mt-4 space-y-3">
-                        <div v-for="g in gruposFacturacion" :key="g.entregaId" class="rounded-lg bg-white border-2 border-gray-300 shadow-sm">
-                            <div class="flex items-center justify-between gap-2 px-4 py-2 border-b-2 border-gray-300 bg-gray-100">
+                    <div v-if="gruposFacturacion.length" class="mt-4 flex items-center gap-3">
+                        <TextInput
+                            v-model="busquedaDestinatario"
+                            type="search"
+                            class="block w-full max-w-md text-sm"
+                            placeholder="Buscar destinatario por nombre o CUIT..."
+                        />
+                        <span class="shrink-0 text-xs text-gray-500">{{ gruposFacturacionVisibles.length }} de {{ gruposFacturacion.length }} grupos</span>
+                    </div>
+
+                    <div class="mt-3 space-y-3">
+                        <div
+                            v-for="g in gruposFacturacionVisibles"
+                            :key="g.entregaId"
+                            class="rounded-lg border-2 shadow-sm"
+                            :class="grupoModificado(g) ? 'border-amber-400 bg-amber-50/40' : 'border-gray-300 bg-white'"
+                        >
+                            <div class="flex items-center justify-between gap-2 px-4 py-2 border-b-2" :class="grupoModificado(g) ? 'border-amber-300 bg-amber-100' : 'border-gray-300 bg-gray-100'">
                                 <div class="text-xs font-medium text-gray-700 flex items-center gap-2">
-                                    <span>{{ g.pedidos[0]?.remitente?.razon_social || '-' }} → {{ g.pedidos[0]?.destinatario?.razon_social || '-' }}</span>
+                                    <span>{{ g.pedidos[0]?.remitente?.razon_social || '-' }} →</span>
+                                    <span class="rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-900">{{ destinatarioNombreGrupo(g) }}</span>
+                                    <span v-if="destinatarioCuitGrupo(g)" class="text-[10px] text-gray-500">CUIT {{ destinatarioCuitGrupo(g) }}</span>
+                                    <span v-if="grupoModificado(g)" class="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-900"><span aria-hidden="true">✓</span> Modificada</span>
                                     <span class="text-gray-400">·</span>
                                     <span>{{ g.pedidos.length }} ped · {{ detalleGrupo(g).moneda }} {{ formatMoney(detalleGrupo(g).total) }}</span>
                                     <label v-if="g.relKey && (g.pedidos.length > 1 || splitRelaciones[g.relKey])" class="inline-flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer select-none">
@@ -865,25 +902,16 @@ const enviarPedido = () => {
                                 <div class="flex flex-col gap-1">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider">A quién facturar</div>
-                                        <button
-                                            type="button"
-                                            class="text-[10px] text-indigo-600 hover:text-indigo-800 underline"
-                                            @click.prevent="toggleBusqueda(g)"
-                                        >
-                                            {{ busquedaCuentas[g.entregaId]?.open ? 'Cerrar' : 'Buscar' }}
-                                        </button>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <select
                                             v-model="facturarPorEntrega.facturar_por_entrega[g.entregaId]"
                                             class="border-gray-300 rounded text-xs py-1 px-1 w-44 focus:border-indigo-500 focus:ring-indigo-500"
+                                            @change="actualizarEmpresaPreferida(g)"
                                         >
                                             <option value="">(facturar a)</option>
                                             <option v-for="c in g.cuentas" :key="c.id" :value="String(c.id)">
                                                 {{ c.label }}{{ c.cuit ? ' CUIT ' + c.cuit : '' }}
-                                            </option>
-                                            <option v-if="cuentasManuales[g.entregaId]" :value="String(cuentasManuales[g.entregaId].id)">
-                                                {{ cuentasManuales[g.entregaId].label }}{{ cuentasManuales[g.entregaId].cuit ? ' CUIT ' + cuentasManuales[g.entregaId].cuit : '' }}
                                             </option>
                                         </select>
                                         <select
@@ -894,33 +922,6 @@ const enviarPedido = () => {
                                                 {{ emp.razon_social }}
                                             </option>
                                         </select>
-                                    </div>
-                                    <div v-if="busquedaCuentas[g.entregaId]?.open" class="mt-1 border border-gray-300 rounded-md bg-white shadow-sm p-2 w-80">
-                                        <TextInput
-                                            v-model="busquedaCuentas[g.entregaId].q"
-                                            type="text"
-                                            placeholder="Razon social o CUIT"
-                                            class="block w-full text-xs"
-                                            @input="buscarCuentas(g)"
-                                        />
-                                        <div v-if="busquedaCuentas[g.entregaId].loading" class="text-xs text-gray-500 mt-1">Buscando...</div>
-                                        <ul v-else class="mt-1 max-h-32 overflow-y-auto divide-y divide-gray-100">
-                                            <li
-                                                v-for="c in busquedaCuentas[g.entregaId].results"
-                                                :key="c.id"
-                                                class="px-1 py-1 text-xs cursor-pointer hover:bg-gray-100"
-                                                @click.prevent="seleccionarCuentaManual(g, c)"
-                                            >
-                                                <div class="font-medium">{{ c.label }}</div>
-                                                <div v-if="c.cuit" class="text-gray-500">CUIT {{ c.cuit }} · N° {{ c.numero_cliente }}</div>
-                                            </li>
-                                            <li v-if="!busquedaCuentas[g.entregaId].results.length && busquedaCuentas[g.entregaId].q.length >= 2" class="px-1 py-1 text-xs text-gray-500">
-                                                Sin resultados.
-                                            </li>
-                                        </ul>
-                                        <div v-if="cuentaSeleccionadaLabel(g)" class="mt-2 text-xs text-green-700">
-                                            Seleccionado: {{ cuentaSeleccionadaLabel(g).label }}{{ cuentaSeleccionadaLabel(g).cuit ? ' CUIT ' + cuentaSeleccionadaLabel(g).cuit : '' }}
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1086,6 +1087,7 @@ const enviarPedido = () => {
                         </div>
 
                         <div v-if="!gruposFacturacion.length" class="text-sm text-gray-600">No hay pedidos pendientes de facturar.</div>
+                        <div v-else-if="!gruposFacturacionVisibles.length" class="text-sm text-gray-600">No hay destinatarios que coincidan con la búsqueda.</div>
                     </div>
                 </div>
 
@@ -1110,7 +1112,10 @@ const enviarPedido = () => {
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="c in comprobantes" :key="c.id">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                                        <Link :href="route('operacion.comprobantes.show', c.id)" class="text-indigo-600 hover:text-indigo-800">#{{ c.id }}</Link>
+                                        <div class="flex items-center gap-2">
+                                            <Link :href="route('operacion.comprobantes.show', c.id)" class="text-indigo-600 hover:text-indigo-800">#{{ c.id }}</Link>
+                                            <span v-if="c.estado === 'emitida'" class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 font-sans text-[10px] font-semibold text-green-800"><span aria-hidden="true">✓</span> Emitida</span>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                         {{ comprobanteTipoLabel(c.tipo) }}

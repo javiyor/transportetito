@@ -10,6 +10,7 @@ use App\Models\Empresa;
 use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\TarifaRelacion;
+use App\Models\TerceroCuenta;
 use App\Services\Facturacion\FacturaCalculator;
 use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Facturacion\TarifaResolver;
@@ -350,6 +351,13 @@ class ManifiestoFacturarController extends Controller
                         'observacion_recepcion' => $observacionRecepcion,
                     ],
                 ]);
+
+                $cuentaFacturada = TerceroCuenta::query()->with('tercero')->find($facturarCuentaId);
+                if ($cuentaFacturada?->tercero) {
+                    $cuentaFacturada->tercero->forceFill([
+                        'empresa_facturadora_preferida_id' => $empresa->id,
+                    ])->save();
+                }
 
                 // Persistir tarifa (solo si el grupo tiene 1 relacion)
                 $persistirTarifa = false;

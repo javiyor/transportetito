@@ -9,6 +9,7 @@ use App\Models\CtaCteMovimiento;
 use App\Models\Deposito;
 use App\Models\Empresa;
 use App\Models\Pedido;
+use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Arca\WsfeClient;
@@ -30,10 +31,11 @@ class CargaDirectaStoreController extends Controller
         WsfeClient $wsfe,
         ArcaTipoComprobanteResolver $arcaTipos,
     ): Response {
-        $empresaId = (int) $request->user()->current_empresa_id;
-        abort_unless($empresaId, 403);
+        $empresaCuentasId = (int) $request->user()->current_empresa_id;
+        abort_unless($empresaCuentasId, 403);
 
         $data = $request->validate([
+            'empresa_facturadora_id' => ['required', 'integer', 'exists:empresas,id'],
             'origen_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'destino_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'facturar_a_destino' => ['required', 'boolean'],
@@ -53,14 +55,33 @@ class CargaDirectaStoreController extends Controller
             'servicio_retiro' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $user = $request->user();
+        $empresaId = (int) $data['empresa_facturadora_id'];
+        if (! $user->hasRole('admin')) {
+            $empresaPermitida = $empresaId === $empresaCuentasId
+                || $user->empresas()->where('empresas.id', $empresaId)->exists();
+            abort_unless($empresaPermitida, 403, 'No tienes acceso a la empresa facturadora seleccionada.');
+        }
+
         $cuentaOrigen = TerceroCuenta::query()->findOrFail($data['origen_cuenta_id']);
         $cuentaDestino = TerceroCuenta::query()->findOrFail($data['destino_cuenta_id']);
-        abort_unless((int) $cuentaOrigen->empresa_id === $empresaId, 404);
-        abort_unless((int) $cuentaDestino->empresa_id === $empresaId, 404);
+        abort_unless((int) $cuentaOrigen->empresa_id === $empresaCuentasId, 404);
+        abort_unless((int) $cuentaDestino->empresa_id === $empresaCuentasId, 404);
 
-        $facturarCuentaId = $data['facturar_a_destino']
-            ? (int) $cuentaDestino->id
-            : (int) $cuentaOrigen->id;
+        $cuentaBaseFacturacion = $data['facturar_a_destino'] ? $cuentaDestino : $cuentaOrigen;
+        $cuentaFacturacion = TerceroCuenta::query()
+            ->where('empresa_id', $empresaId)
+            ->where('tercero_id', $cuentaBaseFacturacion->tercero_id)
+            ->first();
+
+        if (! $cuentaFacturacion) {
+            return back()->withErrors([
+                'empresa_facturadora_id' => 'El cliente no tiene una cuenta en la empresa facturadora seleccionada.',
+            ])->withInput();
+        }
+
+        $facturarCuentaId = (int) $cuentaFacturacion->id;
+        $facturarTerceroId = (int) $cuentaFacturacion->tercero_id;
 
         $empresa = Empresa::query()->findOrFail($empresaId);
         $deposito = Deposito::query()
@@ -75,7 +96,7 @@ class CargaDirectaStoreController extends Controller
             (int) $cuentaOrigen->tercero_id,
             (int) $cuentaDestino->tercero_id,
         );
-        $cuentaFacturacion = $facturarCuentaId === (int) $cuentaOrigen->id ? $cuentaOrigen : $cuentaDestino;
+        $cuentaFacturacion->loadMissing('tercero');
         $opcionesArca = $arcaTipos->opcionesFactura(
             $empresa->condicion_iva,
             $cuentaFacturacion->tercero?->condicion_iva,
@@ -208,7 +229,7 @@ class CargaDirectaStoreController extends Controller
             ->max('numero_interno');
 
         $comprobante = DB::transaction(function () use (
-            $empresaId, $facturarCuentaId, $cuentaDestino, $fecha, $total, $subtotalGravado, $iva,
+            $empresaId, $facturarCuentaId, $facturarTerceroId, $cuentaDestino, $fecha, $total, $subtotalGravado, $iva,
             $detalleFacturacion, $maxInterno, $pedidoRecords
         ) {
             $comprobante = Comprobante::query()->create([
@@ -234,6 +255,10 @@ class CargaDirectaStoreController extends Controller
             }
 
             $comprobante->pedidos()->sync(collect($createdPedidos)->pluck('id')->all());
+
+            Tercero::query()
+                ->whereKey($facturarTerceroId)
+                ->update(['empresa_facturadora_preferida_id' => $empresaId]);
 
             CtaCteMovimiento::query()->create([
                 'empresa_id' => $empresaId,

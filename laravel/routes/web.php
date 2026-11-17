@@ -315,7 +315,13 @@ Route::middleware([
         Route::get('/carga-directa/verificar-cuit', [\App\Http\Controllers\Facturacion\CargaDirectaCuitController::class, 'consultar'])->name('carga-directa.verificar-cuit');
         Route::post('/carga-directa/actualizar-datos-arca', [\App\Http\Controllers\Facturacion\CargaDirectaCuitController::class, 'actualizar'])->name('carga-directa.actualizar-datos-arca');
         Route::get('/carga-directa/cotizaciones', function (\Illuminate\Http\Request $request) {
-            $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
+            $empresaCuentasId = (int) ($request->user()->current_empresa_id ?: 0);
+            $empresaId = (int) ($request->query('empresa_facturadora_id') ?: $empresaCuentasId);
+            if (! $request->user()->hasRole('admin')) {
+                $empresaPermitida = $empresaId === $empresaCuentasId
+                    || $request->user()->empresas()->where('empresas.id', $empresaId)->exists();
+                abort_unless($empresaPermitida, 403);
+            }
             $origenId = (int) $request->query('origen_cuenta_id');
             $destinoId = (int) $request->query('destino_cuenta_id');
             if (! $origenId || ! $destinoId) {

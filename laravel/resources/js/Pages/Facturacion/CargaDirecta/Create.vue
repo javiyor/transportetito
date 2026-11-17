@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -11,6 +11,7 @@ import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     empresa: Object,
+    empresasFacturadoras: Array,
     cuentas: Array,
     condicionesIva: Array,
     tarifaDefaults: Object,
@@ -22,10 +23,38 @@ const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.
 const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 const flashWarning = computed(() => page.props.tt?.flash?.warning || page.props.flash?.warning || null);
 
+let recargandoCuentas = false;
+let ultimaRecargaCuentas = 0;
+const recargarCuentasAlVolver = () => {
+    if (document.visibilityState !== 'visible' || recargandoCuentas) return;
+
+    const ahora = Date.now();
+    if (ahora - ultimaRecargaCuentas < 1500) return;
+
+    ultimaRecargaCuentas = ahora;
+    recargandoCuentas = true;
+    router.reload({
+        only: ['cuentas'],
+        preserveState: true,
+        preserveScroll: true,
+        onFinish: () => { recargandoCuentas = false; },
+    });
+};
+
+onMounted(() => {
+    document.addEventListener('visibilitychange', recargarCuentasAlVolver);
+    window.addEventListener('focus', recargarCuentasAlVolver);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', recargarCuentasAlVolver);
+    window.removeEventListener('focus', recargarCuentasAlVolver);
+});
+
 const defaultPct = Number(props.tarifaDefaults?.tarifa_valor_declarado_pct) || 0.03;
-const ivaPct = props.empresa?.factura_sin_iva ? 0 : (Number(props.tarifaDefaults?.iva_pct) || 0.21);
 
 const form = useForm({
+    empresa_facturadora_id: String(props.empresa?.id || ''),
     origen_cuenta_id: '',
     destino_cuenta_id: '',
     facturar_a_destino: true,
@@ -36,6 +65,11 @@ const form = useForm({
     servicio_retiro: '',
     items: [],
 });
+
+const empresaFacturadora = computed(() => (props.empresasFacturadoras || []).find((empresa) => String(empresa.id) === String(form.empresa_facturadora_id)) || props.empresa);
+const ivaPct = computed(() => empresaFacturadora.value?.factura_sin_iva
+    ? 0
+    : (Number(tarifaActiva.value?.iva_pct) || Number(props.tarifaDefaults?.iva_pct) || 0.21));
 
 const searchOrigen = ref('');
 const showOrigenDropdown = ref(false);
@@ -66,6 +100,11 @@ const cuentaFacturada = computed(() => {
     const id = form.facturar_a_destino ? form.destino_cuenta_id : form.origen_cuenta_id;
     return (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(id)) || null;
 });
+const aplicarEmpresaFacturadoraPreferida = () => {
+    const preferidaId = cuentaFacturada.value?.tercero?.empresa_facturadora_preferida_id;
+    const empresaPermitida = (props.empresasFacturadoras || []).find((empresa) => String(empresa.id) === String(preferidaId));
+    form.empresa_facturadora_id = String(empresaPermitida?.id || props.empresa?.id || '');
+};
 const cuentaOrigenSeleccionada = computed(() => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(form.origen_cuenta_id)) || null);
 const cuentaDestinoSeleccionada = computed(() => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(form.destino_cuenta_id)) || null);
 const cuitCheckModal = ref({
@@ -158,10 +197,12 @@ watch(() => props.cuentas, () => {
     };
     actualizarSeleccion(form.origen_cuenta_id, searchOrigen, selectedOrigen);
     actualizarSeleccion(form.destino_cuenta_id, searchDestino, selectedDestino);
+    aplicarEmpresaFacturadoraPreferida();
 }, { deep: true });
 
 watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], () => {
     cuitVerificadoKey.value = '';
+    aplicarEmpresaFacturadoraPreferida();
 });
 
 const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
@@ -252,7 +293,8 @@ const buscarCotizaciones = async () => {
     try {
         const query = '?origen_cuenta_id=' + encodeURIComponent(form.origen_cuenta_id)
             + '&destino_cuenta_id=' + encodeURIComponent(form.destino_cuenta_id)
-            + '&facturar_a_destino=' + (form.facturar_a_destino ? '1' : '0');
+            + '&facturar_a_destino=' + (form.facturar_a_destino ? '1' : '0')
+            + '&empresa_facturadora_id=' + encodeURIComponent(form.empresa_facturadora_id || '');
         const [cotizacionesResult, tarifaResult] = await Promise.allSettled([
             fetch(route('facturacion.carga-directa.cotizaciones') + query),
             fetch(route('facturacion.carga-directa.tarifa') + query),
@@ -288,7 +330,7 @@ const buscarCotizaciones = async () => {
     }
 };
 
-watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino], buscarCotizaciones);
+watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.facturar_a_destino, () => form.empresa_facturadora_id], buscarCotizaciones);
 
 const importarCotizacion = (cq) => {
     if (!cq.items || !cq.items.length) return;
@@ -331,7 +373,7 @@ const totales = computed(() => {
         const seg = Number(it.seguro) || 0;
         const c = Number(it.cr) || 0;
         const sub = imp + seg + c;
-        const iv = sub * ivaPct;
+        const iv = sub * ivaPct.value;
 
         importe += imp;
         seguro += seg;
@@ -538,6 +580,13 @@ const confirmarActualizacionArca = () => {
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <form @submit.prevent="verificarCuitYEnviar" class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2">
+                            <InputLabel for="empresa_facturadora_id" value="Empresa facturadora" />
+                            <select id="empresa_facturadora_id" v-model="form.empresa_facturadora_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option v-for="empresaOpcion in empresasFacturadoras || []" :key="empresaOpcion.id" :value="String(empresaOpcion.id)">{{ empresaOpcion.razon_social }}</option>
+                            </select>
+                            <InputError :message="form.errors.empresa_facturadora_id" />
+                        </div>
                         <div class="relative">
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <InputLabel value="Origen (Remitente)" />
