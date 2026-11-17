@@ -37,6 +37,7 @@ maintenance=true
 
 git pull --ff-only origin main
 code_updated=true
+docker compose up -d postgres redis minio app
 docker compose exec -T app composer install --no-dev --optimize-autoloader --no-interaction
 docker compose run --rm node
 docker compose exec -T app php artisan migrate --force
