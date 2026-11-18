@@ -25,16 +25,6 @@ class HojaRutaStoreController extends Controller
             'comprobante_ids.*' => ['integer', 'exists:comprobantes,id'],
         ]);
 
-        $hoja = HojaRuta::query()->create([
-            'empresa_id' => $empresaId,
-            'deposito_id' => (int) $data['deposito_id'],
-            'fecha' => $data['fecha'],
-            'vehiculo_id' => ! empty($data['vehiculo_id']) ? (int) $data['vehiculo_id'] : null,
-            'zona_id' => ! empty($data['zona_id']) ? (int) $data['zona_id'] : null,
-            'chofer_user_id' => ! empty($data['chofer_user_id']) ? (int) $data['chofer_user_id'] : null,
-            'estado' => 'borrador',
-        ]);
-
         $orderedIds = array_values($data['comprobante_ids']);
         $comprobantesById = Comprobante::query()
             ->whereIn('id', $orderedIds)
@@ -43,6 +33,10 @@ class HojaRutaStoreController extends Controller
         $comprobantes = collect($orderedIds)->map(fn($id) => $comprobantesById->get($id))->filter()->values();
 
         $invalidos = $comprobantes->filter(function (Comprobante $c) {
+            if (str_starts_with((string) $c->tipo, 'nota_credito')) {
+                return true;
+            }
+
             $tienePedidos = $c->pedidos()->exists();
             if (! $tienePedidos) {
                 return false;
@@ -57,8 +51,18 @@ class HojaRutaStoreController extends Controller
         });
 
         if ($invalidos->isNotEmpty()) {
-            return back()->with('error', 'No se pueden incluir en la hoja de ruta comprobantes con pedidos sin controlar o con errores (salvo que se haya autorizado el reparto al facturar).');
+            return back()->with('error', 'No se pueden incluir notas de crédito ni comprobantes con pedidos sin controlar o con errores (salvo que se haya autorizado el reparto al facturar).');
         }
+
+        $hoja = HojaRuta::query()->create([
+            'empresa_id' => $empresaId,
+            'deposito_id' => (int) $data['deposito_id'],
+            'fecha' => $data['fecha'],
+            'vehiculo_id' => ! empty($data['vehiculo_id']) ? (int) $data['vehiculo_id'] : null,
+            'zona_id' => ! empty($data['zona_id']) ? (int) $data['zona_id'] : null,
+            'chofer_user_id' => ! empty($data['chofer_user_id']) ? (int) $data['chofer_user_id'] : null,
+            'estado' => 'borrador',
+        ]);
 
         $order = 10;
         $total = 0;

@@ -22,7 +22,7 @@ class FleteIndexController extends Controller
                 'remitente',
                 'destinatario',
                 'comprobantes' => fn ($q) => $q->select('comprobantes.id', 'comprobantes.numero_interno', 'comprobantes.tipo', 'comprobantes.estado', 'comprobantes.total', 'comprobantes.fecha_emision'),
-                'comprobantes.hojaRutaItems' => fn ($q) => $q->select('hoja_ruta_items.id', 'hoja_ruta_items.comprobante_id', 'hoja_ruta_items.hoja_ruta_id'),
+                'comprobantes.hojaRutaItems' => fn ($q) => $q->select('hoja_ruta_items.id', 'hoja_ruta_items.comprobante_id', 'hoja_ruta_items.hoja_ruta_id', 'hoja_ruta_items.estado_entrega', 'hoja_ruta_items.fecha_entrega'),
                 'comprobantes.hojaRutaItems.hojaRuta' => fn ($q) => $q->select('hojas_ruta.id', 'hojas_ruta.fecha', 'hojas_ruta.estado'),
             ]);
 
@@ -33,7 +33,11 @@ class FleteIndexController extends Controller
             $query->whereDate('created_at', '<=', $hasta);
         }
         if ($estado = $request->query('estado')) {
-            $query->where('estado', $estado);
+            if (in_array($estado, ['entregado', 'entregado_con_diferencia'], true)) {
+                $query->whereHas('comprobantes.hojaRutaItems', fn ($q) => $q->where('estado_entrega', $estado));
+            } else {
+                $query->where('estado', $estado);
+            }
         }
         if ($remitente = $request->query('remitente')) {
             $query->whereHas('remitente', fn ($q) => $q->where('razon_social', 'ilike', "%{$remitente}%"));
@@ -55,6 +59,9 @@ class FleteIndexController extends Controller
             ->distinct()
             ->orderBy('estado')
             ->pluck('estado')
+            ->merge(['entregado', 'entregado_con_diferencia'])
+            ->unique()
+            ->sort()
             ->values();
 
         return Inertia::render('Operacion/Fletes/Index', [
@@ -75,10 +82,11 @@ class FleteIndexController extends Controller
         $manifiesto = $pedido->manifiestoIngreso;
         $comprobante = $pedido->comprobantes->first();
 
-        $hojaRuta = null;
-        if ($comprobante && $comprobante->hojaRutaItems->isNotEmpty()) {
-            $hojaRuta = $comprobante->hojaRutaItems->first()->hojaRuta;
-        }
+        $itemsHojaRuta = $pedido->comprobantes->flatMap(fn ($c) => $c->hojaRutaItems);
+        $itemEntregado = $itemsHojaRuta->first(fn ($item) => in_array($item->estado_entrega, ['entregado', 'entregado_con_diferencia'], true));
+        $itemHojaRuta = $itemEntregado ?? $itemsHojaRuta->first();
+        $hojaRuta = $itemHojaRuta?->hojaRuta;
+        $estado = $itemEntregado?->estado_entrega ?? $pedido->estado;
 
         return [
             'id' => $pedido->id,
@@ -90,7 +98,7 @@ class FleteIndexController extends Controller
             'bultos' => (int) $pedido->bultos,
             'palets' => (int) $pedido->palets,
             'valor_declarado' => (float) $pedido->valor_declarado,
-            'estado' => $pedido->estado,
+            'estado' => $estado,
             'fecha' => $pedido->created_at?->format('Y-m-d'),
             'manifiesto_id' => $manifiesto?->id,
             'manifiesto_fecha' => $manifiesto?->fecha?->format('Y-m-d'),

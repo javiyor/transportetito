@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\HojaRutaItem;
 use App\Models\Recibo;
 use App\Models\TerceroCuenta;
 use App\Services\Cobranzas\CuentaCorrienteAccess;
@@ -79,6 +80,14 @@ class CuentaCorrienteShowController extends Controller
             ->orderByDesc('id')
             ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
 
+        $entregas = HojaRutaItem::query()
+            ->whereIn('comprobante_id', $comprobantesRawDesc->pluck('id'))
+            ->whereIn('estado_entrega', ['entregado', 'entregado_con_diferencia'])
+            ->selectRaw('comprobante_id, MAX(fecha_entrega) as fecha_entrega')
+            ->groupBy('comprobante_id')
+            ->get()
+            ->keyBy('comprobante_id');
+
         // Para documentos a cancelar (pendientes) ordenar por tipo + numero, con notas arriba
         $comprobantesRaw = $comprobantesRawDesc->sortBy(function ($c) {
             $p = (str_contains($c->tipo ?? '', 'nota_credito') || str_contains($c->tipo ?? '', 'nota_debito')) ? 0 : 1;
@@ -96,16 +105,20 @@ class CuentaCorrienteShowController extends Controller
 
         $saldosComprobantes = $saldoNotasCredito->calcular($comprobantesRaw, $aplicacionesSum->all());
 
-        $comprobantes = $comprobantesRaw->map(function ($c) use ($aplicacionesSum, $saldosComprobantes) {
+        $comprobantes = $comprobantesRaw->map(function ($c) use ($aplicacionesSum, $saldosComprobantes, $entregas) {
             $aplicado = (float) ($aplicacionesSum[$c->id] ?? 0);
             $saldo = $saldosComprobantes[$c->id] ?? ['pendiente' => 0, 'is_credit' => (float) $c->total < 0];
             $pendiente = (float) $saldo['pendiente'];
             $isCredito = (bool) $saldo['is_credit'];
+            $entrega = $entregas->get($c->id);
             $c->setAttribute('pendiente', $pendiente);
             $c->setAttribute('is_credit', $isCredito);
             $c->setAttribute('is_pagada', ! $isCredito && $pendiente <= 0.01);
             $c->setAttribute('aplicado', $aplicado);
             $c->setAttribute('notas_aplicadas', $isCredito ? max(0, abs((float) $c->total) - abs($pendiente)) : 0);
+            $c->setAttribute('entregado', $entrega !== null);
+            $c->setAttribute('fecha_entrega', $entrega?->fecha_entrega);
+
             return $c;
         });
 

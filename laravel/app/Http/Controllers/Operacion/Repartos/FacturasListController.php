@@ -68,7 +68,8 @@ class FacturasListController extends Controller
             ])
             ->where('estado', 'emitida')
             ->where('disponible_para_hoja_ruta', true)
-            ->whereDoesntHave('hojaRutaItems', fn ($q) => $q->where('estado_entrega', 'entregado'));
+            ->where('tipo', 'not like', 'nota_credito%')
+            ->whereDoesntHave('hojaRutaItems', fn ($q) => $q->whereIn('estado_entrega', ['entregado', 'entregado_con_diferencia']));
 
         if ($empresaFiltro > 0) {
             $query->where('empresa_id', $empresaFiltro);
