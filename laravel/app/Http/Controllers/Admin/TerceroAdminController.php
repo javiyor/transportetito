@@ -180,6 +180,7 @@ class TerceroAdminController extends Controller
             'condicion_iva' => $condicionIvaNombre,
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
+        $tercero->syncAccountNamesWithLegalName();
 
         $cuenta = DB::transaction(function () use ($data, $tercero, $cuentaContableProveedorId) {
             // Serialize additions for this CUIT so parallel requests reuse one account per company.
@@ -212,7 +213,7 @@ class TerceroAdminController extends Controller
                 'empresa_id' => (int) $data['empresa_id'],
                 'tercero_id' => $tercero->id,
                 'numero_cliente' => (int) $data['numero_cliente'],
-                'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+                'nombre_cuenta' => $tercero->razon_social,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
                 'provincia_id' => $data['provincia_id'] ?: null,
@@ -228,7 +229,7 @@ class TerceroAdminController extends Controller
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
-            'nombre_cuenta' => $data['nombre_cuenta'] ?: $cuenta->nombre_cuenta,
+            'nombre_cuenta' => $tercero->razon_social,
             'localidad' => $data['localidad'] ?: $cuenta->localidad,
             'barrio' => $data['barrio'] ?: $cuenta->barrio,
             'provincia_id' => $data['provincia_id'] ?: $cuenta->provincia_id,
@@ -313,11 +314,12 @@ class TerceroAdminController extends Controller
             'condicion_iva' => $condicionIvaNombre,
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
+        $tercero->syncAccountNamesWithLegalName();
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'empresa_id' => $data['empresa_id'],
-            'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+            'nombre_cuenta' => $tercero->razon_social,
             'localidad' => $data['localidad'] ?: null,
             'barrio' => $data['barrio'] ?: null,
             'provincia_id' => $data['provincia_id'] ?: null,

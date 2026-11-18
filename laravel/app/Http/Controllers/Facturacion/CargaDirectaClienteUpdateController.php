@@ -43,9 +43,10 @@ class CargaDirectaClienteUpdateController extends Controller
                     'ciudad' => $data['localidad'] ?? null,
                 ]),
             ])->save();
+            $tercero->syncAccountNamesWithLegalName();
 
             $cuenta->forceFill([
-                'nombre_cuenta' => $data['nombre_cuenta'] ?: null,
+                'nombre_cuenta' => $tercero->razon_social,
                 'direccion' => $data['direccion'] ?: null,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,

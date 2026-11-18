@@ -253,6 +253,7 @@ class CargaDirectaCuitController extends Controller
         }
 
         $tercero->save();
+        $tercero->syncAccountNamesWithLegalName();
         $cuenta->save();
     }
 

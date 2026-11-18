@@ -69,6 +69,15 @@ class Tercero extends Model
         return $this->hasMany(TerceroCuenta::class, 'tercero_id');
     }
 
+    public function syncAccountNamesWithLegalName(): void
+    {
+        $legalName = trim((string) $this->razon_social);
+
+        if ($legalName !== '') {
+            $this->cuentas()->update(['nombre_cuenta' => $legalName]);
+        }
+    }
+
     public function empresaFacturadoraPreferida(): BelongsTo
     {
         return $this->belongsTo(Empresa::class, 'empresa_facturadora_preferida_id');
