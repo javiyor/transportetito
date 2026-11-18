@@ -115,7 +115,7 @@ SQL,
                     $createdEnvios++;
                 }
 
-                $res = $this->importCargasForEnvio($empresa, $manifiesto, $envioId, $contactColumns, $existingCargaMap);
+                $res = $this->importCargasForEnvio($empresa, $manifiesto, $envioId, $envio->finalizada ?? null, $contactColumns, $existingCargaMap);
                 $createdPedidos += $res['created'];
                 $skippedPedidos += $res['skipped'];
             } catch (\Throwable $e) {
@@ -140,7 +140,7 @@ SQL,
         ];
     }
 
-    private function importCargasForEnvio(Empresa $empresa, ManifiestoIngreso $manifiesto, int $envioId, array $contactColumns, array &$existingCargaMap): array
+    private function importCargasForEnvio(Empresa $empresa, ManifiestoIngreso $manifiesto, int $envioId, mixed $envioFinalizada, array $contactColumns, array &$existingCargaMap): array
     {
         $direccionOrigenColumn = $contactColumns['direccion_origen'];
         $direccionDestinoColumn = $contactColumns['direccion_destino'];
@@ -185,7 +185,7 @@ SQL,
             $existingCargas = Pedido::query()
                 ->whereIn('external_carga_id', $externalIds)
                 ->withCount('comprobantes')
-                ->get(['id', 'external_carga_id', 'empresa_id', 'remitente_cuenta_id', 'destinatario_cuenta_id', 'bultos', 'palets', 'external_facturado']);
+                ->get(['id', 'external_carga_id', 'empresa_id', 'remitente_cuenta_id', 'destinatario_cuenta_id', 'bultos', 'palets', 'estado', 'external_facturado']);
 
             foreach ($existingCargas as $existingCarga) {
                 $externalId = (int) $existingCarga->external_carga_id;
@@ -212,6 +212,12 @@ SQL,
             if (isset($existingByCompany[(int) $empresa->id])) {
                 $existingCarga = $existingByCompany[(int) $empresa->id];
                 $this->corregirPaletsImportadosComoBultos($existingCarga, $cantidades, (int) ($row->cantidad ?? 0));
+                $this->actualizarEstadoImportado(
+                    $existingCarga,
+                    $envioFinalizada,
+                    (bool) ($row->facturado ?? false),
+                    ($row->estado ?? null) !== null ? (string) $row->estado : null,
+                );
                 $this->actualizarContactoCuenta($existingCarga->remitente_cuenta_id, $empresa, (string) ($row->direccion_origen ?? ''), (string) ($row->telefono_origen ?? ''));
                 $this->actualizarContactoCuenta($existingCarga->destinatario_cuenta_id, $empresa, (string) ($row->direccion_destino ?? ''), (string) ($row->telefono_destino ?? ''));
                 $skipped++;
@@ -258,7 +264,7 @@ SQL,
                 $this->markCuentaAsCliente($empresa, $destinatarioCuenta);
             }
 
-            Pedido::query()->create([
+            $pedido = Pedido::query()->create([
                 'external_carga_id' => $externalId,
                 'empresa_id' => $empresa->id,
                 'deposito_id' => $manifiesto->deposito_id,
@@ -276,21 +282,47 @@ SQL,
                 'valor_declarado' => (float) ($row->valordeclarado ?? 0),
                 'es_devolucion' => false,
                 'cr_importe' => null,
-                'estado' => 'en_deposito',
+                'estado' => $this->resolverEstadoImportado($envioFinalizada, (bool) ($row->facturado ?? false)),
                 'observacion' => ($row->observacion ?? null) !== null ? (string) $row->observacion : null,
                 'external_estado' => ($row->estado ?? null) !== null ? (string) $row->estado : null,
                 'external_facturado' => (bool) ($row->facturado ?? false),
                 'external_retiro' => (bool) ($row->retiro ?? false),
             ]);
 
-            $existingCargaMap[$externalId][(int) $empresa->id] = (object) [
-                'remitente_cuenta_id' => $remitenteCuenta?->id,
-                'destinatario_cuenta_id' => $destinatarioCuenta?->id,
-            ];
+            $pedido->setAttribute('comprobantes_count', 0);
+            $existingCargaMap[$externalId][(int) $empresa->id] = $pedido;
             $created++;
         }
 
         return ['created' => $created, 'skipped' => $skipped];
+    }
+
+    private function actualizarEstadoImportado(Pedido $pedido, mixed $envioFinalizada, bool $facturado, ?string $estadoExterno): void
+    {
+        $actualizacion = [
+            'external_estado' => $estadoExterno,
+            'external_facturado' => $facturado,
+        ];
+
+        if ((int) $pedido->comprobantes_count === 0 && in_array($pedido->estado, ['en_deposito', 'en_viaje', 'facturado'], true)) {
+            $actualizacion['estado'] = $this->resolverEstadoImportado($envioFinalizada, $facturado);
+        }
+
+        $pedido->forceFill($actualizacion)->save();
+    }
+
+    private function resolverEstadoImportado(mixed $envioFinalizada, bool $facturado): string
+    {
+        if ($facturado) {
+            return 'facturado';
+        }
+
+        if ($envioFinalizada === null) {
+            return 'en_deposito';
+        }
+
+        // En el sistema externo, finalizada=1 indica que el envío llegó al depósito destino.
+        return (int) $envioFinalizada === 1 ? 'en_deposito' : 'en_viaje';
     }
 
     /** @return array{bultos: int, palets: int} */
