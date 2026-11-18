@@ -344,14 +344,6 @@ class TerceroAdminController extends Controller
         try {
             $motivo = DB::transaction(function () use ($cuenta): ?string {
                 $cuenta = TerceroCuenta::query()->whereKey($cuenta->id)->lockForUpdate()->firstOrFail();
-                $relacionEmpresa = TerceroEmpresa::query()
-                    ->where('empresa_id', $cuenta->empresa_id)
-                    ->where('tercero_cuenta_id', $cuenta->id)
-                    ->first();
-
-                if (! $relacionEmpresa?->es_cliente || $relacionEmpresa->es_proveedor) {
-                    return 'Solo se pueden eliminar cuentas que sean exclusivamente de cliente.';
-                }
 
                 $usos = [];
                 $referencias = [
@@ -406,7 +398,7 @@ class TerceroAdminController extends Controller
             return back()->with('flash.error', $motivo);
         }
 
-        return back()->with('flash.success', 'Cliente eliminado.');
+        return back()->with('flash.success', 'Cuenta de tercero eliminada.');
     }
 
     public function lookupArcaCuit(Request $request, ArcaPersonaService $arca): JsonResponse

@@ -158,6 +158,10 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
 - proveedor_comprobantes
   - id, empresa_id, tercero_cuenta_id, tipo, numero, estado (emitida), moneda, cotizacion_ars, subtotal/iva_total/tributos_total/total, fecha_emision, fecha_vencimiento, detalle (json), cuenta_contable_id, receptor_cuit, observacion, creado_por_user_id
   - detalle: iva_items (legacy) o iva_detalle [{concepto, importe}] (neto_21/105/27/5/25/0, no_gravado, exento), percepciones/retenciones [{concepto, importe}], combustible, neto_no_gravado, op_exentas
+- combustible_tipos
+  - id, codigo (único, estable para tasas y comprobantes), nombre (editable)
+- combustible_tasas
+  - id, combustible_tipo (codigo), mes, monto_por_litro; unique (combustible_tipo, mes)
 - tercero_cuentas.cuenta_contable_proveedor_id (nullable) — cuenta por defecto para compras (manual, CSV, contabilización)
 - tarifas_relaciones.usar_seguro (bool, default true)
 - ordenes_pago

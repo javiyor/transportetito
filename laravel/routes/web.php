@@ -382,6 +382,9 @@ Route::middleware([
         Route::get('/combustibles/tasas', [PagoCuentaCombustibleIndexController::class, 'tasas'])->name('combustibles.tasas');
         Route::post('/combustibles/tasas', [PagoCuentaCombustibleIndexController::class, 'storeTasa'])->name('combustibles.tasas.store');
         Route::delete('/combustibles/tasas/{tasa}', [PagoCuentaCombustibleIndexController::class, 'destroyTasa'])->name('combustibles.tasas.destroy');
+        Route::post('/combustibles/tipos', [PagoCuentaCombustibleIndexController::class, 'storeTipo'])->name('combustibles.tipos.store');
+        Route::put('/combustibles/tipos/{tipo}', [PagoCuentaCombustibleIndexController::class, 'updateTipo'])->name('combustibles.tipos.update');
+        Route::delete('/combustibles/tipos/{tipo}', [PagoCuentaCombustibleIndexController::class, 'destroyTipo'])->name('combustibles.tipos.destroy');
         Route::get('/combustibles/tasa-actual', [PagoCuentaCombustibleIndexController::class, 'tasaActual'])->name('combustibles.tasa-actual');
         Route::get('/gastos', [GastoOperativoIndexController::class, 'index'])->name('gastos.index');
         Route::post('/gastos', [GastoOperativoIndexController::class, 'store'])->name('gastos.store');

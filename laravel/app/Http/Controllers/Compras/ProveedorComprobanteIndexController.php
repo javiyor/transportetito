@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\CombustibleTipo;
 use App\Models\CuentaContable;
 use App\Models\ProveedorComprobante;
 use App\Models\Tercero;
@@ -214,6 +215,7 @@ class ProveedorComprobanteIndexController extends Controller
 
         $proveedores = TerceroCuenta::query()
             ->with('tercero:id,cuit,razon_social', 'cuentaContableProveedor:id,codigo,nombre')
+            ->leftJoin('terceros', 'terceros.id', '=', 'tercero_cuentas.tercero_id')
             ->where('empresa_id', $empresaId)
             ->whereExists(function ($q) use ($empresaId) {
                 $q->selectRaw('1')
@@ -222,7 +224,8 @@ class ProveedorComprobanteIndexController extends Controller
                     ->where('te.empresa_id', $empresaId)
                     ->where('te.es_proveedor', true);
             })
-            ->orderBy('numero_cliente')
+            ->orderByRaw("LOWER(COALESCE(NULLIF(terceros.razon_social, ''), NULLIF(tercero_cuentas.nombre_cuenta, ''), ''))")
+            ->orderBy('tercero_cuentas.numero_cliente')
             ->get(['id', 'tercero_id', 'numero_cliente', 'nombre_cuenta', 'cuenta_contable_proveedor_id']);
 
         $fFechaDesde = $request->query('fecha_desde') ?: null;
@@ -264,6 +267,7 @@ class ProveedorComprobanteIndexController extends Controller
 
         return Inertia::render('Compras/Proveedores/Comprobantes/Index', [
             'proveedores' => $proveedores,
+            'tiposCombustible' => CombustibleTipo::query()->orderBy('nombre')->get(['codigo', 'nombre']),
             'comprobantes' => $comprobantes,
             'filtros' => [
                 'fecha_desde' => $fFechaDesde,

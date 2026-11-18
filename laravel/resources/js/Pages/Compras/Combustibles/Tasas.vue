@@ -1,22 +1,15 @@
 <script setup>
-import { Head, useForm, Link } from '@inertiajs/vue3';
+import { Head, useForm, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
-const TIPOS = [
-    { value: 'gasoil_grado_2', label: 'Gasoil Grado 2' },
-    { value: 'gasoil_grado_3', label: 'Gasoil Grado 3' },
-    { value: 'nafta_super', label: 'Nafta Súper' },
-    { value: 'nafta_premium', label: 'Nafta Premium' },
-    { value: 'kerosene', label: 'Kerosene' },
-    { value: 'fuel_oil', label: 'Fuel Oil' },
-];
-
 const props = defineProps({
     tasasPorMes: Object,
+    tiposCombustible: Array,
 });
 
 const form = useForm({
@@ -25,11 +18,36 @@ const form = useForm({
     monto_por_litro: '',
 });
 
+const tipoForm = useForm({ nombre: '' });
+const tipoEditForm = useForm({ nombre: '' });
+const editandoTipoId = ref(null);
+
 const submit = () => {
     form.post(route('compras.combustibles.tasas.store'), {
         preserveScroll: true,
         onSuccess: () => { form.monto_por_litro = ''; },
     });
+};
+
+const submitTipo = () => tipoForm.post(route('compras.combustibles.tipos.store'), {
+    preserveScroll: true,
+    onSuccess: () => tipoForm.reset(),
+});
+
+const editarTipo = (tipo) => {
+    editandoTipoId.value = tipo.id;
+    tipoEditForm.nombre = tipo.nombre;
+    tipoEditForm.clearErrors();
+};
+
+const guardarTipo = () => tipoEditForm.put(route('compras.combustibles.tipos.update', editandoTipoId.value), {
+    preserveScroll: true,
+    onSuccess: () => { editandoTipoId.value = null; },
+});
+
+const eliminarTipo = (tipo) => {
+    if (!confirm(`¿Eliminar el tipo de combustible "${tipo.nombre}"?`)) return;
+    router.delete(route('compras.combustibles.tipos.destroy', tipo.id), { preserveScroll: true });
 };
 
 const eliminar = async (id) => {
@@ -38,7 +56,7 @@ const eliminar = async (id) => {
     window.location.reload();
 };
 
-const tipoLabel = (value) => TIPOS.find((t) => t.value === value)?.label || value;
+const tipoLabel = (value) => props.tiposCombustible?.find((tipo) => tipo.codigo === value)?.nombre || value;
 </script>
 
 <template>
@@ -52,12 +70,43 @@ const tipoLabel = (value) => TIPOS.find((t) => t.value === value)?.label || valu
         </template>
         <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">
             <div class="bg-white shadow sm:rounded-lg p-4">
+                <h3 class="text-base font-semibold text-gray-900">Tipos de combustible</h3>
+                <form class="mt-3 flex flex-col gap-2 sm:flex-row" @submit.prevent="submitTipo">
+                    <div class="flex-1">
+                        <TextInput v-model="tipoForm.nombre" type="text" maxlength="120" class="block w-full" placeholder="Nuevo tipo de combustible" />
+                        <p v-if="tipoForm.errors.nombre" class="mt-1 text-sm text-red-600">{{ tipoForm.errors.nombre }}</p>
+                    </div>
+                    <PrimaryButton :disabled="tipoForm.processing">Agregar tipo</PrimaryButton>
+                </form>
+                <div class="mt-3 divide-y divide-gray-100">
+                    <div v-for="tipo in tiposCombustible" :key="tipo.id" class="flex items-center justify-between gap-3 py-2">
+                        <form v-if="editandoTipoId === tipo.id" class="flex flex-1 items-start gap-2" @submit.prevent="guardarTipo">
+                            <div class="flex-1">
+                                <TextInput v-model="tipoEditForm.nombre" type="text" maxlength="120" class="block w-full" />
+                                <p v-if="tipoEditForm.errors.nombre" class="mt-1 text-sm text-red-600">{{ tipoEditForm.errors.nombre }}</p>
+                            </div>
+                            <PrimaryButton :disabled="tipoEditForm.processing">Guardar</PrimaryButton>
+                            <SecondaryButton type="button" @click="editandoTipoId = null">Cancelar</SecondaryButton>
+                        </form>
+                        <template v-else>
+                            <span class="text-sm text-gray-800">{{ tipo.nombre }}</span>
+                            <div class="flex gap-2">
+                                <button type="button" class="text-sm text-indigo-600 hover:text-indigo-800" @click="editarTipo(tipo)">Editar</button>
+                                <button type="button" class="text-sm text-red-600 hover:text-red-800" @click="eliminarTipo(tipo)">Eliminar</button>
+                            </div>
+                        </template>
+                    </div>
+                    <p v-if="!tiposCombustible?.length" class="py-3 text-sm text-gray-500">Todavía no hay tipos cargados.</p>
+                </div>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg p-4">
                 <h3 class="text-base font-semibold text-gray-900">Nueva tasa</h3>
                 <form class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4" @submit.prevent="submit">
                     <div>
                         <InputLabel value="Combustible" />
                         <select v-model="form.combustible_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            <option v-for="t in TIPOS" :key="t.value" :value="t.value">{{ t.label }}</option>
+                            <option v-for="t in tiposCombustible" :key="t.codigo" :value="t.codigo">{{ t.nombre }}</option>
                         </select>
                     </div>
                     <div>

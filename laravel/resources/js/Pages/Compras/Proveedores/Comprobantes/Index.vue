@@ -50,6 +50,7 @@ const page = usePage();
 
 const props = defineProps({
     proveedores: Array,
+    tiposCombustible: Array,
     comprobantes: Object,
     catalogos: Object,
     resumen: Object,
@@ -236,15 +237,6 @@ watch(() => form.tipo, (tipo) => {
         form.iva_detalle = [{ concepto: 'neto_21', importe: '' }];
     }
 });
-
-const TIPOS_COMBUSTIBLE = [
-    { value: 'gasoil_grado_2', label: 'Gasoil Grado 2' },
-    { value: 'gasoil_grado_3', label: 'Gasoil Grado 3' },
-    { value: 'nafta_super', label: 'Nafta Superior' },
-    { value: 'nafta_premium', label: 'Nafta Premium' },
-    { value: 'kerosene', label: 'Kerosene' },
-    { value: 'fuel_oil', label: 'Fuel Oil' },
-];
 
 const fetchTasaCombustible = async (tipo, fecha) => {
     if (!tipo) { tasaActualCombustible.value = 0; return 0; }
@@ -546,7 +538,7 @@ const submitDelete = () => {
                                 <InputLabel value="Tipo combustible" />
                                 <select v-model="form.combustible_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
                                     <option value="">(seleccionar)</option>
-                                    <option v-for="t in TIPOS_COMBUSTIBLE" :key="t.value" :value="t.value">{{ t.label }}</option>
+                                    <option v-for="t in tiposCombustible" :key="t.codigo" :value="t.codigo">{{ t.nombre }}</option>
                                 </select>
                             </div>
                             <div>
@@ -719,7 +711,7 @@ const submitDelete = () => {
                                         <InputLabel value="Tipo combustible" />
                                         <select v-model="editComprobanteForm.combustible_tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-xs">
                                             <option value="">(seleccionar)</option>
-                                            <option v-for="t in TIPOS_COMBUSTIBLE" :key="t.value" :value="t.value">{{ t.label }}</option>
+                                            <option v-for="t in tiposCombustible" :key="t.codigo" :value="t.codigo">{{ t.nombre }}</option>
                                         </select>
                                     </div>
                                     <div>

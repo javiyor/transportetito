@@ -199,8 +199,8 @@ const submitEdit = () => {
 };
 
 const eliminarCuenta = (cuenta) => {
-    if (!cuenta.es_cliente || cuenta.es_proveedor || eliminandoId.value) return;
-    if (!window.confirm(`¿Eliminar el cliente "${cuenta.tercero?.razon_social || cuenta.nombre_cuenta || ''}"? Solo se eliminará si no tiene movimientos ni registros asociados.`)) return;
+    if (eliminandoId.value) return;
+    if (!window.confirm(`¿Eliminar la cuenta de "${cuenta.tercero?.razon_social || cuenta.nombre_cuenta || ''}"? Solo se eliminará si no tiene movimientos ni registros asociados.`)) return;
 
     eliminandoId.value = cuenta.id;
     router.delete(route('admin.terceros.destroy', cuenta.id), {
@@ -370,7 +370,7 @@ const localidadNombre = (c) => {
                             </div>
                             <div class="flex shrink-0 gap-1">
                                 <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
-                                <button v-if="c.es_cliente && !c.es_proveedor" type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="eliminandoId === c.id" @click="eliminarCuenta(c)">{{ eliminandoId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
+                                <button type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="eliminandoId === c.id" @click="eliminarCuenta(c)">{{ eliminandoId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
                             </div>
                         </div>
                         <div class="mt-2 grid grid-cols-1 gap-2 text-xs">
@@ -469,7 +469,7 @@ const localidadNombre = (c) => {
                                 <td class="sticky right-0 bg-white px-3 py-2 text-right text-xs">
                                     <div class="flex justify-end gap-1">
                                         <SecondaryButton class="text-xs" @click.prevent="openEdit(c)">Editar</SecondaryButton>
-                                        <button v-if="c.es_cliente && !c.es_proveedor" type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="eliminandoId === c.id" @click="eliminarCuenta(c)">{{ eliminandoId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
+                                        <button type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="eliminandoId === c.id" @click="eliminarCuenta(c)">{{ eliminandoId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
                                     </div>
                                 </td>
                             </tr>

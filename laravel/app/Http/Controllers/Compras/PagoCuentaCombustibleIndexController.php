@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
 use App\Models\CombustibleTasa;
+use App\Models\CombustibleTipo;
 use App\Models\Empresa;
 use App\Models\PagoCuentaCombustible;
+use App\Models\ProveedorComprobante;
 use App\Services\Moneda\TipoCambioResolver;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -97,7 +101,50 @@ class PagoCuentaCombustibleIndexController extends Controller
 
         return Inertia::render('Compras/Combustibles/Tasas', [
             'tasasPorMes' => $tasas,
+            'tiposCombustible' => CombustibleTipo::query()->orderBy('nombre')->get(['id', 'codigo', 'nombre']),
         ]);
+    }
+
+    public function storeTipo(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['nombre' => ['required', 'string', 'max:120']]);
+        $codigo = Str::slug($data['nombre'], '_');
+
+        if ($codigo === '') {
+            throw ValidationException::withMessages(['nombre' => 'Ingresá un nombre que permita generar un código.']);
+        }
+        if (strlen($codigo) > 64) {
+            throw ValidationException::withMessages(['nombre' => 'El nombre es demasiado largo para generar el código del tipo.']);
+        }
+        if (CombustibleTipo::query()->where('codigo', $codigo)->exists()) {
+            throw ValidationException::withMessages(['nombre' => 'Ya existe un tipo de combustible con ese nombre/código.']);
+        }
+
+        CombustibleTipo::query()->create(['codigo' => $codigo, 'nombre' => trim($data['nombre'])]);
+
+        return back()->with('flash.success', 'Tipo de combustible creado.');
+    }
+
+    public function updateTipo(Request $request, CombustibleTipo $tipo): RedirectResponse
+    {
+        $data = $request->validate(['nombre' => ['required', 'string', 'max:120']]);
+        $tipo->update(['nombre' => trim($data['nombre'])]);
+
+        return back()->with('flash.success', 'Tipo de combustible actualizado.');
+    }
+
+    public function destroyTipo(CombustibleTipo $tipo): RedirectResponse
+    {
+        $tieneTasas = CombustibleTasa::query()->where('combustible_tipo', $tipo->codigo)->exists();
+        $tieneComprobantes = ProveedorComprobante::query()->where('detalle->combustible->tipo', $tipo->codigo)->exists();
+
+        if ($tieneTasas || $tieneComprobantes) {
+            return back()->with('flash.error', 'No se puede eliminar: el tipo de combustible ya está usado en tasas o comprobantes.');
+        }
+
+        $tipo->delete();
+
+        return back()->with('flash.success', 'Tipo de combustible eliminado.');
     }
 
     public function storeTasa(Request $request): JsonResponse
