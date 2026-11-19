@@ -75,6 +75,7 @@ class CuentaCorrienteShowController extends Controller
         $comprobantesRawDesc = Comprobante::query()
             ->where('empresa_id', $empresaId)
             ->where('facturar_cuenta_id', $cuenta->id)
+            ->where('estado', '!=', 'anulada')
             ->orderByDesc('fecha_emision')
             ->orderByDesc('numero_interno')
             ->orderByDesc('id')
