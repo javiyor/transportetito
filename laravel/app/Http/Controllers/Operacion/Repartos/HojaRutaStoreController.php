@@ -12,7 +12,6 @@ use App\Models\Zona;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class HojaRutaStoreController extends Controller
 {
@@ -23,7 +22,7 @@ class HojaRutaStoreController extends Controller
 
         $data = $request->validate([
             'vehiculo_id' => ['nullable', 'integer', 'exists:vehiculos,id'],
-            'zona_id' => ['required', 'integer', Rule::exists('zonas', 'id')->where('empresa_id', $empresaId)],
+            'zona_nombre' => ['required', 'string', 'max:255'],
             'chofer_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'comprobante_ids' => ['required', 'array', 'min:1'],
             'comprobante_ids.*' => ['integer', 'exists:comprobantes,id'],
@@ -91,16 +90,33 @@ class HojaRutaStoreController extends Controller
         }
 
         $total = 0;
-        $zonaId = (int) $data['zona_id'];
-        $zona = Zona::query()->findOrFail($zonaId);
+        $zonaNombre = trim($data['zona_nombre']);
 
-        $hoja = DB::transaction(function () use ($data, $empresaId, $deposito, $zonaId, $zona, $comprobantes, &$total) {
+        $hoja = DB::transaction(function () use ($data, $empresaId, $deposito, $zonaNombre, $comprobantes, &$total) {
+            $zona = Zona::query()
+                ->where('empresa_id', $empresaId)
+                ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($zonaNombre)])
+                ->first();
+
+            if (! $zona) {
+                $zona = Zona::query()->create([
+                    'empresa_id' => $empresaId,
+                    'nombre' => $zonaNombre,
+                    'orden_default' => (int) Zona::query()->where('empresa_id', $empresaId)->max('orden_default') + 10,
+                    'activo' => true,
+                ]);
+            }
+
+            if (! $zona->activo) {
+                $zona->update(['activo' => true]);
+            }
+
             $hoja = HojaRuta::query()->create([
                 'empresa_id' => $empresaId,
                 'deposito_id' => $deposito->id,
                 'fecha' => now()->toDateString(),
                 'vehiculo_id' => ! empty($data['vehiculo_id']) ? (int) $data['vehiculo_id'] : null,
-                'zona_id' => $zonaId,
+                'zona_id' => $zona->id,
                 'chofer_user_id' => ! empty($data['chofer_user_id']) ? (int) $data['chofer_user_id'] : null,
                 'estado' => 'borrador',
             ]);
@@ -126,14 +142,12 @@ class HojaRutaStoreController extends Controller
                 $order += 10;
             }
 
-            if ($zonaId) {
-                $cuentasEntregaIds = $comprobantes->pluck('entrega_cuenta_id')->filter()->unique();
-                TerceroCuenta::query()
-                    ->whereIn('id', $cuentasEntregaIds)
-                    ->where('empresa_id', $empresaId)
-                    ->whereNull('zona_id')
-                    ->update(['zona_id' => $zonaId]);
-            }
+            $cuentasEntregaIds = $comprobantes->pluck('entrega_cuenta_id')->filter()->unique();
+            TerceroCuenta::query()
+                ->whereIn('id', $cuentasEntregaIds)
+                ->where('empresa_id', $empresaId)
+                ->whereNull('zona_id')
+                ->update(['zona_id' => $zona->id]);
 
             return $hoja;
         });

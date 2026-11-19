@@ -130,7 +130,7 @@ const estadoLabel = (estado) => ({
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Origen</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Bult</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Pal</th>
-                                <th class="px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Val.Decl</th>
+                                <th class="px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Facturado</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Manif</th>
@@ -147,7 +147,7 @@ const estadoLabel = (estado) => ({
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.origen || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.bultos }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.palets }}</td>
-                                <td class="px-1 py-0.5 text-[10px] font-mono text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>
+                                <td class="px-1 py-0.5 text-[10px] font-mono text-right">{{ p.valor_facturado == null ? '' : `$${Number(p.valor_facturado).toFixed(2)}` }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-center">
                                     <span class="inline-flex items-center px-1 py-0 rounded-full text-[9px] font-medium" :class="estadoClass(p.estado)">{{ estadoLabel(p.estado) }}</span>
                                 </td>

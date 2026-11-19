@@ -293,7 +293,6 @@ Route::middleware([
 
         Route::middleware(['role:operaciones'])->prefix('repartos')->name('repartos.')->group(function () {
             Route::get('/facturas', FacturasListController::class)->name('facturas');
-            Route::post('/zonas', [FacturasListController::class, 'storeZona'])->name('zonas.store');
             Route::get('/hojas', HojaRutaIndexController::class)->name('hojas.index');
             Route::post('/hojas', HojaRutaStoreController::class)->name('hojas.store');
             Route::get('/hojas/{hoja}', HojaRutaShowController::class)->name('hojas.show');

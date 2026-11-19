@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Models\Vehiculo;
 use App\Models\Zona;
 use Illuminate\Support\Collection;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -21,6 +20,7 @@ class FacturasListController extends Controller
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         $zonaId = (int) ($request->query('zona_id') ?: 0);
+        $zona = trim((string) ($request->query('zona') ?: ''));
         $localidad = trim((string) ($request->query('localidad') ?: ''));
         $tipo = (string) ($request->query('tipo') ?: 'todos');
         $fechaRaw = $request->query('fecha');
@@ -89,6 +89,10 @@ class FacturasListController extends Controller
             $query->whereHas('entregaCuenta', fn ($q) => $q->where('zona_id', $zonaId));
         }
 
+        if ($zona !== '') {
+            $query->whereHas('entregaCuenta.zona', fn ($q) => $q->where('nombre', 'ilike', '%'.$zona.'%'));
+        }
+
         if (in_array($tipo, ['factura_interna', 'guia_envio'], true)) {
             $query->where('tipo', $tipo);
         }
@@ -142,6 +146,7 @@ class FacturasListController extends Controller
             'empresas' => $empresas,
             'filters' => [
                 'zona_id' => $zonaId ?: null,
+                'zona' => $zona,
                 'localidad' => $localidad !== '' ? $localidad : null,
                 'fecha' => $fecha,
                 'tipo' => $tipo,
@@ -151,28 +156,6 @@ class FacturasListController extends Controller
             'vehiculos' => Vehiculo::query()->where('activo', true)->orderBy('patente')->get(['id', 'patente', 'marca', 'modelo']),
             'choferes' => User::query()->role('chofer')->orderBy('name')->get(['id', 'name', 'email']),
         ]);
-    }
-
-    public function storeZona(Request $request): RedirectResponse
-    {
-        $data = $request->validate(['nombre' => ['required', 'string', 'max:255']]);
-        $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-
-        abort_unless($empresaId > 0, 403);
-
-        $zona = Zona::query()->firstOrCreate(
-            ['empresa_id' => $empresaId, 'nombre' => trim($data['nombre'])],
-            [
-                'orden_default' => (int) Zona::query()->where('empresa_id', $empresaId)->max('orden_default') + 10,
-                'activo' => true,
-            ]
-        );
-
-        if (! $zona->activo) {
-            $zona->update(['activo' => true]);
-        }
-
-        return back()->with('flash.success', 'Zona cargada.');
     }
 
     private function resolverLocalidadDestinatario(Comprobante $comprobante, Collection $cuentasPorTercero): string

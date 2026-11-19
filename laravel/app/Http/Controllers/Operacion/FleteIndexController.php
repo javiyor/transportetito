@@ -82,7 +82,7 @@ class FleteIndexController extends Controller
     private function mapFlete(Pedido $pedido): array
     {
         $manifiesto = $pedido->manifiestoIngreso;
-        $comprobante = $pedido->comprobantes->first();
+        $comprobante = $pedido->comprobantes->first(fn ($comprobante) => $comprobante->estado !== 'anulada');
 
         $itemsHojaRuta = $pedido->comprobantes->flatMap(fn ($c) => $c->hojaRutaItems);
         $itemEntregado = $itemsHojaRuta->first(fn ($item) => in_array($item->estado_entrega, ['entregado', 'entregado_con_diferencia'], true));
@@ -100,7 +100,7 @@ class FleteIndexController extends Controller
             'destino' => $manifiesto?->ciudad_destino,
             'bultos' => (int) $pedido->bultos,
             'palets' => (int) $pedido->palets,
-            'valor_declarado' => (float) $pedido->valor_declarado,
+            'valor_facturado' => $comprobante ? (float) $comprobante->total : null,
             'estado' => $estado,
             'fecha' => $pedido->created_at?->format('Y-m-d'),
             'manifiesto_id' => $manifiesto?->id,
@@ -120,7 +120,7 @@ class FleteIndexController extends Controller
 
         $headers = [
             'ID', 'Remitente', 'Destinatario', 'Origen', 'Destino',
-            'Bultos', 'Palets', 'Valor Declarado', 'Estado',
+            'Bultos', 'Palets', 'Valor Facturado', 'Estado',
             'Fecha', 'Manifiesto ID', 'Hoja Ruta ID',
             'Comprobante Nro', 'Comprobante Tipo', 'Comprobante Total',
         ];
@@ -140,7 +140,7 @@ class FleteIndexController extends Controller
                     $row['destino'],
                     $row['bultos'],
                     $row['palets'],
-                    $row['valor_declarado'],
+                    $row['valor_facturado'],
                     $row['estado'],
                     $row['fecha'],
                     $row['manifiesto_id'],

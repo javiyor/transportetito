@@ -21,7 +21,7 @@ const props = defineProps({
 });
 
 const filterForm = useForm({
-    zona_id: props.filters?.zona_id || '',
+    zona: props.filters?.zona || '',
     localidad: props.filters?.localidad || '',
     fecha: props.filters?.fecha || '',
     tipo: props.filters?.tipo || 'todos',
@@ -44,33 +44,21 @@ const filteredFacturas = computed(() => {
 
 const createForm = useForm({
     vehiculo_id: '',
-    zona_id: '',
+    zona_nombre: '',
     chofer_user_id: '',
     comprobante_ids: [],
 });
 
 const showCreateModal = ref(false);
-const mostrarNuevaZona = ref(false);
-const zonaForm = useForm({ nombre: '' });
 
 const openCreateModal = () => {
     createForm.vehiculo_id = '';
-    createForm.zona_id = '';
+    createForm.zona_nombre = '';
     createForm.chofer_user_id = '';
     createForm.comprobante_ids = [...filterForm.comprobante_ids];
     createForm.clearErrors();
     showCreateModal.value = true;
 };
-
-const crearZona = () => zonaForm.post(route('operacion.repartos.zonas.store'), {
-    preserveScroll: true,
-    onSuccess: () => {
-        const zonaCreada = (props.zonasHoja || []).find((zona) => zona.nombre.toLowerCase() === zonaForm.nombre.trim().toLowerCase());
-        if (zonaCreada) createForm.zona_id = zonaCreada.id;
-        zonaForm.reset();
-        mostrarNuevaZona.value = false;
-    },
-});
 
 const submitCreate = () => {
     createForm.post(route('operacion.repartos.hojas.store'), {
@@ -84,7 +72,7 @@ const submitCreate = () => {
 const applyFilters = () => {
     router.get(
         route('operacion.repartos.facturas'),
-        { zona_id: filterForm.zona_id || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos', empresa_id: filterForm.empresa_id || null },
+        { zona: filterForm.zona.trim() || null, localidad: filterForm.localidad || null, fecha: filterForm.fecha || null, tipo: filterForm.tipo || 'todos', empresa_id: filterForm.empresa_id || null },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 };
@@ -131,17 +119,17 @@ const ordenDe = (id) => {
                 <div class="grid grid-cols-2 sm:grid-cols-7 gap-2">
                     <div>
                         <div class="text-[11px] font-medium text-gray-700 mb-0.5">Empresa</div>
-                        <select v-model="filterForm.empresa_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" @change="filterForm.zona_id = ''; filterForm.localidad = ''">
+                        <select v-model="filterForm.empresa_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1" @change="filterForm.zona = ''; filterForm.localidad = ''">
                             <option value="">Todas las empresas</option>
                             <option v-for="empresa in empresas" :key="empresa.id" :value="empresa.id">{{ empresa.razon_social }}</option>
                         </select>
                     </div>
                     <div>
                         <div class="text-[11px] font-medium text-gray-700 mb-0.5">Zona</div>
-                        <select v-model="filterForm.zona_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs py-1">
-                            <option value="">Todos</option>
-                            <option v-for="z in zonas" :key="z.id" :value="z.id">{{ z.nombre }}</option>
-                        </select>
+                        <TextInput v-model="filterForm.zona" type="text" class="block w-full text-xs py-1" placeholder="Escribir zona" />
+                        <div v-if="zonas?.length" class="mt-1 flex flex-wrap gap-1">
+                            <button v-for="z in zonas" :key="z.id" type="button" class="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] text-gray-600 hover:border-indigo-300 hover:text-indigo-700" @click="filterForm.zona = z.nombre">{{ z.nombre }}</button>
+                        </div>
                     </div>
                     <div>
                         <div class="text-[11px] font-medium text-gray-700 mb-0.5">Ciudad</div>
@@ -281,25 +269,13 @@ const ordenDe = (id) => {
                         <InputError class="mt-2" :message="createForm.errors.vehiculo_id" />
                     </div>
                     <div>
-                        <div class="flex items-center justify-between gap-2">
-                            <InputLabel value="Zona" />
-                            <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800" @click="mostrarNuevaZona = !mostrarNuevaZona">
-                                {{ mostrarNuevaZona ? 'Cancelar' : '+ Cargar zona' }}
-                            </button>
+                        <InputLabel value="Zona" />
+                        <TextInput v-model="createForm.zona_nombre" type="text" maxlength="255" class="mt-1 block w-full" placeholder="Escribir o seleccionar del historial" required />
+                        <InputError class="mt-2" :message="createForm.errors.zona_nombre" />
+                        <p class="mt-1 text-[11px] text-gray-500">Una zona nueva se guarda en el historial. Se asigna como predeterminada a clientes sin zona; las existentes se conservan.</p>
+                        <div v-if="zonasHoja?.length" class="mt-2 flex flex-wrap gap-1">
+                            <button v-for="z in zonasHoja" :key="z.id" type="button" class="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] text-gray-600 hover:border-indigo-300 hover:text-indigo-700" @click="createForm.zona_nombre = z.nombre">{{ z.nombre }}</button>
                         </div>
-                        <select v-model="createForm.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                            <option value="">Seleccionar zona...</option>
-                            <option v-for="z in zonasHoja" :key="z.id" :value="z.id">{{ z.nombre }}</option>
-                        </select>
-                        <InputError class="mt-2" :message="createForm.errors.zona_id" />
-                        <p class="mt-1 text-[11px] text-gray-500">Se asigna solo a clientes que aún no tienen zona; sus zonas existentes se conservan.</p>
-                        <form v-if="mostrarNuevaZona" class="mt-2 flex items-start gap-2" @submit.prevent="crearZona">
-                            <div class="flex-1">
-                                <TextInput v-model="zonaForm.nombre" type="text" maxlength="255" class="block w-full text-sm" placeholder="Nombre de la zona" />
-                                <InputError class="mt-1" :message="zonaForm.errors.nombre" />
-                            </div>
-                            <SecondaryButton type="submit" :disabled="zonaForm.processing">Guardar zona</SecondaryButton>
-                        </form>
                     </div>
                     <div>
                         <InputLabel value="Chofer (opcional)" />
