@@ -12,6 +12,13 @@ const formatFecha = (value) => {
     const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
 };
 
+const formatFechaHora = (value) => {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 16);
+    return `${d.toLocaleDateString('es-AR')} ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 const totalImporte = () => {
     return (props.hoja.items || []).reduce((acc, it) => acc + Number(it.comprobante?.total || 0), 0).toFixed(2);
 };
@@ -33,7 +40,7 @@ const vehiculoLabel = computed(() => {
                     <div class="text-xs uppercase tracking-wider text-gray-500">Hoja de ruta</div>
                     <h1 class="mt-1 text-2xl font-semibold">#{{ hoja.id }}</h1>
                     <div class="mt-2 text-sm text-gray-700">
-                        {{ formatFecha(hoja.fecha) }} · {{ hoja.deposito?.nombre || '-' }} · Estado: {{ hoja.estado }}
+                        Creada: {{ formatFechaHora(hoja.created_at) }} · {{ hoja.deposito?.nombre || '-' }} · Estado: {{ hoja.estado }}
                     </div>
                 </div>
                 <div class="text-right">
@@ -41,6 +48,15 @@ const vehiculoLabel = computed(() => {
                     <div class="text-xs text-gray-600">CUIT {{ hoja.empresa?.cuit || '-' }}</div>
                     <div class="mt-2 text-xs text-gray-600">Total: {{ hoja.items?.[0]?.comprobante?.moneda || 'ARS' }} {{ totalImporte() }}</div>
                 </div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-y border-gray-200 py-2 text-[10px] text-gray-600">
+                <span><strong>Borrador:</strong> en preparación.</span>
+                <span><strong>Cerrada:</strong> reparto finalizado.</span>
+                <span><strong>Pendiente:</strong> entrega no registrada.</span>
+                <span><strong>Entregado:</strong> recibido.</span>
+                <span><strong>Entregado con diferencia:</strong> recibido con observaciones.</span>
+                <span><strong>No entregado:</strong> entrega no completada.</span>
             </div>
 
             <div class="mt-4 grid grid-cols-3 gap-4 text-sm">

@@ -13,6 +13,7 @@ import { computed, ref, watch } from 'vue';
 const props = defineProps({
     empresas: Array,
     empresaId: [Number, null],
+    zonas: Array,
     cuentas: Array,
     cuitInicial: String,
     provincias: Array,
@@ -30,6 +31,7 @@ const flashError = computed(() => page.props.tt?.flash?.error || page.props.flas
 const eliminandoId = ref(null);
 
 const cuentasDeEmpresa = (empresaId) => (props.cuentasContables || []).filter((c) => String(c.empresa_id) === String(empresaId || ''));
+const zonasDeEmpresa = (empresaId) => (props.zonas || []).filter((zona) => String(zona.empresa_id) === String(empresaId || ''));
 const cuentaLabel = (c) => (c ? `${c.codigo} - ${c.nombre}` : '-');
 
 const localidades = ref([]);
@@ -98,6 +100,7 @@ const toggleCompartidos = () => {
 
 const form = useForm({
     empresa_id: empresaFiltroId.value || props.empresaId || props.empresas?.[0]?.id || null,
+    zona_id: '',
     numero_cliente: props.proximoNumeroCliente,
     cuit: props.cuitInicial || '',
     razon_social: '',
@@ -137,7 +140,7 @@ watch(() => editForm.es_proveedor, (val) => {
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'localidad', 'barrio', 'telefono', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'zona_id', 'localidad', 'barrio', 'telefono', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
     });
 };
 
@@ -145,6 +148,7 @@ const editing = ref(false);
 const editId = ref(null);
 const editForm = useForm({
     empresa_id: '',
+    zona_id: '',
     cuit: '',
     razon_social: '',
     condicion_iva: '',
@@ -166,6 +170,7 @@ const editForm = useForm({
 const openEdit = (c) => {
     editId.value = c.id;
     editForm.empresa_id = c.empresa_id || '';
+    editForm.zona_id = c.zona_id || '';
     editForm.cuit = c.tercero?.cuit || '';
     editForm.razon_social = c.tercero?.razon_social || '';
     editForm.condicion_iva = c.tercero?.condicion_iva || '';
@@ -192,6 +197,12 @@ const openEdit = (c) => {
 watch(() => editForm.provincia_id, (val) => {
     editForm.localidad_id = '';
     cargarLocalidades(val, editLocalidades);
+});
+
+watch(() => editForm.empresa_id, (val) => {
+    if (editForm.zona_id && !zonasDeEmpresa(val).some((zona) => String(zona.id) === String(editForm.zona_id))) {
+        editForm.zona_id = '';
+    }
 });
 
 const submitEdit = () => {
@@ -290,6 +301,15 @@ const localidadNombre = (c) => {
                             <option v-for="l in localidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
                         </select>
                         <InputError class="mt-1" :message="form.errors.localidad_id" />
+                    </div>
+
+                    <div>
+                        <InputLabel value="Zona predeterminada" />
+                        <select v-model="form.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">(sin asignar)</option>
+                            <option v-for="z in zonasDeEmpresa(form.empresa_id)" :key="z.id" :value="z.id">{{ z.nombre }}</option>
+                        </select>
+                        <InputError class="mt-1" :message="form.errors.zona_id" />
                     </div>
 
                     <div>
@@ -534,6 +554,14 @@ const localidadNombre = (c) => {
                                 <option v-for="l in editLocalidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
                             </select>
                             <InputError class="mt-1" :message="editForm.errors.localidad_id" />
+                        </div>
+                        <div>
+                            <InputLabel value="Zona predeterminada" />
+                            <select v-model="editForm.zona_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">(sin asignar)</option>
+                                <option v-for="z in zonasDeEmpresa(editForm.empresa_id)" :key="z.id" :value="z.id">{{ z.nombre }}</option>
+                            </select>
+                            <InputError class="mt-1" :message="editForm.errors.zona_id" />
                         </div>
                         <div>
                             <InputLabel value="Teléfono" />

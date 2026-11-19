@@ -11,6 +11,7 @@ use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Models\TerceroEmpresa;
 use App\Models\User;
+use App\Models\Zona;
 use App\Services\Arca\ArcaPersonaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\QueryException;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -71,6 +73,7 @@ class TerceroAdminController extends Controller
             'tercero_cuentas.barrio',
             'tercero_cuentas.provincia_id',
             'tercero_cuentas.localidad_id',
+            'tercero_cuentas.zona_id',
             'tercero_cuentas.email',
             'tercero_cuentas.enviar_comprobantes_por_email',
             'tercero_cuentas.cobrador_user_id',
@@ -111,6 +114,7 @@ class TerceroAdminController extends Controller
 
         return Inertia::render('Admin/Terceros/Index', [
             'empresas' => Empresa::query()->orderBy('razon_social')->get(['id', 'razon_social']),
+            'zonas' => Zona::query()->where('activo', true)->orderBy('empresa_id')->orderBy('nombre')->get(['id', 'empresa_id', 'nombre']),
             'empresaId' => $empresaId > 0 ? $empresaId : null,
             'cuentas' => $cuentas,
             'cuitInicial' => $request->query('cuit') ?: null,
@@ -134,6 +138,7 @@ class TerceroAdminController extends Controller
     {
         $data = $request->validate([
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
+            'zona_id' => ['nullable', 'integer', Rule::exists('zonas', 'id')->where('empresa_id', (int) $request->input('empresa_id'))],
             'numero_cliente' => ['required', 'integer', 'min:1'],
             'cuit' => ['required', 'string', 'max:32'],
             'razon_social' => ['required', 'string', 'max:255'],
@@ -214,6 +219,7 @@ class TerceroAdminController extends Controller
                 'tercero_id' => $tercero->id,
                 'numero_cliente' => (int) $data['numero_cliente'],
                 'nombre_cuenta' => $tercero->razon_social,
+                'zona_id' => $data['zona_id'] ?? null,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
                 'provincia_id' => $data['provincia_id'] ?: null,
@@ -230,6 +236,7 @@ class TerceroAdminController extends Controller
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'nombre_cuenta' => $tercero->razon_social,
+            'zona_id' => $data['zona_id'] ?? $cuenta->zona_id,
             'localidad' => $data['localidad'] ?: $cuenta->localidad,
             'barrio' => $data['barrio'] ?: $cuenta->barrio,
             'provincia_id' => $data['provincia_id'] ?: $cuenta->provincia_id,
@@ -260,6 +267,7 @@ class TerceroAdminController extends Controller
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
+            'zona_id' => ['nullable', 'integer', Rule::exists('zonas', 'id')->where('empresa_id', (int) $request->input('empresa_id'))],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
@@ -320,6 +328,7 @@ class TerceroAdminController extends Controller
             'tercero_id' => $tercero->id,
             'empresa_id' => $data['empresa_id'],
             'nombre_cuenta' => $tercero->razon_social,
+            'zona_id' => $data['zona_id'] ?? null,
             'localidad' => $data['localidad'] ?: null,
             'barrio' => $data['barrio'] ?: null,
             'provincia_id' => $data['provincia_id'] ?: null,

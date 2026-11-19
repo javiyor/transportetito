@@ -36,12 +36,11 @@ const medioLabel = (m) => {
     return map[m] || m;
 };
 
-const formatFecha = (v) => {
-    if (!v) return '-';
-    const s = String(v).slice(0, 10);
-    const d = new Date(s + 'T12:00:00');
-    if (isNaN(d.getTime())) return s.split('-').reverse().join('-');
-    const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
+const formatFechaHora = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ').slice(0, 16);
+    return `${date.toLocaleDateString('es-AR')} ${date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
 };
 </script>
 
@@ -117,6 +116,12 @@ const formatFecha = (v) => {
                         <div class="text-xs font-semibold text-gray-900">$ {{ total }}</div>
                     </div>
                 </div>
+                <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-200 pt-2 text-[11px] text-gray-600">
+                    <span><strong>Borrador:</strong> hoja en preparación.</span>
+                    <span><strong>Cerrada:</strong> reparto finalizado.</span>
+                    <span><strong>Pendiente:</strong> entrega aún no registrada.</span>
+                    <span><strong>Entregado:</strong> recibido por el destinatario.</span>
+                </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
@@ -125,7 +130,7 @@ const formatFecha = (v) => {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">ID</th>
-                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Creada</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Depósito</th>
                                 <th class="px-2 py-1.5 text-center text-[11px] font-medium text-gray-500 uppercase">Items</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Estado</th>
@@ -135,7 +140,7 @@ const formatFecha = (v) => {
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="h in hojas.data" :key="h.id" class="hover:bg-gray-50">
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ h.id }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFecha(h.fecha) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFechaHora(h.created_at) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ h.deposito?.nombre || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 text-center">{{ h.items?.length || 0 }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px]">

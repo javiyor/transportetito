@@ -135,11 +135,25 @@ const stats = computed(() => {
     return { total: total.toFixed(2), entregados, noEntregados, pendientes, count: items.length };
 });
 
+const estadoEntregaLabel = (estado) => ({
+    pendiente: 'Pendiente',
+    entregado: 'Entregado',
+    entregado_con_diferencia: 'Entregado con diferencia',
+    no_entregado: 'No entregado',
+}[estado] || estado || '-');
+
 const vehiculoLabel = computed(() => {
     if (!props.hoja.vehiculo) return null;
     const v = props.hoja.vehiculo;
     return `${v.patente}${v.marca ? ' - ' + v.marca : ''}${v.modelo ? ' ' + v.modelo : ''}`;
 });
+
+const formatFechaHora = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ').slice(0, 16);
+    return `${date.toLocaleDateString('es-AR')} ${date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+};
 </script>
 
 <template>
@@ -151,7 +165,7 @@ const vehiculoLabel = computed(() => {
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Hoja #{{ hoja.id }}</h2>
                     <div class="mt-1 text-sm text-gray-600">
-                        {{ hoja.fecha }}
+                        Creada: {{ formatFechaHora(hoja.created_at) }}
                         · {{ hoja.deposito?.nombre || '-' }}
                         · Estado: {{ hoja.estado }}
                         <template v-if="hoja.chofer"> · Chofer: {{ hoja.chofer.name }}</template>
@@ -183,7 +197,7 @@ const vehiculoLabel = computed(() => {
                 <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div><div class="text-xs text-gray-500">Comprobantes</div><div class="font-medium text-gray-900">{{ hojaResumen.cantidad }}</div></div>
                     <div><div class="text-xs text-gray-500">Total</div><div class="font-medium text-gray-900">ARS {{ Number(hojaResumen.total || 0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) }}</div></div>
-                    <div><div class="text-xs text-gray-500">Fecha</div><div class="font-medium text-gray-900">{{ hojaResumen.fecha }}</div></div>
+                    <div><div class="text-xs text-gray-500">Fecha y hora</div><div class="font-medium text-gray-900">{{ hojaResumen.fecha }}</div></div>
                     <div><div class="text-xs text-gray-500">IDs</div><div class="font-mono text-xs text-gray-700">{{ (hojaResumen.ids || []).join(', ') }}</div></div>
                 </div>
             </div>
@@ -206,6 +220,14 @@ const vehiculoLabel = computed(() => {
                         <div class="text-[10px] text-gray-500">Total</div>
                         <div class="text-xs font-medium text-gray-900">{{ hoja.items?.[0]?.comprobante?.moneda || 'ARS' }} {{ stats.total }}</div>
                     </div>
+                </div>
+                <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-200 pt-2 text-[11px] text-gray-600">
+                    <span><strong>Borrador:</strong> hoja en preparación y editable.</span>
+                    <span><strong>Cerrada:</strong> reparto finalizado y bloqueado.</span>
+                    <span><strong>Pendiente:</strong> entrega aún no registrada.</span>
+                    <span><strong>Entregado:</strong> recibido por el destinatario.</span>
+                    <span><strong>Entregado con diferencia:</strong> recibido con observaciones.</span>
+                    <span><strong>No entregado:</strong> no se completó la entrega.</span>
                 </div>
             </div>
 
@@ -239,7 +261,7 @@ const vehiculoLabel = computed(() => {
                                             'bg-blue-100 text-blue-800': it.estado_entrega === 'entregado_con_diferencia',
                                             'bg-red-100 text-red-800': it.estado_entrega === 'no_entregado',
                                         }"
-                                    >{{ it.estado_entrega }}</span>
+                                    >{{ estadoEntregaLabel(it.estado_entrega) }}</span>
                                     <div v-if="it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia'" class="mt-2 space-y-1">
                                         <div v-if="it.recibe_nombre" class="text-xs text-gray-600">Recibe: {{ it.recibe_nombre }} (DNI: {{ it.recibe_dni || '-' }})</div>
                                         <div v-if="it.fecha_entrega" class="text-xs text-gray-400">Entrega: {{ it.fecha_entrega }}</div>
