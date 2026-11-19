@@ -127,7 +127,6 @@ const formatFecha = (v) => {
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">ID</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Fecha</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Depósito</th>
-                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Empresa</th>
                                 <th class="px-2 py-1.5 text-center text-[11px] font-medium text-gray-500 uppercase">Items</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-medium text-gray-500 uppercase">Acción</th>
@@ -138,7 +137,6 @@ const formatFecha = (v) => {
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ h.id }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFecha(h.fecha) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ h.deposito?.nombre || '-' }}</td>
-                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-600 truncate max-w-[150px]">{{ h.empresa?.razon_social || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 text-center">{{ h.items?.length || 0 }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px]">
                                     <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium" :class="h.estado === 'cerrada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">{{ h.estado }}</span>
@@ -148,7 +146,7 @@ const formatFecha = (v) => {
                                 </td>
                             </tr>
                             <tr v-if="!hojas.data.length">
-                                <td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">Sin hojas de ruta.</td>
+                                <td colspan="6" class="px-2 py-4 text-center text-xs text-gray-500">Sin hojas de ruta.</td>
                             </tr>
                         </tbody>
                     </table>

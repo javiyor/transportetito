@@ -163,7 +163,7 @@ const vehiculoLabel = computed(() => {
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1 whitespace-nowrap">
-                    <Link :href="route('operacion.repartos.facturas')" class="inline-flex">
+                    <Link :href="route('operacion.repartos.hojas.index')" class="inline-flex">
                         <SecondaryButton class="!px-2 !py-1 !text-xs">Volver</SecondaryButton>
                     </Link>
                     <a :href="route('operacion.repartos.hojas.print', hoja.id)" target="_blank" rel="noopener" class="inline-flex">

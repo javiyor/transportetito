@@ -26,7 +26,11 @@ class ManifiestoIngresoController extends Controller
 
         $query = ManifiestoIngreso::query()
             ->with(['deposito:id,nombre', 'empresa:id,razon_social'])
-            ->withCount(['pedidos', 'pedidos as pedidos_con_error_count' => function($q){ $q->where('recepcion_estado','con_error'); }]);
+            ->withCount([
+                'pedidos',
+                'pedidos as pedidos_controlados_count' => fn ($q) => $q->whereNotNull('recepcion_controlado_at'),
+                'pedidos as pedidos_con_error_count' => fn ($q) => $q->where('recepcion_estado', 'con_error'),
+            ]);
 
         if ($orden === 'asc') {
             $query->orderBy('fecha')->orderBy('id');

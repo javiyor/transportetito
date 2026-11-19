@@ -46,6 +46,28 @@ const formatFecha = (value) => {
     return `${dd}-${mm}-${yyyy}`;
 };
 
+const controladosCount = (manifiesto) => Number(manifiesto.pedidos_controlados_count || 0);
+const pedidosCount = (manifiesto) => Number(manifiesto.pedidos_count || 0);
+const claseControl = (manifiesto) => {
+    const total = pedidosCount(manifiesto);
+    const controlados = controladosCount(manifiesto);
+
+    if (total > 0 && controlados === total) return 'bg-green-100 text-green-800';
+    if (controlados > 0) return 'bg-yellow-100 text-yellow-800';
+
+    return 'bg-gray-100 text-gray-600';
+};
+const etiquetaControl = (manifiesto) => {
+    const total = pedidosCount(manifiesto);
+    const controlados = controladosCount(manifiesto);
+
+    if (total === 0) return 'Sin pedidos';
+    if (controlados === total) return `✓ ${controlados}/${total} controlados`;
+    if (controlados > 0) return `◐ ${controlados}/${total} controlados`;
+
+    return `0/${total} controlados`;
+};
+
 const autoImportando = ref(false);
 onMounted(() => {
     if (props.orden === 'desc' && props.manifiestos.current_page === 1) {
@@ -107,12 +129,16 @@ const importarManifiestos = () => {
                 </div>
 
                 <div class="sm:hidden space-y-3 p-3">
-                    <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border p-3" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'">
+                    <div v-for="m in manifiestos.data" :key="m.id" class="rounded-lg border p-3" :class="controladosCount(m) === pedidosCount(m) && pedidosCount(m) > 0 ? 'border-green-300 bg-green-50' : (controladosCount(m) > 0 ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white')">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-mono font-bold text-indigo-700">#{{ m.external_envio_id || m.id }}</div>
                                 <div class="text-sm font-semibold text-gray-900">{{ formatFecha(m.fecha) }}</div>
                                 <div class="text-xs text-gray-500">{{ m.chofer || '-' }} · {{ m.deposito?.nombre || '-' }}</div>
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium" :class="claseControl(m)">{{ etiquetaControl(m) }}</span>
+                                    <span v-if="m.pedidos_con_error_count > 0" class="text-[10px] font-medium text-red-700">{{ m.pedidos_con_error_count }} con error</span>
+                                </div>
                             </div>
                             <Link class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
                         </div>
@@ -132,15 +158,20 @@ const importarManifiestos = () => {
                                 </th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
                                 <th class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deposito</th>
+                                <th class="px-3 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Control recepción</th>
                                 <th class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="m in manifiestos.data" :key="m.id" :class="(m.pedidos_count !== undefined ? m.pedidos_count : 0) > 0 && (m.pedidos_con_error_count === 0) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'">
+                            <tr v-for="m in manifiestos.data" :key="m.id" :class="controladosCount(m) === pedidosCount(m) && pedidosCount(m) > 0 ? 'bg-green-50 hover:bg-green-100' : (controladosCount(m) > 0 ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-gray-50')">
                                 <td class="px-3 py-1.5 whitespace-nowrap font-mono text-xs text-indigo-700 font-bold">#{{ m.external_envio_id || m.id }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.chofer || '-' }}</td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
+                                <td class="px-3 py-1.5 text-center whitespace-nowrap">
+                                    <span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium" :class="claseControl(m)">{{ etiquetaControl(m) }}</span>
+                                    <span v-if="m.pedidos_con_error_count > 0" class="ml-1 text-[10px] font-medium text-red-700">({{ m.pedidos_con_error_count }} con error)</span>
+                                </td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-right text-xs space-x-2">
                                     <Link class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.manifiestos.show', m.id)">Ver</Link>
                                     <button class="text-red-500 hover:text-red-700" @click="eliminar(m)">Eliminar</button>
