@@ -33,7 +33,9 @@ class FleteIndexController extends Controller
             $query->whereDate('created_at', '<=', $hasta);
         }
         if ($estado = $request->query('estado')) {
-            if (in_array($estado, ['entregado', 'entregado_con_diferencia'], true)) {
+            if ($estado === 'en_reparto') {
+                $query->whereHas('comprobantes.hojaRutaItems', fn ($q) => $q->where('estado_entrega', 'pendiente'));
+            } elseif (in_array($estado, ['entregado', 'entregado_con_diferencia'], true)) {
                 $query->whereHas('comprobantes.hojaRutaItems', fn ($q) => $q->where('estado_entrega', $estado));
             } else {
                 $query->where('estado', $estado);
@@ -59,7 +61,7 @@ class FleteIndexController extends Controller
             ->distinct()
             ->orderBy('estado')
             ->pluck('estado')
-            ->merge(['entregado', 'entregado_con_diferencia'])
+            ->merge(['en_reparto', 'entregado', 'entregado_con_diferencia'])
             ->unique()
             ->sort()
             ->values();
@@ -84,9 +86,10 @@ class FleteIndexController extends Controller
 
         $itemsHojaRuta = $pedido->comprobantes->flatMap(fn ($c) => $c->hojaRutaItems);
         $itemEntregado = $itemsHojaRuta->first(fn ($item) => in_array($item->estado_entrega, ['entregado', 'entregado_con_diferencia'], true));
-        $itemHojaRuta = $itemEntregado ?? $itemsHojaRuta->first();
+        $itemEnReparto = $itemsHojaRuta->first(fn ($item) => $item->estado_entrega === 'pendiente');
+        $itemHojaRuta = $itemEntregado ?? $itemEnReparto ?? $itemsHojaRuta->first();
         $hojaRuta = $itemHojaRuta?->hojaRuta;
-        $estado = $itemEntregado?->estado_entrega ?? $pedido->estado;
+        $estado = $itemEntregado?->estado_entrega ?? ($itemEnReparto ? 'en_reparto' : $pedido->estado);
 
         return [
             'id' => $pedido->id,

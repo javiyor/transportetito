@@ -59,6 +59,17 @@ const exportCsv = () => {
     params.set('export', 'csv');
     window.open(route('operacion.fletes.index') + '?' + params.toString(), '_blank');
 };
+
+const estadoLabel = (estado) => ({
+    en_deposito: 'En depósito',
+    en_viaje: 'En viaje',
+    en_reparto: 'En reparto',
+    facturado: 'Facturado',
+    entregado: 'Entregado',
+    entregado_con_diferencia: 'Entregado con diferencia',
+    no_entregado: 'No entregado',
+    pendiente: 'Pendiente',
+}[estado] || estado || '-');
 </script>
 
 <template>
@@ -89,7 +100,7 @@ const exportCsv = () => {
                         <label class="block text-[11px] font-medium text-gray-700">Estado</label>
                         <select v-model="form.estado" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1">
                             <option value="">Todos</option>
-                            <option v-for="e in estados" :key="e" :value="e">{{ e }}</option>
+                            <option v-for="e in estados" :key="e" :value="e">{{ estadoLabel(e) }}</option>
                         </select>
                     </div>
                     <div>
@@ -138,7 +149,7 @@ const exportCsv = () => {
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.palets }}</td>
                                 <td class="px-1 py-0.5 text-[10px] font-mono text-right">${{ Number(p.valor_declarado).toFixed(2) }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-center">
-                                    <span class="inline-flex items-center px-1 py-0 rounded-full text-[9px] font-medium" :class="estadoClass(p.estado)">{{ p.estado }}</span>
+                                    <span class="inline-flex items-center px-1 py-0 rounded-full text-[9px] font-medium" :class="estadoClass(p.estado)">{{ estadoLabel(p.estado) }}</span>
                                 </td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-600 whitespace-nowrap">{{ p.fecha }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-center">
@@ -182,6 +193,7 @@ export default {
             const map = {
                 en_deposito: 'bg-yellow-100 text-yellow-800',
                 en_viaje: 'bg-blue-100 text-blue-800',
+                en_reparto: 'bg-indigo-100 text-indigo-800',
                 entregado: 'bg-green-100 text-green-800',
                 entregado_con_diferencia: 'bg-blue-100 text-blue-800',
                 no_entregado: 'bg-red-100 text-red-800',

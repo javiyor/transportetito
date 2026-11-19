@@ -136,7 +136,7 @@ const stats = computed(() => {
 });
 
 const estadoEntregaLabel = (estado) => ({
-    pendiente: 'Pendiente',
+    pendiente: 'En reparto',
     entregado: 'Entregado',
     entregado_con_diferencia: 'Entregado con diferencia',
     no_entregado: 'No entregado',
@@ -209,7 +209,7 @@ const formatFechaHora = (value) => {
                         <div class="text-xs font-medium text-gray-900">{{ stats.count }}</div>
                     </div>
                     <div class="bg-gray-50 rounded p-1.5">
-                        <div class="text-[10px] text-gray-500">Pendientes</div>
+                        <div class="text-[10px] text-gray-500">En reparto</div>
                         <div class="text-xs font-medium text-gray-900">{{ stats.pendientes }}</div>
                     </div>
                     <div class="bg-gray-50 rounded p-1.5">
@@ -224,7 +224,7 @@ const formatFechaHora = (value) => {
                 <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-200 pt-2 text-[11px] text-gray-600">
                     <span><strong>Borrador:</strong> hoja en preparación y editable.</span>
                     <span><strong>Cerrada:</strong> reparto finalizado y bloqueado.</span>
-                    <span><strong>Pendiente:</strong> entrega aún no registrada.</span>
+                    <span><strong>En reparto:</strong> hoja creada; entrega aún no registrada.</span>
                     <span><strong>Entregado:</strong> recibido por el destinatario.</span>
                     <span><strong>Entregado con diferencia:</strong> recibido con observaciones.</span>
                     <span><strong>No entregado:</strong> no se completó la entrega.</span>

@@ -19,6 +19,13 @@ const formatFechaHora = (value) => {
     return `${d.toLocaleDateString('es-AR')} ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
 };
 
+const estadoEntregaLabel = (estado) => ({
+    pendiente: 'En reparto',
+    entregado: 'Entregado',
+    entregado_con_diferencia: 'Entregado con diferencia',
+    no_entregado: 'No entregado',
+}[estado] || estado || '-');
+
 const totalImporte = () => {
     return (props.hoja.items || []).reduce((acc, it) => acc + Number(it.comprobante?.total || 0), 0).toFixed(2);
 };
@@ -53,7 +60,7 @@ const vehiculoLabel = computed(() => {
             <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-y border-gray-200 py-2 text-[10px] text-gray-600">
                 <span><strong>Borrador:</strong> en preparación.</span>
                 <span><strong>Cerrada:</strong> reparto finalizado.</span>
-                <span><strong>Pendiente:</strong> entrega no registrada.</span>
+                <span><strong>En reparto:</strong> hoja creada; entrega no registrada.</span>
                 <span><strong>Entregado:</strong> recibido.</span>
                 <span><strong>Entregado con diferencia:</strong> recibido con observaciones.</span>
                 <span><strong>No entregado:</strong> entrega no completada.</span>
@@ -102,14 +109,15 @@ const vehiculoLabel = computed(() => {
                         </td>
                         <td class="py-2 font-mono">#{{ it.comprobante_id }}</td>
                         <td class="py-2">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
-                        <td class="py-2">{{ it.estado_entrega }}</td>
+                        <td class="py-2">{{ estadoEntregaLabel(it.estado_entrega) }}</td>
                         <td class="py-2 text-xs">
-                            <template v-if="it.estado_entrega === 'entregado'">
+                            <template v-if="it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia'">
                                 <div>{{ it.recibe_nombre || '' }}</div>
                                 <div class="text-gray-500">DNI: {{ it.recibe_dni || '' }}</div>
                                 <div class="text-gray-500">{{ formatFecha(it.fecha_entrega) }}</div>
                             </template>
-                            <div v-else class="text-gray-400 italic">Pendiente</div>
+                            <div v-else-if="it.estado_entrega === 'pendiente'" class="text-gray-400 italic">En reparto</div>
+                            <div v-else class="text-gray-400 italic">No entregado</div>
                         </td>
                         <td class="py-2">
                             <div v-if="it.firma_recibo" class="h-10">

@@ -232,6 +232,8 @@ const statusClass = (estado) => {
     if (estado === 'no_entregado') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-yellow-100 text-yellow-800 border-yellow-200';
 };
+
+const statusLabel = (estado) => estado === 'pendiente' ? 'En reparto' : estado;
 </script>
 
 <template>
@@ -329,7 +331,7 @@ const statusClass = (estado) => {
                             </div>
                             <div class="flex flex-col items-end gap-1 shrink-0">
                                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border" :class="statusClass(item.estado_entrega)">
-                                    {{ item.estado_entrega }}
+                                    {{ statusLabel(item.estado_entrega) }}
                                 </span>
                                 <button
                                     class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 transition-colors"

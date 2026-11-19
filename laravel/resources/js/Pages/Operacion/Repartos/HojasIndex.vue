@@ -119,7 +119,7 @@ const formatFechaHora = (value) => {
                 <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-200 pt-2 text-[11px] text-gray-600">
                     <span><strong>Borrador:</strong> hoja en preparación.</span>
                     <span><strong>Cerrada:</strong> reparto finalizado.</span>
-                    <span><strong>Pendiente:</strong> entrega aún no registrada.</span>
+                    <span><strong>En reparto:</strong> hoja creada; entrega aún no registrada.</span>
                     <span><strong>Entregado:</strong> recibido por el destinatario.</span>
                 </div>
             </div>
