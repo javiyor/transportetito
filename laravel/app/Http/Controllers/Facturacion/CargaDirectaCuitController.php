@@ -209,6 +209,7 @@ class CargaDirectaCuitController extends Controller
             return;
         }
 
+        $razonSocialAnterior = $tercero->razon_social;
         $domicilioArca = (array) ($persona['domicilio'] ?? []);
 
         $tercero->razon_social = trim((string) ($persona['razon_social'] ?? '')) ?: $tercero->razon_social;
@@ -253,7 +254,7 @@ class CargaDirectaCuitController extends Controller
         }
 
         $tercero->save();
-        $tercero->syncAccountNamesWithLegalName();
+        $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
         $cuenta->save();
     }
 

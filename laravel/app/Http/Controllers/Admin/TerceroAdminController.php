@@ -144,7 +144,7 @@ class TerceroAdminController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
-            'nombre_cuenta' => ['nullable', 'string', 'max:255'],
+            'nombre_cuenta' => ['required', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
             'provincia_id' => ['nullable', 'integer', 'exists:provincias,id'],
@@ -180,12 +180,13 @@ class TerceroAdminController extends Controller
             ]
         );
 
+        $razonSocialAnterior = $tercero->razon_social;
         $tercero->update([
             'razon_social' => $data['razon_social'],
             'condicion_iva' => $condicionIvaNombre,
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
-        $tercero->syncAccountNamesWithLegalName();
+        $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
 
         $cuenta = DB::transaction(function () use ($data, $tercero, $cuentaContableProveedorId) {
             // Serialize additions for this CUIT so parallel requests reuse one account per company.
@@ -218,7 +219,7 @@ class TerceroAdminController extends Controller
                 'empresa_id' => (int) $data['empresa_id'],
                 'tercero_id' => $tercero->id,
                 'numero_cliente' => (int) $data['numero_cliente'],
-                'nombre_cuenta' => $tercero->razon_social,
+                'nombre_cuenta' => $data['nombre_cuenta'],
                 'zona_id' => $data['zona_id'] ?? null,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
@@ -235,7 +236,7 @@ class TerceroAdminController extends Controller
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
-            'nombre_cuenta' => $tercero->razon_social,
+            'nombre_cuenta' => $data['nombre_cuenta'],
             'zona_id' => $data['zona_id'] ?? $cuenta->zona_id,
             'localidad' => $data['localidad'] ?: $cuenta->localidad,
             'barrio' => $data['barrio'] ?: $cuenta->barrio,
@@ -268,7 +269,7 @@ class TerceroAdminController extends Controller
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
             'zona_id' => ['nullable', 'integer', Rule::exists('zonas', 'id')->where('empresa_id', (int) $request->input('empresa_id'))],
-            'nombre_cuenta' => ['nullable', 'string', 'max:255'],
+            'nombre_cuenta' => ['required', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
             'provincia_id' => ['nullable', 'integer', 'exists:provincias,id'],
@@ -317,17 +318,18 @@ class TerceroAdminController extends Controller
             ])->withInput();
         }
 
+        $razonSocialAnterior = $tercero->razon_social;
         $tercero->update([
             'razon_social' => $data['razon_social'],
             'condicion_iva' => $condicionIvaNombre,
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
-        $tercero->syncAccountNamesWithLegalName();
+        $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'empresa_id' => $data['empresa_id'],
-            'nombre_cuenta' => $tercero->razon_social,
+            'nombre_cuenta' => $data['nombre_cuenta'],
             'zona_id' => $data['zona_id'] ?? null,
             'localidad' => $data['localidad'] ?: null,
             'barrio' => $data['barrio'] ?: null,

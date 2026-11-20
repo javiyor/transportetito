@@ -125,6 +125,12 @@ watch(() => form.provincia_id, (val) => {
     cargarLocalidades(val, localidades);
 });
 
+watch(() => form.razon_social, (razonSocial, anterior) => {
+    if (razonSocial && (!form.nombre_cuenta || form.nombre_cuenta === anterior)) {
+        form.nombre_cuenta = razonSocial;
+    }
+});
+
 watch(empresaFiltroId, (val) => {
     form.empresa_id = val || props.empresaId || props.empresas?.[0]?.id || null;
 });
@@ -175,7 +181,7 @@ const openEdit = (c) => {
     editForm.razon_social = c.tercero?.razon_social || '';
     editForm.condicion_iva = c.tercero?.condicion_iva || '';
     editForm.condicion_iva_id = c.tercero?.condicion_iva_id || '';
-    editForm.nombre_cuenta = c.nombre_cuenta || '';
+    editForm.nombre_cuenta = c.nombre_cuenta || c.tercero?.razon_social || '';
     editForm.localidad = c.localidad || '';
     editForm.barrio = c.barrio || '';
     editForm.provincia_id = c.provincia_id || '';
@@ -197,6 +203,12 @@ const openEdit = (c) => {
 watch(() => editForm.provincia_id, (val) => {
     editForm.localidad_id = '';
     cargarLocalidades(val, editLocalidades);
+});
+
+watch(() => editForm.razon_social, (razonSocial, anterior) => {
+    if (razonSocial && (!editForm.nombre_cuenta || editForm.nombre_cuenta === anterior)) {
+        editForm.nombre_cuenta = razonSocial;
+    }
 });
 
 watch(() => editForm.empresa_id, (val) => {
@@ -280,8 +292,8 @@ const localidadNombre = (c) => {
                     </div>
 
                     <div class="sm:col-span-3">
-                        <InputLabel value="Nombre cuenta (opcional)" />
-                        <TextInput v-model="form.nombre_cuenta" type="text" class="mt-1 block w-full" />
+                        <InputLabel value="Nombre cuenta" />
+                        <TextInput v-model="form.nombre_cuenta" type="text" class="mt-1 block w-full" required />
                         <InputError class="mt-1" :message="form.errors.nombre_cuenta" />
                     </div>
 
@@ -536,7 +548,7 @@ const localidadNombre = (c) => {
                         </div>
                         <div>
                             <InputLabel value="Nombre cuenta" />
-                            <TextInput v-model="editForm.nombre_cuenta" type="text" class="mt-1 block w-full" />
+                            <TextInput v-model="editForm.nombre_cuenta" type="text" class="mt-1 block w-full" required />
                             <InputError class="mt-1" :message="editForm.errors.nombre_cuenta" />
                         </div>
                         <div>

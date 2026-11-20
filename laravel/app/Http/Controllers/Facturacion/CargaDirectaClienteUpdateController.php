@@ -32,8 +32,9 @@ class CargaDirectaClienteUpdateController extends Controller
         $condicionIva = ! empty($data['condicion_iva_id'])
             ? CondicionIva::query()->findOrFail($data['condicion_iva_id'])
             : null;
+        $razonSocialAnterior = $tercero->razon_social;
 
-        DB::transaction(function () use ($cuenta, $tercero, $data, $condicionIva): void {
+        DB::transaction(function () use ($cuenta, $tercero, $data, $condicionIva, $razonSocialAnterior): void {
             $tercero->forceFill([
                 'razon_social' => $data['razon_social'],
                 'condicion_iva_id' => $condicionIva?->id,
@@ -43,10 +44,10 @@ class CargaDirectaClienteUpdateController extends Controller
                     'ciudad' => $data['localidad'] ?? null,
                 ]),
             ])->save();
-            $tercero->syncAccountNamesWithLegalName();
+            $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
 
             $cuenta->forceFill([
-                'nombre_cuenta' => $tercero->razon_social,
+                'nombre_cuenta' => $data['nombre_cuenta'] ?: $tercero->razon_social,
                 'direccion' => $data['direccion'] ?: null,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
