@@ -562,6 +562,9 @@ const confirmarActualizacionArca = () => {
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Facturacion / Carga directa</h2>
                     <div class="mt-1 text-sm text-gray-600">Crear factura con pedidos desde cero, sin manifiesto.</div>
+                    <div class="mt-2 inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-900">
+                        Empresa facturadora: {{ empresaFacturadora?.razon_social || '-' }}
+                    </div>
                 </div>
                 <Link :href="route('facturacion.manifiestos.index')">
                     <SecondaryButton>Volver</SecondaryButton>
