@@ -443,6 +443,7 @@ Route::middleware([
         Route::get('/cuentas-corrientes/print-selected', CuentaCorrientePrintSelectedController::class)->name('ctacte.print-selected');
         Route::get('/cuentas-corrientes/{cuenta}', CuentaCorrienteShowController::class)->name('ctacte.show');
         Route::get('/cuentas-corrientes/{cuenta}/print', CuentaCorrientePrintController::class)->name('ctacte.print');
+        Route::post('/cuentas-corrientes/{cuenta}/email-pendientes', \App\Http\Controllers\Cobranzas\CuentaCorrientePendientesEmailController::class)->name('ctacte.email-pendientes');
         Route::post('/cuentas-corrientes/{cuenta}/ajustes', CuentaCorrienteAjusteStoreController::class)->name('ctacte.ajustes.store');
         Route::post('/cuentas-corrientes/{cuenta}/notas', CuentaCorrienteNotaStoreController::class)->name('ctacte.notas.store');
         Route::post('/cuentas-corrientes/{cuenta}/recibos', CuentaCorrienteReciboStoreController::class)->name('ctacte.recibos.store');

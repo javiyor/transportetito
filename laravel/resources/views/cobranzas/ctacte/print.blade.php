@@ -24,37 +24,62 @@
         <div><div class="label">CUIT</div><div class="value">{{ $cuenta->tercero?->cuit }}</div></div>
         <div><div class="label">Zona</div><div class="value">{{ $cuenta->zona?->nombre ?? 'Sin zona' }}</div></div>
         <div><div class="label">Ciudad / Barrio</div><div class="value">{{ $cuenta->localidad ?? 'Sin ciudad' }} / {{ $cuenta->barrio ?? 'Sin barrio' }}</div></div>
-        <div><div class="label">Saldo total</div><div class="value">{{ number_format((float) $saldos['saldo_total'], 2, ',', '.') }}</div></div>
-        <div><div class="label">Vencido +30</div><div class="value">{{ number_format((float) $saldos['vencido_30'], 2, ',', '.') }}</div></div>
+        @if($tipo === 'movimientos')
+            <div><div class="label">Saldo total</div><div class="value">{{ number_format((float) ($saldos['saldo_total'] ?? 0), 2, ',', '.') }}</div></div>
+            <div><div class="label">Vencido +30</div><div class="value">{{ number_format((float) ($saldos['vencido_30'] ?? 0), 2, ',', '.') }}</div></div>
+        @endif
     </div>
 
-    <h3>Comprobantes</h3>
-    <table>
-        <thead><tr><th>Comprobante</th><th>Fecha</th><th>Total</th></tr></thead>
-        <tbody>
-            @foreach($comprobantes as $c)
-                @php
-                    $tipoLabels = ['factura_interna' => 'Factura', 'nota_debito_manual' => 'Nota debito', 'nota_credito_manual' => 'Nota credito', 'ajuste_debito' => 'Ajuste debito', 'ajuste_credito' => 'Ajuste credito'];
-                    $label = $tipoLabels[$c->tipo] ?? $c->tipo;
-                    $numero = ($c->arca_punto_venta && $c->arca_numero) ? ((int) $c->arca_punto_venta) . '-' . str_pad((string) $c->arca_numero, 8, '0', STR_PAD_LEFT) : ($c->numero_interno ? '#' . $c->numero_interno : '-');
-                @endphp
-                <tr><td>{{ $label }} {{ $numero }}</td><td>{{ optional($c->fecha_emision)->format('d-m-Y') }}</td><td>{{ $c->moneda }} {{ number_format((float) $c->total, 2, ',', '.') }}</td></tr>
-            @endforeach
-        </tbody>
-    </table>
+    @if($tipo === 'pendientes')
+        <h3>Documentos pendientes de pago</h3>
+        <table>
+            <thead><tr><th>Documento</th><th>Fecha</th><th>Total</th><th>Pendiente / crédito</th></tr></thead>
+            <tbody>
+                @forelse($comprobantes as $documento)
+                    <tr>
+                        <td>{{ $documento['tipo'] }} {{ $documento['numero'] }}</td>
+                        <td>{{ $documento['fecha'] ? \Carbon\Carbon::parse($documento['fecha'])->format('d-m-Y') : '-' }}</td>
+                        <td>{{ $documento['moneda'] }} {{ number_format((float) $documento['total'], 2, ',', '.') }}</td>
+                        <td>{{ $documento['moneda'] }} {{ number_format((float) $documento['pendiente'], 2, ',', '.') }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="4">No hay documentos pendientes de pago.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
 
-    <h3>Movimientos</h3>
-    <table>
-        <thead><tr><th>Fecha</th><th>Tipo</th><th>Moneda</th><th>Importe</th><th>Obs.</th></tr></thead>
-        <tbody>
-            @foreach($movimientos as $m)
-                @php
-                    $tipoLabels = ['factura_interna' => 'Factura', 'nota_debito_manual' => 'Nota debito', 'nota_credito_manual' => 'Nota credito', 'ajuste_debito' => 'Ajuste debito', 'ajuste_credito' => 'Ajuste credito', 'anulacion_recibo' => 'Anulacion recibo'];
-                    $mlabel = $tipoLabels[$m->tipo] ?? $m->tipo;
-                @endphp
-                <tr><td>{{ optional($m->fecha)->format('d-m-Y') }}</td><td>{{ $mlabel }}</td><td>{{ $m->moneda }}@if($m->moneda !== 'ARS' && $m->cotizacion_ars) ({{ number_format((float) $m->cotizacion_ars, 6, ',', '.') }})@endif</td><td>{{ number_format((float) $m->importe_signed, 2, ',', '.') }}</td><td>{{ $m->observacion }}</td></tr>
-            @endforeach
-        </tbody>
-    </table>
+        @if(count($totalesPendientes))
+            <h3>Totales por moneda</h3>
+            <table>
+                <thead><tr><th>Moneda</th><th>A pagar</th><th>Créditos disponibles</th><th>Saldo neto</th></tr></thead>
+                <tbody>
+                    @foreach($totalesPendientes as $total)
+                        <tr>
+                            <td>{{ $total['moneda'] }}</td>
+                            <td>{{ number_format((float) $total['a_pagar'], 2, ',', '.') }}</td>
+                            <td>{{ number_format((float) $total['creditos'], 2, ',', '.') }}</td>
+                            <td>{{ number_format((float) $total['saldo_neto'], 2, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    @else
+        <h3>Movimientos de cuenta corriente</h3>
+        <table>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Moneda</th><th>Importe</th><th>Obs.</th></tr></thead>
+            <tbody>
+                @forelse($movimientos as $m)
+                    @php
+                        $tipoLabels = ['factura_interna' => 'Factura', 'nota_debito_manual' => 'Nota debito', 'nota_credito_manual' => 'Nota credito', 'ajuste_debito' => 'Ajuste debito', 'ajuste_credito' => 'Ajuste credito', 'anulacion_recibo' => 'Anulacion recibo'];
+                        $mlabel = $tipoLabels[$m->tipo] ?? $m->tipo;
+                    @endphp
+                    <tr><td>{{ optional($m->fecha)->format('d-m-Y') }}</td><td>{{ $mlabel }}</td><td>{{ $m->moneda }}@if($m->moneda !== 'ARS' && $m->cotizacion_ars) ({{ number_format((float) $m->cotizacion_ars, 6, ',', '.') }})@endif</td><td>{{ number_format((float) $m->importe_signed, 2, ',', '.') }}</td><td>{{ $m->observacion }}</td></tr>
+                @empty
+                    <tr><td colspan="5">No hay movimientos en cuenta corriente.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    @endif
 </body>
 </html>

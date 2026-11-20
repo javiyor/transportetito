@@ -25,6 +25,7 @@ const movimientosOpen = ref(false);
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
 const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
+const emailPendientesForm = useForm({});
 
 const reciboForm = useForm({
     fecha: new Date().toISOString().slice(0, 10),
@@ -122,6 +123,7 @@ const esCheque = (medio) => medio === 'cheque_tercero';
 
 const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
+const enviarPendientesPorEmail = () => emailPendientesForm.post(route('cobranzas.ctacte.email-pendientes', props.cuenta.id), { preserveScroll: true });
 
 const eliminarRecibo = (reciboId) => {
     if (!confirm('¿Eliminar recibo? Esta accion no se puede deshacer.')) return;
@@ -177,7 +179,11 @@ const formatNum = (n) => {
                     <div v-if="cuenta.empresa?.razon_social" class="mt-1 text-xs text-gray-500">Empresa: {{ cuenta.empresa.razon_social }}</div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
-                    <a :href="route('cobranzas.ctacte.print', cuenta.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
+                    <a :href="route('cobranzas.ctacte.print', { cuenta: cuenta.id, tipo: 'pendientes' })" target="_blank" rel="noopener"><SecondaryButton>Imprimir pendientes</SecondaryButton></a>
+                    <a :href="route('cobranzas.ctacte.print', { cuenta: cuenta.id, tipo: 'movimientos' })" target="_blank" rel="noopener"><SecondaryButton>Imprimir movimientos</SecondaryButton></a>
+                    <PrimaryButton :disabled="!cuenta.email || emailPendientesForm.processing" :title="cuenta.email ? `Enviar a ${cuenta.email}` : 'La cuenta no tiene email cargado'" @click="enviarPendientesPorEmail">
+                        {{ emailPendientesForm.processing ? 'Enviando...' : 'Enviar pendientes por email' }}
+                    </PrimaryButton>
                     <Link :href="route('cobranzas.ctacte.index')"><SecondaryButton>Volver</SecondaryButton></Link>
                 </div>
             </div>
