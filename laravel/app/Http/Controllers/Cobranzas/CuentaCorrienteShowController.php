@@ -98,6 +98,8 @@ class CuentaCorrienteShowController extends Controller
         // Calcular pendiente real por comprobante para marcar pagadas
         $aplicacionesSum = \App\Models\ReciboAplicacion::query()
             ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
+            ->where('recibos.empresa_id', $empresaId)
+            ->where('recibos.tercero_cuenta_id', $cuenta->id)
             ->where('recibos.estado', '!=', 'anulada')
             ->whereIn('recibo_aplicaciones.comprobante_id', $comprobantesRaw->pluck('id'))
             ->selectRaw('comprobante_id, SUM(recibo_aplicaciones.importe) as sum_importe')

@@ -3,6 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import DialogModal from '@/Components/DialogModal.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
@@ -57,6 +58,26 @@ const comprobantesPendientes = computed(() => {
         const pend = parseFloat(c.pendiente ?? c.total);
         return Math.abs(pend) > 0.01;
     });
+});
+const emailPreviewOpen = ref(false);
+const emailPreviewTotals = computed(() => {
+    const totals = new Map();
+
+    comprobantesPendientes.value.forEach((documento) => {
+        const moneda = documento.moneda || 'ARS';
+        const resumen = totals.get(moneda) || { moneda, a_pagar: 0, creditos: 0, saldo_neto: 0 };
+        const pendiente = Number(documento.pendiente ?? documento.total ?? 0);
+
+        if (documento.is_credit || pendiente < 0) {
+            resumen.creditos += Math.abs(pendiente);
+        } else {
+            resumen.a_pagar += pendiente;
+        }
+        resumen.saldo_neto = resumen.a_pagar - resumen.creditos;
+        totals.set(moneda, resumen);
+    });
+
+    return [...totals.values()].sort((a, b) => a.moneda.localeCompare(b.moneda));
 });
 const comprobantesSeleccionados = computed(() => (reciboForm.comprobante_ids || [])
     .map((id) => props.comprobantes.find((comprobante) => String(comprobante.id) === String(id)))
@@ -123,7 +144,17 @@ const esCheque = (medio) => medio === 'cheque_tercero';
 
 const submitAjuste = () => ajusteForm.post(route('cobranzas.ctacte.ajustes.store', props.cuenta.id), { preserveScroll: true });
 const submitNota = () => notaForm.post(route('cobranzas.ctacte.notas.store', props.cuenta.id), { preserveScroll: true });
-const enviarPendientesPorEmail = () => emailPendientesForm.post(route('cobranzas.ctacte.email-pendientes', props.cuenta.id), { preserveScroll: true });
+const enviarPendientesPorEmail = () => {
+    emailPendientesForm.clearErrors();
+    emailPreviewOpen.value = true;
+};
+const confirmarEnvioPendientes = () => emailPendientesForm.post(route('cobranzas.ctacte.email-pendientes', props.cuenta.id), {
+    preserveScroll: true,
+    onSuccess: () => { emailPreviewOpen.value = false; },
+});
+const numeroPendiente = (documento) => typeof documento.id === 'string'
+    ? (documento.numero_interno || documento.numero || documento.id)
+    : comprobanteNumero(documento);
 
 const eliminarRecibo = (reciboId) => {
     if (!confirm('¿Eliminar recibo? Esta accion no se puede deshacer.')) return;
@@ -419,5 +450,53 @@ const formatNum = (n) => {
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="emailPreviewOpen" @close="emailPreviewOpen = false">
+            <template #title>Vista previa del email</template>
+            <template #content>
+                <div class="space-y-3">
+                    <p class="text-sm text-gray-700">Se enviará a <strong>{{ cuenta.email }}</strong> el listado de documentos pendientes y créditos disponibles.</p>
+                    <div v-if="comprobantesPendientes.length" class="max-h-72 overflow-auto rounded border border-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                            <thead class="sticky top-0 bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-1.5 text-left font-medium text-gray-600">Documento</th>
+                                    <th class="px-2 py-1.5 text-left font-medium text-gray-600">Fecha</th>
+                                    <th class="px-2 py-1.5 text-right font-medium text-gray-600">Total</th>
+                                    <th class="px-2 py-1.5 text-right font-medium text-gray-600">Pendiente / crédito</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                <tr v-for="documento in comprobantesPendientes" :key="documento.id">
+                                    <td class="px-2 py-1.5 text-gray-800">{{ tipoLabel(documento.tipo) }} {{ numeroPendiente(documento) }}</td>
+                                    <td class="px-2 py-1.5 text-gray-600">{{ formatFecha(documento.fecha_emision) }}</td>
+                                    <td class="px-2 py-1.5 text-right text-gray-700">{{ documento.moneda }} {{ formatNum(documento.total) }}</td>
+                                    <td class="px-2 py-1.5 text-right" :class="documento.is_credit ? 'font-medium text-green-700' : 'text-gray-800'">{{ documento.moneda }} {{ formatNum(documento.pendiente ?? documento.total) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-else class="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">No hay documentos pendientes; se enviará el aviso igualmente.</div>
+
+                    <div v-if="emailPreviewTotals.length" class="space-y-2">
+                        <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-600">Totales por moneda</h4>
+                        <div v-for="total in emailPreviewTotals" :key="total.moneda" class="grid grid-cols-2 gap-x-3 gap-y-1 rounded bg-gray-50 p-2 text-xs sm:grid-cols-4">
+                            <strong class="text-gray-800">{{ total.moneda }}</strong>
+                            <span class="text-right text-gray-700">Facturas + ND: {{ formatNum(total.a_pagar) }}</span>
+                            <span class="text-right text-green-700">NC + recibos: −{{ formatNum(total.creditos) }}</span>
+                            <strong class="text-right text-gray-900">Neto: {{ formatNum(total.saldo_neto) }}</strong>
+                        </div>
+                    </div>
+                    <InputError :message="emailPendientesForm.errors.email" />
+                    <InputError :message="emailPendientesForm.errors.documentos" />
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton :disabled="emailPendientesForm.processing" @click="emailPreviewOpen = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="emailPendientesForm.processing || !cuenta.email" @click="confirmarEnvioPendientes">
+                    {{ emailPendientesForm.processing ? 'Enviando...' : 'Confirmar y enviar' }}
+                </PrimaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

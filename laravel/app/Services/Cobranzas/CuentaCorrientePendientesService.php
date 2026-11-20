@@ -44,7 +44,7 @@ class CuentaCorrientePendientesService
             $saldo = $saldos[$comprobante->id] ?? ['pendiente' => 0, 'is_credit' => (float) $comprobante->total < 0];
             $pendiente = round((float) $saldo['pendiente'], 2);
 
-            if (abs($pendiente) < 0.01) {
+            if (abs($pendiente) <= 0.01) {
                 return null;
             }
 
