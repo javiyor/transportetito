@@ -293,7 +293,7 @@ const calcularSeguro = (valorDeclarado) => {
 };
 
 const recalcularSeguro = (it) => {
-    it.seguro = calcularSeguro(it.valor_declarado);
+    it.seguro = it.cobrar_seguro ? calcularSeguro(it.valor_declarado) : 0;
 };
 
 let nextKey = 1;
@@ -307,6 +307,7 @@ const agregarItem = () => {
         tipo: 'bultos',
         valor_declarado: 0,
         importe: 0,
+        cobrar_seguro: tarifaActiva.value.usar_seguro !== false,
         seguro: calcularSeguro(0),
         cr: 0,
         remito: '',
@@ -399,6 +400,7 @@ const importarCotizacion = (cq) => {
             tipo: it.tipo || 'bultos',
             valor_declarado: valorDeclarado,
             importe: importe,
+            cobrar_seguro: tarifaActiva.value.usar_seguro !== false,
             seguro: calcularSeguro(valorDeclarado),
             cr: Number(it.cr) || 0,
             remito: it.remito || '',
@@ -446,6 +448,7 @@ const resetForNext = () => {
         tipo: 'bultos',
         valor_declarado: 0,
         importe: 0,
+        cobrar_seguro: tarifaActiva.value.usar_seguro !== false,
         seguro: calcularSeguro(0),
         cr: 0,
         remito: '',
@@ -461,6 +464,7 @@ const submit = () => {
         tipo: it.tipo,
         valor_declarado: Number(it.valor_declarado) || 0,
         importe: Number(it.importe) || 0,
+        cobrar_seguro: !!it.cobrar_seguro,
         seguro: Number(it.seguro) || 0,
         cr: Number(it.cr) || 0,
         remito: it.remito,
@@ -821,10 +825,13 @@ const confirmarActualizacionArca = () => {
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <InputLabel :for="'seguro-' + it.key" value="Seguro (automático)" />
+                                        <label class="flex items-center gap-2 text-xs font-medium text-gray-700">
+                                            <input v-model="it.cobrar_seguro" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
+                                            Cobrar seguro
+                                        </label>
                                         <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-1 block w-full" readonly />
                                         <div class="mt-0.5 text-[10px] text-gray-500 text-right">
-                                            {{ tarifaActiva.usar_seguro === false ? 'Desactivado por tarifa' : `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% del valor declarado` }}
+                                            {{ tarifaActiva.usar_seguro === false ? 'No disponible para esta tarifa' : (it.cobrar_seguro ? `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% del valor declarado` : 'No se cobra') }}
                                         </div>
                                         <div v-if="it.seguro !== '' && it.seguro !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.seguro) }}</div>
                                     </div>
@@ -847,7 +854,7 @@ const confirmarActualizacionArca = () => {
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Val. declarado</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Seguro</th>
+                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrar seguro</th>
                                         <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
                                         <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
                                         <th class="px-2 py-1.5"></th>
@@ -877,9 +884,13 @@ const confirmarActualizacionArca = () => {
                                             <div v-if="it.importe !== '' && it.importe !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.importe) }}</div>
                                         </td>
                                         <td class="px-2 py-1">
+                                            <label class="flex items-center justify-center gap-1 whitespace-nowrap text-[10px] text-gray-700">
+                                                <input v-model="it.cobrar_seguro" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
+                                                Cobrar
+                                            </label>
                                             <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" readonly />
                                             <div class="text-[10px] text-gray-500 text-right leading-none mt-0.5">
-                                                {{ tarifaActiva.usar_seguro === false ? 'Desactivado' : `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% tarifa` }}
+                                                {{ tarifaActiva.usar_seguro === false ? 'No disponible' : (it.cobrar_seguro ? `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% tarifa` : 'No se cobra') }}
                                             </div>
                                             <div v-if="it.seguro !== '' && it.seguro !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.seguro) }}</div>
                                         </td>

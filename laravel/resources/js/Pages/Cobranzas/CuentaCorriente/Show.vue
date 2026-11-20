@@ -43,9 +43,11 @@ const reciboForm = useForm({
     ],
 });
 
-const reciboTotal = computed(() => {
-    return reciboForm.items.reduce((sum, item) => sum + (parseFloat(item.importe) || 0), 0);
-});
+const retencionesTotal = computed(() => Object.values(reciboForm.retenciones || {})
+    .reduce((sum, retencion) => sum + (parseFloat(retencion?.importe) || 0), 0));
+
+const reciboTotal = computed(() => reciboForm.items
+    .reduce((sum, item) => sum + (parseFloat(item.importe) || 0), 0) + retencionesTotal.value);
 
 const esCredito = (tipo) => {
     const t = String(tipo || '');

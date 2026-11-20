@@ -44,7 +44,7 @@ const deliveryForm = useForm({
     email_contacto: '',
     observacion_operador: '',
     firma_recibo: '',
-    forma_pago: '',
+    forma_pago: 'cuenta_corriente',
     importe_cobrado: '',
     foto_comprobante_pago: null,
     foto_remito_firmado: null,
@@ -60,7 +60,7 @@ const openDelivery = (item) => {
     deliveryForm.email_contacto = item.entrega_cuenta?.email || '';
     deliveryForm.observacion_operador = item.observacion_operador || '';
     deliveryForm.firma_recibo = '';
-    deliveryForm.forma_pago = item.forma_pago || '';
+    deliveryForm.forma_pago = item.forma_pago || 'cuenta_corriente';
     deliveryForm.importe_cobrado = item.importe_cobrado || '';
     deliveryForm.foto_comprobante_pago = null;
     deliveryForm.foto_remito_firmado = null;

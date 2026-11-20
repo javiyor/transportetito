@@ -84,6 +84,10 @@ const tipoLabel = (tipo) => {
     return tipo || '-';
 };
 
+const numeroArca = (factura) => factura.arca_punto_venta && factura.arca_numero
+    ? `${Number(factura.arca_punto_venta)}-${String(factura.arca_numero).padStart(7, '0')}`
+    : (factura.numero_interno ? `#${factura.numero_interno}` : '-');
+
 const remitentesDe = (factura) => {
     const remitentes = [...new Set((factura.pedidos || [])
         .map((pedido) => pedido.remitente?.razon_social)
@@ -177,7 +181,7 @@ const ordenDe = (id) => {
                         <div v-if="ordenDe(f.id)" class="absolute -top-1 -left-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{{ ordenDe(f.id) }}</div>
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">#{{ f.id }}</div>
+                                <div class="text-sm font-semibold font-mono text-gray-900">{{ numeroArca(f) }}</div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(f.tipo) }}</div>
                                 <div v-if="f.empresa" class="text-xs text-gray-400">{{ f.empresa.razon_social }}</div>
                             </div>
@@ -219,7 +223,7 @@ const ordenDe = (id) => {
                                     <input type="checkbox" :checked="filterForm.comprobante_ids.length === filteredFacturas.length && filteredFacturas.length" @change="toggleAll($event.target.checked)" />
                                 </th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Nro. ARCA</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
@@ -234,7 +238,7 @@ const ordenDe = (id) => {
                                     <Checkbox v-model:checked="filterForm.comprobante_ids" :value="f.id" />
                                 </td>
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-bold text-center" :class="ordenDe(f.id) ? 'text-indigo-700' : 'text-gray-300'">{{ ordenDe(f.id) || '-' }}</td>
-                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-mono text-gray-900">{{ f.id }}</td>
+                                <td class="px-1 py-0.5 whitespace-nowrap text-[10px] font-mono text-gray-900">{{ numeroArca(f) }}</td>
                                 <td class="px-1 py-0.5 whitespace-nowrap text-[10px] text-gray-700">{{ tipoLabel(f.tipo) }}</td>
                                 <td class="max-w-[180px] truncate px-1 py-0.5 text-[10px] text-gray-700" :title="remitentesDe(f)">{{ remitentesDe(f) }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700">

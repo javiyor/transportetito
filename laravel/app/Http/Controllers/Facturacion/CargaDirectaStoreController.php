@@ -48,6 +48,7 @@ class CargaDirectaStoreController extends Controller
             'items.*.tipo' => ['required', 'in:bultos,palets'],
             'items.*.valor_declarado' => ['required', 'numeric', 'min:0'],
             'items.*.importe' => ['required', 'numeric', 'min:0'],
+            'items.*.cobrar_seguro' => ['sometimes', 'boolean'],
             'items.*.cr' => ['required', 'numeric', 'min:0'],
             'items.*.remito' => ['nullable', 'string', 'max:100'],
             'observacion' => ['nullable', 'string', 'max:2000'],
@@ -122,11 +123,12 @@ class CargaDirectaStoreController extends Controller
             $tipo = $row['tipo'] ?? 'bultos';
             $vd = (float) ($row['valor_declarado'] ?? 0);
             $importe = (float) ($row['importe'] ?? 0);
-            $seguro = ($tarifa['usar_seguro'] ?? true) ? $vd * (float) ($tarifa['seguro_pct'] ?? 0) : 0.0;
-            if (($tarifa['usar_seguro'] ?? true) && ($tarifa['seguro_minimo'] ?? null) !== null) {
+            $cobrarSeguro = (bool) ($row['cobrar_seguro'] ?? true) && ($tarifa['usar_seguro'] ?? true);
+            $seguro = $cobrarSeguro ? $vd * (float) ($tarifa['seguro_pct'] ?? 0) : 0.0;
+            if ($cobrarSeguro && ($tarifa['seguro_minimo'] ?? null) !== null) {
                 $seguro = max((float) $tarifa['seguro_minimo'], $seguro);
             }
-            if (($tarifa['usar_seguro'] ?? true) && ($tarifa['seguro_tope'] ?? null) !== null) {
+            if ($cobrarSeguro && ($tarifa['seguro_tope'] ?? null) !== null) {
                 $seguro = min((float) $tarifa['seguro_tope'], $seguro);
             }
             $seguro = round($seguro, 2);
@@ -149,6 +151,7 @@ class CargaDirectaStoreController extends Controller
                 'tipo' => $tipo,
                 'valor_declarado' => $vd,
                 'importe' => $importe,
+                'cobrar_seguro' => $cobrarSeguro,
                 'seguro' => $seguro,
                 'cr' => $cr,
                 'remito' => $row['remito'] ?? '',
