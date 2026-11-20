@@ -293,6 +293,7 @@ const calcularSeguro = (valorDeclarado) => {
 };
 
 const recalcularSeguro = (it) => {
+    if (tarifaActiva.value.usar_seguro === false) it.cobrar_seguro = false;
     it.seguro = it.cobrar_seguro ? calcularSeguro(it.valor_declarado) : 0;
 };
 
