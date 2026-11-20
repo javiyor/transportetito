@@ -22,6 +22,8 @@ const page = usePage();
 const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
 const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 const flashWarning = computed(() => page.props.tt?.flash?.warning || page.props.flash?.warning || null);
+const empresaCambiando = ref(false);
+const avisoCambioEmpresa = ref('');
 
 let recargandoCuentas = false;
 let ultimaRecargaCuentas = 0;
@@ -107,6 +109,48 @@ const aplicarEmpresaFacturadoraPreferida = () => {
 };
 const cuentaOrigenSeleccionada = computed(() => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(form.origen_cuenta_id)) || null);
 const cuentaDestinoSeleccionada = computed(() => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(form.destino_cuenta_id)) || null);
+
+const sincronizarEmpresaActiva = (empresaId) => {
+    const empresaActivaId = page.props.tt?.currentEmpresa?.id;
+    if (!empresaId || !empresaActivaId || String(empresaActivaId) === String(empresaId) || empresaCambiando.value) return;
+
+    const origenTerceroId = cuentaOrigenSeleccionada.value?.tercero_id || null;
+    const destinoTerceroId = cuentaDestinoSeleccionada.value?.tercero_id || null;
+    const empresaNombre = (props.empresasFacturadoras || []).find((empresa) => String(empresa.id) === String(empresaId))?.razon_social || 'la empresa seleccionada';
+    empresaCambiando.value = true;
+    avisoCambioEmpresa.value = '';
+
+    router.post(route('admin.current-empresa.update'), { empresa_id: Number(empresaId) }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            const buscarCuentaDeTercero = (terceroId) => terceroId
+                ? (props.cuentas || []).find((cuenta) => String(cuenta.tercero_id) === String(terceroId)) || null
+                : null;
+            const origen = buscarCuentaDeTercero(origenTerceroId);
+            const destino = buscarCuentaDeTercero(destinoTerceroId);
+
+            form.origen_cuenta_id = origen?.id || '';
+            form.destino_cuenta_id = destino?.id || '';
+            selectedOrigen.value = origen?.nombre_cuenta || origen?.tercero?.razon_social || '';
+            selectedDestino.value = destino?.nombre_cuenta || destino?.tercero?.razon_social || '';
+            searchOrigen.value = selectedOrigen.value;
+            searchDestino.value = selectedDestino.value;
+
+            const faltantes = [];
+            if (origenTerceroId && !origen) faltantes.push('origen');
+            if (destinoTerceroId && !destino) faltantes.push('destino');
+            avisoCambioEmpresa.value = faltantes.length
+                ? `Empresa activa cambiada a ${empresaNombre}. Seleccioná nuevamente la cuenta de ${faltantes.join(' y ')}; no tiene una cuenta en esa empresa.`
+                : `Empresa activa cambiada a ${empresaNombre}.`;
+        },
+        onFinish: () => {
+            empresaCambiando.value = false;
+            if (String(page.props.tt?.currentEmpresa?.id || '') !== String(empresaId)) {
+                form.empresa_facturadora_id = String(page.props.tt?.currentEmpresa?.id || '');
+            }
+        },
+    });
+};
 const cuitCheckModal = ref({
     show: false,
     loading: false,
@@ -204,6 +248,8 @@ watch([() => form.origen_cuenta_id, () => form.destino_cuenta_id, () => form.fac
     cuitVerificadoKey.value = '';
     aplicarEmpresaFacturadoraPreferida();
 });
+
+watch(() => form.empresa_facturadora_id, sincronizarEmpresaActiva);
 
 const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
     form[field] = cuenta.id;
@@ -562,9 +608,6 @@ const confirmarActualizacionArca = () => {
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Facturacion / Carga directa</h2>
                     <div class="mt-1 text-sm text-gray-600">Crear factura con pedidos desde cero, sin manifiesto.</div>
-                    <div class="mt-2 inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-900">
-                        Empresa facturadora: {{ empresaFacturadora?.razon_social || '-' }}
-                    </div>
                 </div>
                 <Link :href="route('facturacion.manifiestos.index')">
                     <SecondaryButton>Volver</SecondaryButton>
@@ -579,13 +622,14 @@ const confirmarActualizacionArca = () => {
             </div>
             <div v-if="flashError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
             <div v-if="flashWarning" class="mb-3 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">{{ flashWarning }}</div>
+            <div v-if="avisoCambioEmpresa" class="mb-3 rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-900">{{ avisoCambioEmpresa }}</div>
             <div v-if="edicionError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ edicionError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-4">
                 <form @submit.prevent="verificarCuitYEnviar" class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="sm:col-span-2">
                             <InputLabel for="empresa_facturadora_id" value="Empresa facturadora" />
-                            <select id="empresa_facturadora_id" v-model="form.empresa_facturadora_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <select id="empresa_facturadora_id" v-model="form.empresa_facturadora_id" :disabled="empresaCambiando" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-60">
                                 <option v-for="empresaOpcion in empresasFacturadoras || []" :key="empresaOpcion.id" :value="String(empresaOpcion.id)">{{ empresaOpcion.razon_social }}</option>
                             </select>
                             <InputError :message="form.errors.empresa_facturadora_id" />
