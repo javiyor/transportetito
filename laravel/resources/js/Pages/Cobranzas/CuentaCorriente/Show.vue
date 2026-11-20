@@ -84,6 +84,9 @@ const comprobantesSeleccionados = computed(() => (reciboForm.comprobante_ids || 
     .filter(Boolean));
 const notasCreditoSeleccionadas = computed(() => comprobantesSeleccionados.value.filter((comprobante) => esCredito(comprobante.tipo) && String(comprobante.tipo).startsWith('nota_credito')));
 const facturasSeleccionadas = computed(() => comprobantesSeleccionados.value.filter((comprobante) => !esCredito(comprobante.tipo) && parseFloat(comprobante.pendiente ?? comprobante.total) > 0.01));
+const creditosSeleccionadosTotal = computed(() => comprobantesSeleccionados.value
+    .filter((comprobante) => comprobante.is_credit || esCredito(comprobante.tipo) || parseFloat(comprobante.pendiente ?? comprobante.total) < 0)
+    .reduce((sum, comprobante) => sum + Math.abs(parseFloat(comprobante.pendiente ?? comprobante.total) || 0), 0));
 const imputandoCredito = ref(false);
 const errorImputacionCredito = ref('');
 const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
@@ -91,7 +94,7 @@ const flashError = computed(() => page.props.tt?.flash?.error || page.props.flas
 
 const selectedComprobantesTotal = computed(() => {
     return (reciboForm.comprobante_ids || []).reduce((sum, id) => {
-        const c = props.comprobantes.find(c => c.id === id);
+        const c = props.comprobantes.find(c => String(c.id) === String(id));
         if (!c) return sum;
         const pendiente = parseFloat(c.pendiente ?? c.total);
         // Para pago_a_cuenta y notas, usar pendiente directo (ya con signo)
@@ -248,17 +251,18 @@ const formatNum = (n) => {
                         <InputError :message="reciboForm.errors.moneda" />
                         <fieldset class="border border-gray-200 rounded p-1 max-h-40 overflow-y-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
-                            <div v-for="c in comprobantesPendientes" :key="c.id" class="flex items-center gap-1 py-0.5">
+                            <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(0,1fr),minmax(5rem,auto)] items-center gap-1.5 py-0.5">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
-                                <span class="text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</span>
-                                <span class="text-xs text-gray-400">{{ formatFecha(c.fecha_emision) }}</span>
-                                <span class="text-xs" :class="c.is_credit ? 'text-green-600 font-medium' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
+                                <span class="min-w-0 truncate text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} <span class="text-[10px] text-gray-400">{{ formatFecha(c.fecha_emision) }}</span></span>
+                                <span class="whitespace-nowrap text-right text-xs tabular-nums" :class="c.is_credit ? 'font-medium text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
                             </div>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                         </fieldset>
-                        <div v-if="reciboForm.comprobante_ids.length" class="text-xs font-semibold text-gray-700 flex items-center justify-between pt-1">
-                            <span v-if="!notasCreditoSeleccionadas.length">Total: {{ formatNum(selectedComprobantesTotal) }}</span>
-                            <span v-else class="text-green-700">Crédito NC seleccionado: {{ formatNum(Math.abs(notasCreditoSeleccionadas.reduce((sum, nota) => sum + Number(nota.pendiente || 0), 0))) }}</span>
+                        <div v-if="reciboForm.comprobante_ids.length" class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-2 text-xs font-semibold">
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <span class="text-gray-800">Acumulado neto seleccionado: {{ formatNum(selectedComprobantesTotal) }}</span>
+                                <span class="text-green-700">Crédito NC / recibos: −{{ formatNum(creditosSeleccionadosTotal) }}</span>
+                            </div>
                             <button v-if="!notasCreditoSeleccionadas.length" type="button" class="text-indigo-600 hover:text-indigo-800 underline" @click="reciboForm.items[0].importe = selectedComprobantesTotal">Completar</button>
                         </div>
                         <div v-if="notasCreditoSeleccionadas.length" class="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
@@ -375,7 +379,10 @@ const formatNum = (n) => {
                         <div class="flex items-start justify-between gap-2">
                             <div>
                                 <div class="text-xs font-semibold text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} <span v-if="c.is_pagada" class="ml-1 inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">Pagada</span><span v-else-if="!c.is_credit" class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Pendiente</span></div>
-                                <div class="text-xs text-gray-500">{{ formatFecha(c.fecha_emision) }} · Pend: {{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</div>
+                                <div class="flex items-center justify-between gap-3 text-xs text-gray-500">
+                                    <span>{{ formatFecha(c.fecha_emision) }}</span>
+                                    <span class="whitespace-nowrap text-right tabular-nums" :class="c.is_credit ? 'font-medium text-green-700' : 'text-gray-700'">Pend: {{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
+                                </div>
                             </div>
                             <span v-if="c.entregado" class="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-[10px] font-medium text-green-800">
                                 <span aria-hidden="true">✓</span> {{ formatFecha(c.fecha_entrega) }}
@@ -383,13 +390,13 @@ const formatNum = (n) => {
                             <Link v-if="!c.is_credit" class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
                             <span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span>
                         </div>
-                        <div class="mt-2 text-xs font-medium text-gray-900">{{ c.moneda }} {{ formatNum(c.total) }}</div>
+                        <div class="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-gray-900"><span>Total</span><span class="whitespace-nowrap text-right tabular-nums">{{ c.moneda }} {{ formatNum(c.total) }}</span></div>
                     </div>
                 </div>
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pendiente</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id" :class="c.is_pagada ? 'bg-green-50/40' : ''"><td class="px-2 py-1 text-xs text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td><td class="px-2 py-1 text-xs text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-2 py-1 text-xs text-gray-700">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-2 py-1 text-xs" :class="c.is_pagada ? 'text-green-700 font-medium' : 'text-amber-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</td><td class="px-2 py-1 text-xs"><span v-if="c.is_pagada" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">Pagada</span><span v-else-if="c.is_credit" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">Crédito</span><span v-else class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Pendiente</span></td><td class="px-2 py-1 text-xs text-green-700"><span v-if="c.entregado" class="font-medium">✓ {{ formatFecha(c.fecha_entrega) }}</span><span v-else class="text-gray-400">-</span></td><td class="px-2 py-1 text-right text-xs"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table>
+                        <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pendiente</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
+                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id" :class="c.is_pagada ? 'bg-green-50/40' : ''"><td class="px-2 py-1 text-xs text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td><td class="px-2 py-1 text-xs text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-2 py-1 text-right text-xs text-gray-700 tabular-nums">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-2 py-1 text-right text-xs tabular-nums" :class="c.is_pagada ? 'text-green-700 font-medium' : (c.is_credit ? 'text-green-700 font-medium' : 'text-amber-700')">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</td><td class="px-2 py-1 text-xs"><span v-if="c.is_pagada" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">Pagada</span><span v-else-if="c.is_credit" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">Crédito</span><span v-else class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Pendiente</span></td><td class="px-2 py-1 text-xs text-green-700"><span v-if="c.entregado" class="font-medium">✓ {{ formatFecha(c.fecha_entrega) }}</span><span v-else class="text-gray-400">-</span></td><td class="px-2 py-1 text-right text-xs"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table>
                 </div>
                 </div>
             </div>
