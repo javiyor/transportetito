@@ -144,10 +144,12 @@ const ivaPct = computed(() => empresaFacturadora.value?.factura_sin_iva
 
 const searchOrigen = ref('');
 const showOrigenDropdown = ref(false);
+const activeOrigenIndex = ref(-1);
 const selectedOrigen = ref('');
 
 const searchDestino = ref('');
 const showDestinoDropdown = ref(false);
+const activeDestinoIndex = ref(-1);
 const selectedDestino = ref('');
 
 const filtered = (list) => {
@@ -163,6 +165,8 @@ const filtered = (list) => {
 
 const filteredOrigen = computed(() => filtered(props.cuentas)(searchOrigen.value.toLowerCase().trim()));
 const filteredDestino = computed(() => filtered(props.cuentas)(searchDestino.value.toLowerCase().trim()));
+watch(searchOrigen, () => { activeOrigenIndex.value = -1; });
+watch(searchDestino, () => { activeDestinoIndex.value = -1; });
 const cuentasAValidar = computed(() => {
     const ids = [form.origen_cuenta_id, form.destino_cuenta_id].filter(Boolean);
     return [...new Set(ids)].map((id) => (props.cuentas || []).find((cuenta) => String(cuenta.id) === String(id))).filter(Boolean);
@@ -327,8 +331,50 @@ const selectCuenta = (field, searchRef, selectedRef, showRef, cuenta) => {
     showRef.value = false;
 };
 
-const selectOrigen = (cuenta) => selectCuenta('origen_cuenta_id', searchOrigen, selectedOrigen, showOrigenDropdown, cuenta);
-const selectDestino = (cuenta) => selectCuenta('destino_cuenta_id', searchDestino, selectedDestino, showDestinoDropdown, cuenta);
+const selectOrigen = (cuenta) => {
+    selectCuenta('origen_cuenta_id', searchOrigen, selectedOrigen, showOrigenDropdown, cuenta);
+    activeOrigenIndex.value = -1;
+};
+const selectDestino = (cuenta) => {
+    selectCuenta('destino_cuenta_id', searchDestino, selectedDestino, showDestinoDropdown, cuenta);
+    activeDestinoIndex.value = -1;
+};
+
+const moverOpcionCuenta = (tipo, direccion) => {
+    const opciones = tipo === 'origen' ? filteredOrigen.value : filteredDestino.value;
+    const dropdown = tipo === 'origen' ? showOrigenDropdown : showDestinoDropdown;
+    const indice = tipo === 'origen' ? activeOrigenIndex : activeDestinoIndex;
+    if (!opciones.length) return;
+
+    dropdown.value = true;
+    if (direccion > 0) {
+        indice.value = indice.value < 0 ? 0 : Math.min(indice.value + 1, opciones.length - 1);
+    } else {
+        indice.value = indice.value < 0 ? opciones.length - 1 : (indice.value - 1 + opciones.length) % opciones.length;
+    }
+
+    const prefijo = tipo === 'origen' ? 'origen' : 'destino';
+    const opcionId = opciones[indice.value]?.id;
+    nextTick(() => document.getElementById(`${prefijo}-cuenta-option-${opcionId}`)?.scrollIntoView({ block: 'nearest' }));
+};
+
+const seleccionarOpcionCuenta = (tipo) => {
+    const opciones = tipo === 'origen' ? filteredOrigen.value : filteredDestino.value;
+    const dropdown = tipo === 'origen' ? showOrigenDropdown : showDestinoDropdown;
+    const indice = tipo === 'origen' ? activeOrigenIndex : activeDestinoIndex;
+    if (!dropdown.value || !opciones.length) return;
+
+    const selectedIndex = indice.value >= 0 && indice.value < opciones.length ? indice.value : 0;
+    const cuenta = opciones[selectedIndex];
+    if (tipo === 'origen') selectOrigen(cuenta);
+    else selectDestino(cuenta);
+    indice.value = -1;
+};
+
+const cerrarDropdownCuenta = (tipo) => {
+    (tipo === 'origen' ? showOrigenDropdown : showDestinoDropdown).value = false;
+    (tipo === 'origen' ? activeOrigenIndex : activeDestinoIndex).value = -1;
+};
 
 const formatNum = (v) => {
     const n = Number(v) || 0;
@@ -755,11 +801,11 @@ const confirmarActualizacionArca = () => {
                                     <a ref="nuevoOrigenLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo <kbd class="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 text-[9px]">F3</kbd></a>
                                 </div>
                             </div>
-                            <TextInput id="origen-search" ref="origenSearchInput" v-model="searchOrigen" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." @focus="showOrigenDropdown = true" @blur="setTimeout(() => showOrigenDropdown = false, 200)" />
+                            <TextInput id="origen-search" ref="origenSearchInput" v-model="searchOrigen" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." role="combobox" aria-autocomplete="list" :aria-expanded="showOrigenDropdown && filteredOrigen.length > 0" aria-controls="origen-cuenta-options" :aria-activedescendant="activeOrigenIndex >= 0 ? `origen-cuenta-option-${filteredOrigen[activeOrigenIndex]?.id}` : undefined" @focus="showOrigenDropdown = true" @blur="setTimeout(() => showOrigenDropdown = false, 200)" @keydown.down.prevent="moverOpcionCuenta('origen', 1)" @keydown.up.prevent="moverOpcionCuenta('origen', -1)" @keydown.enter.prevent="seleccionarOpcionCuenta('origen')" @keydown.esc.prevent="cerrarDropdownCuenta('origen')" />
                             <input type="hidden" v-model="form.origen_cuenta_id" />
                             <InputError :message="form.errors.origen_cuenta_id" />
-                            <ul v-if="showOrigenDropdown && filteredOrigen.length" class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-300 bg-white text-sm shadow-lg">
-                                <li v-for="c in filteredOrigen" :key="c.id" class="cursor-pointer border-b border-gray-100 px-3 py-2 last:border-b-0 hover:bg-indigo-50" @mousedown.prevent="selectOrigen(c)">
+                            <ul v-if="showOrigenDropdown && filteredOrigen.length" id="origen-cuenta-options" role="listbox" class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-300 bg-white text-sm shadow-lg">
+                                <li v-for="(c, index) in filteredOrigen" :id="`origen-cuenta-option-${c.id}`" :key="c.id" role="option" :aria-selected="activeOrigenIndex === index" :class="['cursor-pointer border-b border-gray-100 px-3 py-2 last:border-b-0 hover:bg-indigo-50', { 'bg-indigo-50': activeOrigenIndex === index }]" @mouseenter="activeOrigenIndex = index" @mousedown.prevent="selectOrigen(c)">
                                     <div class="font-medium text-gray-900">{{ c.nombre_cuenta || c.tercero?.razon_social }}</div>
                                     <div class="text-xs text-gray-500">{{ c.tercero?.cuit || 'Sin CUIT' }}</div>
                                 </li>
@@ -775,11 +821,11 @@ const confirmarActualizacionArca = () => {
                                     <a ref="nuevoDestinoLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo <kbd class="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 text-[9px]">F4</kbd></a>
                                 </div>
                             </div>
-                            <TextInput v-model="searchDestino" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." @focus="showDestinoDropdown = true" @blur="setTimeout(() => showDestinoDropdown = false, 200)" />
+                            <TextInput v-model="searchDestino" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." role="combobox" aria-autocomplete="list" :aria-expanded="showDestinoDropdown && filteredDestino.length > 0" aria-controls="destino-cuenta-options" :aria-activedescendant="activeDestinoIndex >= 0 ? `destino-cuenta-option-${filteredDestino[activeDestinoIndex]?.id}` : undefined" @focus="showDestinoDropdown = true" @blur="setTimeout(() => showDestinoDropdown = false, 200)" @keydown.down.prevent="moverOpcionCuenta('destino', 1)" @keydown.up.prevent="moverOpcionCuenta('destino', -1)" @keydown.enter.prevent="seleccionarOpcionCuenta('destino')" @keydown.esc.prevent="cerrarDropdownCuenta('destino')" />
                             <input type="hidden" v-model="form.destino_cuenta_id" />
                             <InputError :message="form.errors.destino_cuenta_id" />
-                            <ul v-if="showDestinoDropdown && filteredDestino.length" class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-300 bg-white text-sm shadow-lg">
-                                <li v-for="c in filteredDestino" :key="c.id" class="cursor-pointer border-b border-gray-100 px-3 py-2 last:border-b-0 hover:bg-indigo-50" @mousedown.prevent="selectDestino(c)">
+                            <ul v-if="showDestinoDropdown && filteredDestino.length" id="destino-cuenta-options" role="listbox" class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-300 bg-white text-sm shadow-lg">
+                                <li v-for="(c, index) in filteredDestino" :id="`destino-cuenta-option-${c.id}`" :key="c.id" role="option" :aria-selected="activeDestinoIndex === index" :class="['cursor-pointer border-b border-gray-100 px-3 py-2 last:border-b-0 hover:bg-indigo-50', { 'bg-indigo-50': activeDestinoIndex === index }]" @mouseenter="activeDestinoIndex = index" @mousedown.prevent="selectDestino(c)">
                                     <div class="font-medium text-gray-900">{{ c.nombre_cuenta || c.tercero?.razon_social }}</div>
                                     <div class="text-xs text-gray-500">{{ c.tercero?.cuit || 'Sin CUIT' }}</div>
                                 </li>
