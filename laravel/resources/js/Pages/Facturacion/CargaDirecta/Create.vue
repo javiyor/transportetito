@@ -713,7 +713,8 @@ const confirmarActualizacionArca = () => {
             <div v-if="edicionError" class="mb-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-800">{{ edicionError }}</div>
             <div class="bg-white shadow sm:rounded-lg p-2">
                 <form ref="invoiceFormElement" @submit.prevent="verificarCuitYEnviar" class="space-y-2 text-sm">
-                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    <div class="rounded-md bg-slate-50 p-2">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         <div class="rounded border border-gray-200 p-1.5">
                             <InputLabel for="empresa_facturadora_id" value="Empresa facturadora" class="text-xs" />
                             <select id="empresa_facturadora_id" v-model="form.empresa_facturadora_id" :disabled="empresaCambiando" class="mt-0.5 block w-full border-gray-300 rounded-md py-1 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-60">
@@ -737,15 +738,21 @@ const confirmarActualizacionArca = () => {
                             <InputError :message="form.errors.tipo_arca" />
                         </div>
 
-                        <div class="hidden xl:block" aria-hidden="true"></div>
+                        <div>
+                            <InputLabel for="fecha_emision" value="Fecha de emisión" class="text-xs" />
+                            <TextInput id="fecha_emision" v-model="form.fecha_emision" type="date" class="mt-0.5 block w-full !py-1 !text-sm" />
+                            <InputError :message="form.errors.fecha_emision" />
+                        </div>
+                    </div>
 
+                    <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <div class="relative">
                             <div class="flex flex-wrap items-center justify-between gap-1">
                                 <InputLabel value="Origen (Remitente)" class="text-xs" />
                                 <div class="flex items-center gap-2">
                                     <button v-if="cuentaOrigenSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline" @click="abrirEdicionCuenta(cuentaOrigenSeleccionada)">Editar</button>
                                     <button v-if="cuentaOrigenSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaOrigenSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaOrigenSeleccionada)">{{ arcaActualizandoId === cuentaOrigenSeleccionada.id ? 'Consultando...' : 'Actualizar ARCA' }}</button>
-                                    <a ref="nuevoOrigenLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo</a>
+                                    <a ref="nuevoOrigenLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo <kbd class="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 text-[9px]">F3</kbd></a>
                                 </div>
                             </div>
                             <TextInput id="origen-search" ref="origenSearchInput" v-model="searchOrigen" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." @focus="showOrigenDropdown = true" @blur="setTimeout(() => showOrigenDropdown = false, 200)" />
@@ -765,7 +772,7 @@ const confirmarActualizacionArca = () => {
                                 <div class="flex items-center gap-2">
                                     <button v-if="cuentaDestinoSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline" @click="abrirEdicionCuenta(cuentaDestinoSeleccionada)">Editar</button>
                                     <button v-if="cuentaDestinoSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaDestinoSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaDestinoSeleccionada)">{{ arcaActualizandoId === cuentaDestinoSeleccionada.id ? 'Consultando...' : 'Actualizar ARCA' }}</button>
-                                    <a ref="nuevoDestinoLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo</a>
+                                    <a ref="nuevoDestinoLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo <kbd class="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 text-[9px]">F4</kbd></a>
                                 </div>
                             </div>
                             <TextInput v-model="searchDestino" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." @focus="showDestinoDropdown = true" @blur="setTimeout(() => showDestinoDropdown = false, 200)" />
@@ -779,11 +786,7 @@ const confirmarActualizacionArca = () => {
                             </ul>
                         </div>
 
-                        <div>
-                            <InputLabel for="fecha_emision" value="Fecha de emisión" class="text-xs" />
-                            <TextInput id="fecha_emision" v-model="form.fecha_emision" type="date" class="mt-1 block w-full !py-1 !text-sm" />
-                            <InputError :message="form.errors.fecha_emision" />
-                        </div>
+                    </div>
                     </div>
 
                     <div v-if="cuentaFacturada" class="rounded border px-2 py-1 text-[11px]" :class="cuentaFacturada.email ? 'border-green-100 bg-green-50 text-gray-600' : 'border-amber-200 bg-amber-50 text-amber-800'">
@@ -808,7 +811,7 @@ const confirmarActualizacionArca = () => {
                         </div>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-2">
+                    <div class="rounded-md bg-indigo-50/60 p-2">
                         <div class="mb-2 flex items-center justify-between gap-2">
                             <h3 class="text-sm font-semibold text-gray-900">Detalle</h3>
                             <button
@@ -816,7 +819,7 @@ const confirmarActualizacionArca = () => {
                                 class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-white hover:bg-indigo-700"
                                 @click="agregarFilaYEnfocar"
                             >
-                                + Agregar fila
+                                + Agregar fila <kbd class="ml-1 rounded border border-indigo-300 px-1 py-0.5 text-[9px] font-normal">F6</kbd>
                             </button>
                         </div>
 
@@ -861,14 +864,12 @@ const confirmarActualizacionArca = () => {
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="flex items-center gap-2 text-xs font-medium text-gray-700">
-                                            <input v-model="it.cobrar_seguro" type="checkbox" class="size-3.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
-                                            Cobrar seguro
-                                        </label>
+                                        <InputLabel :for="'seguro-' + it.key" value="Seguro" class="text-xs" />
                                         <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" readonly />
-                                        <div class="mt-0.5 truncate text-[10px] text-gray-500">
-                                            {{ tarifaActiva.usar_seguro === false ? 'No disponible por tarifa' : (it.cobrar_seguro ? `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% valor declarado` : 'No se cobra') }}
-                                        </div>
+                                        <label class="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-gray-700">
+                                            <input v-model="it.cobrar_seguro" type="checkbox" class="size-3.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
+                                            {{ tarifaActiva.usar_seguro === false ? 'No disponible' : 'Cobrar seguro' }}
+                                        </label>
                                     </div>
                                     <div>
                                         <InputLabel :for="'remito-' + it.key" value="Remito" class="text-xs" />
@@ -906,34 +907,34 @@ const confirmarActualizacionArca = () => {
                                         <tr>
                                             <td class="px-1 py-1 text-[10px] text-gray-500 whitespace-nowrap">{{ i + 1 }}</td>
                                             <td class="px-1 py-1 text-center">
-                                                <input v-model="it.cantidad" type="number" min="1" class="w-12 border-gray-300 rounded py-0.5 px-1 text-center text-xs" />
+                                                <input v-model="it.cantidad" type="number" min="1" class="block w-full min-w-0 border-gray-300 rounded py-0.5 px-1 text-center text-xs" />
                                             </td>
                                             <td class="px-1 py-1 text-center">
-                                                <select v-model="it.tipo" class="w-20 border-gray-300 rounded py-0.5 px-0.5 text-xs">
+                                                <select v-model="it.tipo" class="block w-full min-w-0 border-gray-300 rounded py-0.5 px-0.5 text-xs">
                                                     <option value="bultos">Bultos</option>
                                                     <option value="palets">Palets</option>
                                                 </select>
                                             </td>
                                             <td class="px-1 py-1">
-                                                <input v-model="it.descripcion" data-item-description type="text" class="w-full min-w-32 border-gray-300 rounded py-0.5 px-1 text-xs" placeholder="Opcional" />
+                                                <input v-model="it.descripcion" data-item-description type="text" class="block w-full min-w-0 border-gray-300 rounded py-0.5 px-1 text-xs" placeholder="Opcional" />
                                             </td>
                                             <td class="px-1 py-1">
-                                                <input v-model.number="it.valor_declarado" @input="recalcularImporte(it)" type="number" min="0" step="0.01" class="w-28 border-gray-300 rounded py-0.5 px-1 text-right text-xs" />
+                                                <input v-model.number="it.valor_declarado" @input="recalcularImporte(it)" type="number" min="0" step="0.01" class="block w-full min-w-0 border-gray-300 rounded py-0.5 px-1 text-right text-xs" />
                                                 <div v-if="it.valor_declarado !== '' && it.valor_declarado !== null" class="mt-0.5 text-right text-[9px] leading-none text-gray-500">{{ formatNum(it.valor_declarado) }}</div>
                                             </td>
                                             <td class="px-1 py-1">
-                                                <input v-model.number="it.importe" type="number" min="0" step="0.01" class="w-24 border-gray-300 rounded py-0.5 px-1 text-right text-xs" />
+                                                <input v-model.number="it.importe" type="number" min="0" step="0.01" class="block w-full min-w-0 border-gray-300 rounded py-0.5 px-1 text-right text-xs" />
                                                 <div v-if="it.importe !== '' && it.importe !== null" class="mt-0.5 text-right text-[9px] leading-none text-gray-500">{{ formatNum(it.importe) }}</div>
                                             </td>
                                             <td class="px-1 py-1">
-                                                <label class="flex items-center justify-center gap-1 whitespace-nowrap text-[9px] text-gray-700">
+                                                <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="mt-0.5 block w-full min-w-0 border-gray-300 rounded py-0.5 px-1 text-right text-xs" readonly />
+                                                <label class="mt-0.5 flex items-center justify-center gap-1 whitespace-nowrap text-[9px] text-gray-700">
                                                     <input v-model="it.cobrar_seguro" type="checkbox" class="size-3 rounded border-gray-300 text-indigo-600" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
-                                                    Cobrar
+                                                    {{ tarifaActiva.usar_seguro === false ? 'No disponible' : 'Cobrar seguro' }}
                                                 </label>
-                                                <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="mt-0.5 w-24 border-gray-300 rounded py-0.5 px-1 text-right text-xs" readonly />
                                             </td>
                                             <td class="px-1 py-1">
-                                                <input v-model="it.remito" type="text" class="w-20 border-gray-300 rounded py-0.5 px-1 text-xs" />
+                                                <input v-model="it.remito" type="text" class="block w-full min-w-0 border-gray-300 rounded py-0.5 px-1 text-xs" />
                                             </td>
                                             <td class="px-1 py-1 text-center">
                                                 <button v-if="items.length > 1" type="button" class="text-xs text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">×</button>
@@ -964,7 +965,8 @@ const confirmarActualizacionArca = () => {
                         </div>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-2">
+                    <div class="space-y-2 rounded-md bg-amber-50/60 p-2">
+                    <div>
                         <InputLabel for="observacion" value="Observaciones" class="text-xs" />
                         <textarea
                             id="observacion"
@@ -976,7 +978,7 @@ const confirmarActualizacionArca = () => {
                         <InputError :message="form.errors.observacion" />
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2 border-t border-gray-200 pt-2 sm:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-2 border-t border-amber-200 pt-2 sm:grid-cols-2">
                         <div>
                             <InputLabel value="Servicio mínimo" class="text-xs" />
                             <TextInput v-model="form.servicio_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" placeholder="0.00" />
@@ -989,13 +991,14 @@ const confirmarActualizacionArca = () => {
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-end gap-2 border-t border-gray-200 pt-2">
+                    <div class="flex items-center justify-end gap-2 border-t border-amber-200 pt-2">
                         <Link :href="route('facturacion.manifiestos.index')">
                             <SecondaryButton type="button">Cancelar</SecondaryButton>
                         </Link>
                         <PrimaryButton :disabled="form.processing || !form.origen_cuenta_id || !form.destino_cuenta_id || !form.tipo_arca || !arcaTipoOpciones.length || items.length === 0">
-                            Verificar CUIT y emitir factura
+                            Verificar CUIT y emitir factura <kbd class="ml-1 rounded border border-white/40 px-1 py-0.5 text-[9px] font-normal">F8</kbd>
                         </PrimaryButton>
+                    </div>
                     </div>
                 </form>
             </div>
