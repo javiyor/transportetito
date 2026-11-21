@@ -1186,7 +1186,11 @@
 
 @if($autoPrint)
 <script>
-    window.addEventListener('load', () => document.getElementById('invoice-copy-count')?.focus());
+    window.addEventListener('load', () => {
+        const copyCount = document.getElementById('invoice-copy-count');
+        copyCount?.focus();
+        window.setTimeout(() => printInvoiceCopies(), 250);
+    });
 </script>
 @endif
 <script>

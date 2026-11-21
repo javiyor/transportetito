@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -19,6 +19,10 @@ const props = defineProps({
 const tarifaActiva = ref({ ...(props.tarifaDefaults || {}) });
 
 const page = usePage();
+const invoiceFormElement = ref(null);
+const origenSearchInput = ref(null);
+const nuevoOrigenLink = ref(null);
+const nuevoDestinoLink = ref(null);
 const flashSuccess = computed(() => page.props.tt?.flash?.success || page.props.flash?.success || null);
 const flashError = computed(() => page.props.tt?.flash?.error || page.props.flash?.error || null);
 const flashWarning = computed(() => page.props.tt?.flash?.warning || page.props.flash?.warning || null);
@@ -46,12 +50,77 @@ const recargarCuentasAlVolver = () => {
 onMounted(() => {
     document.addEventListener('visibilitychange', recargarCuentasAlVolver);
     window.addEventListener('focus', recargarCuentasAlVolver);
+    window.addEventListener('keydown', manejarAtajosFactura);
+    nextTick(enfocarOrigen);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange', recargarCuentasAlVolver);
     window.removeEventListener('focus', recargarCuentasAlVolver);
+    window.removeEventListener('keydown', manejarAtajosFactura);
 });
+
+const enfocarOrigen = () => {
+    origenSearchInput.value?.focus();
+    invoiceFormElement.value?.querySelector('#origen-search')?.select();
+};
+
+const camposNavegables = () => {
+    if (!invoiceFormElement.value) return [];
+
+    return [...invoiceFormElement.value.querySelectorAll('input:not([type="hidden"]):not([type="submit"]), select, textarea')]
+        .filter((element) => !element.disabled && element.getClientRects().length > 0);
+};
+
+const moverFocoCampo = (paso) => {
+    const campos = camposNavegables();
+    if (!campos.length) return;
+
+    const indiceActual = campos.indexOf(document.activeElement);
+    const indiceInicial = indiceActual < 0 ? (paso > 0 ? -1 : 0) : indiceActual;
+    const indiceSiguiente = (indiceInicial + paso + campos.length) % campos.length;
+    campos[indiceSiguiente]?.focus();
+};
+
+const agregarFilaYEnfocar = async () => {
+    agregarItem();
+    await nextTick();
+    const camposDescripcion = [...(invoiceFormElement.value?.querySelectorAll('[data-item-description]') || [])]
+        .filter((element) => element.getClientRects().length > 0);
+    camposDescripcion.at(-1)?.focus();
+};
+
+function manejarAtajosFactura(event) {
+    if (event.altKey || event.metaKey) return;
+    if (cuitCheckModal.value.show || cuentaEditando.value) return;
+
+    if (event.key === 'Tab' && event.ctrlKey) {
+        if (!invoiceFormElement.value?.contains(document.activeElement)) return;
+        event.preventDefault();
+        moverFocoCampo(-1);
+        return;
+    }
+
+    if (event.key === 'Tab' && invoiceFormElement.value?.contains(document.activeElement)) {
+        event.preventDefault();
+        moverFocoCampo(event.shiftKey ? -1 : 1);
+        return;
+    }
+
+    if (event.key === 'F3') {
+        event.preventDefault();
+        nuevoOrigenLink.value?.click();
+    } else if (event.key === 'F4') {
+        event.preventDefault();
+        nuevoDestinoLink.value?.click();
+    } else if (event.key === 'F6') {
+        event.preventDefault();
+        agregarFilaYEnfocar();
+    } else if (event.key === 'F8') {
+        event.preventDefault();
+        verificarCuitYEnviar();
+    }
+}
 
 const defaultPct = Number(props.tarifaDefaults?.tarifa_valor_declarado_pct) || 0.03;
 
@@ -310,6 +379,7 @@ const agregarItem = () => {
         importe: 0,
         cobrar_seguro: tarifaActiva.value.usar_seguro !== false,
         seguro: calcularSeguro(0),
+        cobrar_cr: false,
         cr: 0,
         remito: '',
     });
@@ -403,6 +473,7 @@ const importarCotizacion = (cq) => {
             importe: importe,
             cobrar_seguro: tarifaActiva.value.usar_seguro !== false,
             seguro: calcularSeguro(valorDeclarado),
+            cobrar_cr: Number(it.cr) > 0,
             cr: Number(it.cr) || 0,
             remito: it.remito || '',
         };
@@ -420,7 +491,7 @@ const totales = computed(() => {
     for (const it of items.value) {
         const imp = Number(it.importe) || 0;
         const seg = Number(it.seguro) || 0;
-        const c = Number(it.cr) || 0;
+        const c = it.cobrar_cr ? (Number(it.cr) || 0) : 0;
         const sub = imp + seg + c;
         const iv = sub * ivaPct.value;
 
@@ -451,11 +522,21 @@ const resetForNext = () => {
         importe: 0,
         cobrar_seguro: tarifaActiva.value.usar_seguro !== false,
         seguro: calcularSeguro(0),
+        cobrar_cr: false,
         cr: 0,
         remito: '',
     }];
     form.observacion = '';
+    form.origen_cuenta_id = '';
+    form.destino_cuenta_id = '';
+    searchOrigen.value = '';
+    searchDestino.value = '';
+    selectedOrigen.value = '';
+    selectedDestino.value = '';
+    showOrigenDropdown.value = false;
+    showDestinoDropdown.value = false;
     form.clearErrors();
+    nextTick(enfocarOrigen);
 };
 
 const submit = () => {
@@ -467,7 +548,8 @@ const submit = () => {
         importe: Number(it.importe) || 0,
         cobrar_seguro: !!it.cobrar_seguro,
         seguro: Number(it.seguro) || 0,
-        cr: Number(it.cr) || 0,
+        cobrar_cr: !!it.cobrar_cr,
+        cr: it.cobrar_cr ? (Number(it.cr) || 0) : 0,
         remito: it.remito,
     }));
     form.tipo_arca = form.tipo_arca || arcaTipoOpciones.value[0]?.code || '';
@@ -605,14 +687,14 @@ const confirmarActualizacionArca = () => {
 </script>
 
 <template>
-    <AppLayout title="Facturacion / Carga directa">
+    <AppLayout title="Facturacion / Carga directa" class="carga-directa-page">
         <Head title="Facturacion / Carga directa" />
 
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <div>
-                    <h2 class="font-semibold text-xl text-gray-800 leading-tight">Facturacion / Carga directa</h2>
-                    <div class="mt-1 text-sm text-gray-600">Crear factura con pedidos desde cero, sin manifiesto.</div>
+                    <h2 class="font-semibold text-base text-gray-800 leading-tight">Facturacion / Carga directa</h2>
+                    <div class="mt-0.5 text-xs text-gray-600">Crear factura con pedidos desde cero, sin manifiesto.</div>
                 </div>
                 <Link :href="route('facturacion.manifiestos.index')">
                     <SecondaryButton>Volver</SecondaryButton>
@@ -620,345 +702,294 @@ const confirmarActualizacionArca = () => {
             </div>
         </template>
 
-        <div class="max-w-6xl mx-auto py-4 sm:px-6 lg:px-8">
-            <div v-if="flashSuccess" class="mb-3 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800 flex items-center justify-between gap-4">
+        <div class="max-w-7xl mx-auto px-2 py-2 sm:px-4 lg:px-6">
+            <div v-if="flashSuccess" class="mb-1 flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs text-green-800">
                 <span>{{ flashSuccess }}</span>
                 <Link :href="route('facturacion.manifiestos.index')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold whitespace-nowrap">Ver comprobantes →</Link>
             </div>
-            <div v-if="flashError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ flashError }}</div>
-            <div v-if="flashWarning" class="mb-3 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">{{ flashWarning }}</div>
-            <div v-if="avisoCambioEmpresa" class="mb-3 rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-900">{{ avisoCambioEmpresa }}</div>
-            <div v-if="edicionError" class="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ edicionError }}</div>
-            <div class="bg-white shadow sm:rounded-lg p-4">
-                <form @submit.prevent="verificarCuitYEnviar" class="space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="sm:col-span-2">
-                            <InputLabel for="empresa_facturadora_id" value="Empresa facturadora" />
-                            <select id="empresa_facturadora_id" v-model="form.empresa_facturadora_id" :disabled="empresaCambiando" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-60">
+            <div v-if="flashError" class="mb-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-800">{{ flashError }}</div>
+            <div v-if="flashWarning" class="mb-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">{{ flashWarning }}</div>
+            <div v-if="avisoCambioEmpresa" class="mb-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-900">{{ avisoCambioEmpresa }}</div>
+            <div v-if="edicionError" class="mb-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-800">{{ edicionError }}</div>
+            <div class="bg-white shadow sm:rounded-lg p-2">
+                <form ref="invoiceFormElement" @submit.prevent="verificarCuitYEnviar" class="space-y-2 text-sm">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded border border-gray-200 p-1.5">
+                            <InputLabel for="empresa_facturadora_id" value="Empresa facturadora" class="text-xs" />
+                            <select id="empresa_facturadora_id" v-model="form.empresa_facturadora_id" :disabled="empresaCambiando" class="mt-0.5 block w-full border-gray-300 rounded-md py-1 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-60">
                                 <option v-for="empresaOpcion in empresasFacturadoras || []" :key="empresaOpcion.id" :value="String(empresaOpcion.id)">{{ empresaOpcion.razon_social }}</option>
                             </select>
-                            <InputError :message="form.errors.empresa_facturadora_id" />
-                        </div>
-                        <div class="relative">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <InputLabel value="Origen (Remitente)" />
-                                <div class="flex items-center gap-2">
-                                    <button v-if="cuentaOrigenSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline" @click="abrirEdicionCuenta(cuentaOrigenSeleccionada)">Editar</button>
-                                    <button v-if="cuentaOrigenSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaOrigenSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaOrigenSeleccionada)">{{ arcaActualizandoId === cuentaOrigenSeleccionada.id ? 'Consultando ARCA...' : 'Actualizar ARCA' }}</button>
-                                    <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
-                                </div>
-                            </div>
-                            <TextInput
-                                v-model="searchOrigen"
-                                type="text"
-                                class="mt-1 block w-full"
-                                placeholder="Buscar por nombre o CUIT..."
-                                @focus="showOrigenDropdown = true"
-                                @blur="setTimeout(() => showOrigenDropdown = false, 200)"
-                            />
-                            <input type="hidden" v-model="form.origen_cuenta_id" />
-                            <InputError :message="form.errors.origen_cuenta_id" />
-                            <ul
-                                v-if="showOrigenDropdown && filteredOrigen.length"
-                                class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto text-sm"
-                            >
-                                <li
-                                    v-for="c in filteredOrigen"
-                                    :key="c.id"
-                                    class="px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                    @mousedown.prevent="selectOrigen(c)"
-                                >
-                                    <div class="font-medium text-gray-900">{{ c.nombre_cuenta || c.tercero?.razon_social }}</div>
-                                    <div class="text-xs text-gray-500">{{ c.tercero?.cuit || 'Sin CUIT' }}</div>
-                                </li>
-                            </ul>
-                            <div v-if="form.origen_cuenta_id && !showOrigenDropdown" class="mt-1 text-xs text-green-700">
-                                {{ selectedOrigen }}
-                            </div>
-                        </div>
-
-                        <div class="relative">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <InputLabel value="Destino (Destinatario / Entrega)" />
-                                <div class="flex items-center gap-2">
-                                    <button v-if="cuentaDestinoSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline" @click="abrirEdicionCuenta(cuentaDestinoSeleccionada)">Editar</button>
-                                    <button v-if="cuentaDestinoSeleccionada" type="button" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaDestinoSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaDestinoSeleccionada)">{{ arcaActualizandoId === cuentaDestinoSeleccionada.id ? 'Consultando ARCA...' : 'Actualizar ARCA' }}</button>
-                                    <a :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">+ Nuevo</a>
-                                </div>
-                            </div>
-                            <TextInput
-                                v-model="searchDestino"
-                                type="text"
-                                class="mt-1 block w-full"
-                                placeholder="Buscar por nombre o CUIT..."
-                                @focus="showDestinoDropdown = true"
-                                @blur="setTimeout(() => showDestinoDropdown = false, 200)"
-                            />
-                            <input type="hidden" v-model="form.destino_cuenta_id" />
-                            <InputError :message="form.errors.destino_cuenta_id" />
-                            <ul
-                                v-if="showDestinoDropdown && filteredDestino.length"
-                                class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto text-sm"
-                            >
-                                <li
-                                    v-for="c in filteredDestino"
-                                    :key="c.id"
-                                    class="px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                    @mousedown.prevent="selectDestino(c)"
-                                >
-                                    <div class="font-medium text-gray-900">{{ c.nombre_cuenta || c.tercero?.razon_social }}</div>
-                                    <div class="text-xs text-gray-500">{{ c.tercero?.cuit || 'Sin CUIT' }}</div>
-                                </li>
-                            </ul>
-                            <div v-if="form.destino_cuenta_id && !showDestinoDropdown" class="mt-1 text-xs text-green-700">
-                                {{ selectedDestino }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <InputLabel for="fecha_emision" value="Fecha de emision" />
-                            <TextInput id="fecha_emision" v-model="form.fecha_emision" type="date" class="mt-1 block w-full" />
-                            <InputError :message="form.errors.fecha_emision" />
-                        </div>
-
-                        <div class="flex items-end pb-2">
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    v-model="form.facturar_a_destino"
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                />
-                                <span class="text-sm text-gray-700 font-medium">Facturar a destino</span>
-                                <span class="text-xs text-gray-400">(si no, se factura a origen)</span>
+                            <InputError class="text-xs" :message="form.errors.empresa_facturadora_id" />
+                            <label class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-700">
+                                <input type="checkbox" v-model="form.facturar_a_destino" class="size-3.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                <span class="font-medium">Facturar a destino</span>
+                                <span class="text-gray-400">(si no, a origen)</span>
                             </label>
                         </div>
 
-                        <div v-if="cuentaFacturada" class="sm:col-span-2 rounded-md border border-gray-200 p-3">
-                            <div class="text-sm text-gray-700">
-                                <span v-if="cuentaFacturada.email">La factura se enviará por email al emitirla:</span>
-                                <span v-else>La cuenta facturada no tiene email cargado.</span>
-                                <span v-if="cuentaFacturada.email" class="block text-xs text-gray-500">{{ cuentaFacturada.email }}</span>
-                            </div>
-                        </div>
-
-                        <div v-if="form.origen_cuenta_id && form.destino_cuenta_id" class="sm:col-span-2">
-                            <InputLabel for="tipo_arca" value="Comprobante fiscal ARCA" />
-                            <select id="tipo_arca" v-model="form.tipo_arca" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" :disabled="cotizacionesLoading || !arcaTipoOpciones.length">
+                        <div>
+                            <InputLabel for="tipo_arca" value="Comprobante fiscal ARCA" class="text-xs" />
+                            <select id="tipo_arca" v-model="form.tipo_arca" class="mt-0.5 block w-full border-gray-300 rounded-md py-1 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" :disabled="cotizacionesLoading || !arcaTipoOpciones.length">
                                 <option v-for="opcion in arcaTipoOpciones" :key="opcion.code" :value="opcion.code">{{ opcion.label }}</option>
                             </select>
-                            <div v-if="arcaTipoOpciones.length" class="mt-1 text-xs text-gray-500">
-                                Sugerido según la condición IVA de la empresa y del cliente seleccionado para facturar.
-                            </div>
-                            <div v-else-if="!cotizacionesLoading" class="mt-1 text-xs text-red-600">
-                                No hay tipos de comprobante ARCA disponibles para esta empresa y cliente.
-                            </div>
+                            <div v-if="arcaTipoOpciones.length" class="mt-1 text-[11px] text-gray-500">Sugerido según IVA de la empresa y del cliente.</div>
+                            <div v-else-if="!cotizacionesLoading" class="mt-1 text-[11px] text-red-600">Seleccioná origen y destino para ver las opciones ARCA.</div>
                             <InputError :message="form.errors.tipo_arca" />
+                        </div>
+
+                        <div class="hidden xl:block" aria-hidden="true"></div>
+
+                        <div class="relative">
+                            <div class="flex flex-wrap items-center justify-between gap-1">
+                                <InputLabel value="Origen (Remitente)" class="text-xs" />
+                                <div class="flex items-center gap-2">
+                                    <button v-if="cuentaOrigenSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline" @click="abrirEdicionCuenta(cuentaOrigenSeleccionada)">Editar</button>
+                                    <button v-if="cuentaOrigenSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaOrigenSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaOrigenSeleccionada)">{{ arcaActualizandoId === cuentaOrigenSeleccionada.id ? 'Consultando...' : 'Actualizar ARCA' }}</button>
+                                    <a ref="nuevoOrigenLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo</a>
+                                </div>
+                            </div>
+                            <TextInput id="origen-search" ref="origenSearchInput" v-model="searchOrigen" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." @focus="showOrigenDropdown = true" @blur="setTimeout(() => showOrigenDropdown = false, 200)" />
+                            <input type="hidden" v-model="form.origen_cuenta_id" />
+                            <InputError :message="form.errors.origen_cuenta_id" />
+                            <ul v-if="showOrigenDropdown && filteredOrigen.length" class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-300 bg-white text-sm shadow-lg">
+                                <li v-for="c in filteredOrigen" :key="c.id" class="cursor-pointer border-b border-gray-100 px-3 py-2 last:border-b-0 hover:bg-indigo-50" @mousedown.prevent="selectOrigen(c)">
+                                    <div class="font-medium text-gray-900">{{ c.nombre_cuenta || c.tercero?.razon_social }}</div>
+                                    <div class="text-xs text-gray-500">{{ c.tercero?.cuit || 'Sin CUIT' }}</div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="relative">
+                            <div class="flex flex-wrap items-center justify-between gap-1">
+                                <InputLabel value="Destino (Destinatario / Entrega)" class="text-xs" />
+                                <div class="flex items-center gap-2">
+                                    <button v-if="cuentaDestinoSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline" @click="abrirEdicionCuenta(cuentaDestinoSeleccionada)">Editar</button>
+                                    <button v-if="cuentaDestinoSeleccionada" type="button" class="text-[11px] text-indigo-600 hover:underline disabled:opacity-50" :disabled="arcaActualizandoId === cuentaDestinoSeleccionada.id" @click="actualizarCuentaDesdeArca(cuentaDestinoSeleccionada)">{{ arcaActualizandoId === cuentaDestinoSeleccionada.id ? 'Consultando...' : 'Actualizar ARCA' }}</button>
+                                    <a ref="nuevoDestinoLink" :href="route('admin.terceros.index', { tipo: 'cliente' })" target="_blank" class="text-[11px] text-indigo-600 hover:underline">+ Nuevo</a>
+                                </div>
+                            </div>
+                            <TextInput v-model="searchDestino" type="text" class="mt-1 block w-full !py-1 !text-sm" placeholder="Buscar por nombre o CUIT..." @focus="showDestinoDropdown = true" @blur="setTimeout(() => showDestinoDropdown = false, 200)" />
+                            <input type="hidden" v-model="form.destino_cuenta_id" />
+                            <InputError :message="form.errors.destino_cuenta_id" />
+                            <ul v-if="showDestinoDropdown && filteredDestino.length" class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-300 bg-white text-sm shadow-lg">
+                                <li v-for="c in filteredDestino" :key="c.id" class="cursor-pointer border-b border-gray-100 px-3 py-2 last:border-b-0 hover:bg-indigo-50" @mousedown.prevent="selectDestino(c)">
+                                    <div class="font-medium text-gray-900">{{ c.nombre_cuenta || c.tercero?.razon_social }}</div>
+                                    <div class="text-xs text-gray-500">{{ c.tercero?.cuit || 'Sin CUIT' }}</div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <InputLabel for="fecha_emision" value="Fecha de emisión" class="text-xs" />
+                            <TextInput id="fecha_emision" v-model="form.fecha_emision" type="date" class="mt-1 block w-full !py-1 !text-sm" />
+                            <InputError :message="form.errors.fecha_emision" />
                         </div>
                     </div>
 
-                    <div v-if="cotizacionesLoading" class="text-sm text-gray-500 py-2">Buscando presupuestos vigentes...</div>
-                    <div v-if="cotizaciones.length" class="border border-green-200 bg-green-50 rounded-lg p-4">
-                        <h4 class="text-sm font-semibold text-green-800 mb-2">Presupuesto{{ cotizaciones.length > 1 ? 's' : '' }} vigente{{ cotizaciones.length > 1 ? 's' : '' }} para este origen y destino</h4>
-                        <div v-for="cq in cotizaciones" :key="cq.id" class="mb-2 last:mb-0 bg-white rounded border border-green-200 p-3 flex items-start justify-between gap-4">
-                            <div class="text-sm space-y-1">
+                    <div v-if="cuentaFacturada" class="rounded border px-2 py-1 text-[11px]" :class="cuentaFacturada.email ? 'border-green-100 bg-green-50 text-gray-600' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                        <span v-if="cuentaFacturada.email">Email de facturación: {{ cuentaFacturada.email }}</span>
+                        <span v-else>⚠ Cliente sin correo electrónico registrado.</span>
+                    </div>
+
+                    <div v-if="cotizacionesLoading" class="py-0.5 text-[11px] text-gray-500">Buscando presupuestos vigentes...</div>
+                    <div v-if="cotizaciones.length" class="border border-green-200 bg-green-50 rounded p-1.5">
+                        <h4 class="text-xs font-semibold text-green-800 mb-1">Presupuesto{{ cotizaciones.length > 1 ? 's' : '' }} vigente{{ cotizaciones.length > 1 ? 's' : '' }} para este origen y destino</h4>
+                        <div v-for="cq in cotizaciones" :key="cq.id" class="mb-1 last:mb-0 bg-white rounded border border-green-200 p-2 flex items-start justify-between gap-2">
+                            <div class="text-xs space-y-0.5">
                                 <div><span class="font-medium text-gray-700">Origen:</span> {{ cq.origen || '-' }} <span class="text-gray-400">→</span> <span class="font-medium text-gray-700">Destino:</span> {{ cq.destino || '-' }}</div>
                                 <div class="text-xs text-gray-500">Items: {{ (cq.items || []).length }} · Valor declarado: ${{ formatNum((cq.items || []).reduce((s, i) => s + (Number(i.valor_declarado) || 0), 0)) }}</div>
                                 <div class="text-xs text-gray-500">Validez: {{ formatFecha(cq.fecha_validez) }} · Creado: {{ formatFecha(cq.created_at) }}</div>
                                 <div class="text-xs" v-if="cq.observacion">Obs: {{ cq.observacion }}</div>
                             </div>
                             <div class="text-right shrink-0">
-                                <div class="text-sm font-bold text-green-700">${{ formatNum(cq.flete_final) }}</div>
-                                <PrimaryButton type="button" class="!text-xs !px-2 !py-1 mt-1" @click="importarCotizacion(cq)">Importar items</PrimaryButton>
+                                <div class="text-xs font-bold text-green-700">${{ formatNum(cq.flete_final) }}</div>
+                                <PrimaryButton type="button" class="!text-[10px] !px-2 !py-1 mt-1" @click="importarCotizacion(cq)">Importar</PrimaryButton>
                             </div>
                         </div>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-4">
-                        <div class="flex items-center justify-between gap-4 mb-3">
-                            <h3 class="text-base font-semibold text-gray-900">Detalle</h3>
+                    <div class="border-t border-gray-200 pt-2">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <h3 class="text-sm font-semibold text-gray-900">Detalle</h3>
                             <button
                                 type="button"
-                                class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700"
-                                @click="agregarItem"
+                                class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-white hover:bg-indigo-700"
+                                @click="agregarFilaYEnfocar"
                             >
                                 + Agregar fila
                             </button>
                         </div>
 
-                        <div class="space-y-4 lg:hidden">
+                        <div class="space-y-2 lg:hidden">
                             <div
                                 v-for="(it, i) in items"
                                 :key="it.key"
-                                class="rounded-lg border border-gray-200 p-4 space-y-3"
+                                class="rounded border border-gray-200 p-2 space-y-2"
                             >
                                 <div class="flex items-center justify-between">
-                                    <span class="text-sm font-semibold text-gray-900">Item #{{ i + 1 }}</span>
-                                    <button v-if="items.length > 1" type="button" class="text-xs text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">Eliminar</button>
+                                    <span class="text-xs font-semibold text-gray-900">Item #{{ i + 1 }}</span>
+                                    <button v-if="items.length > 1" type="button" class="text-[11px] text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">Eliminar</button>
                                 </div>
-                                <div>
-                                    <InputLabel :for="'desc-' + it.key" value="Descripcion" />
-                                    <TextInput :id="'desc-' + it.key" v-model="it.descripcion" type="text" class="mt-1 block w-full" placeholder="Ej: Flete mercaderia" />
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <InputLabel :for="'cant-' + it.key" value="Cantidad" />
-                                        <TextInput :id="'cant-' + it.key" v-model="it.cantidad" type="number" min="1" class="mt-1 block w-full" />
+                                        <InputLabel :for="'cant-' + it.key" value="Cantidad" class="text-xs" />
+                                        <TextInput :id="'cant-' + it.key" v-model="it.cantidad" type="number" min="1" class="mt-0.5 block w-full !py-1 !text-sm" />
                                     </div>
                                     <div>
-                                        <InputLabel :for="'tipo-' + it.key" value="Tipo" />
-                                        <select :id="'tipo-' + it.key" v-model="it.tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                        <InputLabel :for="'tipo-' + it.key" value="Tipo" class="text-xs" />
+                                        <select :id="'tipo-' + it.key" v-model="it.tipo" class="mt-0.5 block w-full border-gray-300 rounded-md py-1 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                             <option value="bultos">Bultos</option>
                                             <option value="palets">Palets</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <InputLabel :for="'desc-' + it.key" value="Descripción (opcional)" class="text-xs" />
+                                    <TextInput :id="'desc-' + it.key" v-model="it.descripcion" data-item-description type="text" class="mt-0.5 block w-full !py-1 !text-sm" placeholder="Ej.: flete mercadería" />
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <InputLabel :for="'vd-' + it.key" value="Valor declarado" />
-                                        <TextInput :id="'vd-' + it.key" v-model="it.valor_declarado" type="number" min="0" step="0.01" class="mt-1 block w-full" @input="recalcularImporte(it)" />
+                                        <InputLabel :for="'vd-' + it.key" value="Valor declarado" class="text-xs" />
+                                        <TextInput :id="'vd-' + it.key" v-model="it.valor_declarado" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" @input="recalcularImporte(it)" />
                                         <div v-if="it.valor_declarado !== '' && it.valor_declarado !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.valor_declarado) }}</div>
                                     </div>
                                     <div>
-                                        <InputLabel :for="'importe-' + it.key" value="Importe" />
-                                        <TextInput :id="'importe-' + it.key" v-model="it.importe" type="number" min="0" step="0.01" class="mt-1 block w-full" />
+                                        <InputLabel :for="'importe-' + it.key" value="Importe" class="text-xs" />
+                                        <TextInput :id="'importe-' + it.key" v-model="it.importe" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" />
                                         <div v-if="it.importe !== '' && it.importe !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.importe) }}</div>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="flex items-center gap-2 text-xs font-medium text-gray-700">
-                                            <input v-model="it.cobrar_seguro" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
+                                            <input v-model="it.cobrar_seguro" type="checkbox" class="size-3.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
                                             Cobrar seguro
                                         </label>
-                                        <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-1 block w-full" readonly />
-                                        <div class="mt-0.5 text-[10px] text-gray-500 text-right">
-                                            {{ tarifaActiva.usar_seguro === false ? 'No disponible para esta tarifa' : (it.cobrar_seguro ? `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% del valor declarado` : 'No se cobra') }}
+                                        <TextInput :id="'seguro-' + it.key" v-model="it.seguro" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" readonly />
+                                        <div class="mt-0.5 truncate text-[10px] text-gray-500">
+                                            {{ tarifaActiva.usar_seguro === false ? 'No disponible por tarifa' : (it.cobrar_seguro ? `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% valor declarado` : 'No se cobra') }}
                                         </div>
-                                        <div v-if="it.seguro !== '' && it.seguro !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.seguro) }}</div>
                                     </div>
                                     <div>
-                                        <InputLabel :for="'cr-' + it.key" value="CR" />
-                                        <TextInput :id="'cr-' + it.key" v-model="it.cr" type="number" min="0" step="0.01" class="mt-1 block w-full" />
-                                        <div v-if="it.cr !== '' && it.cr !== null" class="mt-0.5 text-[10px] text-gray-500 text-right">{{ formatNum(it.cr) }}</div>
+                                        <InputLabel :for="'remito-' + it.key" value="Remito" class="text-xs" />
+                                        <TextInput :id="'remito-' + it.key" v-model="it.remito" type="text" class="mt-0.5 block w-full !py-1 !text-sm" />
                                     </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2">
+                                    <label class="flex items-center gap-1.5 text-xs text-gray-700">
+                                        <input v-model="it.cobrar_cr" type="checkbox" class="size-3.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                        Contrarreembolso
+                                    </label>
+                                    <span class="text-xs text-gray-500">Importe:</span>
+                                    <TextInput :id="'cr-' + it.key" v-model="it.cr" type="number" min="0" step="0.01" :disabled="!it.cobrar_cr" class="w-32 !py-1 !text-sm disabled:bg-gray-100" />
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-4 hidden lg:block overflow-x-auto">
-                            <table class="min-w-full w-full divide-y divide-gray-200">
+                        <div class="mt-2 hidden lg:block overflow-x-auto">
+                            <table class="min-w-[900px] w-full table-fixed divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                        <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripcion</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cant</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Val. declarado</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Importe</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cobrar seguro</th>
-                                        <th class="px-2 py-1.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CR</th>
-                                        <th class="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remito</th>
-                                        <th class="px-2 py-1.5"></th>
+                                        <th class="w-6 px-1 py-1 text-left text-[9px] font-medium text-gray-500 uppercase">#</th>
+                                        <th class="w-12 px-1 py-1 text-center text-[9px] font-medium text-gray-500 uppercase">Cantidad</th>
+                                        <th class="w-16 px-1 py-1 text-center text-[9px] font-medium text-gray-500 uppercase">Tipo</th>
+                                        <th class="min-w-28 px-1 py-1 text-left text-[9px] font-medium text-gray-500 uppercase">Descripción</th>
+                                        <th class="w-28 px-1 py-1 text-center text-[9px] font-medium text-gray-500 uppercase">Valor declarado</th>
+                                        <th class="w-24 px-1 py-1 text-center text-[9px] font-medium text-gray-500 uppercase">Importe</th>
+                                        <th class="w-24 px-1 py-1 text-center text-[9px] font-medium text-gray-500 uppercase">Seguro</th>
+                                        <th class="w-20 px-1 py-1 text-left text-[9px] font-medium text-gray-500 uppercase">Remito</th>
+                                        <th class="w-5"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="(it, i) in items" :key="it.key">
-                                        <td class="px-2 py-1 text-xs text-gray-500 whitespace-nowrap">{{ i + 1 }}</td>
-                                        <td class="px-2 py-1">
-                                            <input v-model="it.descripcion" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1" placeholder="Descripcion" />
-                                        </td>
-                                        <td class="px-2 py-1 text-center">
-                                            <input v-model="it.cantidad" type="number" min="1" class="w-12 border-gray-300 rounded text-xs py-0.5 px-1 text-center" />
-                                        </td>
-                                        <td class="px-2 py-1 text-center">
-                                            <select v-model="it.tipo" class="w-16 border-gray-300 rounded text-xs py-0.5 px-0.5">
-                                                <option value="bultos">Bultos</option>
-                                                <option value="palets">Palets</option>
-                                            </select>
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            <input v-model.number="it.valor_declarado" @input="recalcularImporte(it)" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
-                                            <div v-if="it.valor_declarado !== '' && it.valor_declarado !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.valor_declarado) }}</div>
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            <input v-model.number="it.importe" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
-                                            <div v-if="it.importe !== '' && it.importe !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.importe) }}</div>
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            <label class="flex items-center justify-center gap-1 whitespace-nowrap text-[10px] text-gray-700">
-                                                <input v-model="it.cobrar_seguro" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
-                                                Cobrar
-                                            </label>
-                                            <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" readonly />
-                                            <div class="text-[10px] text-gray-500 text-right leading-none mt-0.5">
-                                                {{ tarifaActiva.usar_seguro === false ? 'No disponible' : (it.cobrar_seguro ? `${((Number(tarifaActiva.seguro_pct) || 0) * 100).toLocaleString('es-AR')}% tarifa` : 'No se cobra') }}
-                                            </div>
-                                            <div v-if="it.seguro !== '' && it.seguro !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.seguro) }}</div>
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            <input v-model.number="it.cr" type="number" min="0" step="0.01" class="w-40 border-gray-300 rounded text-xs py-0.5 px-1 text-right" />
-                                            <div v-if="it.cr !== '' && it.cr !== null" class="text-[10px] text-gray-500 text-right leading-none mt-0.5">{{ formatNum(it.cr) }}</div>
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            <input v-model="it.remito" type="text" class="w-20 border-gray-300 rounded text-xs py-0.5 px-1" />
-                                        </td>
-                                        <td class="px-2 py-1 text-center">
-                                            <button v-if="items.length > 1" type="button" class="text-xs text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">X</button>
-                                        </td>
-                                    </tr>
+                                    <template v-for="(it, i) in items" :key="it.key">
+                                        <tr>
+                                            <td class="px-1 py-1 text-[10px] text-gray-500 whitespace-nowrap">{{ i + 1 }}</td>
+                                            <td class="px-1 py-1 text-center">
+                                                <input v-model="it.cantidad" type="number" min="1" class="w-12 border-gray-300 rounded py-0.5 px-1 text-center text-xs" />
+                                            </td>
+                                            <td class="px-1 py-1 text-center">
+                                                <select v-model="it.tipo" class="w-20 border-gray-300 rounded py-0.5 px-0.5 text-xs">
+                                                    <option value="bultos">Bultos</option>
+                                                    <option value="palets">Palets</option>
+                                                </select>
+                                            </td>
+                                            <td class="px-1 py-1">
+                                                <input v-model="it.descripcion" data-item-description type="text" class="w-full min-w-32 border-gray-300 rounded py-0.5 px-1 text-xs" placeholder="Opcional" />
+                                            </td>
+                                            <td class="px-1 py-1">
+                                                <input v-model.number="it.valor_declarado" @input="recalcularImporte(it)" type="number" min="0" step="0.01" class="w-28 border-gray-300 rounded py-0.5 px-1 text-right text-xs" />
+                                                <div v-if="it.valor_declarado !== '' && it.valor_declarado !== null" class="mt-0.5 text-right text-[9px] leading-none text-gray-500">{{ formatNum(it.valor_declarado) }}</div>
+                                            </td>
+                                            <td class="px-1 py-1">
+                                                <input v-model.number="it.importe" type="number" min="0" step="0.01" class="w-24 border-gray-300 rounded py-0.5 px-1 text-right text-xs" />
+                                                <div v-if="it.importe !== '' && it.importe !== null" class="mt-0.5 text-right text-[9px] leading-none text-gray-500">{{ formatNum(it.importe) }}</div>
+                                            </td>
+                                            <td class="px-1 py-1">
+                                                <label class="flex items-center justify-center gap-1 whitespace-nowrap text-[9px] text-gray-700">
+                                                    <input v-model="it.cobrar_seguro" type="checkbox" class="size-3 rounded border-gray-300 text-indigo-600" :disabled="tarifaActiva.usar_seguro === false" @change="recalcularSeguro(it)" />
+                                                    Cobrar
+                                                </label>
+                                                <input v-model.number="it.seguro" type="number" min="0" step="0.01" class="mt-0.5 w-24 border-gray-300 rounded py-0.5 px-1 text-right text-xs" readonly />
+                                            </td>
+                                            <td class="px-1 py-1">
+                                                <input v-model="it.remito" type="text" class="w-20 border-gray-300 rounded py-0.5 px-1 text-xs" />
+                                            </td>
+                                            <td class="px-1 py-1 text-center">
+                                                <button v-if="items.length > 1" type="button" class="text-xs text-red-600 hover:text-red-800" @click="eliminarItem(it.key)">×</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-gray-50/70">
+                                            <td colspan="9" class="px-2 py-1">
+                                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                    <label class="flex items-center gap-1.5 text-[10px] font-medium text-gray-700">
+                                                        <input v-model="it.cobrar_cr" type="checkbox" class="size-3 rounded border-gray-300 text-indigo-600" />
+                                                        Contrarreembolso
+                                                    </label>
+                                                    <span class="text-[10px] text-gray-500">Importe:</span>
+                                                    <input v-model.number="it.cr" type="number" min="0" step="0.01" :disabled="!it.cobrar_cr" class="w-28 border-gray-300 rounded py-0.5 px-1 text-right text-xs disabled:bg-gray-100" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
-                                <tfoot class="bg-gray-50 font-semibold">
-                                    <tr>
-                                        <td colspan="4" class="px-2 py-1.5 text-xs text-gray-700 text-right">Subtotal:</td>
-                                        <td class="px-2 py-1.5 text-xs text-gray-900 text-right">{{ formatNum(totales.importe + totales.seguro + totales.cr) }}</td>
-                                        <td colspan="5"></td>
-                                    </tr>
-                                    <tr class="text-xs text-gray-600">
-                                        <td colspan="4" class="px-2 py-0.5 text-right">IVA ({{ (ivaPct * 100).toFixed(1) }}%):</td>
-                                        <td class="px-2 py-0.5 text-right">{{ formatNum(totales.iva) }}</td>
-                                        <td colspan="5"></td>
-                                    </tr>
-                                    <tr class="border-t-2 border-gray-800">
-                                        <td colspan="4" class="px-2 py-1.5 text-xs text-gray-900 text-right font-bold uppercase">Total factura:</td>
-                                        <td class="px-2 py-1.5 text-xs text-gray-900 text-right font-bold">{{ formatNum(totales.total) }}</td>
-                                        <td colspan="5"></td>
-                                    </tr>
-                                </tfoot>
                             </table>
                         </div>
-                    </div>
-
-                    <div class="border-t border-gray-200 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <InputLabel value="Servicio mínimo" />
-                            <TextInput v-model="form.servicio_minimo" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
-                            <div class="text-xs text-gray-500 mt-1">Se aplica a todas las relaciones</div>
-                        </div>
-                        <div>
-                            <InputLabel value="Servicio de retiro" />
-                            <TextInput v-model="form.servicio_retiro" type="number" min="0" step="0.01" class="mt-1 block w-full" placeholder="0.00" />
-                            <div class="text-xs text-gray-500 mt-1">Costo retiro</div>
-                        </div>
-                        <div>
-                            <InputLabel value="Valor neto total" />
-                            <div class="mt-1 text-sm font-semibold text-gray-900">${{ formatNum(totales.subtotal) }}</div>
-                            <div class="text-xs text-gray-500">Subtotal sin IVA</div>
+                        <div class="flex justify-end pt-2">
+                            <div class="w-full space-y-0.5 text-right sm:w-72">
+                                <div class="flex justify-between gap-4 text-xs text-gray-700"><span>Subtotal:</span><span class="tabular-nums">{{ formatNum(totales.importe + totales.seguro + totales.cr) }}</span></div>
+                                <div class="flex justify-between gap-4 text-xs text-gray-600"><span>IVA ({{ (ivaPct * 100).toFixed(1) }}%):</span><span class="tabular-nums">{{ formatNum(totales.iva) }}</span></div>
+                                <div class="flex justify-between gap-4 border-t border-gray-800 pt-1 text-sm font-bold text-gray-900"><span>Total factura:</span><span class="tabular-nums">{{ formatNum(totales.total) }}</span></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-4">
-                        <InputLabel for="observacion" value="Observacion" />
+                    <div class="border-t border-gray-200 pt-2">
+                        <InputLabel for="observacion" value="Observaciones" class="text-xs" />
                         <textarea
                             id="observacion"
                             v-model="form.observacion"
-                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                            rows="2"
+                            class="mt-1 block w-full border-gray-300 rounded-md py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            rows="1"
                             placeholder="Observaciones generales de la factura (opcional)"
                         ></textarea>
                         <InputError :message="form.errors.observacion" />
                     </div>
 
-                    <div class="border-t border-gray-200 pt-4 flex items-center justify-end gap-3">
+                    <div class="grid grid-cols-1 gap-2 border-t border-gray-200 pt-2 sm:grid-cols-2">
+                        <div>
+                            <InputLabel value="Servicio mínimo" class="text-xs" />
+                            <TextInput v-model="form.servicio_minimo" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" placeholder="0.00" />
+                            <div class="mt-0.5 text-[10px] text-gray-500">Se aplica a todas las relaciones</div>
+                        </div>
+                        <div>
+                            <InputLabel value="Servicio de retiro" class="text-xs" />
+                            <TextInput v-model="form.servicio_retiro" type="number" min="0" step="0.01" class="mt-0.5 block w-full !py-1 !text-sm" placeholder="0.00" />
+                            <div class="mt-0.5 text-[10px] text-gray-500">Costo retiro</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 border-t border-gray-200 pt-2">
                         <Link :href="route('facturacion.manifiestos.index')">
                             <SecondaryButton type="button">Cancelar</SecondaryButton>
                         </Link>
@@ -1108,3 +1139,10 @@ const confirmarActualizacionArca = () => {
         </DialogModal>
     </AppLayout>
 </template>
+
+<style scoped>
+.carga-directa-page :deep(header > div) {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+</style>

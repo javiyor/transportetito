@@ -49,6 +49,7 @@ class CargaDirectaStoreController extends Controller
             'items.*.valor_declarado' => ['required', 'numeric', 'min:0'],
             'items.*.importe' => ['required', 'numeric', 'min:0'],
             'items.*.cobrar_seguro' => ['sometimes', 'boolean'],
+            'items.*.cobrar_cr' => ['sometimes', 'boolean'],
             'items.*.cr' => ['required', 'numeric', 'min:0'],
             'items.*.remito' => ['nullable', 'string', 'max:100'],
             'observacion' => ['nullable', 'string', 'max:2000'],
@@ -132,7 +133,9 @@ class CargaDirectaStoreController extends Controller
                 $seguro = min((float) $tarifa['seguro_tope'], $seguro);
             }
             $seguro = round($seguro, 2);
-            $cr = (float) ($row['cr'] ?? 0);
+            $cr = (bool) ($row['cobrar_cr'] ?? ((float) ($row['cr'] ?? 0) > 0))
+                ? (float) ($row['cr'] ?? 0)
+                : 0.0;
 
             if ($tipo === 'bultos') {
                 $bultos += $cantidad;
@@ -153,6 +156,7 @@ class CargaDirectaStoreController extends Controller
                 'importe' => $importe,
                 'cobrar_seguro' => $cobrarSeguro,
                 'seguro' => $seguro,
+                'cobrar_cr' => (bool) ($row['cobrar_cr'] ?? ($cr > 0)),
                 'cr' => $cr,
                 'remito' => $row['remito'] ?? '',
             ];
