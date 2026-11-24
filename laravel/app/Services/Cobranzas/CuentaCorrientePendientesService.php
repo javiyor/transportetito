@@ -3,9 +3,11 @@
 namespace App\Services\Cobranzas;
 
 use App\Models\Comprobante;
+use App\Models\HojaRutaItem;
 use App\Models\Recibo;
 use App\Models\ReciboAplicacion;
 use App\Models\TerceroCuenta;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class CuentaCorrientePendientesService
@@ -14,7 +16,7 @@ class CuentaCorrientePendientesService
 
     /**
      * @return array{
-     *     documentos: array<int, array{tipo:string,numero:string,fecha:string,moneda:string,total:float,pendiente:float,is_credit:bool}>,
+     *     documentos: array<int, array{tipo:string,numero:string,fecha:string,fecha_entrega:string,moneda:string,total:float,pendiente:float,is_credit:bool}>,
      *     totales: array<int, array{moneda:string,a_pagar:float,creditos:float,saldo_neto:float}>
      * }
      */
@@ -38,9 +40,17 @@ class CuentaCorrientePendientesService
             ->groupBy('recibo_aplicaciones.comprobante_id')
             ->pluck('sum_importe', 'comprobante_id');
 
+        $fechasEntrega = HojaRutaItem::query()
+            ->whereIn('comprobante_id', $comprobantes->pluck('id'))
+            ->whereIn('estado_entrega', ['entregado', 'entregado_con_diferencia'])
+            ->whereNotNull('fecha_entrega')
+            ->selectRaw('comprobante_id, MAX(fecha_entrega) as fecha_entrega')
+            ->groupBy('comprobante_id')
+            ->pluck('fecha_entrega', 'comprobante_id');
+
         $saldos = $this->saldoNotasCredito->calcular($comprobantes, $aplicacionesRecibo->all());
 
-        $documentos = $comprobantes->map(function (Comprobante $comprobante) use ($saldos): ?array {
+        $documentos = $comprobantes->map(function (Comprobante $comprobante) use ($saldos, $fechasEntrega): ?array {
             $saldo = $saldos[$comprobante->id] ?? ['pendiente' => 0, 'is_credit' => (float) $comprobante->total < 0];
             $pendiente = round((float) $saldo['pendiente'], 2);
 
@@ -56,6 +66,9 @@ class CuentaCorrientePendientesService
                 'tipo' => $this->tipoLabel((string) $comprobante->tipo),
                 'numero' => $numero,
                 'fecha' => $comprobante->fecha_emision?->format('Y-m-d') ?? '',
+                'fecha_entrega' => ! empty($fechasEntrega[$comprobante->id])
+                    ? Carbon::parse($fechasEntrega[$comprobante->id])->format('Y-m-d')
+                    : '',
                 'moneda' => (string) $comprobante->moneda,
                 'total' => round((float) $comprobante->total, 2),
                 'pendiente' => $pendiente,

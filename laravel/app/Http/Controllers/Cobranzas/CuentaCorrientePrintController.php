@@ -24,7 +24,7 @@ class CuentaCorrientePrintController extends Controller
         $tipo = (string) $request->query('tipo', 'movimientos');
         abort_unless(in_array($tipo, ['pendientes', 'movimientos'], true), 404);
 
-        $cuenta->load(['tercero:id,cuit,razon_social', 'zona:id,nombre']);
+        $cuenta->load(['tercero:id,cuit,razon_social']);
 
         $movimientos = collect();
         $comprobantes = [];
