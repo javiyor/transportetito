@@ -70,7 +70,7 @@ class FleteIndexController extends Controller
             return $this->exportExcel($query, $estado);
         }
 
-        $pedidos = $query->orderByDesc('created_at')->paginate(30);
+        $pedidos = $query->orderByDesc('created_at')->paginate(250);
 
         $pedidos->through(fn ($pedido) => $this->mapFlete($pedido, $estado));
 
