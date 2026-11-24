@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
@@ -15,8 +16,29 @@ const form = useForm({
     remitente: props.filtros.remitente || '',
     destinatario: props.filtros.destinatario || '',
 });
+const selectedItems = ref(new Map());
+const selectedCount = computed(() => selectedItems.value.size);
+const allVisibleSelected = computed(() => props.pedidos.data.length > 0
+    && props.pedidos.data.every((pedido) => selectedItems.value.has(pedido.id)));
+
+const toggleSelection = (pedido, checked) => {
+    const next = new Map(selectedItems.value);
+    if (checked) next.set(pedido.id, pedido);
+    else next.delete(pedido.id);
+    selectedItems.value = next;
+};
+
+const toggleVisibleSelection = (event) => {
+    const next = new Map(selectedItems.value);
+    for (const pedido of props.pedidos.data) {
+        if (event.target.checked) next.set(pedido.id, pedido);
+        else next.delete(pedido.id);
+    }
+    selectedItems.value = next;
+};
 
 const applyFilters = () => {
+    selectedItems.value = new Map();
     router.get(route('operacion.fletes.index'), {
         ...(form.desde && { desde: form.desde }),
         ...(form.hasta && { hasta: form.hasta }),
@@ -27,6 +49,7 @@ const applyFilters = () => {
 };
 
 const clearFilters = () => {
+    selectedItems.value = new Map();
     form.reset();
     router.get(route('operacion.fletes.index'), {}, { preserveState: true, preserveScroll: true, replace: true });
 };
@@ -49,15 +72,60 @@ const goToPage = (url) => {
     }
 };
 
-const exportCsv = () => {
+const exportExcel = () => {
     const params = new URLSearchParams();
     if (props.filtros.desde) params.set('desde', props.filtros.desde);
     if (props.filtros.hasta) params.set('hasta', props.filtros.hasta);
     if (props.filtros.estado) params.set('estado', props.filtros.estado);
     if (props.filtros.remitente) params.set('remitente', props.filtros.remitente);
     if (props.filtros.destinatario) params.set('destinatario', props.filtros.destinatario);
-    params.set('export', 'csv');
+    params.set('export', 'excel');
+    if (selectedItems.value.size) {
+        params.set('ids', [...selectedItems.value.keys()].join(','));
+    }
     window.open(route('operacion.fletes.index') + '?' + params.toString(), '_blank');
+};
+
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+}[char]));
+
+const printSelected = () => {
+    const rows = [...selectedItems.value.values()];
+    if (!rows.length) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const columns = ['Factura ARCA', 'Empresa', 'Remitente', 'Destinatario', 'Origen', 'Destino', 'Bultos', 'Palets', 'Facturado', 'Estado', 'Fecha', 'Manifiesto', 'Hoja', 'Comprobante'];
+    const tableRows = rows.map((pedido) => {
+        const values = [
+            pedido.comprobante_arca_numero,
+            pedido.empresa,
+            pedido.remitente,
+            pedido.destinatario,
+            pedido.origen,
+            pedido.destino,
+            pedido.bultos,
+            pedido.palets,
+            pedido.valor_facturado == null ? '' : Number(pedido.valor_facturado).toFixed(2),
+            estadoLabel(pedido.estado),
+            pedido.fecha,
+            pedido.manifiesto_id ? `#${pedido.manifiesto_id}` : '',
+            pedido.hoja_ruta_id ? `#${pedido.hoja_ruta_id}` : '',
+            `${pedido.comprobante_tipo || ''} ${pedido.comprobante_numero || ''}`.trim(),
+        ];
+        return `<tr>${values.map((value) => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`;
+    }).join('');
+
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Fletes seleccionados</title><style>body{font-family:Arial,sans-serif;margin:18px}h1{font-size:18px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px;text-align:left;font-size:10px}th{background:#eee}@media print{body{margin:0}}</style></head><body><h1>Fletes seleccionados</h1><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => printWindow.print(), 250);
 };
 
 const estadoLabel = (estado) => ({
@@ -80,7 +148,8 @@ const estadoLabel = (estado) => ({
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Consulta de Fletes</h2>
                 <div class="flex items-center gap-2">
-                    <button type="button" class="inline-flex items-center px-3 py-1.5 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700" @click="exportCsv">Exportar CSV</button>
+                    <button type="button" class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-50" :disabled="!selectedCount" @click="printSelected">Imprimir seleccionados ({{ selectedCount }})</button>
+                    <button type="button" class="inline-flex items-center px-3 py-1.5 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700" @click="exportExcel">Excel{{ selectedCount ? ` (${selectedCount})` : '' }}</button>
                 </div>
             </div>
         </template>
@@ -123,7 +192,8 @@ const estadoLabel = (estado) => ({
                     <table class="min-w-full divide-y divide-gray-200 text-[10px] leading-none">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-1 py-1 text-center"><input type="checkbox" class="size-3.5 rounded border-gray-300 text-indigo-600" :checked="allVisibleSelected" aria-label="Seleccionar fletes visibles" @change="toggleVisibleSelection" /></th>
+                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Factura ARCA</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
@@ -140,7 +210,8 @@ const estadoLabel = (estado) => ({
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="p in pedidos.data" :key="p.id" class="hover:bg-gray-50 leading-none">
-                                <td class="px-1 py-0.5 text-[10px] font-mono text-gray-900 whitespace-nowrap">#{{ p.id }}</td>
+                                <td class="px-1 py-0.5 text-center"><input type="checkbox" class="size-3.5 rounded border-gray-300 text-indigo-600" :checked="selectedItems.has(p.id)" :aria-label="`Seleccionar flete ${p.comprobante_arca_numero || p.id}`" @change="toggleSelection(p, $event.target.checked)" /></td>
+                                <td class="px-1 py-0.5 text-[10px] font-mono text-gray-900 whitespace-nowrap">{{ p.comprobante_arca_numero || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[90px] truncate" :title="p.empresa">{{ p.empresa || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.remitente">{{ p.remitente || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.destinatario">{{ p.destinatario || '—' }}</td>
@@ -166,7 +237,7 @@ const estadoLabel = (estado) => ({
                                 </td>
                             </tr>
                             <tr v-if="!pedidos.data?.length">
-                                <td colspan="13" class="px-1 py-4 text-[10px] text-gray-400 text-center">No se encontraron fletes en el periodo.</td>
+                                <td colspan="14" class="px-1 py-4 text-[10px] text-gray-400 text-center">No se encontraron fletes en el periodo.</td>
                             </tr>
                         </tbody>
                     </table>

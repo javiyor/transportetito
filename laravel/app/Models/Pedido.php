@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Empresa;
 use App\Models\TerceroCuenta;
 use App\Models\Comprobante;
 
@@ -66,6 +67,11 @@ class Pedido extends Model
     public function manifiestoIngreso(): BelongsTo
     {
         return $this->belongsTo(ManifiestoIngreso::class);
+    }
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class);
     }
 
     public function remitente(): BelongsTo
