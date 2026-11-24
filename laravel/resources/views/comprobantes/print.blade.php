@@ -465,7 +465,24 @@
     </style>
     @if($pdfMode ?? false)
         <style>
-            body { font-family: 'DejaVu Sans', sans-serif; width: auto; }
+            @page { size: A4 portrait; margin: 5mm; }
+            body { font-family: 'DejaVu Sans', sans-serif; font-size: 8pt; line-height: 1.15; width: auto; }
+            .page-border { width: 100%; min-height: 0; height: auto; padding: 5mm 6mm; border-width: 1px; }
+            .header-row { padding-bottom: 4pt; margin-bottom: 4pt; }
+            .empresa-nombre { font-size: 12pt; }
+            .doc-type { font-size: 13pt; margin: 3pt 0 1pt; }
+            .doc-letter { font-size: 15pt; padding: 1pt 7pt; margin: 2pt 0; }
+            .condicion-venta, .partes-table, .items-table { margin-bottom: 4pt; }
+            .condicion-venta { padding: 2pt 6pt; }
+            .partes-table td { padding: 3pt 5pt; line-height: 1.15; }
+            .items-table th { padding: 2pt 4pt; font-size: 7pt; }
+            .items-table td { padding: 2pt 4pt; font-size: 7.5pt; }
+            .bottom-row { margin-bottom: 4pt; gap: 4pt; }
+            .bottom-col { padding: 3pt; }
+            .legal-legends { padding: 3pt 4pt; margin-bottom: 4pt; line-height: 1.1; }
+            .footer-row { padding-top: 3pt; gap: 6pt; }
+            .signature-block { margin-top: 5pt; }
+            .signature-block .signature-line { margin-top: 8pt; }
             .header-row, .bottom-row, .footer-row { display: block; width: 100%; font-size: 0; }
             .header-left, .header-center, .header-right,
             .bottom-col, .footer-left, .footer-right { display: inline-block; vertical-align: top; font-size: 7.5pt; }
