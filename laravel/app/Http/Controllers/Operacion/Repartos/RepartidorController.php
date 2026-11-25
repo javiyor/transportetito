@@ -24,7 +24,9 @@ class RepartidorController extends Controller
                     $q->with([
                         'comprobante:id,total,moneda,fecha_emision',
                         'entregaCuenta.tercero:id,cuit,razon_social',
-                    ])->with('entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,cp,telefono,email')->orderBy('orden');
+                        'entregaCuenta.localidadRel:id,nombre,provincia_id',
+                        'entregaCuenta.localidadRel.provincia:id,nombre',
+                    ])->with('entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,localidad_id,cp,telefono,email')->orderBy('orden');
                 },
             ])
             ->where('chofer_user_id', $userId)

@@ -22,11 +22,16 @@ let draggedId = null;
 
 const pendingCount = computed(() => stops.value.filter((stop) => stop.estado_entrega === 'pendiente').length);
 
-const addressFor = (stop) => [
-    stop.direccion || stop.entrega_cuenta?.direccion,
-    stop.localidad || stop.entrega_cuenta?.localidad,
-    'Argentina',
-].filter(Boolean).join(', ').trim();
+const addressFor = (stop) => {
+    const cuenta = stop.entrega_cuenta;
+    return [
+        stop.direccion || cuenta?.direccion,
+        stop.cp || cuenta?.cp,
+        stop.localidad || cuenta?.localidad || cuenta?.localidad_rel?.nombre,
+        cuenta?.localidad_rel?.provincia?.nombre,
+        'Argentina',
+    ].filter(Boolean).join(', ').trim();
+};
 
 const cacheKey = (address) => `tt-route-geocode:${address.toLocaleLowerCase()}`;
 
@@ -50,6 +55,7 @@ const geocodeStops = async () => {
         const cached = cachedCoordinates(address);
         if (cached) {
             coordinates.value[id] = cached;
+            renderMap();
             continue;
         }
 
@@ -70,6 +76,7 @@ const geocodeStops = async () => {
             if (point.every(Number.isFinite)) {
                 coordinates.value[id] = point;
                 localStorage.setItem(cacheKey(address), JSON.stringify(point));
+                renderMap();
             }
         } catch {
             // Las paradas sin geocodificar siguen visibles en la lista.

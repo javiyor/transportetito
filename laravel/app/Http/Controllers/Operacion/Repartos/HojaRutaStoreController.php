@@ -30,7 +30,7 @@ class HojaRutaStoreController extends Controller
 
         $orderedIds = array_values($data['comprobante_ids']);
         $comprobantesById = Comprobante::query()
-            ->with('pedidos.manifiestoIngreso')
+            ->with(['pedidos.manifiestoIngreso', 'entregaCuenta.localidadRel.provincia'])
             ->whereIn('id', $orderedIds)
             ->get()
             ->keyBy('id');
@@ -134,7 +134,7 @@ class HojaRutaStoreController extends Controller
                     'estado_entrega' => 'pendiente',
                     'zona_nombre' => $cuenta?->zona?->nombre ?: $zona?->nombre,
                     'direccion' => $cuenta?->direccion,
-                    'localidad' => $cuenta?->localidad,
+                    'localidad' => $cuenta?->localidad ?: $cuenta?->localidadRel?->nombre,
                     'cp' => $cuenta?->cp,
                     'telefono' => $cuenta?->telefono,
                     'cobro_estado' => 'no_cobrado',
