@@ -2,7 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 
-const props = defineProps({ hoja: { type: Object, required: true } });
+const props = defineProps({
+    hoja: { type: Object, required: true },
+    currentPosition: { type: Object, default: null },
+});
 
 const mapElement = ref(null);
 const stops = ref([]);
@@ -13,6 +16,8 @@ const error = ref('');
 let map = null;
 let markers = [];
 let routeLine = null;
+let driverMarker = null;
+let centeredOnDriver = false;
 let draggedId = null;
 
 const pendingCount = computed(() => stops.value.filter((stop) => stop.estado_entrega === 'pendiente').length);
@@ -105,6 +110,28 @@ const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => 
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
 }[char]));
 
+const renderDriverPosition = () => {
+    if (!map || !window.L || !props.currentPosition) return;
+    const lat = Number(props.currentPosition.latitude);
+    const lng = Number(props.currentPosition.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    const point = [lat, lng];
+    if (driverMarker) driverMarker.remove();
+    driverMarker = window.L.circleMarker(point, {
+        radius: 9,
+        color: '#ffffff',
+        weight: 3,
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+    }).addTo(map).bindPopup('<strong>Mi ubicación actual</strong>');
+
+    if (!centeredOnDriver) {
+        map.setView(point, 15, { animate: true });
+        centeredOnDriver = true;
+    }
+};
+
 const renderMap = () => {
     if (!map || !window.L) return;
     markers.forEach((marker) => marker.remove());
@@ -130,15 +157,16 @@ const renderMap = () => {
 
     if (points.length) {
         routeLine = window.L.polyline(points, { color: '#4f46e5', weight: 3, opacity: 0.7 }).addTo(map);
-        map.fitBounds(points, { padding: [24, 24], maxZoom: 14 });
+        if (!props.currentPosition) map.fitBounds(points, { padding: [24, 24], maxZoom: 14 });
     }
+    renderDriverPosition();
 };
 
 const initializeMap = async () => {
     try {
         await loadLeaflet();
         if (!mapElement.value) return;
-        map = window.L.map(mapElement.value).setView([-34.6037, -58.3816], 6);
+        map = window.L.map(mapElement.value).setView([-29.1176, -59.6583], 13);
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap contributors',
@@ -154,6 +182,13 @@ const moveStop = (from, to) => {
     const [stop] = stops.value.splice(from, 1);
     stops.value.splice(to, 0, stop);
     renderMap();
+};
+
+const centerOnDriver = () => {
+    if (!map || !props.currentPosition) return;
+    const lat = Number(props.currentPosition.latitude);
+    const lng = Number(props.currentPosition.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) map.setView([lat, lng], 15, { animate: true });
 };
 
 const dropStop = (targetId) => {
@@ -179,6 +214,7 @@ const saveOrder = () => {
 watch(() => props.hoja.items, (items) => {
     stops.value = [...(items || [])].sort((a, b) => a.orden - b.orden);
 }, { immediate: true });
+watch(() => props.currentPosition, renderDriverPosition, { deep: true });
 
 onMounted(initializeMap);
 onBeforeUnmount(() => {
@@ -207,6 +243,12 @@ onBeforeUnmount(() => {
         <p v-else-if="stops.length && !Object.keys(coordinates).length" class="text-xs text-amber-700">No se encontraron ubicaciones para mostrar. Revisá que las direcciones incluyan calle y localidad.</p>
 
         <div ref="mapElement" class="h-72 w-full rounded-lg bg-gray-100 sm:h-96"></div>
+        <button
+            v-if="currentPosition"
+            type="button"
+            class="rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100"
+            @click="centerOnDriver"
+        >Centrar en mi ubicación</button>
 
         <ol class="space-y-2">
             <li

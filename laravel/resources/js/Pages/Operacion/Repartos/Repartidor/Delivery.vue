@@ -313,7 +313,7 @@ const statusLabel = (estado) => estado === 'pendiente' ? 'En reparto' : estado;
                 </button>
 
                 <div v-if="expandedHojaId === hoja.id" class="border-t border-gray-100 divide-y divide-gray-100">
-                    <RoutePlanner :hoja="hoja" />
+                    <RoutePlanner :hoja="hoja" :current-position="ultimaPosicion" />
                     <div v-for="item in hoja.items" :key="item.id" class="px-4 py-3">
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex-1 min-w-0">

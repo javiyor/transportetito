@@ -102,6 +102,6 @@ class User extends Authenticatable
 
     public function ubicaciones(): HasMany
     {
-        return $this->hasMany(RepartoUbicacion::class)->latest('created_at');
+        return $this->hasMany(RepartoUbicacion::class)->latest('created_at')->latest('id');
     }
 }
