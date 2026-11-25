@@ -190,7 +190,7 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div v-if="choferesData.length === 0" class="text-sm text-gray-500">
-                            No hay celulares compartiendo ubicación en los últimos 2 minutos.
+                            No hay celulares que hayan enviado ubicación en los últimos 5 minutos.
                         </div>
 
 <ul v-else class="space-y-2">

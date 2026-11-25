@@ -45,8 +45,7 @@ class RepartoMapController extends Controller
         try {
             $data = User::query()
                 ->with(['ubicaciones' => fn ($q) => $q->limit(1)])
-                ->where('envia_ubicacion', true)
-                ->whereHas('ubicaciones', fn ($q) => $q->where('created_at', '>=', Carbon::now()->subMinutes(2)))
+                ->whereHas('ubicaciones', fn ($q) => $q->where('created_at', '>=', Carbon::now()->subMinutes(5)))
                 ->orderBy('name')
                 ->get(['id', 'name', 'email'])
                 ->map(fn (User $u) => [
