@@ -18,10 +18,17 @@ const toggleHoja = (id) => {
 
 const enviaUbicacion = computed(() => !!page.props.auth?.user?.envia_ubicacion);
 let watchId = null;
+let heartbeatTimer = null;
+const ultimaPosicion = ref(null);
 const ubicacionError = ref('');
 const permissionDenied = ref(false);
 
 const enviarUbicacion = (pos) => {
+    ultimaPosicion.value = {
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        accuracy: pos.accuracy ?? null,
+    };
     const hojaId = expandedHojaId.value || (props.hojas?.[0]?.id ?? null);
     fetch(route('repartidor.ubicacion.store'), {
         method: 'POST',
@@ -101,6 +108,11 @@ const requestUbicacionPrompt = () => {
 const iniciarWatch = () => {
     try {
         if (watchId !== null) return;
+        if (heartbeatTimer === null) {
+            heartbeatTimer = window.setInterval(() => {
+                if (ultimaPosicion.value) enviarUbicacion(ultimaPosicion.value);
+            }, 30000);
+        }
         watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 ubicacionError.value = '';
@@ -128,6 +140,10 @@ const detenerWatchInterno = () => {
         navigator.geolocation.clearWatch(watchId);
     }
     watchId = null;
+    if (heartbeatTimer !== null) {
+        window.clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
 };
 
 const stopUbicacion = () => {

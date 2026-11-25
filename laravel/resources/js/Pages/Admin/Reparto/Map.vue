@@ -68,7 +68,6 @@ const renderMarkers = async () => {
     markerByChofer.forEach((m) => m.removeFrom(map));
     markerByChofer.clear();
 
-    const bounds = [];
     choferesData.value.forEach((c) => {
         const u = c.ultima_ubicacion;
         if (!u) return;
@@ -77,12 +76,7 @@ const renderMarkers = async () => {
         if (Number.isNaN(lat) || Number.isNaN(lng)) return;
         const m = Leaflet.marker([lat, lng]).addTo(map).bindPopup(popupContent(c, u));
         markerByChofer.set(c.id, m);
-        bounds.push([lat, lng]);
     });
-
-    if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
-    }
 };
 
 const fetchUbicaciones = async () => {
@@ -95,7 +89,6 @@ const fetchUbicaciones = async () => {
         });
         if (!res.ok) throw new Error('http ' + res.status);
         const data = await res.json();
-        console.log('[mapa] ubicaciones recibidas:', data);
         if (Array.isArray(data)) {
             choferesData.value = data;
         }
@@ -115,8 +108,8 @@ const initMap = async () => {
     if (!container || map) return;
 
     map = window.L.map(container, {
-        center: [-34.6037, -58.3816],
-        zoom: 6,
+        center: [-29.1176, -59.6583],
+        zoom: 13,
         zoomControl: true,
     });
 
@@ -190,14 +183,14 @@ onBeforeUnmount(() => {
                 <div class="lg:col-span-4">
                     <div class="bg-white rounded-lg shadow ring-1 ring-black ring-opacity-5 p-4">
                         <div class="flex items-baseline justify-between mb-3">
-                            <h3 class="text-sm font-semibold text-gray-700">Choferes con tracking</h3>
+                            <h3 class="text-sm font-semibold text-gray-700">Celulares activos ({{ choferesData.length }})</h3>
                             <span v-if="ultimaActualizacion" class="text-xs text-gray-400">
                                 Actualizado: {{ ultimaActualizacion.toLocaleTimeString('es-AR') }}
                             </span>
                         </div>
 
                         <div v-if="choferesData.length === 0" class="text-sm text-gray-500">
-                            No hay choferes con envío de ubicación activo.
+                            No hay celulares compartiendo ubicación en los últimos 2 minutos.
                         </div>
 
 <ul v-else class="space-y-2">

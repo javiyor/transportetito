@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -45,6 +46,7 @@ class RepartoMapController extends Controller
             $data = User::query()
                 ->with(['ubicaciones' => fn ($q) => $q->limit(1)])
                 ->where('envia_ubicacion', true)
+                ->whereHas('ubicaciones', fn ($q) => $q->where('created_at', '>=', Carbon::now()->subMinutes(2)))
                 ->orderBy('name')
                 ->get(['id', 'name', 'email'])
                 ->map(fn (User $u) => [
