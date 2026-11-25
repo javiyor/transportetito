@@ -256,9 +256,9 @@ const translateLabel = (label) => {
                     <div v-for="c in comprobantes.data" :key="c.id" class="rounded-lg border border-gray-200 bg-white p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <div class="text-sm font-semibold text-gray-900">#{{ c.id }} <span class="text-xs font-normal text-gray-500">· {{ formatFecha(c.fecha_emision) }}</span></div>
+                                <div class="text-sm font-semibold text-gray-900">{{ formatFecha(c.fecha_emision) }}<span v-if="c.fecha_entrega" class="text-xs font-normal text-gray-500"> · Entrega: {{ formatFecha(c.fecha_entrega) }}</span></div>
                                 <div class="text-xs text-gray-500">{{ tipoLabel(c) }} · {{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '') }}</div>
-                                <Link v-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen_id" :href="route('operacion.comprobantes.show', c.comprobante_origen_id)" class="text-xs text-indigo-600 hover:text-indigo-800">De factura #{{ c.comprobante_origen_id }}</Link>
+                                <Link v-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen_id" :href="route('operacion.comprobantes.show', c.comprobante_origen_id)" class="text-xs text-indigo-600 hover:text-indigo-800">De factura {{ c.comprobante_origen_numero || 'sin número ARCA' }}</Link>
                                 <div class="mt-0.5"><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ c.empresa?.razon_social || '-' }}</span></div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
@@ -337,10 +337,10 @@ const translateLabel = (label) => {
                     <table class="min-w-full divide-y divide-gray-200 text-[11px]">
                         <thead class="bg-gray-50">
                             <tr class="text-[11px]">
-                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Nro</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Fecha entrega</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
@@ -354,13 +354,13 @@ const translateLabel = (label) => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="c in comprobantes.data" :key="c.id" class="text-[11px]">
-                                <td class="px-2 py-1 whitespace-nowrap font-mono text-gray-900">#{{ c.id }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">
                                     <div>{{ tipoLabel(c) }}</div>
-                                    <Link v-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen_id" :href="route('operacion.comprobantes.show', c.comprobante_origen_id)" class="text-[10px] text-indigo-600 hover:text-indigo-800">Factura #{{ c.comprobante_origen_id }}</Link>
+                                    <Link v-if="c.tipo === 'nota_credito_interna' && c.comprobante_origen_id" :href="route('operacion.comprobantes.show', c.comprobante_origen_id)" class="text-[10px] text-indigo-600 hover:text-indigo-800">Factura {{ c.comprobante_origen_numero || 'sin número ARCA' }}</Link>
                                 </td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700 font-mono">{{ c.arca_punto_venta ? String(parseInt(c.arca_punto_venta)) + '-' + String(c.arca_numero).padStart(8,'0') : (c.numero_interno ? '#' + c.numero_interno : '-') }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-gray-700">{{ c.fecha_entrega ? formatFecha(c.fecha_entrega) : '' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-indigo-700 truncate max-w-[120px]">{{ c.empresa?.razon_social || '-' }}</td>
                                 <td class="px-2 py-1 text-gray-700 max-w-[180px]">
                                     <div v-for="parte in c.remitentes" :key="parte.key" class="flex items-center gap-1 whitespace-nowrap">

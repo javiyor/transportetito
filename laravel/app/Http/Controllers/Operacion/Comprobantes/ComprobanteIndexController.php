@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Comprobante;
 use App\Models\Empresa;
+use App\Models\HojaRutaItem;
 use App\Models\Pedido;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
@@ -54,7 +55,7 @@ class ComprobanteIndexController extends Controller
                 'pedidos.remitenteCuenta:id,tercero_id',
                 'pedidos.destinatarioCuenta:id,tercero_id',
                 'notasCredito:id,comprobante_origen_id,estado,total',
-                'comprobanteOrigen:id,arca_tipo_cbte',
+                'comprobanteOrigen:id,arca_punto_venta,arca_numero,numero_interno',
             ])
             ->whereIn('empresa_id', $fEmpresaId > 0 ? [$fEmpresaId] : $empresaIds)
             ->orderByDesc('fecha_emision')
@@ -93,6 +94,14 @@ class ComprobanteIndexController extends Controller
 
         $comprobantes = $query->paginate(30)->withQueryString();
 
+        $fechasEntrega = HojaRutaItem::query()
+            ->whereIn('comprobante_id', $comprobantes->getCollection()->pluck('id'))
+            ->whereIn('estado_entrega', ['entregado', 'entregado_con_diferencia'])
+            ->whereNotNull('fecha_entrega')
+            ->selectRaw('comprobante_id, MAX(fecha_entrega) as fecha_entrega')
+            ->groupBy('comprobante_id')
+            ->pluck('fecha_entrega', 'comprobante_id');
+
         $motivosAutorizacion = AuditLog::query()
             ->where('subject_type', Comprobante::class)
             ->whereIn('subject_id', $comprobantes->getCollection()->pluck('id'))
@@ -102,7 +111,7 @@ class ComprobanteIndexController extends Controller
             ->unique('subject_id')
             ->mapWithKeys(fn (AuditLog $log) => [$log->subject_id => $log->context['mensaje'] ?? null]);
 
-        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos, $motivosAutorizacion, $empresaId) {
+        $comprobantes->through(function (Comprobante $comprobante) use ($arcaTipos, $motivosAutorizacion, $empresaId, $fechasEntrega) {
             $creditoEmitido = round((float) $comprobante->notasCredito
                 ->where('estado', '!=', 'anulada')
                 ->sum(fn (Comprobante $nota) => abs((float) $nota->total)), 2);
@@ -160,6 +169,10 @@ class ComprobanteIndexController extends Controller
             unset($comprobanteData['pedidos']);
 
             return array_merge($comprobanteData, [
+                'fecha_entrega' => $fechasEntrega[$comprobante->id] ?? null,
+                'comprobante_origen_numero' => $comprobante->comprobanteOrigen?->arca_punto_venta && $comprobante->comprobanteOrigen?->arca_numero
+                    ? ((int) $comprobante->comprobanteOrigen->arca_punto_venta).'-'.str_pad((string) $comprobante->comprobanteOrigen->arca_numero, 8, '0', STR_PAD_LEFT)
+                    : ($comprobante->comprobanteOrigen?->numero_interno ? '#'.$comprobante->comprobanteOrigen->numero_interno : null),
                 'email_facturacion' => $comprobante->facturarCuenta?->email,
                 'puede_enviar_email' => (int) $comprobante->empresa_id === $empresaId
                     && $comprobante->estado === 'emitida'

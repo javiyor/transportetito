@@ -16,7 +16,7 @@ class HojaRutaIndexController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
 
         $query = HojaRuta::query()
-            ->with(['deposito:id,nombre', 'empresa:id,razon_social', 'items:id,hoja_ruta_id,cobro_estado,cobro_medio,cobro_importe']);
+            ->with(['deposito:id,nombre', 'empresa:id,razon_social', 'chofer:id,name', 'items:id,hoja_ruta_id,cobro_estado,cobro_medio,cobro_importe']);
 
         if ($empresaFiltro = (int) ($request->query('empresa_id') ?: 0)) {
             $query->where('empresa_id', $empresaFiltro);

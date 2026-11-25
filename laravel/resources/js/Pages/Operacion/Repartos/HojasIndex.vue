@@ -132,6 +132,7 @@ const formatFechaHora = (value) => {
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">ID</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Creada</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Depósito</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Chofer</th>
                                 <th class="px-2 py-1.5 text-center text-[11px] font-medium text-gray-500 uppercase">Items</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-medium text-gray-500 uppercase">Acción</th>
@@ -142,6 +143,7 @@ const formatFechaHora = (value) => {
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ h.id }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFechaHora(h.created_at) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ h.deposito?.nombre || '-' }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ h.chofer?.name || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 text-center">{{ h.items?.length || 0 }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px]">
                                     <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium" :class="h.estado === 'cerrada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">{{ h.estado }}</span>
@@ -151,7 +153,7 @@ const formatFechaHora = (value) => {
                                 </td>
                             </tr>
                             <tr v-if="!hojas.data.length">
-                                <td colspan="6" class="px-2 py-4 text-center text-xs text-gray-500">Sin hojas de ruta.</td>
+                                <td colspan="7" class="px-2 py-4 text-center text-xs text-gray-500">Sin hojas de ruta.</td>
                             </tr>
                         </tbody>
                     </table>
