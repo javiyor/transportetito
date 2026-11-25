@@ -172,6 +172,7 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
 - reparto_ubicaciones
   - id, user_id, hoja_ruta_id (nullable), lat, lng, accuracy, created_at
   - index (user_id, created_at) — lectura de recorridos recientes por chofer
+- tercero_cuentas.direccion_entrega (nullable) — dirección independiente del domicilio fiscal para reparto
 - vehiculo_controles
   - id, vehiculo_id, tipo (RTO, matafuegos, etc.), fecha_vencimiento, observacion
   - index (vehiculo_id, fecha_vencimiento); alertas de vencimiento + badge en menú Vehículos

@@ -154,6 +154,30 @@ const formatFechaHora = (value) => {
     if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ').slice(0, 16);
     return `${date.toLocaleDateString('es-AR')} ${date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
 };
+
+const numeroComprobante = (comprobante) => {
+    if (!comprobante) return '-';
+    if (comprobante.arca_punto_venta && comprobante.arca_numero) {
+        return `${String(parseInt(comprobante.arca_punto_venta, 10)).padStart(4, '0')}-${String(comprobante.arca_numero).padStart(8, '0')}`;
+    }
+    const numero = comprobante.numero_interno || comprobante.id;
+    return comprobante.tipo === 'guia_envio' ? `Guía #${numero}` : `#${numero}`;
+};
+
+const remitos = (item) => (item.comprobante?.pedidos || [])
+    .map((pedido) => String(pedido.remito_numero || '').trim())
+    .filter(Boolean)
+    .join(', ') || '-';
+
+const formaPagoLabel = (item) => ({
+    cuenta_corriente: 'Cta. cte.',
+    efectivo: 'Efectivo',
+    cheque: 'Cheque',
+    cheque_propio: 'Cheque',
+    cheque_tercero: 'Cheque',
+    transferencia: 'Transferencia',
+    varias: 'Varias',
+}[item.forma_pago || item.cobro_medio] || item.forma_pago || item.cobro_medio || '-');
 </script>
 
 <template>
@@ -221,14 +245,6 @@ const formatFechaHora = (value) => {
                         <div class="text-xs font-medium text-gray-900">{{ hoja.items?.[0]?.comprobante?.moneda || 'ARS' }} {{ stats.total }}</div>
                     </div>
                 </div>
-                <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-200 pt-2 text-[11px] text-gray-600">
-                    <span><strong>Borrador:</strong> hoja en preparación y editable.</span>
-                    <span><strong>Cerrada:</strong> reparto finalizado y bloqueado.</span>
-                    <span><strong>En reparto:</strong> hoja creada; entrega aún no registrada.</span>
-                    <span><strong>Entregado:</strong> recibido por el destinatario.</span>
-                    <span><strong>Entregado con diferencia:</strong> recibido con observaciones.</span>
-                    <span><strong>No entregado:</strong> no se completó la entrega.</span>
-                </div>
             </div>
 
             <div class="bg-white shadow sm:rounded-lg overflow-hidden">
@@ -238,7 +254,9 @@ const formatFechaHora = (value) => {
                             <tr>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Orden</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
-                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Factura</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Factura / guía</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Remitos</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Forma de pago</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="px-2 py-1.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Obs</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -249,10 +267,12 @@ const formatFechaHora = (value) => {
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">{{ it.orden }}</td>
                                 <td class="px-2 py-1 text-xs text-gray-700">
                                     <div class="font-medium text-gray-900">{{ it.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
-                                    <div class="text-xs text-gray-500">CUIT {{ it.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ it.entrega_cuenta?.numero_cliente || '-' }}</div>
-                                    <div class="text-xs text-gray-500">{{ it.direccion || it.entrega_cuenta?.direccion || '' }} {{ it.localidad || it.entrega_cuenta?.localidad ? '· ' + (it.localidad || it.entrega_cuenta?.localidad) : '' }}</div>
+                                    <div class="text-xs text-gray-500">{{ it.entrega_cuenta?.direccion_entrega || it.direccion || it.entrega_cuenta?.direccion || '' }}<template v-if="!it.entrega_cuenta?.direccion_entrega && (it.localidad || it.entrega_cuenta?.localidad)"> · {{ it.localidad || it.entrega_cuenta?.localidad }}</template></div>
+                                    <div v-if="it.telefono || it.entrega_cuenta?.telefono" class="text-xs text-gray-500">Tel. {{ it.telefono || it.entrega_cuenta?.telefono }}</div>
                                 </td>
-                                <td class="px-2 py-1 whitespace-nowrap text-xs text-gray-700">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-xs font-mono text-gray-700">{{ numeroComprobante(it.comprobante) }}</td>
+                                <td class="px-2 py-1 text-xs text-gray-700">{{ remitos(it) }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-xs text-gray-700">{{ formaPagoLabel(it) }}</td>
                                 <td class="px-2 py-1 text-xs text-gray-700">
                                     <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
                                         :class="{
@@ -305,7 +325,7 @@ const formatFechaHora = (value) => {
                                 </td>
                             </tr>
                             <tr v-if="!hoja.items?.length">
-                                <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Sin items.</td>
+                                <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Sin items.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -352,6 +372,7 @@ const formatFechaHora = (value) => {
                             <option value="transferencia">Transferencia</option>
                             <option value="cheque">Cheque</option>
                             <option value="cuenta_corriente">Cuenta corriente</option>
+                            <option value="varias">Varias</option>
                         </select>
                     </div>
                     <div v-if="deliveryForm.estado_entrega === 'entregado' || deliveryForm.estado_entrega === 'entregado_con_diferencia'">

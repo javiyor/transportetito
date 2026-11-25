@@ -20,7 +20,9 @@ class CargaDirectaClienteUpdateController extends Controller
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'nombre_cuenta' => ['nullable', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
+            'direccion_entrega' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
+            'provincia_fiscal' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
             'cp' => ['nullable', 'string', 'max:32'],
             'telefono' => ['nullable', 'string', 'max:64'],
@@ -42,16 +44,17 @@ class CargaDirectaClienteUpdateController extends Controller
                 'domicilio_fiscal' => array_replace((array) $tercero->domicilio_fiscal, [
                     'calle' => $data['direccion'] ?? null,
                     'ciudad' => $data['localidad'] ?? null,
+                    'provincia' => $data['provincia_fiscal'] ?? null,
+                    'codigo_postal' => $data['cp'] ?? null,
                 ]),
             ])->save();
             $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
 
             $cuenta->forceFill([
                 'nombre_cuenta' => $data['nombre_cuenta'] ?: $tercero->razon_social,
-                'direccion' => $data['direccion'] ?: null,
-                'localidad' => $data['localidad'] ?: null,
+                'direccion' => array_key_exists('direccion_entrega', $data) ? ($data['direccion_entrega'] ?: null) : $cuenta->direccion,
+                'direccion_entrega' => array_key_exists('direccion_entrega', $data) ? ($data['direccion_entrega'] ?: null) : $cuenta->direccion_entrega,
                 'barrio' => $data['barrio'] ?: null,
-                'cp' => $data['cp'] ?: null,
                 'telefono' => $data['telefono'] ?: null,
                 'email' => $data['email'] ?: null,
             ])->save();

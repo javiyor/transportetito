@@ -23,6 +23,7 @@ class TerceroCuenta extends Model
         'numero_cliente',
         'nombre_cuenta',
         'direccion',
+        'direccion_entrega',
         'localidad',
         'barrio',
         'provincia_id',

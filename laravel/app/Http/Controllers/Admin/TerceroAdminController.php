@@ -30,7 +30,7 @@ class TerceroAdminController extends Controller
         $empresaId = (int) ($request->query('empresa_id') ?: $request->user()->current_empresa_id ?: 0);
 
         $query = TerceroCuenta::query()
-            ->with(['tercero:id,cuit,razon_social,condicion_iva', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name', 'cuentaContableProveedor:id,codigo,nombre'])
+            ->with(['tercero:id,cuit,razon_social,condicion_iva,domicilio_fiscal', 'empresa:id,razon_social', 'provincia:id,nombre', 'localidadRel:id,nombre,provincia_id', 'cobradorUser:id,name', 'cuentaContableProveedor:id,codigo,nombre'])
             ->leftJoin('tercero_empresa as te', function ($join) {
                 $join->on('te.tercero_cuenta_id', '=', 'tercero_cuentas.id')
                     ->on('te.empresa_id', '=', 'tercero_cuentas.empresa_id');
@@ -69,6 +69,9 @@ class TerceroAdminController extends Controller
             'tercero_cuentas.tercero_id',
             'tercero_cuentas.numero_cliente',
             'tercero_cuentas.nombre_cuenta',
+            'tercero_cuentas.direccion',
+            'tercero_cuentas.direccion_entrega',
+            'tercero_cuentas.cp',
             'tercero_cuentas.localidad',
             'tercero_cuentas.barrio',
             'tercero_cuentas.provincia_id',
@@ -145,6 +148,11 @@ class TerceroAdminController extends Controller
             'condicion_iva' => ['nullable', 'string', 'max:64'],
             'condicion_iva_id' => ['nullable', 'integer', 'exists:condiciones_iva,id'],
             'nombre_cuenta' => ['required', 'string', 'max:255'],
+            'direccion_fiscal' => ['nullable', 'string', 'max:255'],
+            'localidad_fiscal' => ['nullable', 'string', 'max:255'],
+            'provincia_fiscal' => ['nullable', 'string', 'max:255'],
+            'codigo_postal_fiscal' => ['nullable', 'string', 'max:32'],
+            'direccion_entrega' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
             'provincia_id' => ['nullable', 'integer', 'exists:provincias,id'],
@@ -186,6 +194,7 @@ class TerceroAdminController extends Controller
             'condicion_iva' => $condicionIvaNombre,
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
+        $this->syncDomicilioFiscal($tercero, $data, preserveEmpty: true);
         $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
 
         $cuenta = DB::transaction(function () use ($data, $tercero, $cuentaContableProveedorId) {
@@ -220,6 +229,8 @@ class TerceroAdminController extends Controller
                 'tercero_id' => $tercero->id,
                 'numero_cliente' => (int) $data['numero_cliente'],
                 'nombre_cuenta' => $data['nombre_cuenta'],
+                'direccion' => $data['direccion_entrega'] ?? null,
+                'direccion_entrega' => $data['direccion_entrega'] ?? null,
                 'zona_id' => $data['zona_id'] ?? null,
                 'localidad' => $data['localidad'] ?: null,
                 'barrio' => $data['barrio'] ?: null,
@@ -237,6 +248,8 @@ class TerceroAdminController extends Controller
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'nombre_cuenta' => $data['nombre_cuenta'],
+            'direccion' => ! empty($data['direccion_entrega']) ? $data['direccion_entrega'] : $cuenta->direccion,
+            'direccion_entrega' => ! empty($data['direccion_entrega']) ? $data['direccion_entrega'] : $cuenta->direccion_entrega,
             'zona_id' => $data['zona_id'] ?? $cuenta->zona_id,
             'localidad' => $data['localidad'] ?: $cuenta->localidad,
             'barrio' => $data['barrio'] ?: $cuenta->barrio,
@@ -270,6 +283,11 @@ class TerceroAdminController extends Controller
             'empresa_id' => ['required', 'integer', 'exists:empresas,id'],
             'zona_id' => ['nullable', 'integer', Rule::exists('zonas', 'id')->where('empresa_id', (int) $request->input('empresa_id'))],
             'nombre_cuenta' => ['required', 'string', 'max:255'],
+            'direccion_fiscal' => ['nullable', 'string', 'max:255'],
+            'localidad_fiscal' => ['nullable', 'string', 'max:255'],
+            'provincia_fiscal' => ['nullable', 'string', 'max:255'],
+            'codigo_postal_fiscal' => ['nullable', 'string', 'max:32'],
+            'direccion_entrega' => ['nullable', 'string', 'max:255'],
             'localidad' => ['nullable', 'string', 'max:255'],
             'barrio' => ['nullable', 'string', 'max:255'],
             'provincia_id' => ['nullable', 'integer', 'exists:provincias,id'],
@@ -324,12 +342,15 @@ class TerceroAdminController extends Controller
             'condicion_iva' => $condicionIvaNombre,
             'condicion_iva_id' => $data['condicion_iva_id'] ?: null,
         ]);
+        $this->syncDomicilioFiscal($tercero, $data);
         $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
 
         $cuenta->update([
             'tercero_id' => $tercero->id,
             'empresa_id' => $data['empresa_id'],
             'nombre_cuenta' => $data['nombre_cuenta'],
+            'direccion' => array_key_exists('direccion_entrega', $data) ? ($data['direccion_entrega'] ?: null) : $cuenta->direccion,
+            'direccion_entrega' => array_key_exists('direccion_entrega', $data) ? ($data['direccion_entrega'] ?: null) : $cuenta->direccion_entrega,
             'zona_id' => $data['zona_id'] ?? null,
             'localidad' => $data['localidad'] ?: null,
             'barrio' => $data['barrio'] ?: null,
@@ -508,5 +529,28 @@ class TerceroAdminController extends Controller
         ]);
 
         return response()->json(['results' => $results]);
+    }
+
+    private function syncDomicilioFiscal(Tercero $tercero, array $data, bool $preserveEmpty = false): void
+    {
+        $domicilio = (array) ($tercero->domicilio_fiscal ?? []);
+        foreach ([
+            'calle' => 'direccion_fiscal',
+            'ciudad' => 'localidad_fiscal',
+            'provincia' => 'provincia_fiscal',
+            'codigo_postal' => 'codigo_postal_fiscal',
+        ] as $campo => $input) {
+            if (array_key_exists($input, $data)) {
+                if ($preserveEmpty && ! $data[$input]) {
+                    continue;
+                }
+                $domicilio[$campo] = $data[$input] ?: null;
+            }
+        }
+
+        if ($domicilio !== (array) ($tercero->domicilio_fiscal ?? [])) {
+            $tercero->domicilio_fiscal = $domicilio ?: null;
+            $tercero->save();
+        }
     }
 }

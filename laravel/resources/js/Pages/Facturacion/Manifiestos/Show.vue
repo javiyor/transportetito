@@ -680,6 +680,36 @@ const destinatarioCuentaId = (g) => g.pedidos[0]?.destinatario_cuenta_id || g.en
 
 const pedidosSinControl = computed(() => (props.manifiesto.pedidos || []).filter((p) => !p.recepcion_estado));
 
+const direccionCuenta = ref(null);
+const direccionModalOpen = ref(false);
+const direccionForm = useForm({
+    direccion_fiscal: '',
+    localidad_fiscal: '',
+    provincia_fiscal: '',
+    codigo_postal_fiscal: '',
+    direccion_entrega: '',
+});
+
+const editarDirecciones = (cuenta) => {
+    if (!cuenta?.id) return;
+    direccionCuenta.value = cuenta;
+    direccionForm.direccion_fiscal = cuenta.tercero?.domicilio_fiscal?.calle || cuenta.tercero?.domicilio_fiscal?.direccion || cuenta.direccion || '';
+    direccionForm.localidad_fiscal = cuenta.tercero?.domicilio_fiscal?.ciudad || cuenta.localidad || '';
+    direccionForm.provincia_fiscal = cuenta.tercero?.domicilio_fiscal?.provincia || cuenta.provincia?.nombre || '';
+    direccionForm.codigo_postal_fiscal = cuenta.tercero?.domicilio_fiscal?.codigo_postal || cuenta.cp || '';
+    direccionForm.direccion_entrega = cuenta.direccion_entrega || cuenta.direccion || '';
+    direccionForm.clearErrors();
+    direccionModalOpen.value = true;
+};
+
+const guardarDirecciones = () => {
+    if (!direccionCuenta.value) return;
+    direccionForm.put(route('facturacion.cuentas.direcciones.update', direccionCuenta.value.id), {
+        preserveScroll: true,
+        onSuccess: () => { direccionModalOpen.value = false; },
+    });
+};
+
 const cuentaSeleccionadaLabel = (g) => {
     const selectedId = facturarPorEntrega.facturar_por_entrega[g.entregaId];
     return selectedId ? g.cuentas.find((cuenta) => String(cuenta.id) === String(selectedId)) || null : null;
@@ -890,6 +920,7 @@ const enviarPedido = () => {
                                 <div class="text-xs font-medium text-gray-700 flex items-center gap-2">
                                     <span>{{ g.pedidos[0]?.remitente?.razon_social || '-' }} →</span>
                                     <span class="rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-900">{{ destinatarioNombreGrupo(g) }}</span>
+                                    <button v-if="g.pedidos[0]?.destinatario_cuenta" type="button" class="text-[10px] text-indigo-700 underline hover:text-indigo-900" @click="editarDirecciones(g.pedidos[0].destinatario_cuenta)">Dirección reparto</button>
                                     <span v-if="destinatarioCuitGrupo(g)" class="text-[10px] text-gray-500">CUIT {{ destinatarioCuitGrupo(g) }}</span>
                                     <span v-if="grupoModificado(g)" class="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-900"><span aria-hidden="true">✓</span> Modificada</span>
                                     <span class="text-gray-400">·</span>
@@ -1129,6 +1160,7 @@ const enviarPedido = () => {
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="font-medium text-gray-900">{{ c.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
                                         <div class="text-xs text-gray-500">CUIT {{ c.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ c.entrega_cuenta?.numero_cliente || '-' }}</div>
+                                        <button v-if="c.entrega_cuenta" type="button" class="mt-1 text-xs text-indigo-700 hover:text-indigo-900" @click="editarDirecciones(c.entrega_cuenta)">Editar direcciones</button>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="font-medium text-gray-900">{{ c.facturar_cuenta?.tercero?.razon_social || '-' }}</div>
@@ -1176,6 +1208,45 @@ const enviarPedido = () => {
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="direccionModalOpen" @close="direccionModalOpen = false">
+            <template #title>Direcciones del cliente</template>
+            <template #content>
+                <form class="space-y-3" @submit.prevent="guardarDirecciones">
+                    <div>
+                        <InputLabel value="Dirección fiscal" />
+                        <TextInput v-model="direccionForm.direccion_fiscal" type="text" class="mt-1 block w-full" />
+                        <InputError :message="direccionForm.errors.direccion_fiscal" />
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                            <InputLabel value="Localidad fiscal" />
+                            <TextInput v-model="direccionForm.localidad_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError :message="direccionForm.errors.localidad_fiscal" />
+                        </div>
+                        <div>
+                            <InputLabel value="Provincia fiscal" />
+                            <TextInput v-model="direccionForm.provincia_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError :message="direccionForm.errors.provincia_fiscal" />
+                        </div>
+                        <div>
+                            <InputLabel value="Código postal fiscal" />
+                            <TextInput v-model="direccionForm.codigo_postal_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError :message="direccionForm.errors.codigo_postal_fiscal" />
+                        </div>
+                    </div>
+                    <div>
+                        <InputLabel value="Dirección de entrega para reparto" />
+                        <TextInput v-model="direccionForm.direccion_entrega" type="text" class="mt-1 block w-full" placeholder="Dirección completa: calle, número, localidad y referencias" />
+                        <InputError :message="direccionForm.errors.direccion_entrega" />
+                    </div>
+                </form>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="direccionModalOpen = false">Cancelar</SecondaryButton>
+                <PrimaryButton class="ms-3" :disabled="direccionForm.processing" @click="guardarDirecciones">Guardar direcciones</PrimaryButton>
+            </template>
+        </DialogModal>
 
         <DialogModal :show="correccionModalOpen" @close="cerrarCorreccion">
             <template #title>

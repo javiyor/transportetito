@@ -22,7 +22,7 @@ class HojaRutaItemUpdateController extends Controller
             'recibe_dni' => ['nullable', 'string', 'max:32'],
             'firma_recibo' => ['nullable', 'string'],
             'email_contacto' => ['nullable', 'email', 'max:255'],
-            'forma_pago' => ['nullable', 'in:cuenta_corriente,efectivo,cheque,transferencia'],
+            'forma_pago' => ['nullable', 'in:cuenta_corriente,efectivo,cheque,transferencia,varias'],
             'importe_cobrado' => ['nullable', 'numeric', 'min:0'],
         ]);
 

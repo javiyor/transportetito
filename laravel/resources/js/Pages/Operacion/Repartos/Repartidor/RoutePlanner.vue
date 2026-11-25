@@ -24,6 +24,8 @@ const pendingCount = computed(() => stops.value.filter((stop) => stop.estado_ent
 
 const addressFor = (stop) => {
     const cuenta = stop.entrega_cuenta;
+    if (cuenta?.direccion_entrega) return `${cuenta.direccion_entrega}, Argentina`;
+
     return [
         stop.direccion || cuenta?.direccion,
         stop.cp || cuenta?.cp,

@@ -38,7 +38,7 @@ class HojaRutaIndexController extends Controller
             $query->where('deposito_id', $depositoId);
         }
 
-        $hojas = $query->orderByDesc('fecha')->orderByDesc('id')->paginate(20);
+        $hojas = $query->orderByDesc('fecha')->orderByDesc('id')->paginate(200);
 
         $resumen = [
             'total_hojas' => 0,

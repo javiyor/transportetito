@@ -107,6 +107,11 @@ const form = useForm({
     condicion_iva: '',
     condicion_iva_id: '',
     nombre_cuenta: '',
+    direccion_fiscal: '',
+    localidad_fiscal: '',
+    provincia_fiscal: '',
+    codigo_postal_fiscal: '',
+    direccion_entrega: '',
     localidad: '',
     barrio: '',
     provincia_id: '',
@@ -146,7 +151,7 @@ watch(() => editForm.es_proveedor, (val) => {
 const submit = () => {
     form.post(route('admin.terceros.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'zona_id', 'localidad', 'barrio', 'telefono', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
+        onSuccess: () => form.reset('numero_cliente', 'cuit', 'razon_social', 'condicion_iva', 'condicion_iva_id', 'nombre_cuenta', 'direccion_fiscal', 'localidad_fiscal', 'provincia_fiscal', 'codigo_postal_fiscal', 'direccion_entrega', 'zona_id', 'localidad', 'barrio', 'telefono', 'email', 'provincia_id', 'localidad_id', 'cuenta_contable_proveedor_id'),
     });
 };
 
@@ -160,6 +165,11 @@ const editForm = useForm({
     condicion_iva: '',
     condicion_iva_id: '',
     nombre_cuenta: '',
+    direccion_fiscal: '',
+    localidad_fiscal: '',
+    provincia_fiscal: '',
+    codigo_postal_fiscal: '',
+    direccion_entrega: '',
     localidad: '',
     barrio: '',
     provincia_id: '',
@@ -182,6 +192,11 @@ const openEdit = (c) => {
     editForm.condicion_iva = c.tercero?.condicion_iva || '';
     editForm.condicion_iva_id = c.tercero?.condicion_iva_id || '';
     editForm.nombre_cuenta = c.nombre_cuenta || c.tercero?.razon_social || '';
+    editForm.direccion_fiscal = c.tercero?.domicilio_fiscal?.calle || c.tercero?.domicilio_fiscal?.direccion || c.direccion || '';
+    editForm.localidad_fiscal = c.tercero?.domicilio_fiscal?.ciudad || c.localidadRel?.nombre || c.localidad || '';
+    editForm.provincia_fiscal = c.tercero?.domicilio_fiscal?.provincia || provinciaNombre(c.provincia_id) || '';
+    editForm.codigo_postal_fiscal = c.tercero?.domicilio_fiscal?.codigo_postal || c.cp || '';
+    editForm.direccion_entrega = c.direccion_entrega || c.direccion || '';
     editForm.localidad = c.localidad || '';
     editForm.barrio = c.barrio || '';
     editForm.provincia_id = c.provincia_id || '';
@@ -297,8 +312,34 @@ const localidadNombre = (c) => {
                         <InputError class="mt-1" :message="form.errors.nombre_cuenta" />
                     </div>
 
+                    <div class="sm:col-span-3">
+                        <InputLabel value="Dirección fiscal" />
+                        <TextInput v-model="form.direccion_fiscal" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-1" :message="form.errors.direccion_fiscal" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <InputLabel value="Localidad fiscal" />
+                        <TextInput v-model="form.localidad_fiscal" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-1" :message="form.errors.localidad_fiscal" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <InputLabel value="Provincia fiscal" />
+                        <TextInput v-model="form.provincia_fiscal" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-1" :message="form.errors.provincia_fiscal" />
+                    </div>
                     <div>
-                        <InputLabel value="Provincia" />
+                        <InputLabel value="CP fiscal" />
+                        <TextInput v-model="form.codigo_postal_fiscal" type="text" class="mt-1 block w-full" />
+                        <InputError class="mt-1" :message="form.errors.codigo_postal_fiscal" />
+                    </div>
+                    <div class="sm:col-span-6">
+                        <InputLabel value="Dirección de entrega para reparto" />
+                        <TextInput v-model="form.direccion_entrega" type="text" class="mt-1 block w-full" placeholder="Dirección completa: calle, número, localidad y referencias" />
+                        <InputError class="mt-1" :message="form.errors.direccion_entrega" />
+                    </div>
+
+                    <div>
+                        <InputLabel value="Provincia entrega" />
                         <select v-model="form.provincia_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="">(seleccionar)</option>
                             <option v-for="p in provincias" :key="p.id" :value="p.id">{{ p.nombre }}</option>
@@ -307,7 +348,7 @@ const localidadNombre = (c) => {
                     </div>
 
                     <div>
-                        <InputLabel value="Ciudad" />
+                        <InputLabel value="Ciudad entrega" />
                         <select v-model="form.localidad_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="">(seleccionar)</option>
                             <option v-for="l in localidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>
@@ -414,6 +455,14 @@ const localidadNombre = (c) => {
                                 <span class="text-xs uppercase tracking-wider text-gray-500">Cuenta: </span>
                                 <span class="font-medium text-gray-900">{{ c.nombre_cuenta || '-' }}</span>
                             </div>
+                            <div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Dirección fiscal: </span>
+                                <span class="font-medium text-gray-900">{{ c.tercero?.domicilio_fiscal?.calle || c.direccion || '-' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-xs uppercase tracking-wider text-gray-500">Entrega reparto: </span>
+                                <span class="font-medium text-gray-900">{{ c.direccion_entrega || c.direccion || '-' }}</span>
+                            </div>
                             <div v-if="c.es_proveedor">
                                 <span class="text-xs uppercase tracking-wider text-gray-500">Cta contable: </span>
                                 <span class="font-medium text-gray-900">{{ cuentaLabel(c.cuenta_contable_proveedor) }}</span>
@@ -460,6 +509,8 @@ const localidadNombre = (c) => {
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razon social</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dirección fiscal</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega reparto</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cta contable</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prov</th>
                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
@@ -485,6 +536,8 @@ const localidadNombre = (c) => {
                                 <td class="px-3 py-2 text-xs text-gray-900">{{ c.tercero?.razon_social || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.tercero?.condicion_iva || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.nombre_cuenta || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.tercero?.domicilio_fiscal?.calle || c.direccion || '-' }}</td>
+                                <td class="px-3 py-2 text-xs text-gray-700">{{ c.direccion_entrega || c.direccion || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ c.es_proveedor ? cuentaLabel(c.cuenta_contable_proveedor) : '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ provinciaNombre(c.provincia_id) || '-' }}</td>
                                 <td class="px-3 py-2 text-xs text-gray-700">{{ localidadNombre(c) }}</td>
@@ -506,7 +559,7 @@ const localidadNombre = (c) => {
                                 </td>
                             </tr>
                             <tr v-if="!cuentas.length">
-                                <td :colspan="mostrarCompartidos ? 16 : 15" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
+                                <td :colspan="mostrarCompartidos ? 18 : 17" class="px-3 py-3 text-center text-xs text-gray-500">Sin cuentas.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -551,8 +604,33 @@ const localidadNombre = (c) => {
                             <TextInput v-model="editForm.nombre_cuenta" type="text" class="mt-1 block w-full" required />
                             <InputError class="mt-1" :message="editForm.errors.nombre_cuenta" />
                         </div>
+                        <div class="sm:col-span-2">
+                            <InputLabel value="Dirección fiscal" />
+                            <TextInput v-model="editForm.direccion_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-1" :message="editForm.errors.direccion_fiscal" />
+                        </div>
                         <div>
-                            <InputLabel value="Provincia" />
+                            <InputLabel value="Localidad fiscal" />
+                            <TextInput v-model="editForm.localidad_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-1" :message="editForm.errors.localidad_fiscal" />
+                        </div>
+                        <div>
+                            <InputLabel value="Provincia fiscal" />
+                            <TextInput v-model="editForm.provincia_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-1" :message="editForm.errors.provincia_fiscal" />
+                        </div>
+                        <div>
+                            <InputLabel value="CP fiscal" />
+                            <TextInput v-model="editForm.codigo_postal_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError class="mt-1" :message="editForm.errors.codigo_postal_fiscal" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <InputLabel value="Dirección de entrega para reparto" />
+                            <TextInput v-model="editForm.direccion_entrega" type="text" class="mt-1 block w-full" placeholder="Dirección completa: calle, número, localidad y referencias" />
+                            <InputError class="mt-1" :message="editForm.errors.direccion_entrega" />
+                        </div>
+                        <div>
+                            <InputLabel value="Provincia entrega" />
                             <select v-model="editForm.provincia_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">(seleccionar)</option>
                                 <option v-for="p in provincias" :key="p.id" :value="p.id">{{ p.nombre }}</option>
@@ -560,7 +638,7 @@ const localidadNombre = (c) => {
                             <InputError class="mt-1" :message="editForm.errors.provincia_id" />
                         </div>
                         <div>
-                            <InputLabel value="Ciudad" />
+                            <InputLabel value="Ciudad entrega" />
                             <select v-model="editForm.localidad_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">(seleccionar)</option>
                                 <option v-for="l in editLocalidades" :key="l.id" :value="l.id">{{ l.nombre }}</option>

@@ -24,8 +24,9 @@ class ManifiestoShowController extends Controller
                 $q->where('manifiesto_ingreso_id', $manifiesto->id);
             })
             ->with([
-                'entregaCuenta.tercero:id,razon_social,cuit',
-                'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta',
+                'entregaCuenta.tercero:id,razon_social,cuit,domicilio_fiscal',
+                'entregaCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta,direccion,direccion_entrega,localidad,provincia_id,cp',
+                'entregaCuenta.provincia:id,nombre',
                 'facturarCuenta.tercero:id,razon_social,cuit,condicion_iva',
                 'facturarCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta',
                 'comprobanteOrigen:id,arca_tipo_cbte',
@@ -55,7 +56,9 @@ class ManifiestoShowController extends Controller
                     'remitente:id,cuit,razon_social',
                     'destinatario:id,cuit,razon_social',
                     'remitenteCuenta.tercero:id,razon_social,cuit,empresa_facturadora_preferida_id',
-                    'destinatarioCuenta.tercero:id,razon_social,cuit,empresa_facturadora_preferida_id',
+                    'destinatarioCuenta.tercero:id,razon_social,cuit,domicilio_fiscal,empresa_facturadora_preferida_id',
+                    'destinatarioCuenta:id,empresa_id,tercero_id,numero_cliente,nombre_cuenta,direccion,direccion_entrega,localidad,provincia_id,localidad_id,cp,telefono',
+                    'destinatarioCuenta.provincia:id,nombre',
                     'comprobantes:id',
                 ])->orderByDesc('id');
             },

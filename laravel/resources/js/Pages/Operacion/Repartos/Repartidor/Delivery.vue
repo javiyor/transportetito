@@ -453,6 +453,7 @@ const statusLabel = (estado) => estado === 'pendiente' ? 'En reparto' : estado;
                                 <option value="transferencia">Transferencia</option>
                                 <option value="cheque">Cheque</option>
                                 <option value="cuenta_corriente">Cuenta corriente</option>
+                                <option value="varias">Varias</option>
                             </select>
                         </div>
                         <div>

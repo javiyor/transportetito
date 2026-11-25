@@ -244,7 +244,9 @@ const cuentaEditForm = useForm({
     condicion_iva_id: '',
     nombre_cuenta: '',
     direccion: '',
+    direccion_entrega: '',
     localidad: '',
+    provincia_fiscal: '',
     barrio: '',
     cp: '',
     telefono: '',
@@ -259,10 +261,12 @@ const abrirEdicionCuenta = (cuenta) => {
         || props.condicionesIva?.find((condicion) => condicion.nombre === cuenta.tercero?.condicion_iva)?.id
         || '';
     cuentaEditForm.nombre_cuenta = cuenta.nombre_cuenta || '';
-    cuentaEditForm.direccion = cuenta.direccion || cuenta.tercero?.domicilio_fiscal?.calle || '';
-    cuentaEditForm.localidad = cuenta.localidad || cuenta.tercero?.domicilio_fiscal?.ciudad || '';
+    cuentaEditForm.direccion = cuenta.tercero?.domicilio_fiscal?.calle || cuenta.tercero?.domicilio_fiscal?.direccion || cuenta.direccion || '';
+    cuentaEditForm.direccion_entrega = cuenta.direccion_entrega || cuenta.direccion || '';
+    cuentaEditForm.localidad = cuenta.tercero?.domicilio_fiscal?.ciudad || cuenta.localidad || '';
+    cuentaEditForm.provincia_fiscal = cuenta.tercero?.domicilio_fiscal?.provincia || cuenta.provincia?.nombre || '';
     cuentaEditForm.barrio = cuenta.barrio || '';
-    cuentaEditForm.cp = cuenta.cp || cuenta.tercero?.domicilio_fiscal?.codigo_postal || '';
+    cuentaEditForm.cp = cuenta.tercero?.domicilio_fiscal?.codigo_postal || cuenta.cp || '';
     cuentaEditForm.telefono = cuenta.telefono || '';
     cuentaEditForm.email = cuenta.email || '';
     cuentaEditForm.clearErrors();
@@ -1082,14 +1086,24 @@ const confirmarActualizacionArca = () => {
                             <InputError :message="cuentaEditForm.errors.email" class="mt-1" />
                         </div>
                         <div>
-                            <InputLabel for="edicion_direccion" value="Dirección" />
+                            <InputLabel for="edicion_direccion" value="Dirección fiscal" />
                             <TextInput id="edicion_direccion" v-model="cuentaEditForm.direccion" type="text" class="mt-1 block w-full" />
                             <InputError :message="cuentaEditForm.errors.direccion" class="mt-1" />
                         </div>
                         <div>
-                            <InputLabel for="edicion_localidad" value="Localidad" />
+                            <InputLabel for="edicion_localidad" value="Localidad fiscal" />
                             <TextInput id="edicion_localidad" v-model="cuentaEditForm.localidad" type="text" class="mt-1 block w-full" />
                             <InputError :message="cuentaEditForm.errors.localidad" class="mt-1" />
+                        </div>
+                        <div>
+                            <InputLabel for="edicion_provincia_fiscal" value="Provincia fiscal" />
+                            <TextInput id="edicion_provincia_fiscal" v-model="cuentaEditForm.provincia_fiscal" type="text" class="mt-1 block w-full" />
+                            <InputError :message="cuentaEditForm.errors.provincia_fiscal" class="mt-1" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <InputLabel for="edicion_direccion_entrega" value="Dirección de entrega para reparto" />
+                            <TextInput id="edicion_direccion_entrega" v-model="cuentaEditForm.direccion_entrega" type="text" class="mt-1 block w-full" placeholder="Dirección completa: calle, número, localidad y referencias" />
+                            <InputError :message="cuentaEditForm.errors.direccion_entrega" class="mt-1" />
                         </div>
                         <div>
                             <InputLabel for="edicion_barrio" value="Barrio" />
@@ -1097,7 +1111,7 @@ const confirmarActualizacionArca = () => {
                             <InputError :message="cuentaEditForm.errors.barrio" class="mt-1" />
                         </div>
                         <div>
-                            <InputLabel for="edicion_cp" value="Código postal" />
+                            <InputLabel for="edicion_cp" value="Código postal fiscal" />
                             <TextInput id="edicion_cp" v-model="cuentaEditForm.cp" type="text" class="mt-1 block w-full" />
                             <InputError :message="cuentaEditForm.errors.cp" class="mt-1" />
                         </div>

@@ -26,7 +26,7 @@ class RepartidorController extends Controller
                         'entregaCuenta.tercero:id,cuit,razon_social',
                         'entregaCuenta.localidadRel:id,nombre,provincia_id',
                         'entregaCuenta.localidadRel.provincia:id,nombre',
-                    ])->with('entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,localidad_id,cp,telefono,email')->orderBy('orden');
+                    ])->with('entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,direccion_entrega,localidad,localidad_id,cp,telefono,email')->orderBy('orden');
                 },
             ])
             ->where('chofer_user_id', $userId)
@@ -64,7 +64,7 @@ class RepartidorController extends Controller
             'observacion_operador' => ['nullable', 'string', 'max:1000'],
             'firma_recibo' => ['nullable', 'string'],
             'email_contacto' => ['nullable', 'email', 'max:255'],
-            'forma_pago' => ['nullable', 'in:cuenta_corriente,efectivo,cheque,transferencia'],
+            'forma_pago' => ['nullable', 'in:cuenta_corriente,efectivo,cheque,transferencia,varias'],
             'importe_cobrado' => ['nullable', 'numeric', 'min:0'],
         ]);
 

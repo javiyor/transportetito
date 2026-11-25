@@ -133,7 +133,7 @@ class HojaRutaStoreController extends Controller
                     'orden' => $order,
                     'estado_entrega' => 'pendiente',
                     'zona_nombre' => $cuenta?->zona?->nombre ?: $zona?->nombre,
-                    'direccion' => $cuenta?->direccion,
+                    'direccion' => $cuenta?->direccion_entrega ?: $cuenta?->direccion,
                     'localidad' => $cuenta?->localidad ?: $cuenta?->localidadRel?->nombre,
                     'cp' => $cuenta?->cp,
                     'telefono' => $cuenta?->telefono,

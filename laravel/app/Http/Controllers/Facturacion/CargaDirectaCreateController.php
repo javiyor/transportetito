@@ -34,9 +34,10 @@ class CargaDirectaCreateController extends Controller
             ->with([
                 'tercero:id,razon_social,cuit,condicion_iva,condicion_iva_id,domicilio_fiscal,empresa_facturadora_preferida_id',
                 'tercero.empresaFacturadoraPreferida:id,razon_social',
+                'provincia:id,nombre',
             ])
             ->orderBy('nombre_cuenta')
-            ->get(['id', 'tercero_id', 'nombre_cuenta', 'direccion', 'localidad', 'barrio', 'cp', 'telefono', 'email']);
+            ->get(['id', 'tercero_id', 'nombre_cuenta', 'direccion', 'direccion_entrega', 'localidad', 'provincia_id', 'barrio', 'cp', 'telefono', 'email']);
 
         $tarifaDefaults = TarifaResolver::DEFAULTS;
 

@@ -1,146 +1,134 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
 
-const props = defineProps({
-    hoja: Object,
-});
+const props = defineProps({ hoja: Object });
 
 const formatFecha = (value) => {
     if (!value) return '-';
-    const d = new Date(String(value).slice(0, 10));
-    const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
+    const parts = String(value).slice(0, 10).split('-');
+    return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : String(value);
 };
 
-const formatFechaHora = (value) => {
-    if (!value) return '-';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 16);
-    return `${d.toLocaleDateString('es-AR')} ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+const vehiculoLabel = () => {
+    const vehiculo = props.hoja.vehiculo;
+    if (!vehiculo) return '-';
+    return `${vehiculo.patente}${vehiculo.marca ? ` · ${vehiculo.marca}` : ''}${vehiculo.modelo ? ` ${vehiculo.modelo}` : ''}`;
 };
 
-const estadoEntregaLabel = (estado) => ({
-    pendiente: 'En reparto',
-    entregado: 'Entregado',
-    entregado_con_diferencia: 'Entregado con diferencia',
-    no_entregado: 'No entregado',
-}[estado] || estado || '-');
+const numeroComprobante = (comprobante) => {
+    if (!comprobante) return '-';
+    if (comprobante.arca_punto_venta && comprobante.arca_numero) {
+        return `${String(comprobante.arca_punto_venta).padStart(4, '0')}-${String(comprobante.arca_numero).padStart(8, '0')}`;
+    }
 
-const totalImporte = () => {
-    return (props.hoja.items || []).reduce((acc, it) => acc + Number(it.comprobante?.total || 0), 0).toFixed(2);
+    const numero = comprobante.numero_interno || comprobante.id;
+    return comprobante.tipo === 'guia_envio' ? `Guía #${numero}` : `#${numero}`;
 };
 
-const vehiculoLabel = computed(() => {
-    if (!props.hoja.vehiculo) return '-';
-    const v = props.hoja.vehiculo;
-    return `${v.patente}${v.marca ? ' - ' + v.marca : ''}${v.modelo ? ' ' + v.modelo : ''}`;
-});
+const remitos = (item) => (item.comprobante?.pedidos || [])
+    .map((pedido) => String(pedido.remito_numero || '').trim())
+    .filter(Boolean)
+    .join(', ') || '-';
+
+const formaPago = (item) => {
+    const value = String(item.forma_pago || item.cobro_medio || '').toLowerCase();
+    const labels = {
+        cuenta_corriente: 'Cta. cte.',
+        efectivo: 'Efectivo',
+        cheque: 'Cheque',
+        cheque_propio: 'Cheque',
+        cheque_tercero: 'Cheque',
+        transferencia: 'Transferencia',
+        varias: 'Varias',
+        varios: 'Varias',
+    };
+
+    return labels[value] || item.forma_pago || item.cobro_medio || '';
+};
 </script>
 
 <template>
-    <div class="bg-white text-gray-900">
-        <Head :title="`Hoja de ruta #${hoja.id}`" />
+    <div class="driver-guide bg-white text-gray-900">
+        <Head :title="`Guía del chofer #${hoja.id}`" />
 
-        <div class="max-w-5xl mx-auto p-8">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <div class="text-xs uppercase tracking-wider text-gray-500">Hoja de ruta</div>
-                    <h1 class="mt-1 text-2xl font-semibold">#{{ hoja.id }}</h1>
-                    <div class="mt-2 text-sm text-gray-700">
-                        Creada: {{ formatFechaHora(hoja.created_at) }} · {{ hoja.deposito?.nombre || '-' }} · Estado: {{ hoja.estado }}
+        <main class="mx-auto max-w-4xl p-4">
+            <header class="mb-3 border-b-2 border-gray-800 pb-2">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Guía del chofer</p>
+                        <h1 class="text-xl font-bold">Hoja #{{ hoja.id }}</h1>
+                    </div>
+                    <div class="text-right text-xs">
+                        <div><strong>Fecha:</strong> {{ formatFecha(hoja.fecha || hoja.created_at) }}</div>
+                        <div><strong>Chofer:</strong> {{ hoja.chofer?.name || '-' }}</div>
+                        <div><strong>Vehículo:</strong> {{ vehiculoLabel() }}</div>
+                        <div v-if="hoja.zona"><strong>Zona:</strong> {{ hoja.zona.nombre }}</div>
                     </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-sm font-medium">{{ hoja.empresa?.razon_social || '' }}</div>
-                    <div class="text-xs text-gray-600">CUIT {{ hoja.empresa?.cuit || '-' }}</div>
-                    <div class="mt-2 text-xs text-gray-600">Total: {{ hoja.items?.[0]?.comprobante?.moneda || 'ARS' }} {{ totalImporte() }}</div>
-                </div>
-            </div>
+            </header>
 
-            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-y border-gray-200 py-2 text-[10px] text-gray-600">
-                <span><strong>Borrador:</strong> en preparación.</span>
-                <span><strong>Cerrada:</strong> reparto finalizado.</span>
-                <span><strong>En reparto:</strong> hoja creada; entrega no registrada.</span>
-                <span><strong>Entregado:</strong> recibido.</span>
-                <span><strong>Entregado con diferencia:</strong> recibido con observaciones.</span>
-                <span><strong>No entregado:</strong> entrega no completada.</span>
-            </div>
-
-            <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
-                <div>
-                    <div class="text-xs uppercase tracking-wider text-gray-500">Chofer</div>
-                    <div class="font-medium">{{ hoja.chofer?.name || '-' }}</div>
-                </div>
-                <div>
-                    <div class="text-xs uppercase tracking-wider text-gray-500">Vehiculo</div>
-                    <div class="font-medium">{{ vehiculoLabel }}</div>
-                </div>
-                <div>
-                    <div class="text-xs uppercase tracking-wider text-gray-500">Zona</div>
-                    <div class="font-medium">{{ hoja.zona?.nombre || '-' }}</div>
-                </div>
-            </div>
-
-            <div class="mt-6 border-t border-gray-200" />
-
-            <table class="mt-6 w-full text-sm">
+            <table class="w-full table-fixed border-collapse text-[10px] leading-tight">
+                <colgroup>
+                    <col class="w-[5%]">
+                    <col class="w-[43%]">
+                    <col class="w-[18%]">
+                    <col class="w-[16%]">
+                    <col class="w-[18%]">
+                </colgroup>
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-gray-500">
-                        <th class="py-2 text-left w-16">Orden</th>
-                        <th class="py-2 text-left">Entrega</th>
-                        <th class="py-2 text-left">Direccion</th>
-                        <th class="py-2 text-left w-28">Factura</th>
-                        <th class="py-2 text-left w-28">Total</th>
-                        <th class="py-2 text-left w-28">Estado</th>
-                        <th class="py-2 text-left w-36">Recibe</th>
-                        <th class="py-2 text-left w-36">Firma</th>
+                    <tr class="border-b border-gray-500 text-left text-[9px] uppercase tracking-wide">
+                        <th class="px-1.5 py-1.5">Ord.</th>
+                        <th class="px-1.5 py-1.5">Entrega / dirección / teléfono</th>
+                        <th class="px-1.5 py-1.5">Factura / guía</th>
+                        <th class="px-1.5 py-1.5">Remitos</th>
+                        <th class="px-1.5 py-1.5">Forma de pago</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="it in hoja.items" :key="it.id" class="border-t border-gray-100">
-                        <td class="py-2 font-mono">{{ it.orden }}</td>
-                        <td class="py-2">
-                            <div class="font-medium">{{ it.entrega_cuenta?.tercero?.razon_social || '-' }}</div>
-                            <div class="text-xs text-gray-600">CUIT {{ it.entrega_cuenta?.tercero?.cuit || '-' }} · Nro {{ it.entrega_cuenta?.numero_cliente || '-' }}</div>
-                        </td>
-                        <td class="py-2">
-                            <div>{{ it.direccion || '' }}</div>
-                            <div class="text-xs text-gray-600">{{ it.localidad || '' }} {{ it.cp ? '· ' + it.cp : '' }} {{ it.telefono ? '· ' + it.telefono : '' }}</div>
-                        </td>
-                        <td class="py-2 font-mono">#{{ it.comprobante_id }}</td>
-                        <td class="py-2">{{ it.comprobante?.moneda }} {{ it.comprobante?.total }}</td>
-                        <td class="py-2">{{ estadoEntregaLabel(it.estado_entrega) }}</td>
-                        <td class="py-2 text-xs">
-                            <template v-if="it.estado_entrega === 'entregado' || it.estado_entrega === 'entregado_con_diferencia'">
-                                <div>{{ it.recibe_nombre || '' }}</div>
-                                <div class="text-gray-500">DNI: {{ it.recibe_dni || '' }}</div>
-                                <div class="text-gray-500">{{ formatFecha(it.fecha_entrega) }}</div>
-                            </template>
-                            <div v-else-if="it.estado_entrega === 'pendiente'" class="text-gray-400 italic">En reparto</div>
-                            <div v-else class="text-gray-400 italic">No entregado</div>
-                        </td>
-                        <td class="py-2">
-                            <div v-if="it.firma_recibo" class="h-10">
-                                <img :src="it.firma_recibo" alt="Firma" class="h-10 border border-gray-200 rounded" />
+                    <tr v-for="item in hoja.items" :key="item.id" class="border-b border-gray-300 align-top">
+                        <td class="px-1.5 py-2 text-center font-bold">{{ item.orden }}</td>
+                        <td class="px-1.5 py-2">
+                            <div class="font-semibold">{{ item.entrega_cuenta?.tercero?.razon_social || item.entrega_cuenta?.nombre_cuenta || '-' }}</div>
+                            <div>{{ item.entrega_cuenta?.direccion_entrega || item.direccion || item.entrega_cuenta?.direccion || '' }}</div>
+                            <div v-if="!item.entrega_cuenta?.direccion_entrega" class="text-gray-600">
+                                {{ item.localidad || item.entrega_cuenta?.localidad || '' }}
+                                <template v-if="item.cp || item.entrega_cuenta?.cp"> · CP {{ item.cp || item.entrega_cuenta?.cp }}</template>
                             </div>
-                            <div v-else class="border-b border-gray-300 h-8 w-28">&nbsp;</div>
+                            <div v-if="item.telefono || item.entrega_cuenta?.telefono" class="text-gray-600">Tel. {{ item.telefono || item.entrega_cuenta?.telefono }}</div>
+                        </td>
+                        <td class="px-1.5 py-2 font-mono">{{ numeroComprobante(item.comprobante) }}</td>
+                        <td class="px-1.5 py-2">{{ remitos(item) }}</td>
+                        <td class="px-1.5 py-2">
+                            <template v-if="formaPago(item)">{{ formaPago(item) }}</template>
+                            <template v-else>
+                                <div class="payment-write-line"></div>
+                                <div class="mt-1 text-[8px] text-gray-500">Cta. cte. · Efe. · Cheque · Varias</div>
+                            </template>
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <div class="mt-8 text-xs text-gray-400 text-center">
-                Documento generado el {{ new Date().toLocaleString('es-AR') }}
-            </div>
-        </div>
+            <footer class="mt-2 text-right text-[8px] text-gray-400">Transporte Tito · Hoja #{{ hoja.id }}</footer>
+        </main>
     </div>
 </template>
 
 <style>
+.payment-write-line {
+    height: 15px;
+    border-bottom: 1px solid #9ca3af;
+}
+
 @media print {
     @page {
-        size: A4 landscape;
-        margin: 10mm;
+        size: A4 portrait;
+        margin: 8mm;
+    }
+
+    .driver-guide main {
+        max-width: none;
+        padding: 0;
     }
 }
 </style>

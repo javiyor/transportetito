@@ -18,8 +18,9 @@ class HojaRutaPrintController extends Controller
             'zona:id,nombre',
             'items' => function ($q) {
                 $q->with([
-                    'comprobante:id,total,moneda,fecha_emision',
-                    'entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,localidad,cp,telefono',
+                    'comprobante:id,tipo,total,moneda,fecha_emision,arca_punto_venta,arca_numero,numero_interno',
+                    'comprobante.pedidos:id,remito_numero',
+                    'entregaCuenta:id,numero_cliente,nombre_cuenta,tercero_id,direccion,direccion_entrega,localidad,cp,telefono',
                     'entregaCuenta.tercero:id,cuit,razon_social',
                 ])->orderBy('orden');
             },

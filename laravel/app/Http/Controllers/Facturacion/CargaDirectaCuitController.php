@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Facturacion;
 use App\Http\Controllers\Controller;
 use App\Models\CondicionIva;
 use App\Models\Empresa;
-use App\Models\Localidad;
-use App\Models\Provincia;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaPersonaService;
@@ -114,7 +112,7 @@ class CargaDirectaCuitController extends Controller
 
         return TerceroCuenta::query()
             ->where('empresa_id', $empresaId)
-            ->with(['tercero', 'localidadRel', 'provincia'])
+            ->with('tercero')
             ->findOrFail($cuentaId);
     }
 
@@ -163,10 +161,10 @@ class CargaDirectaCuitController extends Controller
         $actuales = [
             'razon_social' => (string) ($tercero?->razon_social ?? ''),
             'condicion_iva' => (string) ($tercero?->condicion_iva ?? ''),
-            'direccion' => (string) ($cuenta->direccion ?: ($domicilioActual['calle'] ?? $domicilioActual['direccion'] ?? '')),
-            'localidad' => (string) ($cuenta->localidad ?: $cuenta->localidadRel?->nombre ?: ($domicilioActual['ciudad'] ?? '')),
-            'provincia' => (string) ($cuenta->provincia?->nombre ?: ($domicilioActual['provincia'] ?? '')),
-            'codigo_postal' => (string) ($cuenta->cp ?: ($domicilioActual['codigo_postal'] ?? '')),
+            'direccion' => (string) ($domicilioActual['calle'] ?? $domicilioActual['direccion'] ?? ''),
+            'localidad' => (string) ($domicilioActual['ciudad'] ?? ''),
+            'provincia' => (string) ($domicilioActual['provincia'] ?? ''),
+            'codigo_postal' => (string) ($domicilioActual['codigo_postal'] ?? ''),
         ];
         $desdeArca = [
             'razon_social' => (string) ($persona['razon_social'] ?? ''),
@@ -231,42 +229,10 @@ class CargaDirectaCuitController extends Controller
                 'codigo_postal' => $domicilioArca['codigo_postal'] ?? null,
             ], fn ($value) => $value !== null && trim((string) $value) !== ''));
 
-            if (! empty($domicilioArca['direccion'])) {
-                $cuenta->direccion = $domicilioArca['direccion'];
-            }
-            if (! empty($domicilioArca['localidad'])) {
-                $cuenta->localidad = $domicilioArca['localidad'];
-                $provincia = $this->buscarProvincia((string) ($domicilioArca['provincia'] ?? ''));
-                if ($provincia) {
-                    $cuenta->provincia_id = $provincia->id;
-                    $localidad = Localidad::query()
-                        ->where('provincia_id', $provincia->id)
-                        ->get(['id', 'nombre'])
-                        ->first(fn (Localidad $localidad) => $this->normalizar($localidad->nombre) === $this->normalizar((string) $domicilioArca['localidad']));
-                    if ($localidad) {
-                        $cuenta->localidad_id = $localidad->id;
-                    }
-                }
-            }
-            if (! empty($domicilioArca['codigo_postal'])) {
-                $cuenta->cp = $domicilioArca['codigo_postal'];
-            }
         }
 
         $tercero->save();
         $tercero->syncAccountNamesWithLegalName($razonSocialAnterior);
-        $cuenta->save();
-    }
-
-    private function buscarProvincia(string $nombre): ?Provincia
-    {
-        if (trim($nombre) === '') {
-            return null;
-        }
-
-        return Provincia::query()
-            ->get(['id', 'nombre'])
-            ->first(fn (Provincia $provincia) => $this->normalizar($provincia->nombre) === $this->normalizar($nombre));
     }
 
     private function normalizar(string $value): string
