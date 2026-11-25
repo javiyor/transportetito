@@ -23,13 +23,31 @@ const ultimaPosicion = ref(null);
 const ubicacionError = ref('');
 const permissionDenied = ref(false);
 
+const csrfToken = () => {
+    const cookie = document.cookie.split('; ').find((value) => value.startsWith('XSRF-TOKEN='));
+    return cookie ? decodeURIComponent(cookie.slice('XSRF-TOKEN='.length)) : null;
+};
+
 const enviarUbicacion = (pos) => {
+    const coordenadas = pos?.coords || pos;
+    const latitude = Number(coordenadas?.latitude);
+    const longitude = Number(coordenadas?.longitude);
+    const accuracy = coordenadas?.accuracy === null || coordenadas?.accuracy === undefined
+        ? null
+        : Number(coordenadas.accuracy);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        ubicacionError.value = 'El dispositivo no devolvió coordenadas válidas.';
+        return;
+    }
+
     ultimaPosicion.value = {
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        accuracy: pos.accuracy ?? null,
+        latitude,
+        longitude,
+        accuracy,
     };
     const hojaId = expandedHojaId.value || (props.hojas?.[0]?.id ?? null);
+    const token = csrfToken();
     fetch(route('repartidor.ubicacion.store'), {
         method: 'POST',
         credentials: 'same-origin',
@@ -37,14 +55,21 @@ const enviarUbicacion = (pos) => {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            ...(token ? { 'X-XSRF-TOKEN': token } : {}),
         },
         body: JSON.stringify({
-            lat: pos.latitude,
-            lng: pos.longitude,
-            accuracy: pos.accuracy ?? null,
+            lat: latitude,
+            lng: longitude,
+            accuracy,
             hoja_ruta_id: hojaId ? Number(hojaId) : null,
         }),
-    }).catch(() => {});
+    }).then((response) => {
+        if (!response.ok) throw new Error(`http ${response.status}`);
+        ubicacionError.value = '';
+    }).catch((error) => {
+        console.warn('[Delivery] no se pudo guardar la ubicación:', error);
+        ubicacionError.value = 'No se pudo guardar la ubicación en el servidor.';
+    });
 };
 
 const startUbicacion = async () => {
