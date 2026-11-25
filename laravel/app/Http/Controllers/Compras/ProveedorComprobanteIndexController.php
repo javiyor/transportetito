@@ -216,7 +216,7 @@ class ProveedorComprobanteIndexController extends Controller
         $proveedores = TerceroCuenta::query()
             ->with('tercero:id,cuit,razon_social', 'cuentaContableProveedor:id,codigo,nombre')
             ->leftJoin('terceros', 'terceros.id', '=', 'tercero_cuentas.tercero_id')
-            ->where('empresa_id', $empresaId)
+            ->where('tercero_cuentas.empresa_id', $empresaId)
             ->whereExists(function ($q) use ($empresaId) {
                 $q->selectRaw('1')
                     ->from('tercero_empresa as te')
@@ -226,7 +226,13 @@ class ProveedorComprobanteIndexController extends Controller
             })
             ->orderByRaw("LOWER(COALESCE(NULLIF(terceros.razon_social, ''), NULLIF(tercero_cuentas.nombre_cuenta, ''), ''))")
             ->orderBy('tercero_cuentas.numero_cliente')
-            ->get(['id', 'tercero_id', 'numero_cliente', 'nombre_cuenta', 'cuenta_contable_proveedor_id']);
+            ->get([
+                'tercero_cuentas.id',
+                'tercero_cuentas.tercero_id',
+                'tercero_cuentas.numero_cliente',
+                'tercero_cuentas.nombre_cuenta',
+                'tercero_cuentas.cuenta_contable_proveedor_id',
+            ]);
 
         $fFechaDesde = $request->query('fecha_desde') ?: null;
         $fFechaHasta = $request->query('fecha_hasta') ?: null;
