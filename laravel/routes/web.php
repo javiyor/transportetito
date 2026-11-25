@@ -55,6 +55,7 @@ use App\Http\Controllers\Operacion\Repartos\HojaRutaItemUpdateController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaCerrarController;
 use App\Http\Controllers\Operacion\Repartos\HojaRutaPrintController;
 use App\Http\Controllers\Operacion\Repartos\RepartidorController;
+use App\Http\Controllers\Operacion\Repartos\RepartidorHojaOrdenController;
 use App\Http\Controllers\Operacion\Repartos\RepartoUbicacionController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoFacturarController;
 use App\Http\Controllers\Operacion\Facturacion\ManifiestoEmitirGuiasController;
@@ -352,6 +353,7 @@ Route::middleware([
             Route::get('/', [RepartidorController::class, 'index'])->name('index');
             Route::post('/ubicacion', [RepartoUbicacionController::class, 'store'])->name('ubicacion.store');
             Route::post('/hojas/{hoja}/items/{item}/entregar', [RepartidorController::class, 'entregar'])->name('entregar');
+            Route::post('/hojas/{hoja}/orden', RepartidorHojaOrdenController::class)->name('hojas.orden');
         });
 
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
