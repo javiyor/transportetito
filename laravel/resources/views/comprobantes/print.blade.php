@@ -495,6 +495,12 @@
             .bottom-col, .footer-left, .footer-right { display: inline-block; vertical-align: top; font-size: 7.5pt; }
             .header-left { width: 40%; }
             .header-center, .header-right { width: 29%; }
+            @if($comprobante->tipo !== 'guia_envio' && !($comprobante->requiere_autorizacion_arca && ! $comprobante->arca_cae))
+                .page-border { width: 125%; transform: scale(.8); transform-origin: top left; }
+                .header-left { width: 36%; padding-right: 6pt; }
+                .header-center { width: 26%; padding-right: 5pt; padding-left: 5pt; }
+                .header-right { width: 30%; padding-left: 5pt; }
+            @endif
             .bottom-col.remitos { width: 58%; }
             .bottom-col.importes { width: 40%; min-width: 0; }
             .importe-line { display: block; width: 100%; font-size: 0; }

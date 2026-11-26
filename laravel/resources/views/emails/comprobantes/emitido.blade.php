@@ -1,4 +1,4 @@
-<p>Hola,</p>
+<p>Estimado cliente,</p>
 
 <p>Se emitió el comprobante <strong>{{ $numeroComprobante }}</strong>.</p>
 

@@ -30,22 +30,51 @@ class CuentaCorrientePrintController extends Controller
         $comprobantes = [];
         $totalesPendientes = [];
         $saldos = [];
+        $filtros = [
+            'desde' => '',
+            'hasta' => '',
+        ];
 
         if ($tipo === 'pendientes') {
             $datos = $documentosService->paraCuenta($cuenta);
             $comprobantes = $datos['documentos'];
             $totalesPendientes = $datos['totales'];
         } else {
-            $movimientos = CtaCteMovimiento::query()
+            $rules = [
+                'desde' => ['nullable', 'date'],
+                'hasta' => ['nullable', 'date'],
+            ];
+            if ($request->query('desde') && $request->query('hasta')) {
+                $rules['hasta'][] = 'after_or_equal:desde';
+            }
+            $filtros = $request->validate($rules);
+            $consultaBase = CtaCteMovimiento::query()
                 ->where('empresa_id', $empresaId)
-                ->where('tercero_cuenta_id', $cuenta->id)
-                ->orderByDesc('fecha')
-                ->orderByDesc('id')
+                ->where('tercero_cuenta_id', $cuenta->id);
+
+            $saldoAnterior = ! empty($filtros['desde'])
+                ? (float) (clone $consultaBase)->whereDate('fecha', '<', $filtros['desde'])->sum('importe_signed')
+                : 0.0;
+
+            $consultaPeriodo = clone $consultaBase;
+            if (! empty($filtros['desde'])) {
+                $consultaPeriodo->whereDate('fecha', '>=', $filtros['desde']);
+            }
+            if (! empty($filtros['hasta'])) {
+                $consultaPeriodo->whereDate('fecha', '<=', $filtros['hasta']);
+            }
+
+            $movimientos = $consultaPeriodo
+                ->orderBy('fecha')
+                ->orderBy('id')
                 ->get();
+            $saldoPeriodo = (float) $movimientos->sum('importe_signed');
+            $saldoActual = round($saldoAnterior + $saldoPeriodo, 2);
 
             $saldos = [
-                'saldo_total' => round((float) $movimientos->sum('importe_signed'), 2),
-                'vencido_30' => round(max(0, (float) $movimientos->where('fecha', '<=', now()->subDays(30)->toDateString())->sum('importe_signed')), 2),
+                'saldo_anterior' => round($saldoAnterior, 2),
+                'saldo_periodo' => round($saldoPeriodo, 2),
+                'saldo_actual' => $saldoActual,
             ];
         }
 
@@ -57,6 +86,7 @@ class CuentaCorrientePrintController extends Controller
             'tipo' => $tipo,
             'totalesPendientes' => $totalesPendientes,
             'saldos' => $saldos,
+            'filtros' => $filtros,
         ]);
     }
 }

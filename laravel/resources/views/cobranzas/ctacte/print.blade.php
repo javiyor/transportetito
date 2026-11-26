@@ -11,22 +11,36 @@
         .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
         .label { font-size: 12px; text-transform: uppercase; color: #6b7280; }
         .value { font-size: 14px; margin-top: 4px; }
-        .actions { margin-bottom: 20px; }
+        .actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+        .date-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+        .date-filter label { display: grid; gap: 3px; font-size: 11px; color: #4b5563; }
+        .balance-summary { display: grid; gap: 8px; margin-top: 18px; }
+        .balance-row { display: flex; justify-content: space-between; gap: 16px; padding: 8px 10px; border: 1px solid #d1d5db; }
+        .balance-current { border: 2px solid #111827; background: #f3f4f6; font-size: 18px; font-weight: 700; }
         @media print { .actions { display: none; } body { margin: 0; } }
     </style>
 </head>
 <body>
     @include('partials.print-header')
-    <div class="actions"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+    <div class="actions">
+        @if($tipo === 'movimientos')
+            <form class="date-filter" method="GET" action="{{ route('cobranzas.ctacte.print', $cuenta->id) }}">
+                <input type="hidden" name="tipo" value="movimientos">
+                <label>Desde<input type="date" name="desde" value="{{ $filtros['desde'] ?? '' }}"></label>
+                <label>Hasta<input type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}"></label>
+                <button type="submit">Aplicar fechas</button>
+                @if(!empty($filtros['desde']) || !empty($filtros['hasta']))
+                    <a href="{{ route('cobranzas.ctacte.print', ['cuenta' => $cuenta->id, 'tipo' => 'movimientos']) }}">Quitar rango</a>
+                @endif
+            </form>
+        @endif
+        <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    </div>
     <h1>Cuenta corriente</h1>
     <div class="grid">
         <div><div class="label">Cliente</div><div class="value">{{ $cuenta->tercero?->razon_social }}</div></div>
         <div><div class="label">CUIT</div><div class="value">{{ $cuenta->tercero?->cuit }}</div></div>
         <div><div class="label">Ciudad / Barrio</div><div class="value">{{ $cuenta->localidad ?? 'Sin ciudad' }} / {{ $cuenta->barrio ?? 'Sin barrio' }}</div></div>
-        @if($tipo === 'movimientos')
-            <div><div class="label">Saldo total</div><div class="value">{{ number_format((float) ($saldos['saldo_total'] ?? 0), 2, ',', '.') }}</div></div>
-            <div><div class="label">Vencido +30</div><div class="value">{{ number_format((float) ($saldos['vencido_30'] ?? 0), 2, ',', '.') }}</div></div>
-        @endif
     </div>
 
     @if($tipo === 'pendientes')
@@ -66,6 +80,14 @@
         @endif
     @else
         <h3>Movimientos de cuenta corriente</h3>
+        <div class="label">
+            Período: {{ !empty($filtros['desde']) ? \Carbon\Carbon::parse($filtros['desde'])->format('d-m-Y') : 'inicio' }}
+            al {{ !empty($filtros['hasta']) ? \Carbon\Carbon::parse($filtros['hasta'])->format('d-m-Y') : 'hoy' }}
+        </div>
+        <div class="balance-row">
+            <span>Saldo anterior a {{ !empty($filtros['desde']) ? \Carbon\Carbon::parse($filtros['desde'])->format('d-m-Y') : 'los movimientos impresos' }}</span>
+            <strong>{{ number_format((float) ($saldos['saldo_anterior'] ?? 0), 2, ',', '.') }}</strong>
+        </div>
         <table>
             <thead><tr><th>Fecha</th><th>Tipo</th><th>Moneda</th><th>Importe</th><th>Obs.</th></tr></thead>
             <tbody>
@@ -80,6 +102,10 @@
                 @endforelse
             </tbody>
         </table>
+        <div class="balance-summary">
+            <div class="balance-row"><span>Movimiento neto del período</span><strong>{{ number_format((float) ($saldos['saldo_periodo'] ?? 0), 2, ',', '.') }}</strong></div>
+            <div class="balance-row balance-current"><span>Saldo Actual al {{ !empty($filtros['hasta']) ? \Carbon\Carbon::parse($filtros['hasta'])->format('d-m-Y') : 'hoy' }}</span><strong>{{ number_format((float) ($saldos['saldo_actual'] ?? 0), 2, ',', '.') }}</strong></div>
+        </div>
     @endif
 </body>
 </html>
