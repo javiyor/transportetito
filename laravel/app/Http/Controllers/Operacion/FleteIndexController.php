@@ -15,8 +15,12 @@ class FleteIndexController extends Controller
     {
         $empresaId = (int) $request->user()->current_empresa_id;
         $estado = $request->query('estado');
+        if (in_array($estado, ['en_viaje', 'en_deposito'], true)) {
+            $estado = null;
+        }
 
         $query = Pedido::query()
+            ->where(fn ($q) => $q->whereNull('estado')->orWhereNotIn('estado', ['en_viaje', 'en_deposito']))
             ->with([
                 'empresa:id,razon_social',
                 'manifiestoIngreso',
@@ -75,6 +79,8 @@ class FleteIndexController extends Controller
         $pedidos->through(fn ($pedido) => $this->mapFlete($pedido, $estado));
 
         $estados = Pedido::query()
+            ->whereNotNull('estado')
+            ->whereNotIn('estado', ['en_viaje', 'en_deposito'])
             ->select('estado')
             ->distinct()
             ->orderBy('estado')
@@ -89,7 +95,7 @@ class FleteIndexController extends Controller
             'filtros' => [
                 'desde' => $request->query('desde') ?: '',
                 'hasta' => $request->query('hasta') ?: '',
-                'estado' => $request->query('estado') ?: '',
+                'estado' => $estado ?: '',
                 'remitente' => $request->query('remitente') ?: '',
                 'destinatario' => $request->query('destinatario') ?: '',
             ],
