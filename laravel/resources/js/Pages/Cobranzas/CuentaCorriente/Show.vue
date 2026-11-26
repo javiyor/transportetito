@@ -7,9 +7,34 @@ import DialogModal from '@/Components/DialogModal.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const page = usePage();
+let recargandoBancos = false;
+let ultimaRecargaBancos = 0;
+
+const recargarBancosAlVolver = () => {
+    if (document.visibilityState !== 'visible' || recargandoBancos || Date.now() - ultimaRecargaBancos < 1500) return;
+
+    ultimaRecargaBancos = Date.now();
+    recargandoBancos = true;
+    router.reload({
+        only: ['bancos'],
+        preserveState: true,
+        preserveScroll: true,
+        onFinish: () => { recargandoBancos = false; },
+    });
+};
+
+onMounted(() => {
+    document.addEventListener('visibilitychange', recargarBancosAlVolver);
+    window.addEventListener('focus', recargarBancosAlVolver);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', recargarBancosAlVolver);
+    window.removeEventListener('focus', recargarBancosAlVolver);
+});
 
 const props = defineProps({
     cuenta: Object,
@@ -23,6 +48,7 @@ const roles = computed(() => page.props.tt?.roles || []);
 const esSoloCobrador = computed(() => roles.value.includes('cobrador') && !roles.value.includes('cobranzas_admin') && !roles.value.includes('admin'));
 const comprobantesOpen = ref(false);
 const movimientosOpen = ref(false);
+const eliminandoNotaPendienteId = ref(null);
 
 const ajusteForm = useForm({ tipo: 'ajuste_debito', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', observacion: '' });
 const notaForm = useForm({ tipo: 'nota_debito_manual', fecha: new Date().toISOString().slice(0, 10), moneda: 'ARS', importe: '', motivo: '' });
@@ -39,7 +65,7 @@ const reciboForm = useForm({
         ganancias: { descripcion: '', importe: '' },
     },
     items: [
-        { medio: 'efectivo', importe: '', detalle: '', moneda: 'ARS', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
+        { medio: 'efectivo', importe: '', detalle: '', moneda: 'ARS', cheque_tipo: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
     ],
 });
 
@@ -52,6 +78,26 @@ const reciboTotal = computed(() => reciboForm.items
 const esCredito = (tipo) => {
     const t = String(tipo || '');
     return t.startsWith('nota_credito') || t.startsWith('ajuste_credito') || t === 'pago_a_cuenta';
+};
+const esNotaPendienteArca = (comprobante) => {
+    const tipo = String(comprobante?.tipo || '');
+    return (tipo.startsWith('nota_credito') || tipo.startsWith('nota_debito'))
+        && comprobante.estado !== 'anulada'
+        && !!comprobante.requiere_autorizacion_arca
+        && !comprobante.arca_cae;
+};
+const eliminarNotaPendienteArca = (comprobante) => {
+    if (!esNotaPendienteArca(comprobante) || eliminandoNotaPendienteId.value) return;
+    if (!window.confirm(`¿Eliminar la ${tipoLabel(comprobante.tipo)} ${comprobanteNumero(comprobante)} pendiente de autorización ARCA?`)) return;
+
+    eliminandoNotaPendienteId.value = comprobante.id;
+    router.delete(route('operacion.comprobantes.nota-pendiente.destroy', comprobante.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            reciboForm.comprobante_ids = reciboForm.comprobante_ids.filter((id) => String(id) !== String(comprobante.id));
+        },
+        onFinish: () => { eliminandoNotaPendienteId.value = null; },
+    });
 };
 
 const comprobantesPendientes = computed(() => {
@@ -136,7 +182,7 @@ const imputarNotasCredito = () => {
 };
 
 const agregarItem = () => {
-    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
+    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, cheque_tipo: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
 };
 
 const quitarItem = (idx) => {
@@ -215,6 +261,7 @@ const formatNum = (n) => {
                     <div v-if="cuenta.empresa?.razon_social" class="mt-1 text-xs text-gray-500">Empresa: {{ cuenta.empresa.razon_social }}</div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
+                    <a v-if="roles.includes('admin')" :href="route('admin.bancos.index')" target="_blank" rel="noopener"><SecondaryButton>Bancos</SecondaryButton></a>
                     <a :href="route('cobranzas.ctacte.print', { cuenta: cuenta.id, tipo: 'pendientes' })" target="_blank" rel="noopener"><SecondaryButton>Imprimir pendientes</SecondaryButton></a>
                     <a :href="route('cobranzas.ctacte.print', { cuenta: cuenta.id, tipo: 'movimientos' })" target="_blank" rel="noopener"><SecondaryButton>Imprimir movimientos</SecondaryButton></a>
                     <PrimaryButton :disabled="!cuenta.email || emailPendientesForm.processing" :title="cuenta.email ? `Enviar a ${cuenta.email}` : 'La cuenta no tiene email cargado'" @click="enviarPendientesPorEmail">
@@ -253,10 +300,11 @@ const formatNum = (n) => {
                         <InputError :message="reciboForm.errors.moneda" />
                         <fieldset class="border border-gray-200 rounded p-1 max-h-40 overflow-y-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
-                            <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(0,1fr),minmax(5rem,auto)] items-center gap-1.5 py-0.5">
+                            <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(0,1fr),minmax(5rem,auto),auto] items-center gap-1.5 py-0.5">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
                                 <span class="min-w-0 truncate text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} <span class="text-[10px] text-gray-400">{{ formatFecha(c.fecha_emision) }}</span></span>
                                 <span class="whitespace-nowrap text-right text-xs tabular-nums" :class="c.is_credit ? 'font-medium text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
+                                <button v-if="esNotaPendienteArca(c)" type="button" class="text-[10px] text-red-600 hover:text-red-800 disabled:opacity-50" :disabled="eliminandoNotaPendienteId === c.id" @click="eliminarNotaPendienteArca(c)">{{ eliminandoNotaPendienteId === c.id ? '...' : 'Eliminar' }}</button>
                             </div>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                         </fieldset>
@@ -288,6 +336,11 @@ const formatNum = (n) => {
                                     <button type="button" class="text-red-500 text-base leading-none font-bold" @click="quitarItem(idx)" :disabled="reciboForm.items.length <= 1">&times;</button>
                                 </div>
                                 <div v-if="esCheque(item.medio)" class="grid grid-cols-2 gap-1.5">
+                                    <select v-model="item.cheque_tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                        <option value="" disabled>Tipo de cheque...</option>
+                                        <option value="fisico">Cheque físico</option>
+                                        <option value="echeq">E-Cheq</option>
+                                    </select>
                                     <TextInput v-model="item.cheque_numero" type="text" class="block w-full text-xs" placeholder="Nro cheque" />
                                     <select v-model="item.cheque_banco" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
                                         <option value="">Banco</option>
@@ -296,6 +349,7 @@ const formatNum = (n) => {
                                     <TextInput v-model="item.cheque_fecha_vencimiento" type="date" class="block w-full text-xs" />
                                     <TextInput v-model="item.cheque_titular" type="text" class="block w-full text-xs" placeholder="Titular" />
                                 </div>
+                                <InputError :message="reciboForm.errors[`items.${idx}.cheque_tipo`]" />
                                 <TextInput v-model="item.detalle" type="text" class="block w-full text-xs" placeholder="Detalle (opcional)" />
                             </div>
                             <SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="agregarItem">+ Agregar medio</SecondaryButton>
@@ -389,8 +443,11 @@ const formatNum = (n) => {
                             <span v-if="c.entregado" class="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-[10px] font-medium text-green-800">
                                 <span aria-hidden="true">✓</span> {{ formatFecha(c.fecha_entrega) }}
                             </span>
-                            <Link v-if="!c.is_credit" class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
-                            <span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span>
+                            <div class="flex flex-col items-end gap-1">
+                                <Link v-if="typeof c.id === 'number'" class="text-xs text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
+                                <span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span>
+                                <button v-if="esNotaPendienteArca(c)" type="button" class="text-[10px] text-red-600 hover:text-red-800 disabled:opacity-50" :disabled="eliminandoNotaPendienteId === c.id" @click="eliminarNotaPendienteArca(c)">{{ eliminandoNotaPendienteId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
+                            </div>
                         </div>
                         <div class="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-gray-900"><span>Total</span><span class="whitespace-nowrap text-right tabular-nums">{{ c.moneda }} {{ formatNum(c.total) }}</span></div>
                     </div>
@@ -398,7 +455,24 @@ const formatNum = (n) => {
                 <div class="hidden sm:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pendiente</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th><th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th><th class="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th></tr></thead>
-                            <tbody class="bg-white divide-y divide-gray-200"><tr v-for="c in comprobantes" :key="c.id" :class="c.is_pagada ? 'bg-green-50/40' : ''"><td class="px-2 py-1 text-xs text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td><td class="px-2 py-1 text-xs text-gray-700">{{ formatFecha(c.fecha_emision) }}</td><td class="px-2 py-1 text-right text-xs text-gray-700 tabular-nums">{{ c.moneda }} {{ formatNum(c.total) }}</td><td class="px-2 py-1 text-right text-xs tabular-nums" :class="c.is_pagada ? 'text-green-700 font-medium' : (c.is_credit ? 'text-green-700 font-medium' : 'text-amber-700')">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</td><td class="px-2 py-1 text-xs"><span v-if="c.is_pagada" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">Pagada</span><span v-else-if="c.is_credit" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">Crédito</span><span v-else class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Pendiente</span></td><td class="px-2 py-1 text-xs text-green-700"><span v-if="c.entregado" class="font-medium">✓ {{ formatFecha(c.fecha_entrega) }}</span><span v-else class="text-gray-400">-</span></td><td class="px-2 py-1 text-right text-xs"><Link v-if="!c.is_credit" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link><span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span></td></tr></tbody></table>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="c in comprobantes" :key="c.id" :class="c.is_pagada ? 'bg-green-50/40' : ''">
+                                    <td class="px-2 py-1 text-xs text-gray-900">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }}</td>
+                                    <td class="px-2 py-1 text-xs text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
+                                    <td class="px-2 py-1 text-right text-xs text-gray-700 tabular-nums">{{ c.moneda }} {{ formatNum(c.total) }}</td>
+                                    <td class="px-2 py-1 text-right text-xs tabular-nums" :class="c.is_pagada ? 'text-green-700 font-medium' : (c.is_credit ? 'text-green-700 font-medium' : 'text-amber-700')">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</td>
+                                    <td class="px-2 py-1 text-xs"><span v-if="c.is_pagada" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">Pagada</span><span v-else-if="c.is_credit" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">Crédito</span><span v-else class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Pendiente</span></td>
+                                    <td class="px-2 py-1 text-xs text-green-700"><span v-if="c.entregado" class="font-medium">✓ {{ formatFecha(c.fecha_entrega) }}</span><span v-else class="text-gray-400">-</span></td>
+                                    <td class="px-2 py-1 text-right text-xs">
+                                        <div class="flex justify-end gap-2">
+                                            <Link v-if="typeof c.id === 'number'" class="text-indigo-600 hover:text-indigo-800" :href="route('operacion.comprobantes.show', c.id)">Ver</Link>
+                                            <span v-else class="text-xs text-gray-400 italic">Pago a cuenta</span>
+                                            <button v-if="esNotaPendienteArca(c)" type="button" class="text-red-600 hover:text-red-800 disabled:opacity-50" :disabled="eliminandoNotaPendienteId === c.id" @click="eliminarNotaPendienteArca(c)">{{ eliminandoNotaPendienteId === c.id ? 'Eliminando...' : 'Eliminar' }}</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                 </div>
                 </div>
             </div>

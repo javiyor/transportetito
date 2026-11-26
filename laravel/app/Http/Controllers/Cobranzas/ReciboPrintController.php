@@ -19,7 +19,6 @@ class ReciboPrintController extends Controller
 
         $recibo->load([
             'cuenta.tercero:id,razon_social,cuit',
-            'cuenta.zona:id,nombre',
             'items',
             'aplicaciones.comprobante:id,tipo,moneda,total,arca_punto_venta,arca_numero,numero_interno',
         ]);

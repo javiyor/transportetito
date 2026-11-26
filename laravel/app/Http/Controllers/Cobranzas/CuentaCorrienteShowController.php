@@ -79,7 +79,7 @@ class CuentaCorrienteShowController extends Controller
             ->orderByDesc('fecha_emision')
             ->orderByDesc('numero_interno')
             ->orderByDesc('id')
-            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
+            ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'requiere_autorizacion_arca', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
 
         $entregas = HojaRutaItem::query()
             ->whereIn('comprobante_id', $comprobantesRawDesc->pluck('id'))

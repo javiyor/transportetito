@@ -12,11 +12,19 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChequeController extends Controller
 {
     public function index(Request $request)
     {
+        $this->normalizarFechas($request, ['p_desde', 'p_hasta', 't_desde', 't_hasta']);
+        $request->validate([
+            'p_desde' => ['nullable', 'date'],
+            'p_hasta' => ['nullable', 'date'],
+            't_desde' => ['nullable', 'date'],
+            't_hasta' => ['nullable', 'date'],
+        ]);
         $empresaId = (int) ($request->query('empresa_id') ?: ($request->user()->current_empresa_id ?: 0));
 
         $baseQuery = Cheque::query()->with(['recibo.cuenta.tercero', 'bancoDeposito', 'bancoPropio', 'movimientoBancario']);
@@ -47,6 +55,13 @@ class ChequeController extends Controller
 
         $queryTerceros = (clone $baseQuery)->where('origen', 'tercero');
         $aplicarFiltros($queryTerceros, 't', Cheque::ESTADOS_TERCERO);
+
+        if ($request->query('export') === 'propios') {
+            return $this->exportExcel($queryPropios, 'Cheques propios', 'cheques-propios');
+        }
+        if ($request->query('export') === 'terceros') {
+            return $this->exportExcel($queryTerceros, 'Cheques de terceros', 'cheques-terceros');
+        }
 
         $totalesPropios = [
             'fisico' => round((float) (clone $queryPropios)->where('tipo', 'fisico')->sum('importe'), 2),
@@ -90,6 +105,7 @@ class ChequeController extends Controller
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         abort_unless($empresaId, 403);
 
+        $this->normalizarFechas($request, ['fecha_emision', 'fecha_vencimiento']);
         $data = $request->validate([
             'tipo' => ['required', 'in:' . implode(',', Cheque::TIPOS)],
             'origen' => ['required', 'in:' . implode(',', Cheque::ORIGENES)],
@@ -134,6 +150,7 @@ class ChequeController extends Controller
     {
         abort_unless((int) $cheque->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
 
+        $this->normalizarFechas($request, ['fecha_deposito', 'fecha_cobro', 'fecha_rechazo']);
         $data = $request->validate([
             'estado' => ['required', 'in:' . implode(',', array_merge(Cheque::ESTADOS_PROPIO, Cheque::ESTADOS_TERCERO))],
             'fecha_deposito' => ['nullable', 'date'],
@@ -293,5 +310,80 @@ class ChequeController extends Controller
         return response()->json(
             Banco::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'es_propio'])
         );
+    }
+
+    private function exportExcel($query, string $titulo, string $filename): StreamedResponse
+    {
+        $cheques = (clone $query)->orderByDesc('created_at')->get();
+        $headers = [
+            'ID', 'Tipo', 'Origen', 'Número', 'Banco', 'Importe', 'Moneda', 'Fecha emisión',
+            'Vencimiento', 'Titular', 'Librado por', 'Endosado a', 'Depósito', 'Cobro',
+            'Banco depósito', 'Estado', 'Observación',
+        ];
+
+        $callback = function () use ($cheques, $headers, $titulo) {
+            echo "\xEF\xBB\xBF";
+            echo '<html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{border:1px solid #d1d5db;padding:5px;font-size:11px}th{background:#f3f4f6;text-align:left}</style></head><body>';
+            echo '<h3>'.e($titulo).'</h3><table><thead><tr>';
+            foreach ($headers as $header) {
+                echo '<th>'.e($header).'</th>';
+            }
+            echo '</tr></thead><tbody>';
+
+            foreach ($cheques as $cheque) {
+                $values = [
+                    $cheque->id,
+                    $cheque->tipo === 'echeq' ? 'E-Cheq' : 'Físico',
+                    $cheque->origen === 'propio' ? 'Propio' : 'Tercero',
+                    $cheque->numero,
+                    $cheque->banco,
+                    number_format((float) $cheque->importe, 2, ',', '.'),
+                    $cheque->moneda,
+                    $cheque->fecha_emision?->format('d-m-Y'),
+                    $cheque->fecha_vencimiento?->format('d-m-Y'),
+                    $cheque->titular,
+                    $cheque->librado_por,
+                    $cheque->endosado_a,
+                    $cheque->fecha_deposito?->format('d-m-Y'),
+                    $cheque->fecha_cobro?->format('d-m-Y'),
+                    $cheque->bancoDeposito?->nombre,
+                    $cheque->estado,
+                    $cheque->observacion,
+                ];
+                echo '<tr>'.implode('', array_map(fn ($value) => '<td>'.e((string) ($value ?? '')).'</td>', $values)).'</tr>';
+            }
+
+            echo '</tbody></table></body></html>';
+        };
+
+        return new StreamedResponse($callback, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'-'.now()->format('Ymd-His').'.xls"',
+        ]);
+    }
+
+    private function normalizarFechas(Request $request, array $campos): void
+    {
+        foreach ($campos as $campo) {
+            $valor = $request->input($campo);
+            if (! is_string($valor) || trim($valor) === '') {
+                continue;
+            }
+
+            $valor = trim($valor);
+            if (preg_match('/^(\d{1,2})[\/.\-](\d{1,2})$/', $valor, $partes)) {
+                [$dia, $mes, $anio] = [(int) $partes[1], (int) $partes[2], (int) now()->year];
+            } elseif (preg_match('/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/', $valor, $partes)) {
+                [$dia, $mes, $anio] = [(int) $partes[1], (int) $partes[2], (int) $partes[3]];
+            } elseif (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $valor, $partes)) {
+                [$anio, $mes, $dia] = [(int) $partes[1], (int) $partes[2], (int) $partes[3]];
+            } else {
+                continue;
+            }
+
+            if (checkdate($mes, $dia, $anio)) {
+                $request->merge([$campo => sprintf('%04d-%02d-%02d', $anio, $mes, $dia)]);
+            }
+        }
     }
 }

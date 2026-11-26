@@ -112,7 +112,7 @@ const printSelected = () => {
             pedido.destino,
             pedido.bultos,
             pedido.palets,
-            pedido.valor_facturado == null ? '' : Number(pedido.valor_facturado).toFixed(2),
+            pedido.valor_facturado == null ? '' : `$${formatImporte(pedido.valor_facturado)}`,
             estadoLabel(pedido.estado),
             pedido.fecha,
             pedido.manifiesto_id ? `#${pedido.manifiesto_id}` : '',
@@ -138,6 +138,10 @@ const estadoLabel = (estado) => ({
     no_entregado: 'No entregado',
     pendiente: 'Pendiente',
 }[estado] || estado || '-');
+const formatImporte = (value) => Number(value || 0).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
 </script>
 
 <template>
@@ -218,7 +222,7 @@ const estadoLabel = (estado) => ({
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.origen || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.bultos }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.palets }}</td>
-                                <td class="px-1 py-0.5 text-[10px] font-mono text-right">{{ p.valor_facturado == null ? '' : `$${Number(p.valor_facturado).toFixed(2)}` }}</td>
+                                <td class="px-1 py-0.5 text-[10px] font-mono text-right">{{ p.valor_facturado == null ? '' : `$${formatImporte(p.valor_facturado)}` }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-center">
                                     <span class="inline-flex items-center px-1 py-0 rounded-full text-[9px] font-medium" :class="estadoClass(p.estado)">{{ estadoLabel(p.estado) }}</span>
                                 </td>

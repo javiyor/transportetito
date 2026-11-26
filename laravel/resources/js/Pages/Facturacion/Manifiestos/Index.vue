@@ -51,6 +51,7 @@ const monedaSymbol = (moneda) => {
                                 <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">#</th>
                                 <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Chofer</th>
+                                <th class="px-2 py-1 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Depósito origen</th>
                                 <th class="px-2 py-1 text-center text-[11px] font-medium text-gray-500 uppercase tracking-wider">Pend.</th>
                                 <th class="px-2 py-1 text-right text-[11px] font-medium text-gray-500 uppercase tracking-wider">Accion</th>
                             </tr>
@@ -60,6 +61,7 @@ const monedaSymbol = (moneda) => {
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] font-mono text-gray-900">#{{ m.id }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700 truncate max-w-[120px]">{{ m.chofer || '-' }}</td>
+                                <td class="px-2 py-1 whitespace-nowrap text-[11px] text-gray-700">{{ m.deposito?.nombre || '-' }}</td>
                                 <td class="px-2 py-1 whitespace-nowrap text-center">
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">{{ m.pendientes_count }}</span>
                                 </td>

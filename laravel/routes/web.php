@@ -39,6 +39,7 @@ use App\Http\Controllers\Operacion\PedidoRecepcionControlController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteIndexController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteShowController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteAnularController;
+use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaPendienteDestroyController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobantePrintController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaCreditoStoreController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteNotaDebitoStoreController;
@@ -269,6 +270,7 @@ Route::middleware([
         Route::middleware(['role:facturacion|admin'])->get('/comprobantes/{comprobante}', ComprobanteShowController::class)->name('comprobantes.show');
         Route::middleware(['role:facturacion|admin'])->get('/comprobantes/{comprobante}/print', ComprobantePrintController::class)->name('comprobantes.print');
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/anular', ComprobanteAnularController::class)->name('comprobantes.anular');
+        Route::middleware(['role:facturacion|admin|cobranzas|cobranzas_admin|cobrador'])->delete('/comprobantes/{comprobante}/nota-pendiente', ComprobanteNotaPendienteDestroyController::class)->name('comprobantes.nota-pendiente.destroy');
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/nota-credito', ComprobanteNotaCreditoStoreController::class)->name('comprobantes.nota-credito');
         Route::middleware(['role:facturacion|admin'])->post('/comprobantes/{comprobante}/nota-debito', ComprobanteNotaDebitoStoreController::class)->name('comprobantes.nota-debito');
 

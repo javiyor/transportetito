@@ -41,6 +41,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'items.*.importe' => ['required', 'numeric', 'gt:0'],
             'items.*.detalle' => ['nullable', 'string', 'max:500'],
+            'items.*.cheque_tipo' => ['nullable', 'required_if:items.*.medio,cheque_tercero', 'in:fisico,echeq'],
             'items.*.cheque_numero' => ['nullable', 'string', 'max:64'],
             'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],
             'items.*.cheque_fecha_vencimiento' => ['nullable', 'date'],
@@ -104,6 +105,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             }
 
             if ($item['medio'] === 'cheque_tercero') {
+                $detalle['tipo'] = $item['cheque_tipo'] ?? 'fisico';
                 $detalle['numero'] = $item['cheque_numero'] ?? null;
                 $detalle['banco'] = $item['cheque_banco'] ?? null;
                 $detalle['fecha_vencimiento'] = $item['cheque_fecha_vencimiento'] ?? null;
@@ -122,7 +124,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             if ($item['medio'] === 'cheque_tercero') {
                 Cheque::query()->create([
                     'empresa_id' => $cuenta->empresa_id,
-                    'tipo' => $item['cheque_numero'] && str_starts_with($item['cheque_numero'], 'E') ? 'echeq' : 'fisico',
+                    'tipo' => $item['cheque_tipo'] ?? 'fisico',
                     'origen' => 'tercero',
                     'numero' => $item['cheque_numero'] ?? null,
                     'banco' => $item['cheque_banco'] ?? null,

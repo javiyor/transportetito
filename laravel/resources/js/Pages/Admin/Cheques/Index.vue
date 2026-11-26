@@ -41,6 +41,11 @@ const secciones = computed(() => [
 ]);
 
 const bancosPropios = computed(() => (props.bancos || []).filter((b) => !!b.es_propio));
+const fechaParaInput = (value) => {
+    if (!value) return '';
+    const match = String(value).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);
+};
 
 const showForm = ref(false);
 const createForm = useForm({
@@ -51,7 +56,7 @@ const createForm = useForm({
     banco_id: '',
     importe: '',
     moneda: 'ARS',
-    fecha_emision: new Date().toISOString().slice(0, 10),
+    fecha_emision: fechaParaInput(new Date().toISOString().slice(0, 10)),
     fecha_vencimiento: '',
     titular: '',
     librado_por: '',
@@ -93,9 +98,9 @@ const openEdit = (c) => {
     editForm.numero = c.numero || '';
     editForm.banco = c.banco || '';
     editForm.banco_id = c.banco_id || '';
-    editForm.fecha_deposito = c.fecha_deposito ? String(c.fecha_deposito).slice(0, 10) : '';
-    editForm.fecha_cobro = c.fecha_cobro ? String(c.fecha_cobro).slice(0, 10) : '';
-    editForm.fecha_rechazo = c.fecha_rechazo ? String(c.fecha_rechazo).slice(0, 10) : '';
+    editForm.fecha_deposito = fechaParaInput(c.fecha_deposito);
+    editForm.fecha_cobro = fechaParaInput(c.fecha_cobro);
+    editForm.fecha_rechazo = fechaParaInput(c.fecha_rechazo);
     editForm.endosado_a = c.endosado_a || '';
     editForm.banco_deposito_id = c.banco_deposito_id || '';
     editForm.observacion = c.observacion || '';
@@ -138,15 +143,15 @@ const submitDelete = () => {
 const filtrosPropios = useForm({
     estado: props.filtros.propios.estado,
     tipo: props.filtros.propios.tipo,
-    desde: props.filtros.propios.desde,
-    hasta: props.filtros.propios.hasta,
+    desde: fechaParaInput(props.filtros.propios.desde),
+    hasta: fechaParaInput(props.filtros.propios.hasta),
 });
 
 const filtrosTerceros = useForm({
     estado: props.filtros.terceros.estado,
     tipo: props.filtros.terceros.tipo,
-    desde: props.filtros.terceros.desde,
-    hasta: props.filtros.terceros.hasta,
+    desde: fechaParaInput(props.filtros.terceros.desde),
+    hasta: fechaParaInput(props.filtros.terceros.hasta),
 });
 
 const filtrosPorSeccion = {
@@ -166,6 +171,18 @@ const applyFilters = () => {
         ...(filtrosTerceros.hasta && { t_hasta: filtrosTerceros.hasta }),
         ...(props.empresaId && { empresa_id: props.empresaId }),
     }, { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const exportExcel = (origen) => {
+    const prefijo = origen === 'propio' ? 'p' : 't';
+    const filtros = origen === 'propio' ? props.filtros.propios : props.filtros.terceros;
+    const params = new URLSearchParams({ export: origen });
+    if (props.empresaId) params.set('empresa_id', props.empresaId);
+    if (filtros.estado) params.set(`${prefijo}_estado`, filtros.estado);
+    if (filtros.tipo) params.set(`${prefijo}_tipo`, filtros.tipo);
+    if (filtros.desde) params.set(`${prefijo}_desde`, filtros.desde);
+    if (filtros.hasta) params.set(`${prefijo}_hasta`, filtros.hasta);
+    window.open(`${route('admin.cheques.index')}?${params.toString()}`, '_blank');
 };
 
 const estadosPropio = ['emitido', 'pagado', 'rechazado', 'vencido', 'reemplazado'];
@@ -220,6 +237,10 @@ const formatFecha = (v) => {
     if (isNaN(d.getTime())) return s.split('-').reverse().join('-');
     const dd = String(d.getDate()).padStart(2, '0'); const mm = String(d.getMonth() + 1).padStart(2, '0'); const yyyy = d.getFullYear(); return `${dd}-${mm}-${yyyy}`;
 };
+const formatImporte = (value) => Number(value || 0).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
 </script>
 
 <template>
@@ -294,12 +315,12 @@ const formatFecha = (v) => {
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Fecha emisión</div>
-                        <TextInput v-model="createForm.fecha_emision" type="date" class="block w-full" />
+                        <TextInput v-model="createForm.fecha_emision" type="text" inputmode="numeric" placeholder="DD/MM/AAAA o DD/MM" class="block w-full" />
                         <InputError :message="createForm.errors.fecha_emision" />
                     </div>
                     <div>
                         <div class="text-xs font-medium text-gray-700 mb-1">Fecha vencimiento</div>
-                        <TextInput v-model="createForm.fecha_vencimiento" type="date" class="block w-full" />
+                        <TextInput v-model="createForm.fecha_vencimiento" type="text" inputmode="numeric" placeholder="DD/MM/AAAA o DD/MM" class="block w-full" />
                         <InputError :message="createForm.errors.fecha_vencimiento" />
                     </div>
                     <div>
@@ -328,10 +349,11 @@ const formatFecha = (v) => {
                 <div class="px-3 py-2 border-b border-gray-200 space-y-2">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h3 class="font-semibold text-sm text-gray-900">{{ seccion.titulo }}</h3>
-                        <div class="flex gap-2 text-xs">
-                            <span class="font-medium text-gray-700">Físico: <span class="font-mono">{{ seccion.totales.fisico.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
-                            <span class="font-medium text-gray-700">E-Cheq: <span class="font-mono">{{ seccion.totales.echeq.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
-                            <span class="font-medium text-gray-900">Total: <span class="font-mono">{{ (seccion.totales.fisico + seccion.totales.echeq).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span></span>
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="font-medium text-gray-700">Físico: <span class="font-mono">{{ formatImporte(seccion.totales.fisico) }}</span></span>
+                            <span class="font-medium text-gray-700">E-Cheq: <span class="font-mono">{{ formatImporte(seccion.totales.echeq) }}</span></span>
+                            <span class="font-medium text-gray-900">Total: <span class="font-mono">{{ formatImporte(seccion.totales.fisico + seccion.totales.echeq) }}</span></span>
+                            <button type="button" class="rounded bg-green-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-green-700" @click="exportExcel(seccion.key)">Excel</button>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
@@ -346,8 +368,8 @@ const formatFecha = (v) => {
                                 <option value="fisico">Físico</option>
                                 <option value="echeq">E-Cheq</option>
                             </select>
-                            <input v-model="filtrosPropios.desde" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
-                            <input v-model="filtrosPropios.hasta" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                            <input v-model="filtrosPropios.desde" type="text" inputmode="numeric" placeholder="Desde DD/MM" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                            <input v-model="filtrosPropios.hasta" type="text" inputmode="numeric" placeholder="Hasta DD/MM" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
                         </template>
                         <template v-else>
                             <span class="text-[10px] font-medium text-gray-500 uppercase">Filtro</span>
@@ -360,8 +382,8 @@ const formatFecha = (v) => {
                                 <option value="fisico">Físico</option>
                                 <option value="echeq">E-Cheq</option>
                             </select>
-                            <input v-model="filtrosTerceros.desde" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
-                            <input v-model="filtrosTerceros.hasta" type="date" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                            <input v-model="filtrosTerceros.desde" type="text" inputmode="numeric" placeholder="Desde DD/MM" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
+                            <input v-model="filtrosTerceros.hasta" type="text" inputmode="numeric" placeholder="Hasta DD/MM" class="border-gray-300 rounded-md shadow-sm text-[10px] py-0.5 px-1.5" />
                         </template>
                         <SecondaryButton class="!text-[10px] !px-2 !py-0.5" @click="applyFilters">Filtrar</SecondaryButton>
                     </div>
@@ -375,6 +397,7 @@ const formatFecha = (v) => {
                                 <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Nro</th>
                                 <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Banco</th>
                                 <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Importe</th>
+                                <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Emisión</th>
                                 <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Venc.</th>
                                 <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Librado por</th>
                                 <th class="px-2 py-1 text-left text-[10px] font-medium text-gray-500 uppercase">Endosado a</th>
@@ -392,7 +415,8 @@ const formatFecha = (v) => {
                                 <td class="px-2 py-0.5 text-xs text-gray-700">{{ tipoLabel(c.tipo) }}</td>
                                 <td class="px-2 py-0.5 text-xs font-mono text-gray-900">{{ c.numero || '-' }}</td>
                                 <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.banco || '-' }}</td>
-                                <td class="px-2 py-0.5 text-xs font-mono text-gray-900">{{ c.moneda }} {{ c.importe }}</td>
+                                <td class="px-2 py-0.5 text-xs font-mono text-gray-900">{{ c.moneda }} {{ formatImporte(c.importe) }}</td>
+                                <td class="px-2 py-0.5 text-xs text-gray-700">{{ formatFecha(c.fecha_emision) }}</td>
                                 <td class="px-2 py-0.5 text-xs text-gray-700">{{ formatFecha(c.fecha_vencimiento) }}</td>
                                 <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.librado_por || '-' }}</td>
                                 <td class="px-2 py-0.5 text-xs text-gray-700">{{ c.endosado_a || '-' }}</td>
@@ -409,7 +433,7 @@ const formatFecha = (v) => {
                                 </td>
                             </tr>
                             <tr v-if="!seccion.cheques.data.length">
-                                <td colspan="14" class="px-6 py-2 text-center text-xs text-gray-500">Sin cheques.</td>
+                                <td colspan="15" class="px-6 py-2 text-center text-xs text-gray-500">Sin cheques.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -461,7 +485,7 @@ const formatFecha = (v) => {
                     </div>
                     <div v-if="editForm.origen === 'tercero' && (editForm.estado === 'depositado' || editForm.estado === 'cobrado')">
                         <div class="text-xs font-medium text-gray-700 mb-1">Fecha depósito</div>
-                        <TextInput v-model="editForm.fecha_deposito" type="date" class="block w-full" />
+                        <TextInput v-model="editForm.fecha_deposito" type="text" inputmode="numeric" placeholder="DD/MM/AAAA o DD/MM" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_deposito" />
                     </div>
                     <div v-if="editForm.origen === 'tercero' && (editForm.estado === 'depositado' || editForm.estado === 'cobrado')">
@@ -476,13 +500,13 @@ const formatFecha = (v) => {
                     </div>
                     <div v-if="editForm.estado === 'cobrado' || (editForm.origen === 'propio' && editForm.estado === 'pagado')">
                         <div class="text-xs font-medium text-gray-700 mb-1">{{ editForm.origen === 'propio' ? 'Fecha de pago bancario' : 'Fecha cobro (acreditación)' }}</div>
-                        <TextInput v-model="editForm.fecha_cobro" type="date" class="block w-full" />
+                        <TextInput v-model="editForm.fecha_cobro" type="text" inputmode="numeric" placeholder="DD/MM/AAAA o DD/MM" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_cobro" />
                     </div>
                     <div v-if="editForm.origen === 'propio' && editForm.estado === 'emitido'" class="text-xs text-blue-700 sm:col-span-2 self-end">El cheque ya cancela la cuenta corriente; el banco se debitará al marcarlo Pagado.</div>
                     <div v-if="editForm.estado === 'rechazado'">
                         <div class="text-xs font-medium text-gray-700 mb-1">Fecha rechazo</div>
-                        <TextInput v-model="editForm.fecha_rechazo" type="date" class="block w-full" />
+                        <TextInput v-model="editForm.fecha_rechazo" type="text" inputmode="numeric" placeholder="DD/MM/AAAA o DD/MM" class="block w-full" />
                         <InputError :message="editForm.errors.fecha_rechazo" />
                     </div>
                     <div v-if="editForm.estado === 'endosado'">

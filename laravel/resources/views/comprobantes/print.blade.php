@@ -5,11 +5,18 @@
     @php
         $nombreArchivoEmpresa = trim((string) ($comprobante->empresa?->razon_social ?? 'Empresa'));
         $nombreArchivoCliente = trim((string) ($comprobante->facturarCuenta?->tercero?->razon_social ?? 'Cliente'));
+        $nombreArchivoTipo = match (true) {
+            str_starts_with((string) $comprobante->tipo, 'factura') => 'Fac',
+            str_starts_with((string) $comprobante->tipo, 'nota_credito') => 'NCR',
+            str_starts_with((string) $comprobante->tipo, 'nota_debito') => 'NDB',
+            default => 'Comp',
+        };
         $nombreArchivoNumero = $comprobante->arca_numero
             ? str_pad((string) ($comprobante->arca_punto_venta ?? 0), 4, '0', STR_PAD_LEFT).'-'.str_pad((string) $comprobante->arca_numero, 8, '0', STR_PAD_LEFT)
             : (string) ($comprobante->numero_interno ? '#'.$comprobante->numero_interno : '#'.$comprobante->id);
         $nombreArchivo = str_replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], '-', implode(' - ', array_filter([
             $nombreArchivoEmpresa,
+            $nombreArchivoTipo,
             $nombreArchivoNumero,
             $nombreArchivoCliente,
         ])));
