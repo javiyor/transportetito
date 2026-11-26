@@ -64,10 +64,17 @@ class CuentaCorrientePrintController extends Controller
                 $consultaPeriodo->whereDate('fecha', '<=', $filtros['hasta']);
             }
 
+            $saldoParcial = round($saldoAnterior, 2);
             $movimientos = $consultaPeriodo
                 ->orderBy('fecha')
                 ->orderBy('id')
-                ->get();
+                ->get()
+                ->map(function (CtaCteMovimiento $movimiento) use (&$saldoParcial) {
+                    $saldoParcial = round($saldoParcial + (float) $movimiento->importe_signed, 2);
+                    $movimiento->setAttribute('saldo_parcial', $saldoParcial);
+
+                    return $movimiento;
+                });
             $saldoPeriodo = (float) $movimientos->sum('importe_signed');
             $saldoActual = round($saldoAnterior + $saldoPeriodo, 2);
 

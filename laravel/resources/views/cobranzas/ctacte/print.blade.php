@@ -89,16 +89,16 @@
             <strong>{{ number_format((float) ($saldos['saldo_anterior'] ?? 0), 2, ',', '.') }}</strong>
         </div>
         <table>
-            <thead><tr><th>Fecha</th><th>Tipo</th><th>Moneda</th><th>Importe</th><th>Obs.</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Moneda</th><th>Importe</th><th>Saldo parcial</th><th>Obs.</th></tr></thead>
             <tbody>
                 @forelse($movimientos as $m)
                     @php
                         $tipoLabels = ['factura_interna' => 'Factura', 'nota_debito_manual' => 'Nota debito', 'nota_credito_manual' => 'Nota credito', 'ajuste_debito' => 'Ajuste debito', 'ajuste_credito' => 'Ajuste credito', 'anulacion_recibo' => 'Anulacion recibo'];
                         $mlabel = $tipoLabels[$m->tipo] ?? $m->tipo;
                     @endphp
-                    <tr><td>{{ optional($m->fecha)->format('d-m-Y') }}</td><td>{{ $mlabel }}</td><td>{{ $m->moneda }}@if($m->moneda !== 'ARS' && $m->cotizacion_ars) ({{ number_format((float) $m->cotizacion_ars, 6, ',', '.') }})@endif</td><td>{{ number_format((float) $m->importe_signed, 2, ',', '.') }}</td><td>{{ $m->observacion }}</td></tr>
+                    <tr><td>{{ optional($m->fecha)->format('d-m-Y') }}</td><td>{{ $mlabel }}</td><td>{{ $m->moneda }}@if($m->moneda !== 'ARS' && $m->cotizacion_ars) ({{ number_format((float) $m->cotizacion_ars, 6, ',', '.') }})@endif</td><td>{{ number_format((float) $m->importe_signed, 2, ',', '.') }}</td><td>{{ number_format((float) $m->saldo_parcial, 2, ',', '.') }}</td><td>{{ $m->observacion }}</td></tr>
                 @empty
-                    <tr><td colspan="5">No hay movimientos en cuenta corriente.</td></tr>
+                    <tr><td colspan="6">No hay movimientos en cuenta corriente.</td></tr>
                 @endforelse
             </tbody>
         </table>

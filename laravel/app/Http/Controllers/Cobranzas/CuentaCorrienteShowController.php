@@ -24,13 +24,19 @@ class CuentaCorrienteShowController extends Controller
 
         $cuenta->load(['empresa:id,razon_social', 'tercero:id,cuit,razon_social', 'zona:id,nombre']);
 
-        $movimientos = CtaCteMovimiento::query()
+        $movimientosRaw = CtaCteMovimiento::query()
             ->where('empresa_id', $empresaId)
             ->where('tercero_cuenta_id', $cuenta->id)
             ->orderByDesc('fecha')
             ->orderByDesc('id')
-            ->get()
-            ->map(function (CtaCteMovimiento $m) {
+            ->get();
+
+        $saldoTotal = round((float) $movimientosRaw->sum('importe_signed'), 2);
+        $saldoParcial = $saldoTotal;
+        $movimientos = $movimientosRaw->map(function (CtaCteMovimiento $m) use (&$saldoParcial) {
+                $m->setAttribute('saldo_parcial', round($saldoParcial, 2));
+                $saldoParcial = round($saldoParcial - (float) $m->importe_signed, 2);
+
                 if ($m->referencia_tipo === 'comprobante' && $m->referencia_id) {
                     $comp = Comprobante::query()->find($m->referencia_id, ['id', 'tipo', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
                     if ($comp) {
@@ -55,8 +61,6 @@ class CuentaCorrienteShowController extends Controller
                 }
                 return $m;
             });
-
-        $saldoTotal = round((float) $movimientos->sum('importe_signed'), 2);
 
         $retencionesSum = round((float) Recibo::query()
             ->where('empresa_id', $empresaId)
