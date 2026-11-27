@@ -3,12 +3,18 @@
 namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
+use App\Models\AsientoContable;
+use App\Models\AsientoLinea;
 use App\Models\CtaCteMovimiento;
 use App\Models\ProveedorComprobante;
 use App\Models\TerceroCuenta;
+use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ProveedorComprobanteUpdateController extends Controller
 {
@@ -96,7 +102,7 @@ class ProveedorComprobanteUpdateController extends Controller
             $netoNoGravado = round((float) ($data['neto_no_gravado'] ?? 0), 2);
             $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
         }
-        $subtotal = !empty($ivaItems)
+        $subtotal = ! empty($ivaItems)
             ? round(collect($ivaItems)->sum('base_imponible') + $netoNoGravado + $opExentas, 2)
             : round((float) ($data['subtotal'] ?? 0) + $netoNoGravado + $opExentas, 2);
         $ivaTotal = round(collect($ivaItems)->sum('importe'), 2);
@@ -124,8 +130,12 @@ class ProveedorComprobanteUpdateController extends Controller
         ];
     }
 
-    public function __invoke(Request $request, ProveedorComprobante $comprobante, TipoCambioResolver $tipoCambioResolver): RedirectResponse
-    {
+    public function __invoke(
+        Request $request,
+        ProveedorComprobante $comprobante,
+        TipoCambioResolver $tipoCambioResolver,
+        ContabilizadorService $contabilizador,
+    ): RedirectResponse {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         abort_unless((int) $comprobante->empresa_id === $empresaId, 404);
 
@@ -162,46 +172,79 @@ class ProveedorComprobanteUpdateController extends Controller
         $nuevaCuenta = TerceroCuenta::query()->findOrFail($data['tercero_cuenta_id']);
         abort_unless((int) $nuevaCuenta->empresa_id === $empresaId, 422);
 
-        $empresa = $comprobante->empresa()->firstOrFail();
-        $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha_emision']);
-        $fiscal = $this->fiscalDetail($data, $data['tipo']);
+        try {
+            DB::transaction(function () use ($request, $comprobante, $data, $nuevaCuenta, $tipoCambioResolver, $contabilizador): void {
+                $comprobante = ProveedorComprobante::query()
+                    ->whereKey($comprobante->id)
+                    ->where('empresa_id', $request->user()->current_empresa_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $empresa = $comprobante->empresa()->firstOrFail();
+                $cotizacion = $tipoCambioResolver->resolver($empresa, $data['moneda'], $data['fecha_emision']);
+                $fiscal = $this->fiscalDetail($data, $data['tipo']);
 
-        // Resolver cuenta contable: si viene del form usarla, sino usar la cuenta por defecto del proveedor (nueva cuenta) o fallback empresa
-        $cuentaContableId = $data['cuenta_contable_id'] ?? null;
-        if (!$cuentaContableId) {
-            $cuentaContableId = $nuevaCuenta->cuenta_contable_proveedor_id
-                ?: $comprobante->cuenta_contable_id
-                ?: $empresa->getCuentaContable('compras_default')?->id;
-        }
+                // Resolver cuenta contable: cuenta elegida, default del proveedor o fallback empresa.
+                $cuentaContableId = $data['cuenta_contable_id'] ?? null;
+                if (! $cuentaContableId) {
+                    $cuentaContableId = $nuevaCuenta->cuenta_contable_proveedor_id
+                        ?: $comprobante->cuenta_contable_id
+                        ?: $empresa->getCuentaContable('compras_default')?->id;
+                }
 
-        $comprobante->update([
-            'tipo' => $data['tipo'],
-            'numero' => $data['numero'] ?: null,
-            'moneda' => $data['moneda'],
-            'tercero_cuenta_id' => $data['tercero_cuenta_id'],
-            'cotizacion_ars' => $cotizacion['tasa_ars'],
-            'subtotal' => $fiscal['subtotal'],
-            'iva_total' => $fiscal['iva_total'],
-            'tributos_total' => $fiscal['tributos_total'],
-            'total' => $fiscal['total'],
-            'fecha_emision' => $data['fecha_emision'],
-            'fecha_vencimiento' => $data['fecha_vencimiento'] ?: null,
-            'observacion' => $data['observacion'] ?: null,
-            'cuenta_contable_id' => $cuentaContableId,
-            'detalle' => array_merge($fiscal['detalle'], ['cotizacion' => $cotizacion, 'retenciones_total' => $fiscal['retenciones_total']]),
-        ]);
+                $comprobante->update([
+                    'tipo' => $data['tipo'],
+                    'numero' => $data['numero'] ?: null,
+                    'moneda' => $data['moneda'],
+                    'tercero_cuenta_id' => $data['tercero_cuenta_id'],
+                    'cotizacion_ars' => $cotizacion['tasa_ars'],
+                    'subtotal' => $fiscal['subtotal'],
+                    'iva_total' => $fiscal['iva_total'],
+                    'tributos_total' => $fiscal['tributos_total'],
+                    'total' => $fiscal['total'],
+                    'fecha_emision' => $data['fecha_emision'],
+                    'fecha_vencimiento' => $data['fecha_vencimiento'] ?: null,
+                    'observacion' => $data['observacion'] ?: null,
+                    'cuenta_contable_id' => $cuentaContableId,
+                    'detalle' => array_merge($fiscal['detalle'], ['cotizacion' => $cotizacion, 'retenciones_total' => $fiscal['retenciones_total']]),
+                ]);
 
-        CtaCteMovimiento::query()
-            ->where('referencia_tipo', 'proveedor_comprobante')
-            ->where('referencia_id', $comprobante->id)
-            ->update([
-                'fecha' => $data['fecha_emision'],
-                'moneda' => $data['moneda'],
-                'cotizacion_ars' => $cotizacion['tasa_ars'],
-                'tercero_cuenta_id' => $data['tercero_cuenta_id'],
-                'importe_signed' => $fiscal['total'],
-                'observacion' => $data['observacion'] ?: ('Comprobante proveedor '.$comprobante->id),
+                CtaCteMovimiento::query()
+                    ->where('referencia_tipo', 'proveedor_comprobante')
+                    ->where('referencia_id', $comprobante->id)
+                    ->update([
+                        'fecha' => $data['fecha_emision'],
+                        'moneda' => $data['moneda'],
+                        'cotizacion_ars' => $cotizacion['tasa_ars'],
+                        'tercero_cuenta_id' => $data['tercero_cuenta_id'],
+                        'importe_signed' => $fiscal['total'],
+                        'observacion' => $data['observacion'] ?: ('Comprobante proveedor '.$comprobante->id),
+                    ]);
+
+                $asientos = AsientoContable::query()
+                    ->where('empresa_id', $empresa->id)
+                    ->where('referencia_tipo', 'proveedor_comprobante')
+                    ->where('referencia_id', $comprobante->id)
+                    ->lockForUpdate()
+                    ->get();
+
+                foreach ($asientos as $asiento) {
+                    AsientoLinea::query()->where('asiento_id', $asiento->id)->delete();
+                    $asiento->delete();
+                }
+
+                $comprobante->load(['empresa', 'cuenta', 'cuentaContable']);
+                $contabilizador->contabilizarCompra($comprobante);
+            });
+        } catch (Throwable $exception) {
+            Log::error('No se pudo actualizar el comprobante de proveedor ni su asiento contable', [
+                'comprobante_id' => $comprobante->id,
+                'empresa_id' => $empresaId,
+                'user_id' => $request->user()->id,
+                'error' => $exception->getMessage(),
             ]);
+
+            return back()->with('flash.error', 'No se pudo actualizar el comprobante y su asiento contable. No se guardaron cambios; revisá la configuración contable y volvé a intentar.');
+        }
 
         return back()->with('success', 'Comprobante de proveedor actualizado.');
     }
