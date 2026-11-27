@@ -19,6 +19,7 @@ class MovimientoBancario extends Model
         'moneda',
         'referencia_tipo',
         'referencia_id',
+        'referencia_item_id',
         'contabilizado',
         'creado_por_user_id',
     ];

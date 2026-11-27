@@ -26,6 +26,27 @@ const gastoForm = useForm({
 });
 
 const gastoDialog = ref(false);
+const editDialog = ref(false);
+const movimientoEditando = ref(null);
+const editForm = useForm({ banco_id: '', fecha: '', concepto: '' });
+
+const editarMovimiento = (movimiento) => {
+    movimientoEditando.value = movimiento;
+    editForm.banco_id = movimiento.banco_id;
+    editForm.fecha = formatFecha(movimiento.fecha);
+    editForm.concepto = movimiento.concepto || '';
+    editForm.clearErrors();
+    editDialog.value = true;
+};
+
+const guardarEdicion = () => {
+    if (!movimientoEditando.value) return;
+    editForm.put(route('finanzas.movimientos-bancarios.update', movimientoEditando.value.id), {
+        preserveScroll: true,
+        onSuccess: () => { editDialog.value = false; movimientoEditando.value = null; },
+    });
+};
+
 const mostrarGasto = () => {
     gastoForm.reset();
     gastoForm.fecha = new Date().toISOString().slice(0, 10);
@@ -39,6 +60,7 @@ const submitGasto = () => {
 };
 
 const tipoLabel = (t) => ({ ingreso: 'Ingreso', egreso: 'Egreso', gasto_bancario: 'Gasto bancario' }[t] || t);
+const puedeEditar = (movimiento) => ['recibo', 'orden_pago', 'contrarreembolso_cobro'].includes(movimiento.referencia_tipo);
 
 const formatNum = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 });
 const formatFecha = (v) => v ? String(v).slice(0, 10) : '-';
@@ -112,26 +134,45 @@ const filtrar = () => {
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Banco</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Empresa origen</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Importe</th>
                                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Contab.</th>
+                                <th class="px-4 py-2"></th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr v-for="m in movimientos.data" :key="m.id">
                                 <td class="px-4 py-2 text-sm text-gray-700">{{ formatFecha(m.fecha) }}</td>
                                 <td class="px-4 py-2 text-sm text-gray-700">{{ m.banco?.nombre || '-' }}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">{{ m.empresa?.razon_social || '-' }}</td>
                                 <td class="px-4 py-2 text-sm" :class="m.tipo === 'gasto_bancario' ? 'text-red-600' : m.tipo === 'ingreso' ? 'text-green-700' : 'text-gray-700'">{{ tipoLabel(m.tipo) }}</td>
                                 <td class="px-4 py-2 text-sm text-gray-700">{{ m.concepto }}</td>
                                 <td class="px-4 py-2 text-sm text-right font-mono" :class="m.tipo === 'ingreso' ? 'text-green-700' : 'text-red-600'">{{ m.moneda }} {{ formatNum(m.importe) }}</td>
                                 <td class="px-4 py-2 text-sm text-center">
                                     <span :class="m.contabilizado ? 'text-green-600' : 'text-gray-400'">{{ m.contabilizado ? 'Si' : 'No' }}</span>
                                 </td>
+                                <td class="px-4 py-2 text-right"><button v-if="puedeEditar(m)" type="button" class="text-xs text-indigo-700 hover:text-indigo-900" @click="editarMovimiento(m)">Editar</button><span v-else class="text-xs text-gray-400">—</span></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <div v-if="editDialog && movimientoEditando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="editDialog = false">
+            <div class="bg-white rounded-lg shadow-xl p-4 w-full max-w-md mx-4">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Editar movimiento bancario #{{ movimientoEditando.id }}</h3>
+                <form class="space-y-3" @submit.prevent="guardarEdicion">
+                    <div><InputLabel value="Empresa que generó el movimiento" /><TextInput :model-value="movimientoEditando.empresa?.razon_social || ''" readonly class="mt-1 block w-full bg-gray-100" /></div>
+                    <div><InputLabel value="Banco / cuenta propia" /><select v-model="editForm.banco_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"><option value="">Seleccionar...</option><option v-for="b in bancosPropios" :key="b.id" :value="b.id">{{ b.nombre }}</option></select><InputError :message="editForm.errors.banco_id" /></div>
+                    <div><InputLabel value="Fecha" /><TextInput v-model="editForm.fecha" type="date" class="mt-1 block w-full" /><InputError :message="editForm.errors.fecha" /></div>
+                    <div><InputLabel value="Concepto" /><TextInput v-model="editForm.concepto" class="mt-1 block w-full" maxlength="255" /><InputError :message="editForm.errors.concepto" /></div>
+                    <InputError :message="editForm.errors.movimiento" />
+                    <p v-if="movimientoEditando.referencia_tipo" class="text-xs text-gray-500">El importe, moneda y empresa se mantienen vinculados al documento que originó este movimiento.</p>
+                    <div class="flex justify-end gap-3 pt-2"><SecondaryButton type="button" @click="editDialog = false">Cancelar</SecondaryButton><PrimaryButton :disabled="editForm.processing">Guardar cambios</PrimaryButton></div>
+                </form>
             </div>
         </div>
 

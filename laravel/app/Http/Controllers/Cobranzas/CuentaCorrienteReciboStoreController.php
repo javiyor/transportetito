@@ -159,6 +159,7 @@ class CuentaCorrienteReciboStoreController extends Controller
                     'moneda' => $item['moneda'],
                     'referencia_tipo' => 'recibo',
                     'referencia_id' => $recibo->id,
+                    'referencia_item_id' => $reciboItem->id,
                     'contabilizado' => true,
                     'creado_por_user_id' => $request->user()->id,
                 ]);

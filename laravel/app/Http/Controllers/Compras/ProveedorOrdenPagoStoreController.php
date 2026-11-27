@@ -286,7 +286,7 @@ class ProveedorOrdenPagoStoreController extends Controller
                 'creado_por_user_id' => $request->user()->id,
             ]);
 
-            foreach ($itemsData as $itemData) {
+            foreach ($itemsData as $itemIndex => $itemData) {
                 if (($itemData['medio'] ?? null) !== 'transferencia' || empty($itemData['banco_id'])) {
                     continue;
                 }
@@ -301,6 +301,7 @@ class ProveedorOrdenPagoStoreController extends Controller
                     'moneda' => $itemData['moneda'],
                     'referencia_tipo' => 'orden_pago',
                     'referencia_id' => $orden->id,
+                    'referencia_item_id' => $itemIndex,
                     'contabilizado' => true,
                     'creado_por_user_id' => $request->user()->id,
                 ]);

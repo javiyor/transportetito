@@ -66,6 +66,7 @@ class SincronizarTransferenciasBancarias extends Command
                                 'moneda' => $item->moneda,
                                 'referencia_tipo' => 'recibo',
                                 'referencia_id' => $recibo->id,
+                                'referencia_item_id' => $item->id,
                                 'contabilizado' => true,
                                 'creado_por_user_id' => $recibo->confirmado_por_user_id,
                             ]);
@@ -81,14 +82,14 @@ class SincronizarTransferenciasBancarias extends Command
             ->orderBy('id')
             ->chunkById(100, function ($ordenes) use ($bancoForzado, $bancoUnico, $aplicar, &$encontrados, &$creados, &$sinBanco) {
                 foreach ($ordenes as $orden) {
-                    $items = collect($orden->detalle['items'] ?? [])->where('medio', 'transferencia')->values();
+                    $items = collect($orden->detalle['items'] ?? [])->where('medio', 'transferencia');
                     $encontrados += $items->count();
                     $yaCreados = MovimientoBancario::query()
                         ->where('referencia_tipo', 'orden_pago')
                         ->where('referencia_id', $orden->id)
                         ->count();
 
-                    foreach ($items->slice($yaCreados) as $item) {
+                    foreach ($items->slice($yaCreados) as $itemIndex => $item) {
                         $banco = $this->resolverBanco($item['banco_id'] ?? null, $bancoForzado, $bancoUnico);
                         if (! $banco) {
                             $sinBanco++;
@@ -106,6 +107,7 @@ class SincronizarTransferenciasBancarias extends Command
                                 'moneda' => $item['moneda'] ?? $orden->moneda,
                                 'referencia_tipo' => 'orden_pago',
                                 'referencia_id' => $orden->id,
+                                'referencia_item_id' => $itemIndex,
                                 'contabilizado' => true,
                                 'creado_por_user_id' => $orden->creado_por_user_id,
                             ]);

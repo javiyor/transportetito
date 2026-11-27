@@ -421,6 +421,7 @@ Route::middleware([
         Route::get('/egresos/export', EgresoExportController::class)->name('egresos.export');
 
         Route::get('/movimientos-bancarios', [MovimientoBancarioIndexController::class, 'index'])->name('movimientos-bancarios.index');
+        Route::put('/movimientos-bancarios/{movimiento}', [MovimientoBancarioIndexController::class, 'update'])->name('movimientos-bancarios.update');
         Route::post('/movimientos-bancarios/gasto', [MovimientoBancarioIndexController::class, 'storeGasto'])->name('movimientos-bancarios.gasto');
 
         Route::get('/libro-diario', [\App\Http\Controllers\Finanzas\LibroDiarioController::class, 'index'])->name('libro-diario');
