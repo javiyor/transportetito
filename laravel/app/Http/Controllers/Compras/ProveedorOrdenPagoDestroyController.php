@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Compras;
 use App\Http\Controllers\Controller;
 use App\Models\AsientoContable;
 use App\Models\CtaCteMovimiento;
+use App\Models\MovimientoBancario;
 use App\Models\OrdenPago;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class ProveedorOrdenPagoDestroyController extends Controller
             ->where('referencia_tipo', 'orden_pago')
             ->where('referencia_id', $ordenPago->id)
             ->delete();
+        MovimientoBancario::eliminarReferencia('orden_pago', $ordenPago->id);
 
         // Revertir consumos de créditos de OP utilizados en esta orden
         foreach ($ordenPago->detalle['compensaciones'] ?? [] as $comp) {

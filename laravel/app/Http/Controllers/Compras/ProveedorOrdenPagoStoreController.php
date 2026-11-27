@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
+use App\Models\MovimientoBancario;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use App\Models\TerceroCuenta;
@@ -39,6 +40,7 @@ class ProveedorOrdenPagoStoreController extends Controller
             'items.*.cheque_numero' => ['nullable', 'string', 'max:64'],
             'items.*.cheque_banco' => ['nullable', 'string', 'max:255'],
             'items.*.cheque_banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
+            'items.*.banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
             'items.*.cheque_vencimiento' => ['nullable', 'date'],
             'items.*.cheque_id' => ['nullable', 'integer', 'exists:cheques,id'],
             'items.*.cheque_tipo' => ['nullable', 'string', 'in:fisico,echeq'],
@@ -46,6 +48,14 @@ class ProveedorOrdenPagoStoreController extends Controller
         ]);
 
         foreach ($data['items'] ?? [] as $idx => $item) {
+            if (($item['medio'] ?? null) === 'transferencia') {
+                $bancoValido = ! empty($item['banco_id'])
+                    && Banco::query()->where('activo', true)->where('es_propio', true)->whereKey($item['banco_id'])->exists();
+                if (! $bancoValido) {
+                    return back()->withErrors(["items.{$idx}.banco_id" => 'Seleccioná la cuenta propia desde la que se realizó la transferencia.'])->withInput();
+                }
+            }
+
             if (($item['medio'] ?? null) !== 'cheque_propio') {
                 continue;
             }
@@ -80,13 +90,17 @@ class ProveedorOrdenPagoStoreController extends Controller
         $chequesCreados = [];
         $contabilizacionError = null;
 
-        DB::transaction(function () use ($data, $cuenta, $empresaId, $empresa, $cotizacion, $comprobanteIds, $creditOpIds, $request, &$itemsData, &$chequesCreados, &$contabilizacionError) {
+        DB::transaction(function () use ($data, $cuenta, $empresaId, $cotizacion, $comprobanteIds, $creditOpIds, $request, &$itemsData, &$chequesCreados, &$contabilizacionError) {
             foreach ($data['items'] ?? [] as $item) {
                 $itemData = [
                     'medio' => $item['medio'],
                     'importe' => $item['importe'],
                     'moneda' => $item['moneda'],
                 ];
+
+                if ($item['medio'] === 'transferencia') {
+                    $itemData['banco_id'] = (int) $item['banco_id'];
+                }
 
                 if ($item['medio'] === 'cheque_tercero' && ! empty($item['cheque_id'])) {
                     $cheque = Cheque::query()->findOrFail($item['cheque_id']);
@@ -272,6 +286,26 @@ class ProveedorOrdenPagoStoreController extends Controller
                 'creado_por_user_id' => $request->user()->id,
             ]);
 
+            foreach ($itemsData as $itemData) {
+                if (($itemData['medio'] ?? null) !== 'transferencia' || empty($itemData['banco_id'])) {
+                    continue;
+                }
+
+                MovimientoBancario::query()->create([
+                    'empresa_id' => $empresaId,
+                    'banco_id' => $itemData['banco_id'],
+                    'fecha' => $data['fecha'],
+                    'tipo' => 'egreso',
+                    'concepto' => 'Transferencia emitida · OP #'.$orden->id,
+                    'importe' => $itemData['importe'],
+                    'moneda' => $itemData['moneda'],
+                    'referencia_tipo' => 'orden_pago',
+                    'referencia_id' => $orden->id,
+                    'contabilizado' => true,
+                    'creado_por_user_id' => $request->user()->id,
+                ]);
+            }
+
             // Completar orden_pago_id en los créditos consumidos
             foreach ($creditosDisponibles as $cred) {
                 $opCredito = $cred['op'];
@@ -280,6 +314,7 @@ class ProveedorOrdenPagoStoreController extends Controller
                         if (empty($c['orden_pago_id'])) {
                             $c['orden_pago_id'] = $orden->id;
                         }
+
                         return $c;
                     })->values()->all();
                 $opCredito->update(['detalle' => array_merge($opCredito->detalle, ['compensado_en' => $compensadoEn])]);

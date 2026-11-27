@@ -406,6 +406,14 @@ Route::middleware([
     });
 
     Route::middleware(['role:admin'])->prefix('finanzas')->name('finanzas.')->group(function () {
+        Route::get('/contrarreembolsos', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'index'])->name('contrarreembolsos.index');
+        Route::get('/contrarreembolsos/create', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'create'])->name('contrarreembolsos.create');
+        Route::post('/contrarreembolsos', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'store'])->name('contrarreembolsos.store');
+        Route::get('/contrarreembolsos/{comprobante}/print', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'print'])->name('contrarreembolsos.print');
+        Route::get('/contrarreembolsos/{comprobante}', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'show'])->name('contrarreembolsos.show');
+        Route::post('/contrarreembolsos/{comprobante}/confirmar', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'confirmar'])->name('contrarreembolsos.confirmar');
+        Route::post('/contrarreembolsos/{comprobante}/anular', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'anular'])->name('contrarreembolsos.anular');
+
         Route::get('/egresos', [EgresoIndexController::class, 'index'])->name('egresos.index');
         Route::post('/egresos', [EgresoIndexController::class, 'store'])->name('egresos.store');
         Route::put('/egresos/{egreso}', [EgresoIndexController::class, 'update'])->name('egresos.update');

@@ -36,11 +36,11 @@
     <div style="margin-bottom: 20px;">
         <div class="summary-box">
             <div class="label">Ingresos</div>
-            <div class="value saldo-positivo">${{ number_format($totalIngresos + $totalPreIngresos, 2, ',', '.') }}</div>
+            <div class="value saldo-positivo">${{ number_format($totalIngresos + $totalPreIngresos + $totalIngresosContrarreembolso, 2, ',', '.') }}</div>
         </div>
         <div class="summary-box">
             <div class="label">Egresos</div>
-            <div class="value saldo-negativo">${{ number_format($totalEgresos, 2, ',', '.') }}</div>
+            <div class="value saldo-negativo">${{ number_format($totalEgresos + $totalEgresosContrarreembolso, 2, ',', '.') }}</div>
         </div>
         <div class="summary-box">
             <div class="label">Saldo neto</div>
@@ -78,6 +78,21 @@
         <p style="color: #6b7280;">Sin pre-ingresos en el periodo.</p>
     @endif
 
+    <h2>Contrarreembolsos cobrados</h2>
+    @if($ingresosContrarreembolsoPorMedio->count())
+    <table>
+        <thead><tr><th>Medio</th><th class="num">Total</th></tr></thead>
+        <tbody>
+            @foreach($ingresosContrarreembolsoPorMedio as $medio => $total)
+                <tr><td class="capitalize">{{ $medio }}</td><td class="num">${{ number_format($total, 2, ',', '.') }}</td></tr>
+            @endforeach
+        </tbody>
+        <tfoot><tr class="total-row"><td>Total contrarreembolsos cobrados</td><td class="num saldo-positivo">${{ number_format($totalIngresosContrarreembolso, 2, ',', '.') }}</td></tr></tfoot>
+    </table>
+    @else
+        <p style="color: #6b7280;">Sin contrarreembolsos cobrados en el periodo.</p>
+    @endif
+
     <h2>Egresos por medio (Ordenes de pago)</h2>
     @if($egresosPorMedio->count())
     <table>
@@ -91,6 +106,21 @@
     </table>
     @else
         <p style="color: #6b7280;">Sin egresos en el periodo.</p>
+    @endif
+
+    <h2>Liquidaciones de contrarreembolso</h2>
+    @if($egresosContrarreembolsoPorMedio->count())
+    <table>
+        <thead><tr><th>Medio</th><th class="num">Total</th></tr></thead>
+        <tbody>
+            @foreach($egresosContrarreembolsoPorMedio as $medio => $total)
+                <tr><td class="capitalize">{{ $medio }}</td><td class="num">${{ number_format($total, 2, ',', '.') }}</td></tr>
+            @endforeach
+        </tbody>
+        <tfoot><tr class="total-row"><td>Total contrarreembolsos liquidados</td><td class="num saldo-negativo">${{ number_format($totalEgresosContrarreembolso, 2, ',', '.') }}</td></tr></tfoot>
+    </table>
+    @else
+        <p style="color: #6b7280;">Sin liquidaciones de contrarreembolso en el periodo.</p>
     @endif
 
     <h2>Resumen de cuentas contables</h2>

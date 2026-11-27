@@ -5,6 +5,7 @@ import RoutePlanner from './RoutePlanner.vue';
 
 const props = defineProps({
     hojas: Array,
+    bancos: Array,
 });
 
 const page = usePage();
@@ -187,6 +188,7 @@ const deliveryForm = useForm({
     firma_recibo: '',
     forma_pago: '',
     importe_cobrado: '',
+    contrarreembolsos: [],
     foto_comprobante_pago: null,
     foto_remito_firmado: null,
 });
@@ -206,6 +208,26 @@ const openDelivery = (item) => {
     deliveryForm.firma_recibo = '';
     deliveryForm.forma_pago = item.forma_pago || '';
     deliveryForm.importe_cobrado = item.importe_cobrado || '';
+    deliveryForm.contrarreembolsos = (item.contrarreembolsos || []).map((contra) => ({
+        contrarreembolso_id: contra.id,
+        pedido_id: contra.pedido_id,
+        remitente: contra.remitente || '',
+        destinatario: contra.destinatario || '',
+        moneda: contra.moneda || 'ARS',
+        importe_esperado: Number(contra.importe_esperado) || 0,
+        importe_cobrado_previo: Number(contra.importe_cobrado) || 0,
+        importe_disponible: Number(contra.importe_disponible) || 0,
+        cobrar: false,
+        importe: '',
+        medio: 'efectivo',
+        banco_id: '',
+        cheque_tipo: 'fisico',
+        cheque_numero: '',
+        cheque_banco: '',
+        cheque_fecha_vencimiento: '',
+        cheque_titular: '',
+        idempotency_key: crearIdempotencyKey(),
+    }));
     deliveryForm.foto_comprobante_pago = null;
     deliveryForm.foto_remito_firmado = null;
     deliveryForm.clearErrors();
@@ -250,6 +272,21 @@ const clearCanvas = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     deliveryForm.firma_recibo = '';
 };
+
+const toggleCobroContrarreembolso = (linea) => {
+    linea.importe = linea.cobrar ? linea.importe_disponible : '';
+};
+
+const crearIdempotencyKey = () => window.crypto?.randomUUID?.()
+    || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+        const value = Math.floor(Math.random() * 16);
+        return (char === 'x' ? value : (value & 0x3) | 0x8).toString(16);
+    });
+
+const formatImporte = (value) => Number(value || 0).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
 
 const saveSignature = () => {
     const canvas = canvasRef.value;
@@ -443,6 +480,66 @@ const statusLabel = (estado) => estado === 'pendiente' ? 'En reparto' : estado;
                         <div>
                             <label class="block text-sm font-medium text-gray-900 mb-1">Recibe DNI</label>
                             <input v-model="deliveryForm.recibe_dni" type="text" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm" placeholder="DNI" />
+                        </div>
+
+                        <div v-if="deliveryForm.contrarreembolsos.length" class="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-amber-900">Contrarreembolsos cobrados en esta entrega</h3>
+                                <p class="mt-0.5 text-xs text-amber-800">Solo marcá los importes que recibiste efectivamente. Se registrarán por separado del pago de la factura.</p>
+                            </div>
+                            <div v-for="contra in deliveryForm.contrarreembolsos" :key="contra.pedido_id" class="space-y-2 rounded border border-amber-100 bg-white p-2">
+                                <label class="flex items-start gap-2 text-xs text-gray-800">
+                                    <input v-model="contra.cobrar" type="checkbox" class="mt-0.5 size-3.5 rounded border-gray-300 text-indigo-600" :disabled="contra.importe_disponible <= 0" @change="toggleCobroContrarreembolso(contra)" />
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block font-medium">Pedido #{{ contra.pedido_id }} · {{ contra.remitente || 'Remitente' }} → {{ contra.destinatario || 'Destinatario' }}</span>
+                                        <span class="block text-gray-500">Esperado: {{ contra.moneda }} {{ formatImporte(contra.importe_esperado) }} · Cobrado previamente: {{ contra.moneda }} {{ formatImporte(contra.importe_cobrado_previo) }} · Pendiente: {{ contra.moneda }} {{ formatImporte(contra.importe_disponible) }}</span>
+                                    </span>
+                                </label>
+                                <div v-if="contra.cobrar" class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700">Importe cobrado</label>
+                                        <input v-model="contra.importe" type="number" min="0.01" :max="contra.importe_disponible" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700">Medio</label>
+                                        <select v-model="contra.medio" class="mt-1 block w-full border-gray-300 rounded-md text-sm">
+                                            <option value="efectivo">Efectivo</option>
+                                            <option value="transferencia">Transferencia</option>
+                                            <option value="cheque_tercero">Cheque tercero</option>
+                                        </select>
+                                    </div>
+                                    <div v-if="contra.medio === 'transferencia'" class="col-span-2">
+                                        <label class="block text-xs font-medium text-gray-700">Banco receptor</label>
+                                        <select v-model="contra.banco_id" class="mt-1 block w-full border-gray-300 rounded-md text-sm">
+                                            <option value="">Seleccionar banco...</option>
+                                            <option v-for="banco in bancos || []" :key="banco.id" :value="banco.id">{{ banco.nombre }}</option>
+                                        </select>
+                                    </div>
+                                    <template v-if="contra.medio === 'cheque_tercero'">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Tipo de cheque</label>
+                                            <select v-model="contra.cheque_tipo" class="mt-1 block w-full border-gray-300 rounded-md text-sm"><option value="fisico">Físico</option><option value="echeq">E-Cheq</option></select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Número</label>
+                                            <input v-model="contra.cheque_numero" type="text" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Banco</label>
+                                            <select v-model="contra.cheque_banco" class="mt-1 block w-full border-gray-300 rounded-md text-sm"><option value="">Seleccionar banco...</option><option v-for="banco in bancos || []" :key="banco.id" :value="banco.nombre">{{ banco.nombre }}</option></select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Vencimiento</label>
+                                            <input v-model="contra.cheque_fecha_vencimiento" type="date" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+                                        </div>
+                                        <div class="col-span-2">
+                                            <label class="block text-xs font-medium text-gray-700">Titular</label>
+                                            <input v-model="contra.cheque_titular" type="text" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+                                        </div>
+                                    </template>
+                                    <div class="col-span-2"><InputError :message="deliveryForm.errors.contrarreembolsos" /></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div>

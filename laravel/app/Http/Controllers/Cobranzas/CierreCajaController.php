@@ -4,16 +4,15 @@ namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
 use App\Models\AsientoContable;
-use App\Models\AsientoLinea;
 use App\Models\Banco;
 use App\Models\CajaTraspaso;
 use App\Models\CierreCaja;
-use App\Models\CuentaContable;
+use App\Models\ContrarreembolsoCobro;
+use App\Models\ContrarreembolsoComprobanteItem;
 use App\Models\HojaRuta;
 use App\Models\OrdenPago;
 use App\Models\PreRecibo;
 use App\Models\Recibo;
-use App\Models\ReciboItem;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -73,6 +72,28 @@ class CierreCajaController extends Controller
 
         $totalEgresos = round($egresosPorMedio->sum(), 2);
 
+        $contrarreembolsosCobrados = ContrarreembolsoCobro::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'confirmado')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->get();
+        $ingresosContrarreembolsoPorMedio = $contrarreembolsosCobrados
+            ->groupBy('medio')
+            ->map(fn ($items) => round((float) $items->sum('importe'), 2));
+        $totalIngresosContrarreembolso = round((float) $ingresosContrarreembolsoPorMedio->sum(), 2);
+
+        $pagosContrarreembolso = ContrarreembolsoComprobanteItem::query()
+            ->whereHas('comprobante', fn ($query) => $query
+                ->where('empresa_id', $empresaId)
+                ->where('estado', 'confirmado')
+                ->whereBetween('fecha', [$desde, $hasta]))
+            ->with('comprobante:id,fecha')
+            ->get();
+        $egresosContrarreembolsoPorMedio = $pagosContrarreembolso
+            ->groupBy('medio')
+            ->map(fn ($items) => round((float) $items->sum('importe'), 2));
+        $totalEgresosContrarreembolso = round((float) $egresosContrarreembolsoPorMedio->sum(), 2);
+
         $asientos = AsientoContable::query()
             ->where('empresa_id', $empresaId)
             ->where('estado', 'confirmado')
@@ -83,7 +104,7 @@ class CierreCajaController extends Controller
 
         $resumenContable = $asientos
             ->flatMap(fn ($a) => $a->lineas)
-            ->groupBy(fn ($l) => $l->cuentaContable?->codigo . ' - ' . $l->cuentaContable?->nombre)
+            ->groupBy(fn ($l) => $l->cuentaContable?->codigo.' - '.$l->cuentaContable?->nombre)
             ->map(fn ($lineas, $cuenta) => [
                 'cuenta' => $cuenta ?: 'Sin cuenta',
                 'debe' => round((float) $lineas->sum('debe'), 2),
@@ -155,7 +176,11 @@ class CierreCajaController extends Controller
             'totalPreIngresos' => $totalPreIngresos,
             'egresosPorMedio' => $egresosPorMedio,
             'totalEgresos' => $totalEgresos,
-            'saldoNeto' => round($totalIngresos + $totalPreIngresos - $totalEgresos, 2),
+            'ingresosContrarreembolsoPorMedio' => $ingresosContrarreembolsoPorMedio,
+            'totalIngresosContrarreembolso' => $totalIngresosContrarreembolso,
+            'egresosContrarreembolsoPorMedio' => $egresosContrarreembolsoPorMedio,
+            'totalEgresosContrarreembolso' => $totalEgresosContrarreembolso,
+            'saldoNeto' => round($totalIngresos + $totalPreIngresos + $totalIngresosContrarreembolso - $totalEgresos - $totalEgresosContrarreembolso, 2),
             'resumenContable' => $resumenContable,
             'resumenPorMes' => $resumenPorMes,
             'totalDebe' => $totalDebe,

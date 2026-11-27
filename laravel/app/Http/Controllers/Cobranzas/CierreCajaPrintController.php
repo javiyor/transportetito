@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
 use App\Models\AsientoContable;
+use App\Models\ContrarreembolsoCobro;
+use App\Models\ContrarreembolsoComprobanteItem;
 use App\Models\HojaRuta;
 use App\Models\OrdenPago;
 use App\Models\PreRecibo;
@@ -67,6 +69,27 @@ class CierreCajaPrintController extends Controller
 
         $totalEgresos = round($egresosPorMedio->sum(), 2);
 
+        $contrarreembolsosCobrados = ContrarreembolsoCobro::query()
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'confirmado')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->get();
+        $ingresosContrarreembolsoPorMedio = $contrarreembolsosCobrados
+            ->groupBy('medio')
+            ->map(fn ($items) => round((float) $items->sum('importe'), 2));
+        $totalIngresosContrarreembolso = round((float) $ingresosContrarreembolsoPorMedio->sum(), 2);
+
+        $pagosContrarreembolso = ContrarreembolsoComprobanteItem::query()
+            ->whereHas('comprobante', fn ($query) => $query
+                ->where('empresa_id', $empresaId)
+                ->where('estado', 'confirmado')
+                ->whereBetween('fecha', [$desde, $hasta]))
+            ->get();
+        $egresosContrarreembolsoPorMedio = $pagosContrarreembolso
+            ->groupBy('medio')
+            ->map(fn ($items) => round((float) $items->sum('importe'), 2));
+        $totalEgresosContrarreembolso = round((float) $egresosContrarreembolsoPorMedio->sum(), 2);
+
         $asientos = AsientoContable::query()
             ->where('empresa_id', $empresaId)
             ->where('estado', 'confirmado')
@@ -77,7 +100,7 @@ class CierreCajaPrintController extends Controller
 
         $resumenContable = $asientos
             ->flatMap(fn ($a) => $a->lineas)
-            ->groupBy(fn ($l) => $l->cuentaContable?->codigo . ' - ' . $l->cuentaContable?->nombre)
+            ->groupBy(fn ($l) => $l->cuentaContable?->codigo.' - '.$l->cuentaContable?->nombre)
             ->map(fn ($lineas, $cuenta) => (object) [
                 'cuenta' => $cuenta ?: 'Sin cuenta',
                 'debe' => round((float) $lineas->sum('debe'), 2),
@@ -142,7 +165,11 @@ class CierreCajaPrintController extends Controller
             'totalPreIngresos' => $totalPreIngresos,
             'egresosPorMedio' => $egresosPorMedio,
             'totalEgresos' => $totalEgresos,
-            'saldoNeto' => round($totalIngresos + $totalPreIngresos - $totalEgresos, 2),
+            'ingresosContrarreembolsoPorMedio' => $ingresosContrarreembolsoPorMedio,
+            'totalIngresosContrarreembolso' => $totalIngresosContrarreembolso,
+            'egresosContrarreembolsoPorMedio' => $egresosContrarreembolsoPorMedio,
+            'totalEgresosContrarreembolso' => $totalEgresosContrarreembolso,
+            'saldoNeto' => round($totalIngresos + $totalPreIngresos + $totalIngresosContrarreembolso - $totalEgresos - $totalEgresosContrarreembolso, 2),
             'resumenContable' => $resumenContable,
             'resumenPorMes' => $resumenPorMes,
             'totalDebe' => round($asientos->flatMap->lineas->sum('debe'), 2),

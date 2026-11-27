@@ -9,10 +9,12 @@ use App\Models\CtaCteMovimiento;
 use App\Models\Deposito;
 use App\Models\Empresa;
 use App\Models\Pedido;
+use App\Models\TarifaRelacion;
 use App\Models\Tercero;
 use App\Models\TerceroCuenta;
 use App\Services\Arca\ArcaTipoComprobanteResolver;
 use App\Services\Arca\WsfeClient;
+use App\Services\Cobranzas\ContrarreembolsoService;
 use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Facturacion\ComprobanteMailer;
 use App\Services\Facturacion\TarifaResolver;
@@ -28,6 +30,7 @@ class CargaDirectaStoreController extends Controller
         Request $request,
         ComprobanteMailer $mailer,
         ContabilizadorService $contabilizador,
+        ContrarreembolsoService $contrarreembolso,
         WsfeClient $wsfe,
         ArcaTipoComprobanteResolver $arcaTipos,
     ): Response {
@@ -92,7 +95,7 @@ class CargaDirectaStoreController extends Controller
             ->firstOrFail();
         $fecha = $data['fecha_emision'];
 
-        $tarifaResolver = new TarifaResolver();
+        $tarifaResolver = new TarifaResolver;
         $tarifa = $tarifaResolver->resolve(
             $empresaId,
             (int) $cuentaOrigen->tercero_id,
@@ -184,7 +187,8 @@ class CargaDirectaStoreController extends Controller
         }
 
         $ivaPct = $empresa->factura_sin_iva ? 0.0 : (float) ($tarifa['iva_pct'] ?? 0.21);
-        $subtotalGravado = round($totalImporte + $totalSeguro + $totalCr, 2);
+        // El principal del contrarreembolso son fondos de terceros, no integra la base fiscal de la factura.
+        $subtotalGravado = round($totalImporte + $totalSeguro, 2);
         $iva = round($subtotalGravado * $ivaPct, 2);
         $total = round($subtotalGravado + $iva, 2);
 
@@ -204,14 +208,14 @@ class CargaDirectaStoreController extends Controller
         if (isset($data['servicio_minimo']) && $data['servicio_minimo'] !== '' && $data['servicio_minimo'] !== null) {
             $tarifa['servicio_minimo'] = (float) $data['servicio_minimo'];
             // Actualizar tarifa existente para esta relacion
-            \App\Models\TarifaRelacion::where('empresa_id', $empresaId)
+            TarifaRelacion::where('empresa_id', $empresaId)
                 ->where('remitente_tercero_id', $cuentaOrigen->tercero_id)
                 ->where('destinatario_tercero_id', $cuentaDestino->tercero_id)
                 ->update(['servicio_minimo' => (float) $data['servicio_minimo']]);
         }
         if (isset($data['servicio_retiro']) && $data['servicio_retiro'] !== '' && $data['servicio_retiro'] !== null) {
             $tarifa['servicio_retiro'] = (float) $data['servicio_retiro'];
-            \App\Models\TarifaRelacion::where('empresa_id', $empresaId)
+            TarifaRelacion::where('empresa_id', $empresaId)
                 ->where('remitente_tercero_id', $cuentaOrigen->tercero_id)
                 ->where('destinatario_tercero_id', $cuentaDestino->tercero_id)
                 ->update(['servicio_retiro' => (float) $data['servicio_retiro']]);
@@ -237,7 +241,7 @@ class CargaDirectaStoreController extends Controller
 
         $comprobante = DB::transaction(function () use (
             $empresaId, $facturarCuentaId, $facturarTerceroId, $cuentaDestino, $fecha, $total, $subtotalGravado, $iva,
-            $detalleFacturacion, $maxInterno, $pedidoRecords
+            $detalleFacturacion, $maxInterno, $pedidoRecords, $contrarreembolso
         ) {
             $comprobante = Comprobante::query()->create([
                 'empresa_id' => $empresaId,
@@ -262,6 +266,7 @@ class CargaDirectaStoreController extends Controller
             }
 
             $comprobante->pedidos()->sync(collect($createdPedidos)->pluck('id')->all());
+            $contrarreembolso->sincronizarDesdeComprobante($comprobante);
 
             Tercero::query()
                 ->whereKey($facturarTerceroId)
@@ -351,7 +356,7 @@ class CargaDirectaStoreController extends Controller
             $emailResultado = false;
         }
 
-        $mensajeExito = "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').")" . ($comprobante->arca_cae ? " y autorizada en ARCA (CAE {$comprobante->arca_cae}). " : '. ') . ($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : '');
+        $mensajeExito = "Factura #{$comprobante->id} creada (total ARS ".number_format($total, 2, ',', '.').')'.($comprobante->arca_cae ? " y autorizada en ARCA (CAE {$comprobante->arca_cae}). " : '. ').($comprobante->facturarCuenta?->nombre_cuenta ? 'Facturada a '.$comprobante->facturarCuenta->nombre_cuenta.'.' : '');
         $mensajeError = $autorizacionError
             ? "Factura #{$comprobante->id} creada pero no se pudo autorizar en ARCA: {$autorizacionError}. Podés reintentar desde Comprobantes."
             : null;

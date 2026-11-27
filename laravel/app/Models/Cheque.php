@@ -32,6 +32,7 @@ class Cheque extends Model
         'endosado_a',
         'recibo_id',
         'recibo_item_id',
+        'contrarreembolso_cobro_id',
         'observacion',
     ];
 
@@ -46,6 +47,7 @@ class Cheque extends Model
         'banco_deposito_id' => 'int',
         'banco_id' => 'int',
         'movimiento_bancario_id' => 'int',
+        'contrarreembolso_cobro_id' => 'int',
     ];
 
     public const ESTADOS_TERCERO = [
@@ -68,6 +70,7 @@ class Cheque extends Model
     public const ESTADOS = ['en_cartera', 'depositado', 'cobrado', 'rechazado', 'endosado', 'anulado', 'emitido', 'pagado', 'vencido', 'reemplazado'];
 
     public const TIPOS = ['fisico', 'echeq'];
+
     public const ORIGENES = ['propio', 'tercero'];
 
     public function empresa(): BelongsTo
@@ -80,18 +83,23 @@ class Cheque extends Model
         return $this->belongsTo(Recibo::class);
     }
 
+    public function contrarreembolsoCobro(): BelongsTo
+    {
+        return $this->belongsTo(ContrarreembolsoCobro::class, 'contrarreembolso_cobro_id');
+    }
+
     public function bancoDeposito(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Banco::class, 'banco_deposito_id');
+        return $this->belongsTo(Banco::class, 'banco_deposito_id');
     }
 
     public function bancoPropio(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Banco::class, 'banco_id');
+        return $this->belongsTo(Banco::class, 'banco_id');
     }
 
     public function movimientoBancario(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MovimientoBancario::class, 'movimiento_bancario_id');
+        return $this->belongsTo(MovimientoBancario::class, 'movimiento_bancario_id');
     }
 }

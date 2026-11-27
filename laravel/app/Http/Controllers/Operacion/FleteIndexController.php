@@ -127,7 +127,6 @@ class FleteIndexController extends Controller
             'empresa' => $pedido->empresa?->razon_social ?? $manifiesto?->empresa?->razon_social ?? $pedido->empresa_id,
             'remitente' => $pedido->remitente?->razon_social,
             'destinatario' => $pedido->destinatario?->razon_social,
-            'origen' => $pedido->remitente?->razon_social,
             'destino' => $manifiesto?->ciudad_destino,
             'bultos' => (int) $pedido->bultos,
             'palets' => (int) $pedido->palets,
@@ -153,7 +152,7 @@ class FleteIndexController extends Controller
         $pedidos = $query->orderByDesc('created_at')->get();
 
         $headers = [
-            'Factura ARCA', 'Empresa', 'Remitente', 'Destinatario', 'Origen', 'Destino',
+            'Factura ARCA', 'Empresa', 'Remitente', 'Destinatario', 'Destino',
             'Bultos', 'Palets', 'Valor Facturado', 'Estado',
             'Fecha', 'Manifiesto ID', 'Hoja Ruta ID', 'Comprobante',
         ];
@@ -175,7 +174,6 @@ class FleteIndexController extends Controller
                     $row['empresa'],
                     $row['remitente'],
                     $row['destinatario'],
-                    $row['origen'],
                     $row['destino'],
                     $row['bultos'],
                     $row['palets'],

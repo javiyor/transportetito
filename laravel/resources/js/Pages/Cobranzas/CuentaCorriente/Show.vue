@@ -65,7 +65,7 @@ const reciboForm = useForm({
         ganancias: { descripcion: '', importe: '' },
     },
     items: [
-        { medio: 'efectivo', importe: '', detalle: '', moneda: 'ARS', cheque_tipo: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
+        { medio: 'efectivo', importe: '', detalle: '', moneda: 'ARS', banco_id: '', cheque_tipo: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' },
     ],
 });
 
@@ -182,7 +182,7 @@ const imputarNotasCredito = () => {
 };
 
 const agregarItem = () => {
-    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, cheque_tipo: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
+    reciboForm.items.push({ medio: 'efectivo', importe: '', detalle: '', moneda: reciboForm.moneda, banco_id: '', cheque_tipo: '', cheque_numero: '', cheque_banco: '', cheque_fecha_vencimiento: '', cheque_titular: '' });
 };
 
 const quitarItem = (idx) => {
@@ -334,6 +334,13 @@ const formatNum = (n) => {
                                     </select>
                                     <TextInput v-model="item.importe" type="number" min="0.01" step="0.01" class="block w-28 text-xs" placeholder="Importe" />
                                     <button type="button" class="text-red-500 text-base leading-none font-bold" @click="quitarItem(idx)" :disabled="reciboForm.items.length <= 1">&times;</button>
+                                </div>
+                                <div v-if="item.medio === 'transferencia'">
+                                    <select v-model="item.banco_id" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">
+                                        <option value="">Cuenta bancaria receptora...</option>
+                                        <option v-for="banco in bancos.filter((b) => b.es_propio)" :key="banco.id" :value="banco.id">{{ banco.nombre }}</option>
+                                    </select>
+                                    <InputError :message="reciboForm.errors[`items.${idx}.banco_id`]"></InputError>
                                 </div>
                                 <div v-if="esCheque(item.medio)" class="grid grid-cols-2 gap-1.5">
                                     <select v-model="item.cheque_tipo" class="block w-full border-gray-300 rounded-md shadow-sm text-xs">

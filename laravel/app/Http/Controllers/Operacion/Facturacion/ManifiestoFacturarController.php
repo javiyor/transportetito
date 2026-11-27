@@ -11,8 +11,9 @@ use App\Models\ManifiestoIngreso;
 use App\Models\Pedido;
 use App\Models\TarifaRelacion;
 use App\Models\TerceroCuenta;
-use App\Services\Facturacion\FacturaCalculator;
+use App\Services\Cobranzas\ContrarreembolsoService;
 use App\Services\Facturacion\ComprobanteMailer;
+use App\Services\Facturacion\FacturaCalculator;
 use App\Services\Facturacion\TarifaResolver;
 use App\Services\Moneda\TipoCambioResolver;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class ManifiestoFacturarController extends Controller
         $destino = strtoupper(trim($monedaDestino));
         if ($origen === $destino) {
             $tarifa['moneda'] = $destino;
+
             return $tarifa;
         }
 
@@ -37,10 +39,11 @@ class ManifiestoFacturarController extends Controller
         }
 
         $tarifa['moneda'] = $destino;
+
         return $tarifa;
     }
 
-    public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ComprobanteMailer $mailer, TipoCambioResolver $tipoCambioResolver): RedirectResponse
+    public function __invoke(Request $request, ManifiestoIngreso $manifiesto, ComprobanteMailer $mailer, TipoCambioResolver $tipoCambioResolver, ContrarreembolsoService $contrarreembolso): RedirectResponse
     {
         $request->validate([
             'confirm' => ['required', 'boolean'],
@@ -86,10 +89,10 @@ class ManifiestoFacturarController extends Controller
         $missingSelection = 0;
         $comprobanteIds = [];
 
-        $tarifaResolver = new TarifaResolver();
-        $calculator = new FacturaCalculator();
+        $tarifaResolver = new TarifaResolver;
+        $calculator = new FacturaCalculator;
 
-        DB::transaction(function () use ($manifiesto, $map, $detalles, $empresaPorEntrega, $repartoForzadoMap, $tarifaResolver, $calculator, $tipoCambioResolver, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
+        DB::transaction(function () use ($manifiesto, $map, $detalles, $empresaPorEntrega, $repartoForzadoMap, $tarifaResolver, $calculator, $tipoCambioResolver, $contrarreembolso, &$created, &$skipped, &$missingCuentas, &$missingSelection, &$comprobanteIds) {
             $pedidos = Pedido::query()
                 ->where('manifiesto_ingreso_id', $manifiesto->id)
                 ->whereDoesntHave('comprobantes')
@@ -99,6 +102,7 @@ class ManifiestoFacturarController extends Controller
             foreach ($pedidos as $p) {
                 if (! $p->destinatario_cuenta_id) {
                     $missingCuentas++;
+
                     continue;
                 }
 
@@ -135,6 +139,7 @@ class ManifiestoFacturarController extends Controller
 
                 if ($selected <= 0) {
                     $missingSelection += count($g['pedidos']);
+
                     continue;
                 }
 
@@ -151,6 +156,7 @@ class ManifiestoFacturarController extends Controller
 
                 if (! isset($allowed[$selected])) {
                     $missingSelection += count($g['pedidos']);
+
                     continue;
                 }
 
@@ -218,30 +224,30 @@ class ManifiestoFacturarController extends Controller
                         if (! empty($override['moneda'])) {
                             $tarifa = $this->convertirTarifaMoneda($tarifa, (string) $override['moneda'], $empresa, $manifiesto->fecha->toDateString(), $tipoCambioResolver);
                         }
-                    foreach ([
-                        'tarifa_bulto',
-                        'tarifa_palet',
-                        'tarifa_valor_declarado_pct',
-                        'flete_minimo',
-                        'seguro_pct',
-                        'seguro_minimo',
-                        'seguro_tope',
-                        'cr_comision_pct',
-                        'cr_comision_minimo',
-                        'cr_comision_tope',
-                    'cr_importe_manual',
-                        'comision_cr_manual',
-                        'iva_pct',
-                        'usar_bulto',
-                        'usar_palet',
-                        'usar_valor',
-                        'usar_seguro',
-                        'usar_servicio_minimo',
-                        'servicio_retiro',
-                     ] as $k) {
+                        foreach ([
+                            'tarifa_bulto',
+                            'tarifa_palet',
+                            'tarifa_valor_declarado_pct',
+                            'flete_minimo',
+                            'seguro_pct',
+                            'seguro_minimo',
+                            'seguro_tope',
+                            'cr_comision_pct',
+                            'cr_comision_minimo',
+                            'cr_comision_tope',
+                            'cr_importe_manual',
+                            'comision_cr_manual',
+                            'iva_pct',
+                            'usar_bulto',
+                            'usar_palet',
+                            'usar_valor',
+                            'usar_seguro',
+                            'usar_servicio_minimo',
+                            'servicio_retiro',
+                        ] as $k) {
                             if (array_key_exists($k, $override) && $override[$k] !== null && $override[$k] !== '') {
                                 $tarifa[$k] = is_bool($override[$k]) ? $override[$k] : (float) $override[$k];
-                                if (in_array($k, ['usar_bulto','usar_palet','usar_valor','usar_seguro','usar_servicio_minimo'])) {
+                                if (in_array($k, ['usar_bulto', 'usar_palet', 'usar_valor', 'usar_seguro', 'usar_servicio_minimo'])) {
                                     $tarifa[$k] = (bool) $override[$k];
                                 }
                             }
@@ -288,7 +294,7 @@ class ManifiestoFacturarController extends Controller
                     'bultos' => $bultos,
                     'palets' => $palets,
                     'valor_declarado' => round($valorDeclarado, 2),
-                    'valor_neto_total' => round($valorDeclarado * (float)($tarifa['tarifa_valor_declarado_pct'] ?? 0), 2),
+                    'valor_neto_total' => round($valorDeclarado * (float) ($tarifa['tarifa_valor_declarado_pct'] ?? 0), 2),
                     'cr_importe' => round($crImporte, 2),
                     'flete' => round($flete, 2),
                     'seguro' => round($seguro, 2),
@@ -396,6 +402,7 @@ class ManifiestoFacturarController extends Controller
                 }
 
                 $comprobante->pedidos()->sync(collect($g['pedidos'])->pluck('id')->all());
+                $contrarreembolso->sincronizarDesdeComprobante($comprobante);
                 $comprobanteIds[] = (int) $comprobante->id;
 
                 foreach ($g['pedidos'] as $p) {

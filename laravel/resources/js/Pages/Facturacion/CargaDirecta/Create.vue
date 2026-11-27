@@ -542,7 +542,7 @@ const totales = computed(() => {
         const imp = Number(it.importe) || 0;
         const seg = Number(it.seguro) || 0;
         const c = it.cobrar_cr ? (Number(it.cr) || 0) : 0;
-        const sub = imp + seg + c;
+        const sub = imp + seg;
         const iv = sub * ivaPct.value;
 
         importe += imp;
@@ -1008,7 +1008,7 @@ const confirmarActualizacionArca = () => {
                         </div>
                         <div class="flex justify-end pt-2">
                             <div class="w-full space-y-0.5 text-right sm:w-72">
-                                <div class="flex justify-between gap-4 text-xs text-gray-700"><span>Subtotal:</span><span class="tabular-nums">{{ formatNum(totales.importe + totales.seguro + totales.cr) }}</span></div>
+                                <div class="flex justify-between gap-4 text-xs text-gray-700"><span>Subtotal:</span><span class="tabular-nums">{{ formatNum(totales.subtotal) }}</span></div>
                                 <div class="flex justify-between gap-4 text-xs text-gray-600"><span>IVA ({{ (ivaPct * 100).toFixed(1) }}%):</span><span class="tabular-nums">{{ formatNum(totales.iva) }}</span></div>
                                 <div class="flex justify-between gap-4 border-t border-gray-800 pt-1 text-sm font-bold text-gray-900"><span>Total factura:</span><span class="tabular-nums">{{ formatNum(totales.total) }}</span></div>
                             </div>

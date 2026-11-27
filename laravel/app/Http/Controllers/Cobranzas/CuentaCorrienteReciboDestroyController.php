@@ -7,6 +7,7 @@ use App\Models\AsientoContable;
 use App\Models\AsientoLinea;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
+use App\Models\MovimientoBancario;
 use App\Models\Recibo;
 use App\Services\Cobranzas\CuentaCorrienteAccess;
 use Illuminate\Http\RedirectResponse;
@@ -59,6 +60,7 @@ class CuentaCorrienteReciboDestroyController extends Controller
                 AsientoLinea::where('asiento_id', $asiento->id)->delete();
                 $asiento->delete();
             }
+            MovimientoBancario::eliminarReferencia('recibo', $recibo->id);
 
             $recibo->delete();
         });

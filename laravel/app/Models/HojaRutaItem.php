@@ -4,9 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Comprobante;
-use App\Models\HojaRuta;
-use App\Models\TerceroCuenta;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HojaRutaItem extends Model
 {
@@ -67,5 +65,10 @@ class HojaRutaItem extends Model
     public function entregaCuenta(): BelongsTo
     {
         return $this->belongsTo(TerceroCuenta::class, 'entrega_cuenta_id');
+    }
+
+    public function contrarreembolsoCobros(): HasMany
+    {
+        return $this->hasMany(ContrarreembolsoCobro::class, 'hoja_ruta_item_id');
     }
 }

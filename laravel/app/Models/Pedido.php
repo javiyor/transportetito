@@ -5,9 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\Empresa;
-use App\Models\TerceroCuenta;
-use App\Models\Comprobante;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Pedido extends Model
 {
@@ -97,5 +95,10 @@ class Pedido extends Model
     public function comprobantes(): BelongsToMany
     {
         return $this->belongsToMany(Comprobante::class, 'comprobante_pedido');
+    }
+
+    public function contrarreembolso(): HasOne
+    {
+        return $this->hasOne(Contrarreembolso::class, 'pedido_id');
     }
 }

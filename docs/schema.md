@@ -167,6 +167,22 @@ Nota: este documento define entidades y relaciones para migraciones Laravel.
 - ordenes_pago
   - id, empresa_id, tercero_cuenta_id, numero_interno, estado (emitida), moneda, cotizacion_ars, total, fecha, medio, detalle (json), cheque_id (nullable), observacion, creado_por_user_id
 
+## Contrarreembolsos
+- contrarreembolsos
+  - id, empresa_id, pedido_id (único), comprobante_id (nullable), remitente_cuenta_id, destinatario_cuenta_id, moneda, importe
+  - obligación esperada por pedido, sincronizada al facturar o al incorporar el comprobante a una hoja de ruta
+- contrarreembolso_cobros
+  - id, empresa_id, contrarreembolso_id, hoja_ruta_item_id (nullable), fecha, medio (efectivo/transferencia/cheque_tercero), moneda, importe, idempotency_key (UUID único), banco_id, cheque_id, estado, creado_por_user_id, asiento_id
+  - el repartidor registra cobros efectivos en la entrega, independientemente del cobro de la factura
+- contrarreembolso_comprobantes
+  - id, empresa_id, deposito_id, numero_interno, fecha, beneficiario_tipo, beneficiario_cuenta_id, moneda, total_cheques, efectivo, subtotal, descuento_porcentaje, descuento_importe, total, observaciones, estado, usuarios y timestamps de creación/confirmación/anulación, asiento_id
+- contrarreembolso_comprobante_aplicaciones
+  - id, comprobante_id, contrarreembolso_id, importe; unique (comprobante_id, contrarreembolso_id)
+- contrarreembolso_comprobante_items
+  - id, comprobante_id, medio (efectivo/cheque_tercero), moneda, importe, cheque_id (nullable), detalle (json)
+- cheques.contrarreembolso_cobro_id (nullable FK contrarreembolso_cobros) — cheque de terceros recibido por cobro en reparto
+- Cuenta contable `contrarreembolso_default`: pasivo “Contrarreembolso a Pagar” (código 2.05.001.005)
+
 ## Reparto
 - users.envia_ubicacion (bool, default false) — choferes que envían pings de geolocalización a `reparto_ubicaciones`
 - reparto_ubicaciones

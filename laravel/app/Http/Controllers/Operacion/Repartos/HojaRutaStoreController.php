@@ -9,13 +9,14 @@ use App\Models\HojaRuta;
 use App\Models\HojaRutaItem;
 use App\Models\TerceroCuenta;
 use App\Models\Zona;
+use App\Services\Cobranzas\ContrarreembolsoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class HojaRutaStoreController extends Controller
 {
-    public function __invoke(Request $request): RedirectResponse
+    public function __invoke(Request $request, ContrarreembolsoService $contrarreembolso): RedirectResponse
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
         abort_unless($empresaId > 0, 403);
@@ -34,7 +35,7 @@ class HojaRutaStoreController extends Controller
             ->whereIn('id', $orderedIds)
             ->get()
             ->keyBy('id');
-        $comprobantes = collect($orderedIds)->map(fn($id) => $comprobantesById->get($id))->filter()->values();
+        $comprobantes = collect($orderedIds)->map(fn ($id) => $comprobantesById->get($id))->filter()->values();
 
         $depositosReceptores = $comprobantes->flatMap(function (Comprobante $comprobante) {
             if ($comprobante->pedidos->isEmpty()) {
@@ -92,7 +93,7 @@ class HojaRutaStoreController extends Controller
         $total = 0;
         $zonaNombre = trim($data['zona_nombre']);
 
-        $hoja = DB::transaction(function () use ($data, $empresaId, $deposito, $zonaNombre, $comprobantes, &$total) {
+        $hoja = DB::transaction(function () use ($data, $empresaId, $deposito, $zonaNombre, $comprobantes, $contrarreembolso, &$total) {
             $zona = Zona::query()
                 ->where('empresa_id', $empresaId)
                 ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($zonaNombre)])
@@ -123,6 +124,7 @@ class HojaRutaStoreController extends Controller
 
             $order = 10;
             foreach ($comprobantes as $comprobante) {
+                $contrarreembolso->sincronizarDesdeComprobante($comprobante);
                 $cuenta = $comprobante->entregaCuenta;
                 $total += (float) ($comprobante->total ?? 0);
 
@@ -154,7 +156,7 @@ class HojaRutaStoreController extends Controller
 
         $cantidad = $comprobantes->count();
         $fechaCreacion = $hoja->created_at?->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i');
-        $resumen = "Hoja #{$hoja->id} creada: {$cantidad} comprobante".($cantidad !== 1 ? 's' : '')." — total ARS ".number_format($total, 2, ',', '.')." — depósito #{$hoja->deposito_id} · {$fechaCreacion}.";
+        $resumen = "Hoja #{$hoja->id} creada: {$cantidad} comprobante".($cantidad !== 1 ? 's' : '').' — total ARS '.number_format($total, 2, ',', '.')." — depósito #{$hoja->deposito_id} · {$fechaCreacion}.";
 
         return redirect()->route('operacion.repartos.hojas.show', $hoja)->with('flash.success', $resumen)->with('flash.hoja_resumen', [
             'hoja_id' => $hoja->id,

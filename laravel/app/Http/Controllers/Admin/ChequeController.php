@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\Empresa;
+use App\Models\GastoOperativo;
+use App\Models\MovimientoBancario;
+use App\Models\OrdenPago;
 use App\Services\Contabilidad\ContabilizadorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -107,8 +110,8 @@ class ChequeController extends Controller
 
         $this->normalizarFechas($request, ['fecha_emision', 'fecha_vencimiento']);
         $data = $request->validate([
-            'tipo' => ['required', 'in:' . implode(',', Cheque::TIPOS)],
-            'origen' => ['required', 'in:' . implode(',', Cheque::ORIGENES)],
+            'tipo' => ['required', 'in:'.implode(',', Cheque::TIPOS)],
+            'origen' => ['required', 'in:'.implode(',', Cheque::ORIGENES)],
             'numero' => ['nullable', 'string', 'max:64'],
             'banco' => ['nullable', 'string', 'max:255'],
             'banco_id' => ['nullable', 'integer', 'exists:bancos,id', 'required_if:origen,propio'],
@@ -152,13 +155,13 @@ class ChequeController extends Controller
 
         $this->normalizarFechas($request, ['fecha_deposito', 'fecha_cobro', 'fecha_rechazo']);
         $data = $request->validate([
-            'estado' => ['required', 'in:' . implode(',', array_merge(Cheque::ESTADOS_PROPIO, Cheque::ESTADOS_TERCERO))],
+            'estado' => ['required', 'in:'.implode(',', array_merge(Cheque::ESTADOS_PROPIO, Cheque::ESTADOS_TERCERO))],
             'fecha_deposito' => ['nullable', 'date'],
             'fecha_cobro' => ['nullable', 'date'],
             'fecha_rechazo' => ['nullable', 'date'],
             'endosado_a' => ['nullable', 'string', 'max:255'],
             'observacion' => ['nullable', 'string', 'max:1000'],
-            'tipo' => ['nullable', 'in:' . implode(',', Cheque::TIPOS)],
+            'tipo' => ['nullable', 'in:'.implode(',', Cheque::TIPOS)],
             'numero' => ['nullable', 'string', 'max:64'],
             'banco' => ['nullable', 'string', 'max:255'],
             'banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
@@ -205,7 +208,7 @@ class ChequeController extends Controller
             $fechaDeposito = $request->input('fecha_deposito');
 
             // Crear movimiento bancario pendiente
-            $mov = \App\Models\MovimientoBancario::create([
+            $mov = MovimientoBancario::create([
                 'empresa_id' => $cheque->empresa_id,
                 'banco_id' => $bancoDepositoId,
                 'fecha' => $fechaDeposito,
@@ -228,7 +231,7 @@ class ChequeController extends Controller
         if ($newEstado === 'cobrado' && $oldEstado !== 'cobrado') {
             // Si venía de depositado, actualizar el movimiento pendiente
             if ($cheque->movimiento_bancario_id) {
-                $mov = \App\Models\MovimientoBancario::find($cheque->movimiento_bancario_id);
+                $mov = MovimientoBancario::find($cheque->movimiento_bancario_id);
                 if ($mov) {
                     $mov->update([
                         'fecha' => $data['fecha_cobro'] ?: $cheque->fecha_deposito ?: now()->toDateString(),
@@ -237,11 +240,11 @@ class ChequeController extends Controller
                     ]);
                     $data['estado_deposito'] = 'acreditado';
                 }
-            } elseif (!empty($data['banco_deposito_id'])) {
+            } elseif (! empty($data['banco_deposito_id'])) {
                 // Si se manda directo a cobrado sin pasar por depositado, crear movimiento acreditado
                 $bancoId = $data['banco_deposito_id'] ?? $cheque->banco_deposito_id;
                 if ($bancoId) {
-                    $mov = \App\Models\MovimientoBancario::create([
+                    $mov = MovimientoBancario::create([
                         'empresa_id' => $cheque->empresa_id,
                         'banco_id' => $bancoId,
                         'fecha' => $data['fecha_cobro'] ?: now()->toDateString(),
@@ -264,8 +267,8 @@ class ChequeController extends Controller
 
         // Si se vuelve a en_cartera o rechazado, revertir movimiento pendiente si existe y está pendiente
         if (in_array($newEstado, ['en_cartera', 'rechazado', 'anulado']) && $cheque->movimiento_bancario_id) {
-            $mov = \App\Models\MovimientoBancario::find($cheque->movimiento_bancario_id);
-            if ($mov && $mov->tipo === 'deposito_pendiente' && !$mov->contabilizado) {
+            $mov = MovimientoBancario::find($cheque->movimiento_bancario_id);
+            if ($mov && $mov->tipo === 'deposito_pendiente' && ! $mov->contabilizado) {
                 $mov->delete();
                 $data['movimiento_bancario_id'] = null;
                 $data['estado_deposito'] = null;
@@ -284,16 +287,20 @@ class ChequeController extends Controller
             return back()->with('flash.error', 'No se puede eliminar: el cheque proviene de un recibo de cobranza.');
         }
 
-        if (\App\Models\GastoOperativo::query()->where('cheque_id', $cheque->id)->exists()) {
+        if ($cheque->contrarreembolso_cobro_id) {
+            return back()->with('flash.error', 'No se puede eliminar: el cheque forma parte de un cobro de contrarreembolso.');
+        }
+
+        if (GastoOperativo::query()->where('cheque_id', $cheque->id)->exists()) {
             return back()->with('flash.error', 'No se puede eliminar: el cheque está usado en un egreso.');
         }
 
-        if (\App\Models\OrdenPago::query()->where('cheque_id', $cheque->id)->exists()) {
+        if (OrdenPago::query()->where('cheque_id', $cheque->id)->exists()) {
             return back()->with('flash.error', 'No se puede eliminar: el cheque está usado en una orden de pago.');
         }
 
         if ($cheque->movimiento_bancario_id) {
-            $mov = \App\Models\MovimientoBancario::find($cheque->movimiento_bancario_id);
+            $mov = MovimientoBancario::find($cheque->movimiento_bancario_id);
             if ($mov && $mov->contabilizado) {
                 return back()->with('flash.error', 'No se puede eliminar: el cheque tiene movimiento bancario contabilizado.');
             }

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Cobranzas;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ReciboConfirmadoMail;
+use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\Empresa;
+use App\Models\MovimientoBancario;
 use App\Models\Recibo;
 use App\Models\ReciboAplicacion;
 use App\Models\ReciboItem;
@@ -13,12 +17,12 @@ use App\Models\TerceroCuenta;
 use App\Services\Cobranzas\CuentaCorrienteAccess;
 use App\Services\Contabilidad\ContabilizadorService;
 use App\Services\Moneda\TipoCambioResolver;
-use App\Mail\ReciboConfirmadoMail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CuentaCorrienteReciboStoreController extends Controller
 {
@@ -40,6 +44,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             'items.*.medio' => ['required', 'string', 'max:64', Rule::notIn(['cheque_propio'])],
             'items.*.moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'items.*.importe' => ['required', 'numeric', 'gt:0'],
+            'items.*.banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
             'items.*.detalle' => ['nullable', 'string', 'max:500'],
             'items.*.cheque_tipo' => ['nullable', 'required_if:items.*.medio,cheque_tercero', 'in:fisico,echeq'],
             'items.*.cheque_numero' => ['nullable', 'string', 'max:64'],
@@ -58,18 +63,36 @@ class CuentaCorrienteReciboStoreController extends Controller
             'retenciones.ganancias.importe' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        foreach ($data['items'] as $index => $item) {
+            if (($item['medio'] ?? null) !== 'transferencia') {
+                continue;
+            }
+
+            if (empty($item['banco_id']) || ! Banco::query()
+                ->where('activo', true)
+                ->where('es_propio', true)
+                ->whereKey($item['banco_id'])
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.banco_id" => 'Seleccioná la cuenta bancaria propia donde ingresó la transferencia.',
+                ]);
+            }
+        }
+
         $empresa = $cuenta->empresa()->firstOrFail();
         $empresaReciboIdTmp = $cuenta->empresa_id;
-        if (!empty($data['comprobante_ids'])) {
+        if (! empty($data['comprobante_ids'])) {
             $tmpComp = Comprobante::whereIn('id', $data['comprobante_ids'])->first(['empresa_id']);
-            if ($tmpComp) $empresaReciboIdTmp = $tmpComp->empresa_id;
+            if ($tmpComp) {
+                $empresaReciboIdTmp = $tmpComp->empresa_id;
+            }
         }
         $empresaCotizacion = $empresaReciboIdTmp !== $empresa->id ? (Empresa::find($empresaReciboIdTmp) ?: $empresa) : $empresa;
         $cotizacion = $tipoCambioResolver->resolver($empresaCotizacion, $data['moneda'], $data['fecha']);
 
         $total = collect($data['items'])->sum(fn ($i) => (float) $i['importe']);
         $retencionesSum = 0;
-        if (!empty($data['retenciones'])) {
+        if (! empty($data['retenciones'])) {
             foreach (['iibb', 'iva', 'ganancias'] as $k) {
                 $retencionesSum += (float) ($data['retenciones'][$k]['importe'] ?? 0);
             }
@@ -104,6 +127,10 @@ class CuentaCorrienteReciboStoreController extends Controller
                 $detalle['detalle'] = $item['detalle'];
             }
 
+            if ($item['medio'] === 'transferencia') {
+                $detalle['banco_id'] = (int) $item['banco_id'];
+            }
+
             if ($item['medio'] === 'cheque_tercero') {
                 $detalle['tipo'] = $item['cheque_tipo'] ?? 'fisico';
                 $detalle['numero'] = $item['cheque_numero'] ?? null;
@@ -120,6 +147,22 @@ class CuentaCorrienteReciboStoreController extends Controller
                 'importe' => $item['importe'],
                 'detalle' => ! empty($detalle) ? $detalle : null,
             ]);
+
+            if ($item['medio'] === 'transferencia') {
+                MovimientoBancario::query()->create([
+                    'empresa_id' => $empresaReciboId,
+                    'banco_id' => $item['banco_id'],
+                    'fecha' => $data['fecha'],
+                    'tipo' => 'ingreso',
+                    'concepto' => 'Transferencia recibida · Recibo #'.$recibo->numero_interno,
+                    'importe' => $item['importe'],
+                    'moneda' => $item['moneda'],
+                    'referencia_tipo' => 'recibo',
+                    'referencia_id' => $recibo->id,
+                    'contabilizado' => true,
+                    'creado_por_user_id' => $request->user()->id,
+                ]);
+            }
 
             if ($item['medio'] === 'cheque_tercero') {
                 Cheque::query()->create([
@@ -152,7 +195,9 @@ class CuentaCorrienteReciboStoreController extends Controller
 
             foreach ($comprobantes as $comprobante) {
                 $aplicar = min((float) $comprobante->total, $totalAplicar - $aplicadoTotal);
-                if ($aplicar <= 0) break;
+                if ($aplicar <= 0) {
+                    break;
+                }
 
                 ReciboAplicacion::query()->create([
                     'recibo_id' => $recibo->id,
@@ -189,7 +234,7 @@ class CuentaCorrienteReciboStoreController extends Controller
             'importe_signed' => (-1 * $totalAplicar),
             'referencia_tipo' => 'recibo',
             'referencia_id' => $recibo->id,
-            'observacion' => 'Recibo manual' . ($retencionesSum > 0 ? ' (incluye retenciones $'.number_format($retencionesSum, 2, ',', '.').')' : ''),
+            'observacion' => 'Recibo manual'.($retencionesSum > 0 ? ' (incluye retenciones $'.number_format($retencionesSum, 2, ',', '.').')' : ''),
         ]);
 
         try {
@@ -208,7 +253,7 @@ class CuentaCorrienteReciboStoreController extends Controller
                     Mail::to($cuentaEmail)->send(new ReciboConfirmadoMail($recibo));
                 }
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('Error enviando email de recibo manual', [
+                Log::error('Error enviando email de recibo manual', [
                     'recibo_id' => $recibo->id,
                     'error' => $e->getMessage(),
                 ]);

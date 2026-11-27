@@ -9,12 +9,14 @@ use Illuminate\Console\Command;
 class RepararPlanCuentas extends Command
 {
     protected $signature = 'cuentas:reparar-plan {empresa_id?} {--all : Repara todas las empresas}';
+
     protected $description = 'Inserta capitulos 1 (ACTIVO) y 2 (PASIVO) faltantes del plan de cuentas y corrige niveles/ordenes';
 
     public function handle(): int
     {
         if ($this->option('all') || ! $this->argument('empresa_id')) {
             $this->repararTodas();
+
             return 0;
         }
 
@@ -22,10 +24,12 @@ class RepararPlanCuentas extends Command
         $empresa = Empresa::find($empresaId);
         if (! $empresa) {
             $this->error("Empresa {$empresaId} no encontrada.");
+
             return 1;
         }
 
         $this->repararEmpresa($empresaId);
+
         return 0;
     }
 
@@ -34,6 +38,7 @@ class RepararPlanCuentas extends Command
         $empresas = Empresa::pluck('id');
         if ($empresas->isEmpty()) {
             $this->warn('No hay empresas para reparar.');
+
             return;
         }
 
@@ -53,7 +58,7 @@ class RepararPlanCuentas extends Command
             ->values()
             ->toArray();
 
-        $this->info("Empresa {$empresaId} tiene ".count($existing)." cuentas existentes.");
+        $this->info("Empresa {$empresaId} tiene ".count($existing).' cuentas existentes.');
 
         $stats = ['created' => 0, 'skipped' => 0, 'fixed' => 0];
 
@@ -89,6 +94,7 @@ class RepararPlanCuentas extends Command
                     $stats['skipped']++;
                 }
                 $capituloIds[$def['codigo']] = $cuenta->id;
+
                 continue;
             }
 
@@ -116,6 +122,7 @@ class RepararPlanCuentas extends Command
                 $rubroIds[$def['codigo']] = CuentaContable::where('empresa_id', $empresaId)
                     ->where('codigo', $def['codigo'])->value('id');
                 $stats['skipped']++;
+
                 continue;
             }
             $capCodigo = explode('.', $def['codigo'])[0];
@@ -144,6 +151,7 @@ class RepararPlanCuentas extends Command
                 $cmIds[$def['codigo']] = CuentaContable::where('empresa_id', $empresaId)
                     ->where('codigo', $def['codigo'])->value('id');
                 $stats['skipped']++;
+
                 continue;
             }
             $parts = explode('.', $def['codigo']);
@@ -173,6 +181,7 @@ class RepararPlanCuentas extends Command
                 $cuentaIds[$def['codigo']] = CuentaContable::where('empresa_id', $empresaId)
                     ->where('codigo', $def['codigo'])->value('id');
                 $stats['skipped']++;
+
                 continue;
             }
             $parts = explode('.', $def['codigo']);
@@ -199,6 +208,7 @@ class RepararPlanCuentas extends Command
         foreach ($subcuentas as $def) {
             if (in_array($def['codigo'], $existing)) {
                 $stats['skipped']++;
+
                 continue;
             }
 
@@ -342,7 +352,9 @@ class RepararPlanCuentas extends Command
         $count = 0;
         foreach ($fixes as $fix) {
             $cuenta = CuentaContable::where('empresa_id', $empresaId)->where('codigo', $fix['old'])->first();
-            if (! $cuenta) continue;
+            if (! $cuenta) {
+                continue;
+            }
 
             $parent = CuentaContable::where('empresa_id', $empresaId)->where('codigo_completo', $fix['newParent'])->first();
             $cuenta->update([
@@ -522,6 +534,7 @@ class RepararPlanCuentas extends Command
             ['codigo' => '2.05.001.002', 'codigo_corto' => '2401', 'nombre' => 'Alquileres Cobrados por Adelantado', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 2],
             ['codigo' => '2.05.001.003', 'codigo_corto' => '2402', 'nombre' => 'Depósitos en Garantía', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 3],
             ['codigo' => '2.05.001.004', 'codigo_corto' => '2403', 'nombre' => 'Honorarios a Pagar', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 4],
+            ['codigo' => '2.05.001.005', 'codigo_corto' => '2404', 'nombre' => 'Contrarreembolso a Pagar', 'tipo' => 'pasivo', 'naturaleza' => 'acreedor', 'contabilizable' => true, 'orden' => 5],
         ];
     }
 

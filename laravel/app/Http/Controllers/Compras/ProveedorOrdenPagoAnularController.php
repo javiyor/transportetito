@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AsientoContable;
 use App\Models\AuditLog;
 use App\Models\CtaCteMovimiento;
+use App\Models\MovimientoBancario;
 use App\Models\OrdenPago;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,7 @@ class ProveedorOrdenPagoAnularController extends Controller
                 ->where('referencia_tipo', 'orden_pago')
                 ->where('referencia_id', $ordenPago->id)
                 ->delete();
+            MovimientoBancario::eliminarReferencia('orden_pago', $ordenPago->id);
 
             $movimientos = CtaCteMovimiento::query()
                 ->where('referencia_tipo', 'orden_pago')

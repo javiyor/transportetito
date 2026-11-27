@@ -7,6 +7,9 @@ use App\Models\AsientoContable;
 use App\Models\AuditLog;
 use App\Models\Cheque;
 use App\Models\CtaCteMovimiento;
+use App\Models\GastoOperativo;
+use App\Models\MovimientoBancario;
+use App\Models\OrdenPago;
 use App\Models\Recibo;
 use App\Services\Cobranzas\CuentaCorrienteAccess;
 use Illuminate\Http\RedirectResponse;
@@ -36,12 +39,12 @@ class ReciboAnularController extends Controller
             // Eliminar cheques cargados con el recibo que sigan en cartera y sin uso posterior
             $cheques = Cheque::query()->where('recibo_id', $recibo->id)->get();
             foreach ($cheques as $ch) {
-                $enUso = \App\Models\GastoOperativo::query()->where('cheque_id', $ch->id)->exists()
-                    || \App\Models\OrdenPago::query()->where('cheque_id', $ch->id)->exists()
-                    || ($ch->movimiento_bancario_id && (bool) \App\Models\MovimientoBancario::query()->where('id', $ch->movimiento_bancario_id)->where('contabilizado', true)->exists());
+                $enUso = GastoOperativo::query()->where('cheque_id', $ch->id)->exists()
+                    || OrdenPago::query()->where('cheque_id', $ch->id)->exists()
+                    || ($ch->movimiento_bancario_id && (bool) MovimientoBancario::query()->where('id', $ch->movimiento_bancario_id)->where('contabilizado', true)->exists());
                 if ($ch->estado === 'en_cartera' && ! $enUso) {
                     if ($ch->movimiento_bancario_id) {
-                        \App\Models\MovimientoBancario::query()->where('id', $ch->movimiento_bancario_id)->where('contabilizado', false)->delete();
+                        MovimientoBancario::query()->where('id', $ch->movimiento_bancario_id)->where('contabilizado', false)->delete();
                     }
                     $ch->delete();
                 }
@@ -52,6 +55,7 @@ class ReciboAnularController extends Controller
                 ->where('referencia_tipo', 'recibo')
                 ->where('referencia_id', $recibo->id)
                 ->delete();
+            MovimientoBancario::eliminarReferencia('recibo', $recibo->id);
 
             $movimientos = CtaCteMovimiento::query()
                 ->where('referencia_tipo', 'recibo')
@@ -67,7 +71,7 @@ class ReciboAnularController extends Controller
                     'moneda' => $m->moneda,
                     'cotizacion_ars' => $m->cotizacion_ars,
                     'importe_signed' => (-1 * (float) $m->importe_signed),
-                    'observacion' => 'Anulacion recibo #' . $recibo->id . ': ' . $request->motivo,
+                    'observacion' => 'Anulacion recibo #'.$recibo->id.': '.$request->motivo,
                 ]);
             }
 

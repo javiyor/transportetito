@@ -101,14 +101,13 @@ const printSelected = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const columns = ['Factura ARCA', 'Empresa', 'Remitente', 'Destinatario', 'Origen', 'Destino', 'Bultos', 'Palets', 'Facturado', 'Estado', 'Fecha', 'Manifiesto', 'Hoja', 'Comprobante'];
+    const columns = ['Factura ARCA', 'Empresa', 'Remitente', 'Destinatario', 'Destino', 'Bultos', 'Palets', 'Facturado', 'Estado', 'Fecha', 'Manifiesto', 'Hoja', 'Comprobante'];
     const tableRows = rows.map((pedido) => {
         const values = [
             pedido.comprobante_arca_numero,
             pedido.empresa,
             pedido.remitente,
             pedido.destinatario,
-            pedido.origen,
             pedido.destino,
             pedido.bultos,
             pedido.palets,
@@ -201,7 +200,6 @@ const formatImporte = (value) => Number(value || 0).toLocaleString('es-AR', {
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
                                 <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
-                                <th class="px-1 py-1 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Origen</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Bult</th>
                                 <th class="px-1 py-1 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Pal</th>
                                 <th class="px-1 py-1 text-right text-[10px] font-medium text-gray-500 uppercase tracking-wider">Facturado</th>
@@ -219,7 +217,6 @@ const formatImporte = (value) => Number(value || 0).toLocaleString('es-AR', {
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[90px] truncate" :title="p.empresa">{{ p.empresa || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.remitente">{{ p.remitente || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[110px] truncate" :title="p.destinatario">{{ p.destinatario || '—' }}</td>
-                                <td class="px-1 py-0.5 text-[10px] text-gray-700 max-w-[80px] truncate">{{ p.origen || '—' }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.bultos }}</td>
                                 <td class="px-1 py-0.5 text-[10px] text-gray-700 text-center">{{ p.palets }}</td>
                                 <td class="px-1 py-0.5 text-[10px] font-mono text-right">{{ p.valor_facturado == null ? '' : `$${formatImporte(p.valor_facturado)}` }}</td>
@@ -241,7 +238,7 @@ const formatImporte = (value) => Number(value || 0).toLocaleString('es-AR', {
                                 </td>
                             </tr>
                             <tr v-if="!pedidos.data?.length">
-                                <td colspan="14" class="px-1 py-4 text-[10px] text-gray-400 text-center">No se encontraron fletes en el periodo.</td>
+                                <td colspan="13" class="px-1 py-4 text-[10px] text-gray-400 text-center">No se encontraron fletes en el periodo.</td>
                             </tr>
                         </tbody>
                     </table>

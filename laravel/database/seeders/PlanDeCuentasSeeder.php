@@ -24,6 +24,7 @@ class PlanDeCuentasSeeder extends Seeder
 
         if ($empresas->isEmpty()) {
             $this->command->warn('No hay empresas para cargar el plan de cuentas.');
+
             return;
         }
 
@@ -219,6 +220,7 @@ class PlanDeCuentasSeeder extends Seeder
         $this->addCuenta('2.05.001.002', '2401', 'Alquileres Cobrados por Adelantado', 'pasivo', 'acreedor', true, 2);
         $this->addCuenta('2.05.001.003', '2402', 'Depósitos en Garantía', 'pasivo', 'acreedor', true, 3);
         $this->addCuenta('2.05.001.004', '2403', 'Honorarios a Pagar', 'pasivo', 'acreedor', true, 4);
+        $this->addCuenta('2.05.001.005', '2404', 'Contrarreembolso a Pagar', 'pasivo', 'acreedor', true, 5);
 
         // ====================================================================
         // CAP 3 - PATRIMONIO NETO

@@ -7,6 +7,8 @@ use App\Models\AsientoLinea;
 use App\Models\Banco;
 use App\Models\Cheque;
 use App\Models\Comprobante;
+use App\Models\ContrarreembolsoCobro;
+use App\Models\ContrarreembolsoComprobante;
 use App\Models\CuentaContable;
 use App\Models\Empresa;
 use App\Models\GastoOperativo;
@@ -14,9 +16,7 @@ use App\Models\IngresoOperativo;
 use App\Models\OrdenPago;
 use App\Models\ProveedorComprobante;
 use App\Models\Recibo;
-use App\Models\ReciboItem;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class ContabilizadorService
 {
@@ -73,7 +73,7 @@ class ContabilizadorService
         $cuentaIvaDebito = $empresa->getCuentaContable('iva_debito');
         $cuentaTributos = $empresa->getCuentaContable('tributos_ventas');
 
-        return DB::transaction(function () use ($notaCredito, $empresa, $cuentaDeudores, $cuentaVentas, $cuentaIvaDebito, $cuentaTributos) {
+        return DB::transaction(function () use ($notaCredito, $empresa, $cuentaDeudores, $cuentaVentas, $cuentaIvaDebito) {
             $asiento = AsientoContable::create([
                 'empresa_id' => $empresa->id,
                 'fecha' => $notaCredito->fecha_emision,
@@ -167,7 +167,19 @@ class ContabilizadorService
             foreach ($recibo->items as $item) {
                 $medio = (string) ($item->medio ?? '');
                 $claveMedio = 'medio_pago.'.$medio;
-                $cuentaMedio = $empresa->getCuentaContable($claveMedio);
+                $cuentaMedio = null;
+                if ($medio === 'transferencia' && ! empty($item->detalle['banco_id'])) {
+                    $banco = Banco::query()
+                        ->where('activo', true)
+                        ->where('es_propio', true)
+                        ->find($item->detalle['banco_id']);
+                    if (! $banco) {
+                        throw new \RuntimeException("Recibo #{$recibo->id}: la cuenta bancaria receptora no es una cuenta propia activa.");
+                    }
+                    $cuentaMedio = $this->cuentaBancoPorNombre($empresa, $banco->nombre);
+                } else {
+                    $cuentaMedio = $empresa->getCuentaContable($claveMedio);
+                }
 
                 // Solo efectivo puede caer en caja_default; cheques/transferencias deben tener su cuenta configurada
                 if (! $cuentaMedio && $medio === 'efectivo') {
@@ -189,7 +201,7 @@ class ContabilizadorService
             $retencionesNorm = [];
             if (isset($retenciones['iibb']) || isset($retenciones['iva']) || isset($retenciones['ganancias'])) {
                 foreach (['iibb', 'iva', 'ganancias'] as $k) {
-                    if (!empty($retenciones[$k]['importe']) && (float) $retenciones[$k]['importe'] > 0) {
+                    if (! empty($retenciones[$k]['importe']) && (float) $retenciones[$k]['importe'] > 0) {
                         $retencionesNorm[] = ['tipo' => $k, 'importe' => (float) $retenciones[$k]['importe'], 'descripcion' => $retenciones[$k]['descripcion'] ?? ''];
                     }
                 }
@@ -202,10 +214,12 @@ class ContabilizadorService
             }
             foreach ($retencionesNorm as $ret) {
                 $importeRet = (float) ($ret['importe'] ?? 0);
-                if ($importeRet <= 0) continue;
+                if ($importeRet <= 0) {
+                    continue;
+                }
                 $tipo = $ret['tipo'] ?? '';
                 // Si tipo viene como key (iibb) o como valor dentro, normalizar
-                if (!$tipo && isset($ret['descripcion'])) {
+                if (! $tipo && isset($ret['descripcion'])) {
                     // intentar inferir tipo por descripcion
                     $tipo = '';
                 }
@@ -216,11 +230,14 @@ class ContabilizadorService
                     default => null,
                 };
                 // Fallback: si no hay tipo, usar ganancias por defecto para compatibilidad
-                if (!$claveRet && $tipo === '') {
+                if (! $claveRet && $tipo === '') {
                     // intentar mapear por descripcion si contiene palabras clave
                     $desc = strtolower($ret['descripcion'] ?? '');
-                    if (str_contains($desc, 'ganancias')) $claveRet = 'retenciones_ganancias';
-                    elseif (str_contains($desc, 'iibb') || str_contains($desc, 'ingresos brutos')) $claveRet = 'retenciones_iibb';
+                    if (str_contains($desc, 'ganancias')) {
+                        $claveRet = 'retenciones_ganancias';
+                    } elseif (str_contains($desc, 'iibb') || str_contains($desc, 'ingresos brutos')) {
+                        $claveRet = 'retenciones_iibb';
+                    }
                 }
                 if ($claveRet) {
                     $cuentaRet = $empresa->getCuentaContable($claveRet);
@@ -242,6 +259,333 @@ class ContabilizadorService
             $totalCobrado = $totalCobrado + $retencionesSum;
 
             $this->addLinea($asiento, $cuentaDeudores, $recibo->cuenta, 0, $totalCobrado, 'Cancelacion de deuda');
+
+            return $asiento;
+        });
+    }
+
+    private function contabilizarCobroContrarreembolsoDuplicadoUno(ContrarreembolsoCobro $cobro): AsientoContable
+    {
+        $empresa = $cobro->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Cobro de contrarreembolso #{$cobro->id} sin empresa.");
+        }
+
+        $cuentaContrarreembolso = $empresa->getCuentaContable('contrarreembolso_default');
+        if (! $cuentaContrarreembolso) {
+            throw new \RuntimeException("No está configurada la cuenta Contrarreembolso a Pagar para la empresa {$empresa->id}.");
+        }
+
+        $medio = (string) $cobro->medio;
+        $cuentaActivo = match ($medio) {
+            'efectivo' => $empresa->getCuentaContable('medio_pago.efectivo') ?? $empresa->getCuentaContable('caja_default'),
+            'cheque_tercero' => $empresa->getCuentaContable('medio_pago.cheque_tercero'),
+            'transferencia' => $cobro->banco
+                ? $this->cuentaBancoPorNombre($empresa, $cobro->banco->nombre)
+                : $empresa->getCuentaContable('medio_pago.transferencia'),
+            default => null,
+        };
+        if (! $cuentaActivo) {
+            throw new \RuntimeException("No hay cuenta contable configurada para el medio de cobro '{$medio}'.");
+        }
+
+        return DB::transaction(function () use ($cobro, $empresa, $cuentaContrarreembolso, $cuentaActivo, $medio) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'contrarreembolso_cobro')
+                ->where('referencia_id', $cobro->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $cobro->fecha,
+                'moneda' => $cobro->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'contrarreembolso_cobro',
+                'referencia_id' => $cobro->id,
+                'descripcion' => 'Cobro contrarreembolso pedido #'.$cobro->contrarreembolso?->pedido_id,
+            ]);
+
+            $importe = (float) $cobro->importe;
+            $this->addLinea($asiento, $cuentaActivo, null, $importe, 0, 'Ingreso contrarreembolso via '.$medio);
+            $this->addLinea($asiento, $cuentaContrarreembolso, $cobro->contrarreembolso?->remitenteCuenta, 0, $importe, 'Obligación por contrarreembolso cobrado');
+
+            return $asiento;
+        });
+    }
+
+    private function contabilizarLiquidacionContrarreembolsoDuplicadoUno(ContrarreembolsoComprobante $comprobante): AsientoContable
+    {
+        $empresa = $comprobante->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Comprobante de contrarreembolso #{$comprobante->id} sin empresa.");
+        }
+
+        $cuentaContrarreembolso = $empresa->getCuentaContable('contrarreembolso_default');
+        if (! $cuentaContrarreembolso) {
+            throw new \RuntimeException("No está configurada la cuenta Contrarreembolso a Pagar para la empresa {$empresa->id}.");
+        }
+
+        $comprobante->loadMissing(['items.cheque', 'beneficiarioCuenta']);
+
+        return DB::transaction(function () use ($comprobante, $empresa, $cuentaContrarreembolso) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'contrarreembolso_comprobante')
+                ->where('referencia_id', $comprobante->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $comprobante->fecha,
+                'moneda' => $comprobante->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'contrarreembolso_comprobante',
+                'referencia_id' => $comprobante->id,
+                'descripcion' => 'Comprobante de contrarreembolso N.º '.$comprobante->numero_interno,
+            ]);
+
+            $importeAplicado = round((float) $comprobante->aplicaciones->sum('importe'), 2);
+            $this->addLinea(
+                $asiento,
+                $cuentaContrarreembolso,
+                $comprobante->beneficiarioCuenta,
+                $importeAplicado,
+                0,
+                'Liquidación de contrarreembolso'
+            );
+
+            foreach ($comprobante->items as $item) {
+                $cuentaActivo = $item->medio === 'efectivo'
+                    ? ($empresa->getCuentaContable('medio_pago.efectivo') ?? $empresa->getCuentaContable('caja_default'))
+                    : $empresa->getCuentaContable('medio_pago.cheque_tercero');
+                if (! $cuentaActivo) {
+                    throw new \RuntimeException("No hay cuenta contable configurada para el medio de pago '{$item->medio}'.");
+                }
+                $this->addLinea($asiento, $cuentaActivo, null, 0, (float) $item->importe, 'Entrega por contrarreembolso: '.$item->medio);
+            }
+
+            return $asiento;
+        });
+    }
+
+    private function contabilizarCobroContrarreembolsoDuplicadoDos(ContrarreembolsoCobro $cobro): AsientoContable
+    {
+        $empresa = $cobro->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Cobro de contrarreembolso #{$cobro->id} sin empresa.");
+        }
+
+        $cuentaContrarreembolso = $empresa->getCuentaContable('contrarreembolso_default');
+        if (! $cuentaContrarreembolso) {
+            throw new \RuntimeException("No está configurada la cuenta Contrarreembolso a Pagar para la empresa {$empresa->id}.");
+        }
+
+        $medio = (string) $cobro->medio;
+        $cuentaActivo = match ($medio) {
+            'efectivo' => $empresa->getCuentaContable('medio_pago.efectivo') ?? $empresa->getCuentaContable('caja_default'),
+            'cheque_tercero' => $empresa->getCuentaContable('medio_pago.cheque_tercero'),
+            'transferencia' => $cobro->banco
+                ? $this->cuentaBancoPorNombre($empresa, $cobro->banco->nombre)
+                : $empresa->getCuentaContable('medio_pago.transferencia'),
+            default => null,
+        };
+        if (! $cuentaActivo) {
+            throw new \RuntimeException("No hay cuenta contable configurada para el medio de cobro '{$medio}'.");
+        }
+
+        return DB::transaction(function () use ($cobro, $empresa, $cuentaContrarreembolso, $cuentaActivo, $medio) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'contrarreembolso_cobro')
+                ->where('referencia_id', $cobro->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $cobro->fecha,
+                'moneda' => $cobro->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'contrarreembolso_cobro',
+                'referencia_id' => $cobro->id,
+                'descripcion' => 'Cobro contrarreembolso pedido #'.$cobro->contrarreembolso?->pedido_id,
+            ]);
+
+            $importe = (float) $cobro->importe;
+            $this->addLinea($asiento, $cuentaActivo, null, $importe, 0, 'Ingreso contrarreembolso via '.$medio);
+            $this->addLinea($asiento, $cuentaContrarreembolso, $cobro->contrarreembolso?->remitenteCuenta, 0, $importe, 'Obligación por contrarreembolso cobrado');
+
+            return $asiento;
+        });
+    }
+
+    private function contabilizarLiquidacionContrarreembolsoDuplicadoDos(ContrarreembolsoComprobante $comprobante): AsientoContable
+    {
+        $empresa = $comprobante->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Comprobante de contrarreembolso #{$comprobante->id} sin empresa.");
+        }
+
+        $cuentaContrarreembolso = $empresa->getCuentaContable('contrarreembolso_default');
+        if (! $cuentaContrarreembolso) {
+            throw new \RuntimeException("No está configurada la cuenta Contrarreembolso a Pagar para la empresa {$empresa->id}.");
+        }
+
+        $comprobante->loadMissing(['items.cheque', 'beneficiarioCuenta']);
+
+        return DB::transaction(function () use ($comprobante, $empresa, $cuentaContrarreembolso) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'contrarreembolso_comprobante')
+                ->where('referencia_id', $comprobante->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $comprobante->fecha,
+                'moneda' => 'ARS',
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'contrarreembolso_comprobante',
+                'referencia_id' => $comprobante->id,
+                'descripcion' => 'Comprobante de contrarreembolso N.º '.$comprobante->numero_interno,
+            ]);
+
+            $importeAplicado = round((float) $comprobante->aplicaciones->sum('importe'), 2);
+            $this->addLinea(
+                $asiento,
+                $cuentaContrarreembolso,
+                $comprobante->beneficiarioCuenta,
+                $importeAplicado,
+                0,
+                'Liquidación de contrarreembolso'
+            );
+
+            foreach ($comprobante->items as $item) {
+                $cuentaActivo = $item->medio === 'efectivo'
+                    ? ($empresa->getCuentaContable('medio_pago.efectivo') ?? $empresa->getCuentaContable('caja_default'))
+                    : $empresa->getCuentaContable('medio_pago.cheque_tercero');
+                if (! $cuentaActivo) {
+                    throw new \RuntimeException("No hay cuenta contable configurada para el medio de pago '{$item->medio}'.");
+                }
+                $this->addLinea($asiento, $cuentaActivo, null, 0, (float) $item->importe, 'Entrega por contrarreembolso: '.$item->medio);
+            }
+
+            return $asiento;
+        });
+    }
+
+    public function contabilizarCobroContrarreembolso(ContrarreembolsoCobro $cobro): AsientoContable
+    {
+        $empresa = $cobro->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Cobro de contrarreembolso #{$cobro->id} sin empresa.");
+        }
+
+        $cuentaContrarreembolso = $empresa->getCuentaContable('contrarreembolso_default');
+        if (! $cuentaContrarreembolso) {
+            throw new \RuntimeException("No está configurada la cuenta Contrarreembolso a Pagar para la empresa {$empresa->id}.");
+        }
+
+        $medio = (string) $cobro->medio;
+        $cuentaActivo = match ($medio) {
+            'efectivo' => $empresa->getCuentaContable('medio_pago.efectivo') ?? $empresa->getCuentaContable('caja_default'),
+            'cheque_tercero' => $empresa->getCuentaContable('medio_pago.cheque_tercero'),
+            'transferencia' => $cobro->banco
+                ? $this->cuentaBancoPorNombre($empresa, $cobro->banco->nombre)
+                : $empresa->getCuentaContable('medio_pago.transferencia'),
+            default => null,
+        };
+        if (! $cuentaActivo) {
+            throw new \RuntimeException("No hay cuenta contable configurada para el medio de cobro '{$medio}'.");
+        }
+
+        return DB::transaction(function () use ($cobro, $empresa, $cuentaContrarreembolso, $cuentaActivo, $medio) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'contrarreembolso_cobro')
+                ->where('referencia_id', $cobro->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $cobro->fecha,
+                'moneda' => $cobro->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'contrarreembolso_cobro',
+                'referencia_id' => $cobro->id,
+                'descripcion' => 'Cobro contrarreembolso pedido #'.$cobro->contrarreembolso?->pedido_id,
+            ]);
+
+            $importe = (float) $cobro->importe;
+            $this->addLinea($asiento, $cuentaActivo, null, $importe, 0, 'Ingreso contrarreembolso via '.$medio);
+            $this->addLinea($asiento, $cuentaContrarreembolso, $cobro->contrarreembolso?->remitenteCuenta, 0, $importe, 'Obligación por contrarreembolso cobrado');
+
+            return $asiento;
+        });
+    }
+
+    public function contabilizarLiquidacionContrarreembolso(ContrarreembolsoComprobante $comprobante): AsientoContable
+    {
+        $empresa = $comprobante->empresa;
+        if (! $empresa) {
+            throw new \RuntimeException("Comprobante de contrarreembolso #{$comprobante->id} sin empresa.");
+        }
+
+        $cuentaContrarreembolso = $empresa->getCuentaContable('contrarreembolso_default');
+        if (! $cuentaContrarreembolso) {
+            throw new \RuntimeException("No está configurada la cuenta Contrarreembolso a Pagar para la empresa {$empresa->id}.");
+        }
+
+        $comprobante->loadMissing(['items.cheque', 'beneficiarioCuenta']);
+
+        return DB::transaction(function () use ($comprobante, $empresa, $cuentaContrarreembolso) {
+            $existente = AsientoContable::query()
+                ->where('referencia_tipo', 'contrarreembolso_comprobante')
+                ->where('referencia_id', $comprobante->id)
+                ->first();
+            if ($existente) {
+                return $existente;
+            }
+
+            $asiento = AsientoContable::query()->create([
+                'empresa_id' => $empresa->id,
+                'fecha' => $comprobante->fecha,
+                'moneda' => $comprobante->moneda,
+                'estado' => 'confirmado',
+                'referencia_tipo' => 'contrarreembolso_comprobante',
+                'referencia_id' => $comprobante->id,
+                'descripcion' => 'Comprobante de contrarreembolso N.º '.$comprobante->numero_interno,
+            ]);
+
+            $importeAplicado = round((float) $comprobante->aplicaciones->sum('importe'), 2);
+            $this->addLinea(
+                $asiento,
+                $cuentaContrarreembolso,
+                $comprobante->beneficiarioCuenta,
+                $importeAplicado,
+                0,
+                'Liquidación de contrarreembolso'
+            );
+
+            foreach ($comprobante->items as $item) {
+                $cuentaActivo = $item->medio === 'efectivo'
+                    ? ($empresa->getCuentaContable('medio_pago.efectivo') ?? $empresa->getCuentaContable('caja_default'))
+                    : $empresa->getCuentaContable('medio_pago.cheque_tercero');
+                if (! $cuentaActivo) {
+                    throw new \RuntimeException("No hay cuenta contable configurada para el medio de pago '{$item->medio}'.");
+                }
+                $this->addLinea($asiento, $cuentaActivo, null, 0, (float) $item->importe, 'Entrega por contrarreembolso: '.$item->medio);
+            }
 
             return $asiento;
         });
@@ -302,6 +646,15 @@ class ContabilizadorService
                         throw new \RuntimeException("OP #{$ordenPago->id}: no se encontró el cheque propio asociado al medio '{$medio}'.");
                     }
                     $cuentaMedio = $this->cuentaChequeDiferido($empresa, $cheque);
+                } elseif ($medio === 'transferencia' && ! empty($item['banco_id'])) {
+                    $banco = Banco::query()
+                        ->where('activo', true)
+                        ->where('es_propio', true)
+                        ->find($item['banco_id']);
+                    if (! $banco) {
+                        throw new \RuntimeException("OP #{$ordenPago->id}: la cuenta bancaria de la transferencia no es una cuenta propia activa.");
+                    }
+                    $cuentaMedio = $this->cuentaBancoPorNombre($empresa, $banco->nombre);
                 } else {
                     $cuentaMedio = $empresa->getCuentaContable($claveMedio);
                 }
@@ -413,6 +766,7 @@ class ContabilizadorService
 
         $elegida = $candidatas->map(function (CuentaContable $cuenta) use ($tokensBanco) {
             $tokensCuenta = $this->tokensBanco($cuenta->nombre);
+
             return ['cuenta' => $cuenta, 'score' => count(array_intersect($tokensBanco, $tokensCuenta))];
         })->sortByDesc('score')->first();
 
@@ -439,6 +793,7 @@ class ContabilizadorService
 
         $elegida = $candidatas->map(function (CuentaContable $cuenta) use ($tokensBanco) {
             $tokensCuenta = $this->tokensBanco($cuenta->nombre);
+
             return ['cuenta' => $cuenta, 'score' => count(array_intersect($tokensBanco, $tokensCuenta))];
         })->sortByDesc('score')->first();
 
@@ -501,7 +856,7 @@ class ContabilizadorService
         $empresa = $gasto->empresa;
         if ($gasto->forma_pago === 'cuenta_corriente' && $gasto->cuenta_pasivo_id) {
             $cuentaMedio = $gasto->cuentaPasivo ?? CuentaContable::find($gasto->cuenta_pasivo_id);
-            if (!$cuentaMedio) {
+            if (! $cuentaMedio) {
                 $cuentaMedio = $empresa->getCuentaContable('proveedores_default') ?? $empresa->getCuentaContable('caja_default');
             }
         } else {

@@ -12,6 +12,10 @@ const props = defineProps({
     totalPreIngresos: Number,
     egresosPorMedio: Object,
     totalEgresos: Number,
+    ingresosContrarreembolsoPorMedio: Object,
+    totalIngresosContrarreembolso: Number,
+    egresosContrarreembolsoPorMedio: Object,
+    totalEgresosContrarreembolso: Number,
     saldoNeto: Number,
     resumenContable: Array,
     resumenPorMes: Array,
@@ -127,6 +131,19 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                         </div>
                     </div>
                     <p v-else class="text-sm text-gray-400">Sin pre-ingresos en el periodo.</p>
+
+                    <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">Contrarreembolsos cobrados</h3>
+                    <div v-if="Object.keys(ingresosContrarreembolsoPorMedio || {}).length" class="space-y-2">
+                        <div v-for="(total, medio) in ingresosContrarreembolsoPorMedio" :key="medio" class="flex items-center justify-between text-sm">
+                            <span class="text-gray-700 capitalize">{{ medio }}</span>
+                            <span class="font-mono font-medium text-gray-900">${{ formatNum(total) }}</span>
+                        </div>
+                        <div class="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-bold">
+                            <span>Total CR cobrados</span>
+                            <span class="font-mono text-green-700">${{ formatNum(totalIngresosContrarreembolso) }}</span>
+                        </div>
+                    </div>
+                    <p v-else class="text-sm text-gray-400">Sin contrarreembolsos cobrados en el periodo.</p>
                 </div>
 
                 <div class="bg-white shadow sm:rounded-lg p-4">
@@ -144,10 +161,23 @@ const sumBy = (obj) => Object.values(obj).reduce((a, b) => a + Number(b || 0), 0
                     </div>
                     <p v-else class="text-sm text-gray-400">Sin egresos en el periodo.</p>
 
+                    <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">Liquidaciones de contrarreembolso</h3>
+                    <div v-if="Object.keys(egresosContrarreembolsoPorMedio || {}).length" class="space-y-2">
+                        <div v-for="(total, medio) in egresosContrarreembolsoPorMedio" :key="medio" class="flex items-center justify-between text-sm">
+                            <span class="text-gray-700 capitalize">{{ medio }}</span>
+                            <span class="font-mono font-medium text-gray-900">${{ formatNum(total) }}</span>
+                        </div>
+                        <div class="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-bold">
+                            <span>Total CR liquidados</span>
+                            <span class="font-mono text-red-700">${{ formatNum(totalEgresosContrarreembolso) }}</span>
+                        </div>
+                    </div>
+                    <p v-else class="text-sm text-gray-400">Sin liquidaciones de contrarreembolso en el periodo.</p>
+
                     <div class="mt-6 bg-gray-50 rounded-lg p-4">
                         <div class="flex items-center justify-between text-sm font-bold">
                             <span class="text-gray-900">Saldo neto</span>
-                            <span class="font-mono text-lg" :class="saldoNeto >= 0 ? 'text-green-700' : 'text-red-700'">${{ Number(saldoNeto).toFixed(2) }}</span>
+                            <span class="font-mono text-lg" :class="saldoNeto >= 0 ? 'text-green-700' : 'text-red-700'">${{ formatNum(saldoNeto) }}</span>
                         </div>
                         <div class="text-xs text-gray-500 mt-1">Ingresos - Egresos</div>
                     </div>
