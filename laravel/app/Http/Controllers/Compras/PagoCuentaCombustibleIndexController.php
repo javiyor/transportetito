@@ -51,6 +51,7 @@ class PagoCuentaCombustibleIndexController extends Controller
                 'cantidad' => $items->count(),
                 'importe_total_ars' => round((float) $items->sum(function (PagoCuentaCombustible $p) {
                     $cot = (float) ($p->cotizacion_ars ?: 1);
+
                     return strtoupper((string) $p->moneda) === 'ARS' ? (float) $p->importe : ((float) $p->importe * $cot);
                 }), 2),
             ],
@@ -147,7 +148,7 @@ class PagoCuentaCombustibleIndexController extends Controller
         return back()->with('flash.success', 'Tipo de combustible eliminado.');
     }
 
-    public function storeTasa(Request $request): JsonResponse
+    public function storeTasa(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'combustible_tipo' => ['required', 'string', 'max:64'],
@@ -162,7 +163,7 @@ class PagoCuentaCombustibleIndexController extends Controller
             ['monto_por_litro' => round((float) $data['monto_por_litro'], 4)],
         );
 
-        return response()->json(['success' => true]);
+        return back()->with('success', 'Tasa de combustible guardada.');
     }
 
     public function destroyTasa(Request $request, CombustibleTasa $tasa): JsonResponse
