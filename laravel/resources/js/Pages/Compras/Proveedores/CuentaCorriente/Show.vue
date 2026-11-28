@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -199,7 +200,7 @@ const saldoPendienteTotal = computed(() => {
                     <div class="mt-1 text-sm text-gray-600">{{ cuenta.tercero?.razon_social || '-' }} · CUIT {{ cuenta.tercero?.cuit || '-' }}</div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('compras.proveedores.ctacte.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                 </div>
             </div>
         </template>

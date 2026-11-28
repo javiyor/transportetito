@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { nextTick, onMounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { formatFecha } from '@/Utils/format.js';
@@ -132,7 +133,7 @@ onMounted(async () => {
                     </div>
                     <PrimaryButton v-if="['nota_credito_interna', 'nota_debito_interna'].includes(comprobante.tipo) && !comprobante.arca_cae && comprobante.comprobante_origen?.arca_tipo_cbte" :disabled="autorizarForm.processing" @click="autorizarArca">Autorizar ARCA</PrimaryButton>
                     <PrimaryButton v-if="comprobante.estado === 'emitida' && !comprobante.arca_cae" @click="anular">Anular</PrimaryButton>
-                    <Link :href="route('operacion.comprobantes.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                 </div>
             </div>
         </template>

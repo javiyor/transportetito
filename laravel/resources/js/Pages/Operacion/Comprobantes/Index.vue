@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { formatNum } from '@/Utils/format.js';
 import { ref } from 'vue';
@@ -209,7 +210,7 @@ const translateLabel = (label) => {
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Comprobantes</h2>
                 <div class="flex items-center gap-2">
                     <Link :href="route('admin.terceros.index', { tipo: 'cliente' })"><SecondaryButton>Nuevo cliente</SecondaryButton></Link>
-                    <Link :href="route('operacion.manifiestos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                 </div>
             </div>
         </template>

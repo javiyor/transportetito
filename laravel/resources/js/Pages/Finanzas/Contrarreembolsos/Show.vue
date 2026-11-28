@@ -1,11 +1,24 @@
 <script setup>
+import { onMounted } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import BackLink from '@/Components/BackLink.vue'
 
 const props = defineProps({ comprobante: { type: Object, required: true } })
 const form = useForm({ motivo: '' })
 const formatNum = (value) => Number(value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const confirmar = () => useForm({}).post(route('finanzas.contrarreembolsos.confirmar', props.comprobante.id))
+const abrirVistaImpresion = () => {
+    const printUrl = new URL(route('finanzas.contrarreembolsos.print', props.comprobante.id))
+    printUrl.searchParams.set('auto_print', '1')
+    window.location.replace(printUrl.toString())
+}
+onMounted(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('imprimir') !== '1' || props.comprobante.estado !== 'confirmado') return
+
+    abrirVistaImpresion()
+})
+const confirmar = () => useForm({}).post(route('finanzas.contrarreembolsos.confirmar', props.comprobante.id), { onSuccess: abrirVistaImpresion })
 const anular = () => {
     const motivo = window.prompt('Motivo de anulación del borrador:')
     if (!motivo) return
@@ -16,7 +29,7 @@ const anular = () => {
 
 <template>
     <AppLayout title="Liquidación de contrarreembolso">
-        <template #header><div class="flex items-center justify-between"><h2 class="text-xl font-semibold text-gray-800">Liquidación #{{ comprobante.numero_interno }}</h2><div class="flex gap-3"><Link :href="route('finanzas.contrarreembolsos.index')" class="text-sm text-indigo-700">Listado</Link><a :href="route('finanzas.contrarreembolsos.print', comprobante.id)" target="_blank" class="text-sm text-indigo-700">Imprimir</a></div></div></template>
+        <template #header><div class="flex items-center justify-between"><h2 class="text-xl font-semibold text-gray-800">Liquidación #{{ comprobante.numero_interno }}</h2><div class="flex gap-3"><BackLink class="text-sm text-indigo-700">Listado</BackLink><a :href="route('finanzas.contrarreembolsos.print', comprobante.id)" target="_blank" class="text-sm text-indigo-700">Imprimir</a></div></div></template>
         <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
             <div class="grid gap-4 rounded-lg bg-white p-5 shadow-sm sm:grid-cols-3"><div><div class="text-xs uppercase text-gray-500">Fecha</div><div>{{ comprobante.fecha }}</div></div><div><div class="text-xs uppercase text-gray-500">Beneficiario</div><div>{{ comprobante.beneficiario_cuenta?.tercero?.razon_social || comprobante.beneficiario_cuenta?.nombre_cuenta }}</div><div class="text-xs text-gray-500">{{ comprobante.beneficiario_tipo }}</div></div><div><div class="text-xs uppercase text-gray-500">Estado</div><span class="rounded-full bg-gray-100 px-2 py-1 text-sm">{{ comprobante.estado }}</span></div></div>
             <section class="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200"><h3 class="border-b px-4 py-3 font-semibold">Aplicaciones</h3><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr><th class="px-4 py-3">Contrarreembolso</th><th class="px-4 py-3">Pedido</th><th class="px-4 py-3 text-right">Importe</th></tr></thead><tbody class="divide-y"><tr v-for="aplicacion in comprobante.aplicaciones" :key="aplicacion.id"><td class="px-4 py-3">#{{ aplicacion.contrarreembolso_id }}</td><td class="px-4 py-3">{{ aplicacion.contrarreembolso?.pedido?.remito_numero || aplicacion.contrarreembolso?.pedido_id }}</td><td class="px-4 py-3 text-right font-mono">{{ comprobante.moneda }} {{ formatNum(aplicacion.importe) }}</td></tr></tbody></table></section>

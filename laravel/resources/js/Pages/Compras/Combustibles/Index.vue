@@ -1,6 +1,7 @@
 <script setup>
 import { Head, useForm, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -40,7 +41,7 @@ const applyFilters = () => router.get(route('compras.combustibles.index'), { bus
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.export', { buscar: filtersForm.buscar || null })">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.tasas')">Tasas por litro</Link>
-                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.index')">Volver a compras</Link>
+                    <BackLink class="text-sm text-indigo-600 hover:text-indigo-800">Volver a compras</BackLink>
                 </div>
             </div>
         </template>

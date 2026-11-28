@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -80,7 +81,7 @@ const onTipoChange = (e) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Facturacion / Carga manual de factura</h2>
-                <Link :href="route('facturacion.manifiestos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
             </div>
         </template>
 
@@ -236,7 +237,7 @@ const onTipoChange = (e) => {
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                        <Link :href="route('facturacion.manifiestos.index')"><SecondaryButton type="button">Cancelar</SecondaryButton></Link>
+                        <BackLink><SecondaryButton type="button">Cancelar</SecondaryButton></BackLink>
                         <PrimaryButton :disabled="form.processing">Cargar factura</PrimaryButton>
                     </div>
                 </form>

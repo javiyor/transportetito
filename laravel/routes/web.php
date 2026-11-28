@@ -259,6 +259,8 @@ Route::middleware([
     });
 
     Route::prefix('operacion')->name('operacion.')->group(function () {
+        Route::redirect('/', '/operacion/manifiestos')->name('index');
+        Route::redirect('/import', '/operacion/manifiestos')->name('import.index');
         Route::get('/manifiestos', [ManifiestoIngresoController::class, 'index'])->name('manifiestos.index');
         Route::post('/manifiestos/import-auto', [ManifiestoIngresoController::class, 'importAuto'])->name('manifiestos.import-auto');
         Route::get('/manifiestos/create', [ManifiestoIngresoController::class, 'create'])->name('manifiestos.create');
@@ -295,6 +297,7 @@ Route::middleware([
         Route::middleware(['role:operaciones|facturacion|admin'])->get('/fletes', \App\Http\Controllers\Operacion\FleteIndexController::class)->name('fletes.index');
 
         Route::middleware(['role:operaciones'])->prefix('repartos')->name('repartos.')->group(function () {
+            Route::redirect('/', '/operacion/repartos/hojas')->name('index');
             Route::get('/facturas', FacturasListController::class)->name('facturas');
             Route::get('/hojas', HojaRutaIndexController::class)->name('hojas.index');
             Route::post('/hojas', HojaRutaStoreController::class)->name('hojas.store');
@@ -307,6 +310,7 @@ Route::middleware([
     });
 
     Route::middleware(['role:facturacion|admin'])->prefix('facturacion')->name('facturacion.')->group(function () {
+        Route::redirect('/', '/facturacion/manifiestos')->name('index');
         Route::get('/manifiestos', ManifiestoIndexController::class)->name('manifiestos.index');
         Route::get('/manifiestos/{manifiesto}', ManifiestoShowController::class)->name('manifiestos.show');
         Route::get('/manual', \App\Http\Controllers\Facturacion\ManualInvoiceCreateController::class)->name('manual.create');
@@ -360,6 +364,8 @@ Route::middleware([
         });
 
     Route::middleware(['role:admin'])->prefix('compras')->name('compras.')->group(function () {
+        Route::redirect('/', '/compras/proveedores/comprobantes')->name('index');
+        Route::redirect('/combustibles', '/compras/proveedores/comprobantes')->name('combustibles.home');
         Route::get('/proveedores/comprobantes', [ProveedorComprobanteIndexController::class, 'index'])->name('proveedores.comprobantes.index');
         Route::get('/proveedores/comprobantes/export', ProveedorComprobanteExportController::class)->name('proveedores.comprobantes.export');
         Route::post('/proveedores/comprobantes/pdf-import', ProveedorComprobantePdfImportController::class)->name('proveedores.comprobantes.pdf-import');
@@ -406,6 +412,7 @@ Route::middleware([
     });
 
     Route::middleware(['role:admin'])->prefix('finanzas')->name('finanzas.')->group(function () {
+        Route::redirect('/', '/finanzas/balance')->name('index');
         Route::get('/contrarreembolsos', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'index'])->name('contrarreembolsos.index');
         Route::get('/contrarreembolsos/create', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'create'])->name('contrarreembolsos.create');
         Route::post('/contrarreembolsos', [\App\Http\Controllers\Finanzas\ContrarreembolsoController::class, 'store'])->name('contrarreembolsos.store');

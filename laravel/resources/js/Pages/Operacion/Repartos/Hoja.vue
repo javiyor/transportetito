@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -201,9 +202,9 @@ const formaPagoLabel = (item) => ({
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1 whitespace-nowrap">
-                    <Link :href="route('operacion.repartos.hojas.index')" class="inline-flex">
+                    <BackLink class="inline-flex">
                         <SecondaryButton class="!px-2 !py-1 !text-xs">Volver</SecondaryButton>
-                    </Link>
+                    </BackLink>
                     <a :href="route('operacion.repartos.hojas.print', hoja.id)" target="_blank" rel="noopener" class="inline-flex">
                         <SecondaryButton class="!px-2 !py-1 !text-xs">Imprimir</SecondaryButton>
                     </a>

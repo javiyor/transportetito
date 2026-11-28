@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -746,9 +747,9 @@ const confirmarActualizacionArca = () => {
                     <h2 class="font-semibold text-base text-gray-800 leading-tight">Facturacion / Carga directa</h2>
                     <div class="mt-0.5 text-xs text-gray-600">Crear factura con pedidos desde cero, sin manifiesto.</div>
                 </div>
-                <Link :href="route('facturacion.manifiestos.index')">
+                <BackLink>
                     <SecondaryButton>Volver</SecondaryButton>
-                </Link>
+                </BackLink>
             </div>
         </template>
 
@@ -1042,9 +1043,9 @@ const confirmarActualizacionArca = () => {
                     </div>
 
                     <div class="flex items-center justify-end gap-2 border-t border-amber-200 pt-2">
-                        <Link :href="route('facturacion.manifiestos.index')">
+                        <BackLink>
                             <SecondaryButton type="button">Cancelar</SecondaryButton>
-                        </Link>
+                        </BackLink>
                         <PrimaryButton :disabled="form.processing || !form.origen_cuenta_id || !form.destino_cuenta_id || !form.tipo_arca || !arcaTipoOpciones.length || items.length === 0">
                             Verificar CUIT y emitir factura <kbd class="ml-1 rounded border border-white/40 px-1 py-0.5 text-[9px] font-normal">F8</kbd>
                         </PrimaryButton>

@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -55,9 +56,9 @@ const submit = () => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Nuevo manifiesto</h2>
-                <Link :href="route('operacion.manifiestos.index')">
+                <BackLink>
                     <SecondaryButton>Volver</SecondaryButton>
-                </Link>
+                </BackLink>
             </div>
         </template>
 
@@ -137,9 +138,9 @@ const submit = () => {
                     </div>
 
                     <div class="sm:col-span-2 flex items-center justify-end gap-2 pt-2">
-                        <Link :href="route('operacion.manifiestos.index')">
+                        <BackLink>
                             <SecondaryButton type="button">Cancelar</SecondaryButton>
-                        </Link>
+                        </BackLink>
                         <PrimaryButton :disabled="form.processing">Crear</PrimaryButton>
                     </div>
                 </form>

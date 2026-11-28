@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -105,7 +106,7 @@ const submitPagarTodos = () => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Pasivos pendientes de pago</h2>
-                <Link :href="route('finanzas.egresos.index')" class="text-sm text-indigo-600 hover:text-indigo-800">Volver a Egresos</Link>
+                <BackLink class="text-sm text-indigo-600 hover:text-indigo-800">Volver a Egresos</BackLink>
             </div>
         </template>
         <div class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">

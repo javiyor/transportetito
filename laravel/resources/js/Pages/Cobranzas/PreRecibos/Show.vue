@@ -1,6 +1,7 @@
 <script setup>
 import { Head, useForm, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { computed } from 'vue';
@@ -41,7 +42,7 @@ const formatFecha = (value) => {
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <a :href="route('cobranzas.pre-recibos.print', preRecibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
                     <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Recibos</SecondaryButton></Link>
-                    <SecondaryButton :href="route('cobranzas.pre-recibos.index')" as="a">Volver</SecondaryButton>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                     <label v-if="preRecibo.estado !== 'confirmado' && preRecibo.cuenta?.email" class="flex items-center gap-2 text-sm text-gray-700">
                         <input type="checkbox" v-model="confirmForm.send_email" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
                         Enviar recibo por email

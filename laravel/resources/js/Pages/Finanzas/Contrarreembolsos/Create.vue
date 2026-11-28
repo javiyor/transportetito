@@ -2,9 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import BackLink from '@/Components/BackLink.vue'
 
 const props = defineProps({ registros: { type: Array, required: true }, cheques: { type: Array, required: true }, fecha: { type: String, required: true } })
-const form = useForm({ fecha: props.fecha, moneda: 'ARS', remitente_cuenta_id: '', destinatario_cuenta_id: '', observaciones: '', contrarreembolsos: [], items: [], cheque_ids: [], efectivo: '', confirmar: false })
+const form = useForm({ fecha: props.fecha, moneda: 'ARS', remitente_cuenta_id: '', destinatario_cuenta_id: '', beneficiario_tipo: 'remitente', observaciones: '', contrarreembolsos: [], items: [], cheque_ids: [], efectivo: '', confirmar: false })
 const confirming = ref(false)
 const searchRemitente = ref('')
 const searchDestinatario = ref('')
@@ -37,6 +38,7 @@ const seleccionarDestinatario = (cuenta) => {
     searchDestinatario.value = cuenta.nombre
     showDestinatarioDropdown.value = false
 }
+const seleccionarBeneficiario = (tipo) => { form.beneficiario_tipo = tipo }
 watch(() => [form.remitente_cuenta_id, form.destinatario_cuenta_id, form.moneda], () => {
     form.contrarreembolsos = []
 })
@@ -70,14 +72,14 @@ const enviar = (confirmar) => {
 
 <template>
     <AppLayout title="Nueva liquidación de contrarreembolso">
-        <template #header><div class="flex items-center justify-between"><h2 class="text-xl font-semibold text-gray-800">Nueva liquidación de contrarreembolso</h2><Link :href="route('finanzas.contrarreembolsos.index')" class="text-sm text-indigo-700">Volver al listado</Link></div></template>
+        <template #header><div class="flex items-center justify-between"><h2 class="text-xl font-semibold text-gray-800">Nueva liquidación de contrarreembolso</h2><BackLink class="text-sm text-indigo-700">Volver al listado</BackLink></div></template>
         <div class="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
             <div v-if="Object.keys(form.errors).length" class="rounded-md bg-red-50 p-4 text-sm text-red-700">{{ Object.values(form.errors)[0] }}</div>
             <section class="grid gap-4 rounded-lg bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
                 <label class="text-sm">Fecha<input v-model="form.fecha" type="date" class="mt-1 block w-full rounded-md border-gray-300" /></label>
                 <label class="text-sm">Moneda<select v-model="form.moneda" class="mt-1 block w-full rounded-md border-gray-300"><option v-for="moneda in ['ARS','USD','EUR','BRL']" :key="moneda">{{ moneda }}</option></select></label>
                 <div class="relative text-sm">
-                    <label for="remitente-search">Remitente</label>
+                    <div class="flex items-center justify-between gap-2"><label for="remitente-search">Remitente</label><label class="flex items-center gap-1 text-xs text-indigo-700"><input type="checkbox" :checked="form.beneficiario_tipo === 'remitente'" :disabled="!form.remitente_cuenta_id" @change="seleccionarBeneficiario('remitente')" class="rounded border-gray-300 text-indigo-600" />Beneficiario</label></div>
                     <input id="remitente-search" v-model="searchRemitente" @input="form.remitente_cuenta_id = ''; showRemitenteDropdown = true" @focus="showRemitenteDropdown = true" @blur="setTimeout(() => showRemitenteDropdown = false, 200)" type="text" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Buscar nombre o CUIT..." autocomplete="off" />
                     <input v-model="form.remitente_cuenta_id" type="hidden" />
                     <ul v-if="showRemitenteDropdown && remitentesFiltrados.length" class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-gray-300 bg-white shadow-lg">
@@ -86,7 +88,7 @@ const enviar = (confirmar) => {
                     <InputError :message="form.errors.remitente_cuenta_id" />
                 </div>
                 <div class="relative text-sm">
-                    <label for="destinatario-search">Destinatario</label>
+                    <div class="flex items-center justify-between gap-2"><label for="destinatario-search">Destinatario</label><label class="flex items-center gap-1 text-xs text-indigo-700"><input type="checkbox" :checked="form.beneficiario_tipo === 'destinatario'" :disabled="!form.destinatario_cuenta_id" @change="seleccionarBeneficiario('destinatario')" class="rounded border-gray-300 text-indigo-600" />Beneficiario</label></div>
                     <input id="destinatario-search" v-model="searchDestinatario" @input="form.destinatario_cuenta_id = ''; showDestinatarioDropdown = true" @focus="showDestinatarioDropdown = true" @blur="setTimeout(() => showDestinatarioDropdown = false, 200)" type="text" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Buscar nombre o CUIT..." autocomplete="off" />
                     <input v-model="form.destinatario_cuenta_id" type="hidden" />
                     <ul v-if="showDestinatarioDropdown && destinatariosFiltrados.length" class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-gray-300 bg-white shadow-lg">

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -267,7 +268,7 @@ const formatNum = (n) => {
                     <PrimaryButton :disabled="!cuenta.email || emailPendientesForm.processing" :title="cuenta.email ? `Enviar a ${cuenta.email}` : 'La cuenta no tiene email cargado'" @click="enviarPendientesPorEmail">
                         {{ emailPendientesForm.processing ? 'Enviando...' : 'Enviar pendientes por email' }}
                     </PrimaryButton>
-                    <Link :href="route('cobranzas.ctacte.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                 </div>
             </div>
         </template>

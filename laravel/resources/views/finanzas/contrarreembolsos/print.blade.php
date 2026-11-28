@@ -6,6 +6,11 @@
     <style>
         body{font:13px Arial,sans-serif;color:#111827;margin:28px}h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:24px 0 8px}.muted{color:#6b7280}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0;padding:12px;background:#f9fafb}.meta strong{display:block;font-size:11px;text-transform:uppercase;color:#6b7280;margin-bottom:4px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}th{font-size:10px;text-transform:uppercase;color:#6b7280;background:#f9fafb}.num{text-align:right;font-variant-numeric:tabular-nums}.total td{font-weight:bold;border-top:2px solid #9ca3af}.observaciones{margin-top:18px;white-space:pre-wrap}@media print{body{margin:14mm}.no-print{display:none}}
     </style>
+    @if(request()->boolean('auto_print'))
+        <script>
+            window.addEventListener('load', () => window.setTimeout(() => window.print(), 200));
+        </script>
+    @endif
 </head>
 <body>
     <div class="no-print" style="text-align:right;margin-bottom:15px"><button onclick="window.print()">Imprimir</button></div>

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -113,9 +114,9 @@ const ordenDe = (id) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Repartos</h2>
-                <Link :href="route('operacion.manifiestos.index')">
+                <BackLink>
                     <SecondaryButton>Volver</SecondaryButton>
-                </Link>
+                </BackLink>
             </div>
         </template>
 

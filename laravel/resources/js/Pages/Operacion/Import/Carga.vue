@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -39,9 +40,9 @@ const submit = () => {
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">Operacion / Importar manifiestos</h2>
                     <div class="mt-1 text-sm text-gray-600">Trae carga desde MySQL externo y crea manifiestos + pedidos.</div>
                 </div>
-                <Link :href="route('operacion.manifiestos.index')">
+                <BackLink>
                     <SecondaryButton>Volver</SecondaryButton>
-                </Link>
+                </BackLink>
             </div>
         </template>
 

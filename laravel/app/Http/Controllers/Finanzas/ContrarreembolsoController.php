@@ -114,6 +114,7 @@ class ContrarreembolsoController extends Controller
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'remitente_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'destinatario_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+            'beneficiario_tipo' => ['required', 'in:remitente,destinatario'],
             'descuento_porcentaje' => ['nullable', 'numeric', 'in:0,0.0,0.00'],
             'descuento_importe' => ['nullable', 'numeric', 'in:0,0.0,0.00'],
             'observaciones' => ['nullable', 'string', 'max:2000'],
@@ -145,6 +146,7 @@ class ContrarreembolsoController extends Controller
             if (! $destinatario) {
                 throw ValidationException::withMessages(['destinatario_cuenta_id' => 'Seleccioná un destinatario con cuenta en la empresa actual.']);
             }
+            $beneficiario = $data['beneficiario_tipo'] === 'destinatario' ? $destinatario : $remitente;
 
             $registros = Contrarreembolso::query()
                 ->where('empresa_id', $empresaId)
@@ -210,8 +212,8 @@ class ContrarreembolsoController extends Controller
                 'deposito_id' => null,
                 'numero_interno' => $numero,
                 'fecha' => $data['fecha'],
-                'beneficiario_tipo' => 'remitente',
-                'beneficiario_cuenta_id' => $remitente->id,
+                'beneficiario_tipo' => $data['beneficiario_tipo'],
+                'beneficiario_cuenta_id' => $beneficiario->id,
                 'moneda' => $data['moneda'],
                 'total_cheques' => round($totalCheques, 2),
                 'efectivo' => round($efectivo, 2),
@@ -259,7 +261,10 @@ class ContrarreembolsoController extends Controller
             return $comprobante;
         });
 
-        return redirect()->route('finanzas.contrarreembolsos.show', $voucher)->with('success', $request->boolean('confirmar')
+        return redirect()->route('finanzas.contrarreembolsos.show', [
+            'comprobante' => $voucher->id,
+            'imprimir' => $request->boolean('confirmar') ? '1' : null,
+        ])->with('success', $request->boolean('confirmar')
             ? 'Comprobante de contrarreembolso confirmado.'
             : 'Borrador de contrarreembolso guardado.');
     }
@@ -269,7 +274,10 @@ class ContrarreembolsoController extends Controller
         abort_unless((int) $comprobante->empresa_id === (int) ($request->user()->current_empresa_id ?: 0), 404);
         DB::transaction(fn () => $this->confirmarEnTransaccion($request, $comprobante, $contabilizador));
 
-        return back()->with('success', 'Comprobante de contrarreembolso confirmado.');
+        return redirect()->route('finanzas.contrarreembolsos.show', [
+            'comprobante' => $comprobante->id,
+            'imprimir' => '1',
+        ])->with('success', 'Comprobante de contrarreembolso confirmado.');
     }
 
     public function show(Request $request, ContrarreembolsoComprobante $comprobante): Response

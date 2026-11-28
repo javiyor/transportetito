@@ -1,6 +1,7 @@
 <script setup>
 import { Head, useForm, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -117,7 +118,7 @@ const confirmDelete = (g) => {
                 <div class="flex items-center gap-3">
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.gastos.export')">Exportar CSV</a>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.combustibles.index')">Combustibles</Link>
-                    <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('compras.proveedores.comprobantes.index')">Volver a compras</Link>
+                    <BackLink class="text-sm text-indigo-600 hover:text-indigo-800">Volver a compras</BackLink>
                 </div>
             </div>
         </template>

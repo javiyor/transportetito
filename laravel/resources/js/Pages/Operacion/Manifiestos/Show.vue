@@ -2,6 +2,7 @@
 import { computed, reactive } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -227,9 +228,9 @@ const formatFecha = (value) => {
                     >
                         {{ showAddForm.value ? 'Cancelar' : 'Agregar pedido' }}
                     </button>
-                    <Link :href="route('operacion.manifiestos.index')">
+                    <BackLink>
                         <SecondaryButton>Volver</SecondaryButton>
-                    </Link>
+                    </BackLink>
                 </div>
             </div>
         </template>

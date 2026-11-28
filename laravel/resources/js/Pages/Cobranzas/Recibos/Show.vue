@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -108,7 +109,7 @@ const submitAnular = () => {
                 </div>
                 <div class="flex flex-wrap items-center gap-2 justify-end">
                     <a :href="route('cobranzas.recibos.print', recibo.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
-                    <Link :href="route('cobranzas.recibos.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                     <template v-if="recibo.estado !== 'anulada'">
                         <TextInput v-model="anularForm.motivo" type="text" class="!w-48 text-xs" placeholder="Motivo de anulacion" />
                         <PrimaryButton class="!bg-red-600 hover:!bg-red-700 !text-xs" :disabled="anularForm.processing || !anularForm.motivo" @click="submitAnular">Anular recibo</PrimaryButton>

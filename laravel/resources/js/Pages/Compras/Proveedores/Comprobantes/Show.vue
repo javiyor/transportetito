@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { formatFecha, formatNum } from '@/Utils/format.js';
 
@@ -59,7 +60,7 @@ defineProps({
                 </div>
                 <div class="flex items-center gap-2">
                     <a :href="route('compras.proveedores.comprobantes.print', comprobante.id)" target="_blank"><SecondaryButton>Imprimir / PDF</SecondaryButton></a>
-                    <Link :href="route('compras.proveedores.comprobantes.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                 </div>
             </div>
         </template>

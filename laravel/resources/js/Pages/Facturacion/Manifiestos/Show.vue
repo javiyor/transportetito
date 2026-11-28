@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -811,9 +812,9 @@ const enviarPedido = () => {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('facturacion.manifiestos.index')">
+                    <BackLink>
                         <SecondaryButton>Volver</SecondaryButton>
-                    </Link>
+                    </BackLink>
                     <Link :href="route('operacion.manifiestos.show', manifiesto.id)">
                         <SecondaryButton>Ver en Operacion</SecondaryButton>
                     </Link>

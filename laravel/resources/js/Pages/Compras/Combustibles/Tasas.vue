@@ -2,6 +2,7 @@
 import { Head, useForm, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -65,7 +66,7 @@ const tipoLabel = (value) => props.tiposCombustible?.find((tipo) => tipo.codigo 
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Combustibles / Tasas por litro</h2>
-                <Link :href="route('compras.combustibles.index')" class="text-sm text-indigo-600 hover:text-indigo-800">Volver a pagos a cuenta</Link>
+                <BackLink class="text-sm text-indigo-600 hover:text-indigo-800">Volver a pagos a cuenta</BackLink>
             </div>
         </template>
         <div class="max-w-5xl mx-auto py-4 sm:px-6 lg:px-8 space-y-3">

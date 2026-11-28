@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import BackLink from '@/Components/BackLink.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
@@ -66,7 +67,7 @@ const aplicarFiltro = (anio, mes) => {
                 <div class="flex items-center gap-2">
                     <a :href="route('cobranzas.resumen-arca.export', { tipo: 'ventas', anio: filtros.anio, mes: filtros.mes })"><SecondaryButton>Exportar Ventas CSV</SecondaryButton></a>
                     <a :href="route('cobranzas.resumen-arca.export', { tipo: 'compras', anio: filtros.anio, mes: filtros.mes })"><SecondaryButton>Exportar Compras CSV</SecondaryButton></a>
-                    <Link :href="route('cobranzas.ctacte.index')"><SecondaryButton>Volver</SecondaryButton></Link>
+                    <BackLink><SecondaryButton>Volver</SecondaryButton></BackLink>
                 </div>
             </div>
         </template>
