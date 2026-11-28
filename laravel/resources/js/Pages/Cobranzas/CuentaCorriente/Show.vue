@@ -299,14 +299,20 @@ const formatNum = (n) => {
                         </div>
                         <InputError :message="reciboForm.errors.fecha" />
                         <InputError :message="reciboForm.errors.moneda" />
-                        <fieldset class="border border-gray-200 rounded p-1 max-h-40 overflow-y-auto">
+                        <fieldset class="border border-gray-200 rounded p-1 max-h-40 overflow-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
-                            <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(0,1fr),minmax(5rem,auto),minmax(5rem,auto),auto] items-center gap-1.5 py-0.5">
-                                <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
-                                <span class="min-w-0 truncate text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} <span class="text-[10px] text-gray-400">{{ formatFecha(c.fecha_emision) }}</span></span>
-                                <span class="whitespace-nowrap text-right text-xs tabular-nums" :class="c.is_credit ? 'font-medium text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
-                                <span class="truncate text-right text-[10px] text-gray-500" :title="c.remitente || ''">{{ c.remitente ? `Rem: ${c.remitente}` : 'Rem: —' }}</span>
-                                <button v-if="esNotaPendienteArca(c)" type="button" class="text-[10px] text-red-600 hover:text-red-800 disabled:opacity-50" :disabled="eliminandoNotaPendienteId === c.id" @click="eliminarNotaPendienteArca(c)">{{ eliminandoNotaPendienteId === c.id ? '...' : 'Eliminar' }}</button>
+                            <div class="min-w-[36rem]">
+                                <div class="grid grid-cols-[auto,minmax(12rem,1fr),minmax(9rem,1fr),7rem,auto] items-center gap-1.5 border-b border-gray-200 py-1 text-[9px] font-medium uppercase tracking-wide text-gray-500">
+                                    <span></span><span>Documento</span><span>Remitente</span><span class="text-right">Pendiente</span><span></span>
+                                </div>
+                                <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(12rem,1fr),minmax(9rem,1fr),7rem,auto] items-center gap-1.5 border-b border-gray-100 py-1">
+                                    <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
+                                    <span class="min-w-0 truncate text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} <span class="text-[10px] text-gray-400">{{ formatFecha(c.fecha_emision) }}</span></span>
+                                    <span class="min-w-0 truncate text-xs text-gray-600" :title="c.remitente || ''">{{ c.remitente || '—' }}</span>
+                                    <span class="whitespace-nowrap text-right font-mono text-xs tabular-nums" :class="c.is_credit ? 'font-medium text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
+                                    <button v-if="esNotaPendienteArca(c)" type="button" class="text-[10px] text-red-600 hover:text-red-800 disabled:opacity-50" :disabled="eliminandoNotaPendienteId === c.id" @click="eliminarNotaPendienteArca(c)">{{ eliminandoNotaPendienteId === c.id ? '...' : 'Eliminar' }}</button>
+                                    <span v-else></span>
+                                </div>
                             </div>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>
                         </fieldset>
@@ -557,6 +563,7 @@ const formatNum = (n) => {
                             <thead class="sticky top-0 bg-gray-50">
                                 <tr>
                                     <th class="px-2 py-1.5 text-left font-medium text-gray-600">Documento</th>
+                                    <th class="px-2 py-1.5 text-left font-medium text-gray-600">Remitente</th>
                                     <th class="px-2 py-1.5 text-left font-medium text-gray-600">Fecha</th>
                                     <th class="px-2 py-1.5 text-right font-medium text-gray-600">Total</th>
                                     <th class="px-2 py-1.5 text-right font-medium text-gray-600">Pendiente / crédito</th>
@@ -565,6 +572,7 @@ const formatNum = (n) => {
                             <tbody class="divide-y divide-gray-100 bg-white">
                                 <tr v-for="documento in comprobantesPendientes" :key="documento.id">
                                     <td class="px-2 py-1.5 text-gray-800">{{ tipoLabel(documento.tipo) }} {{ numeroPendiente(documento) }}</td>
+                                    <td class="px-2 py-1.5 text-gray-600">{{ documento.remitente || '—' }}</td>
                                     <td class="px-2 py-1.5 text-gray-600">{{ formatFecha(documento.fecha_emision) }}</td>
                                     <td class="px-2 py-1.5 text-right text-gray-700">{{ documento.moneda }} {{ formatNum(documento.total) }}</td>
                                     <td class="px-2 py-1.5 text-right" :class="documento.is_credit ? 'font-medium text-green-700' : 'text-gray-800'">{{ documento.moneda }} {{ formatNum(documento.pendiente ?? documento.total) }}</td>
