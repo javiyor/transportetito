@@ -26,6 +26,7 @@ class CuentaCorrientePendientesService
             ->where('empresa_id', $cuenta->empresa_id)
             ->where('facturar_cuenta_id', $cuenta->id)
             ->where('estado', '!=', 'anulada')
+            ->with(['pedidos:id,remitente_tercero_id', 'pedidos.remitente:id,razon_social'])
             ->orderBy('fecha_emision')
             ->orderBy('id')
             ->get(['id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_punto_venta', 'arca_numero', 'numero_interno', 'comprobante_origen_id']);
@@ -69,6 +70,11 @@ class CuentaCorrientePendientesService
                 'fecha_entrega' => ! empty($fechasEntrega[$comprobante->id])
                     ? Carbon::parse($fechasEntrega[$comprobante->id])->format('Y-m-d')
                     : '',
+                'remitente' => $comprobante->pedidos
+                    ->map(fn ($pedido) => $pedido->remitente?->razon_social)
+                    ->filter()
+                    ->unique()
+                    ->implode(', '),
                 'moneda' => (string) $comprobante->moneda,
                 'total' => round((float) $comprobante->total, 2),
                 'pendiente' => $pendiente,

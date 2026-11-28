@@ -46,18 +46,19 @@
     @if($tipo === 'pendientes')
         <h3>Documentos pendientes de pago</h3>
         <table>
-            <thead><tr><th>Documento</th><th>Fecha factura</th><th>Fecha entrega</th><th>Total</th><th>Pendiente / crédito</th></tr></thead>
+            <thead><tr><th>Documento</th><th>Remitente</th><th>Fecha factura</th><th>Fecha entrega</th><th>Total</th><th>Pendiente / crédito</th></tr></thead>
             <tbody>
                 @forelse($comprobantes as $documento)
                     <tr>
                         <td>{{ $documento['tipo'] }} {{ $documento['numero'] }}</td>
+                        <td>{{ $documento['remitente'] ?? '—' }}</td>
                         <td>{{ $documento['fecha'] ? \Carbon\Carbon::parse($documento['fecha'])->format('d-m-Y') : '-' }}</td>
                         <td>{{ !empty($documento['fecha_entrega']) ? \Carbon\Carbon::parse($documento['fecha_entrega'])->format('d-m-Y') : '-' }}</td>
                         <td>{{ $documento['moneda'] }} {{ number_format((float) $documento['total'], 2, ',', '.') }}</td>
                         <td>{{ $documento['moneda'] }} {{ number_format((float) $documento['pendiente'], 2, ',', '.') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5">No hay documentos pendientes de pago.</td></tr>
+                    <tr><td colspan="6">No hay documentos pendientes de pago.</td></tr>
                 @endforelse
             </tbody>
         </table>

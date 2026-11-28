@@ -301,10 +301,11 @@ const formatNum = (n) => {
                         <InputError :message="reciboForm.errors.moneda" />
                         <fieldset class="border border-gray-200 rounded p-1 max-h-40 overflow-y-auto">
                             <legend class="text-xs text-gray-500 px-1">Comprobantes a cancelar (opcional)</legend>
-                            <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(0,1fr),minmax(5rem,auto),auto] items-center gap-1.5 py-0.5">
+                            <div v-for="c in comprobantesPendientes" :key="c.id" class="grid grid-cols-[auto,minmax(0,1fr),minmax(5rem,auto),minmax(5rem,auto),auto] items-center gap-1.5 py-0.5">
                                 <input type="checkbox" :value="c.id" v-model="reciboForm.comprobante_ids" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 size-3.5" />
                                 <span class="min-w-0 truncate text-xs" :class="c.is_credit ? 'text-green-600' : 'text-gray-700'">{{ tipoLabel(c.tipo) }} {{ comprobanteNumero(c) }} <span class="text-[10px] text-gray-400">{{ formatFecha(c.fecha_emision) }}</span></span>
                                 <span class="whitespace-nowrap text-right text-xs tabular-nums" :class="c.is_credit ? 'font-medium text-green-600' : 'text-gray-700'">{{ c.moneda }} {{ formatNum(c.pendiente ?? c.total) }}</span>
+                                <span class="truncate text-right text-[10px] text-gray-500" :title="c.remitente || ''">{{ c.remitente ? `Rem: ${c.remitente}` : 'Rem: —' }}</span>
                                 <button v-if="esNotaPendienteArca(c)" type="button" class="text-[10px] text-red-600 hover:text-red-800 disabled:opacity-50" :disabled="eliminandoNotaPendienteId === c.id" @click="eliminarNotaPendienteArca(c)">{{ eliminandoNotaPendienteId === c.id ? '...' : 'Eliminar' }}</button>
                             </div>
                             <div v-if="!comprobantesPendientes.length" class="text-xs text-gray-400 py-0.5">Sin comprobantes pendientes</div>

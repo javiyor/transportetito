@@ -8,6 +8,7 @@ use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
 use App\Models\HojaRutaItem;
 use App\Models\Recibo;
+use App\Models\ReciboAplicacion;
 use App\Models\TerceroCuenta;
 use App\Services\Cobranzas\CuentaCorrienteAccess;
 use App\Services\Cobranzas\SaldoNotasCreditoService;
@@ -34,33 +35,34 @@ class CuentaCorrienteShowController extends Controller
         $saldoTotal = round((float) $movimientosRaw->sum('importe_signed'), 2);
         $saldoParcial = $saldoTotal;
         $movimientos = $movimientosRaw->map(function (CtaCteMovimiento $m) use (&$saldoParcial) {
-                $m->setAttribute('saldo_parcial', round($saldoParcial, 2));
-                $saldoParcial = round($saldoParcial - (float) $m->importe_signed, 2);
+            $m->setAttribute('saldo_parcial', round($saldoParcial, 2));
+            $saldoParcial = round($saldoParcial - (float) $m->importe_signed, 2);
 
-                if ($m->referencia_tipo === 'comprobante' && $m->referencia_id) {
-                    $comp = Comprobante::query()->find($m->referencia_id, ['id', 'tipo', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
-                    if ($comp) {
-                        $numero = $comp->arca_punto_venta && $comp->arca_numero
-                            ? ((int) $comp->arca_punto_venta) . '-' . str_pad((string) $comp->arca_numero, 8, '0', STR_PAD_LEFT)
-                            : ($comp->numero_interno ? '#' . $comp->numero_interno : '-');
-                        $m->setAttribute('comprobante_numero', $numero);
-                        $m->setAttribute('comprobante_tipo', $comp->tipo);
-                    } else {
-                        $m->setAttribute('comprobante_numero', null);
-                        $m->setAttribute('comprobante_tipo', null);
-                    }
+            if ($m->referencia_tipo === 'comprobante' && $m->referencia_id) {
+                $comp = Comprobante::query()->find($m->referencia_id, ['id', 'tipo', 'arca_punto_venta', 'arca_numero', 'numero_interno']);
+                if ($comp) {
+                    $numero = $comp->arca_punto_venta && $comp->arca_numero
+                        ? ((int) $comp->arca_punto_venta).'-'.str_pad((string) $comp->arca_numero, 8, '0', STR_PAD_LEFT)
+                        : ($comp->numero_interno ? '#'.$comp->numero_interno : '-');
+                    $m->setAttribute('comprobante_numero', $numero);
+                    $m->setAttribute('comprobante_tipo', $comp->tipo);
                 } else {
                     $m->setAttribute('comprobante_numero', null);
                     $m->setAttribute('comprobante_tipo', null);
                 }
-                if ($m->referencia_tipo === 'recibo' && $m->referencia_id) {
-                    $rec = Recibo::query()->find($m->referencia_id, ['id', 'numero_interno']);
-                    $m->setAttribute('recibo_numero', $rec?->numero_interno ? '#' . $rec->numero_interno : null);
-                } else {
-                    $m->setAttribute('recibo_numero', null);
-                }
-                return $m;
-            });
+            } else {
+                $m->setAttribute('comprobante_numero', null);
+                $m->setAttribute('comprobante_tipo', null);
+            }
+            if ($m->referencia_tipo === 'recibo' && $m->referencia_id) {
+                $rec = Recibo::query()->find($m->referencia_id, ['id', 'numero_interno']);
+                $m->setAttribute('recibo_numero', $rec?->numero_interno ? '#'.$rec->numero_interno : null);
+            } else {
+                $m->setAttribute('recibo_numero', null);
+            }
+
+            return $m;
+        });
 
         $retencionesSum = round((float) Recibo::query()
             ->where('empresa_id', $empresaId)
@@ -73,6 +75,7 @@ class CuentaCorrienteShowController extends Controller
                 foreach (['iibb', 'iva', 'ganancias'] as $k) {
                     $sum += (float) (($ret[$k] ?? [])['importe'] ?? 0);
                 }
+
                 return $sum;
             }), 2);
 
@@ -80,6 +83,7 @@ class CuentaCorrienteShowController extends Controller
             ->where('empresa_id', $empresaId)
             ->where('facturar_cuenta_id', $cuenta->id)
             ->where('estado', '!=', 'anulada')
+            ->with(['pedidos:id,remitente_tercero_id', 'pedidos.remitente:id,razon_social'])
             ->orderByDesc('fecha_emision')
             ->orderByDesc('numero_interno')
             ->orderByDesc('id')
@@ -96,11 +100,12 @@ class CuentaCorrienteShowController extends Controller
         // Para documentos a cancelar (pendientes) ordenar por tipo + numero, con notas arriba
         $comprobantesRaw = $comprobantesRawDesc->sortBy(function ($c) {
             $p = (str_contains($c->tipo ?? '', 'nota_credito') || str_contains($c->tipo ?? '', 'nota_debito')) ? 0 : 1;
-            return sprintf('%d-%s-%08d-%08d', $p, $c->tipo ?? '', (int)($c->arca_numero ?? 0), (int)($c->numero_interno ?? 0));
+
+            return sprintf('%d-%s-%08d-%08d', $p, $c->tipo ?? '', (int) ($c->arca_numero ?? 0), (int) ($c->numero_interno ?? 0));
         })->values();
 
         // Calcular pendiente real por comprobante para marcar pagadas
-        $aplicacionesSum = \App\Models\ReciboAplicacion::query()
+        $aplicacionesSum = ReciboAplicacion::query()
             ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
             ->where('recibos.empresa_id', $empresaId)
             ->where('recibos.tercero_cuenta_id', $cuenta->id)
@@ -122,6 +127,11 @@ class CuentaCorrienteShowController extends Controller
             $c->setAttribute('is_credit', $isCredito);
             $c->setAttribute('is_pagada', ! $isCredito && $pendiente <= 0.01);
             $c->setAttribute('aplicado', $aplicado);
+            $c->setAttribute('remitente', $c->pedidos
+                ->map(fn ($pedido) => $pedido->remitente?->razon_social)
+                ->filter()
+                ->unique()
+                ->implode(', '));
             $c->setAttribute('notas_aplicadas', $isCredito ? max(0, abs((float) $c->total) - abs($pendiente)) : 0);
             $c->setAttribute('entregado', $entrega !== null);
             $c->setAttribute('fecha_entrega', $entrega?->fecha_entrega);
@@ -130,9 +140,9 @@ class CuentaCorrienteShowController extends Controller
         });
 
         // Créditos a cuenta: recibos con sobrante (modo a_cuenta) + recibos sin aplicar (legado)
-        $acuentaAplicaciones = \App\Models\ReciboAplicacion::query()
+        $acuentaAplicaciones = ReciboAplicacion::query()
             ->where('modo', 'a_cuenta')
-            ->whereHas('recibo', fn($q) => $q->where('empresa_id', $empresaId)->where('tercero_cuenta_id', $cuenta->id)->where('estado', '!=', 'anulada'))
+            ->whereHas('recibo', fn ($q) => $q->where('empresa_id', $empresaId)->where('tercero_cuenta_id', $cuenta->id)->where('estado', '!=', 'anulada'))
             ->with('recibo:id,moneda,fecha,numero_interno')
             ->get()
             ->groupBy('recibo_id');
@@ -140,6 +150,7 @@ class CuentaCorrienteShowController extends Controller
         $reciboCreditsAcuenta = $acuentaAplicaciones->map(function ($group) {
             $rec = $group->first()->recibo;
             $totalAcuenta = round((float) $group->sum('importe'), 2);
+
             return (object) [
                 'id' => 'rec_credit_'.$rec->id,
                 'tipo' => 'pago_a_cuenta',
@@ -188,16 +199,24 @@ class CuentaCorrienteShowController extends Controller
         $comprobantes = $comprobantes->concat($reciboCredits)->sortBy(function ($c) {
             $t = is_array($c) ? ($c['tipo'] ?? '') : ($c->tipo ?? '');
             $num = is_array($c) ? ($c['arca_numero'] ?? $c['numero_interno'] ?? 0) : ($c->arca_numero ?? $c->numero_interno ?? 0);
-            if (is_string($num)) $num = (int) filter_var($num, FILTER_SANITIZE_NUMBER_INT);
-            if ($t === 'pago_a_cuenta') $p = 0;
-            elseif (str_contains($t, 'nota_credito') || str_contains($t, 'nota_debito')) $p = 1;
-            else $p = 2;
-            return sprintf('%d-%s-%08d', $p, $t, (int)$num);
+            if (is_string($num)) {
+                $num = (int) filter_var($num, FILTER_SANITIZE_NUMBER_INT);
+            }
+            if ($t === 'pago_a_cuenta') {
+                $p = 0;
+            } elseif (str_contains($t, 'nota_credito') || str_contains($t, 'nota_debito')) {
+                $p = 1;
+            } else {
+                $p = 2;
+            }
+
+            return sprintf('%d-%s-%08d', $p, $t, (int) $num);
         })->values();
 
         $cutoff30 = now()->subDays(30)->toDateString();
-        $vencido30 = round($comprobantes->filter(fn($c) => ($c->fecha_emision ? $c->fecha_emision->format('Y-m-d') : '') <= $cutoff30 && !$c->is_pagada)->sum(function($c){
-            $pend = (float)($c->pendiente ?? $c->total);
+        $vencido30 = round($comprobantes->filter(fn ($c) => ($c->fecha_emision ? $c->fecha_emision->format('Y-m-d') : '') <= $cutoff30 && ! $c->is_pagada)->sum(function ($c) {
+            $pend = (float) ($c->pendiente ?? $c->total);
+
             // pendiente ya tiene signo (negativo para NC/pago_a_cuenta), sumar directo descuenta créditos y suma débitos
             return $pend;
         }), 2);
