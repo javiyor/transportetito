@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cobranzas;
 use App\Http\Controllers\Controller;
 use App\Models\Comprobante;
 use App\Models\CtaCteMovimiento;
+use App\Models\ReciboAplicacion;
 use App\Models\TerceroCuenta;
 use App\Models\User;
 use App\Models\Zona;
@@ -25,7 +26,7 @@ class CuentaCorrienteIndexController extends Controller
             ? TerceroCuenta::query()->where('cobrador_user_id', $user->id)->distinct()->pluck('empresa_id')
             : collect([$empresaId]);
         $cutoff = now()->subDays(30)->toDateString();
-        $filtro = (string) ($request->query('filtro') ?: 'todos');
+        $filtro = (string) ($request->query('filtro') ?: 'con_saldo');
         $desde = (string) ($request->query('desde') ?: '');
         $hasta = (string) ($request->query('hasta') ?: '');
         $zonaId = (int) ($request->query('zona_id') ?: 0);
@@ -61,7 +62,7 @@ class CuentaCorrienteIndexController extends Controller
             $cuentas->where('cobrador_user_id', $cobradorUserId);
         }
 
-        if ($user->hasRole('cobrador') && !$user->hasRole('admin')) {
+        if ($user->hasRole('cobrador') && ! $user->hasRole('admin')) {
             $cuentas->where('cobrador_user_id', $user->id);
         }
 
@@ -94,7 +95,7 @@ class CuentaCorrienteIndexController extends Controller
             ->get(['id', 'facturar_cuenta_id', 'tipo', 'estado', 'moneda', 'total', 'fecha_emision', 'arca_cae', 'comprobante_origen_id']);
 
         // Calcular saldo por comprobante, separando créditos disponibles de notas.
-        $aplicacionesSum = \App\Models\ReciboAplicacion::query()
+        $aplicacionesSum = ReciboAplicacion::query()
             ->join('recibos', 'recibos.id', '=', 'recibo_aplicaciones.recibo_id')
             ->where('recibos.estado', '!=', 'anulada')
             ->whereIn('recibo_aplicaciones.comprobante_id', $comprobantes->pluck('id'))
@@ -104,15 +105,13 @@ class CuentaCorrienteIndexController extends Controller
 
         $saldosComprobantes = $saldoNotasCredito->calcular($comprobantes, $aplicacionesSum->all());
 
-        $comprobantesPendientes = $comprobantes->filter(fn (Comprobante $comprobante) =>
-            ! ($saldosComprobantes[$comprobante->id]['is_credit'] ?? false)
+        $comprobantesPendientes = $comprobantes->filter(fn (Comprobante $comprobante) => ! ($saldosComprobantes[$comprobante->id]['is_credit'] ?? false)
             && (float) ($saldosComprobantes[$comprobante->id]['pendiente'] ?? 0) > 0.01
         );
 
         $comprobantesPorCuenta = $comprobantesPendientes->groupBy('facturar_cuenta_id');
         $notasCreditoPorCuenta = $comprobantes
-            ->filter(fn (Comprobante $comprobante) =>
-                str_starts_with((string) $comprobante->tipo, 'nota_credito')
+            ->filter(fn (Comprobante $comprobante) => str_starts_with((string) $comprobante->tipo, 'nota_credito')
                 && $comprobante->estado !== 'anulada'
             )
             ->groupBy('facturar_cuenta_id');
@@ -138,28 +137,29 @@ class CuentaCorrienteIndexController extends Controller
         $cobradores = User::query()->role('cobrador')->orderBy('name')->get(['id', 'name']);
 
         // Para vencido incluir pagos a cuenta / NC como descuento
-        $reciboAcuentaPorCuenta = \App\Models\ReciboAplicacion::query()
+        $reciboAcuentaPorCuenta = ReciboAplicacion::query()
             ->where('modo', 'a_cuenta')
-            ->whereHas('recibo', fn($q) => $q->whereIn('empresa_id', $empresaIds)->where('estado', '!=', 'anulada'))
+            ->whereHas('recibo', fn ($q) => $q->whereIn('empresa_id', $empresaIds)->where('estado', '!=', 'anulada'))
             ->with('recibo:id,tercero_cuenta_id,fecha')
             ->get()
-            ->groupBy(fn($a) => $a->recibo->tercero_cuenta_id);
+            ->groupBy(fn ($a) => $a->recibo->tercero_cuenta_id);
 
         $rows = $cuentas->map(function (TerceroCuenta $cuenta) use ($movimientos, $cutoff, $comprobantesPorCuenta, $notasCreditoPorCuenta, $saldosComprobantes, $reciboAcuentaPorCuenta) {
             $items = $movimientos->get($cuenta->id, collect());
             $saldo = round((float) $items->sum('importe_signed'), 2);
             // vencido = suma de pendientes vencidos (factura/ND positivo, NC/pago_a_cuenta negativo)
             $pendientesVencidos = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
-                ->filter(fn($c) => ($c->fecha_emision?->format('Y-m-d') ?? '') <= $cutoff)
+                ->filter(fn ($c) => ($c->fecha_emision?->format('Y-m-d') ?? '') <= $cutoff)
                 ->sum(fn ($c) => max(0, (float) ($saldosComprobantes[$c->id]['pendiente'] ?? 0)));
             $creditosVencidos = $reciboAcuentaPorCuenta->get($cuenta->id, collect())
-                ->filter(fn($a) => $a->recibo->fecha <= $cutoff)
+                ->filter(fn ($a) => $a->recibo->fecha <= $cutoff)
                 ->sum('importe');
             $vencido30 = round(max(0, $pendientesVencidos - $creditosVencidos), 2);
 
             $docsPendientes = collect($comprobantesPorCuenta->get($cuenta->id, collect()))
                 ->map(function (Comprobante $c) use ($saldosComprobantes) {
                     $pendiente = (float) ($saldosComprobantes[$c->id]['pendiente'] ?? 0);
+
                     return [
                         'id' => $c->id,
                         'tipo' => $c->tipo,
@@ -204,8 +204,8 @@ class CuentaCorrienteIndexController extends Controller
         })->filter(function (array $row) use ($filtro) {
             return match ($filtro) {
                 'vencido' => $row['vencido_30'] > 0,
-                'con_saldo' => $row['saldo'] > 0,
-                'sin_saldo' => $row['saldo'] <= 0,
+                'con_saldo' => abs($row['saldo']) > 0.01,
+                'sin_saldo' => abs($row['saldo']) <= 0.01,
                 default => true,
             };
         })->values();

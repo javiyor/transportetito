@@ -34,6 +34,7 @@ use App\Http\Controllers\Finanzas\EgresoExportController;
 
 use App\Http\Controllers\Operacion\ManifiestoIngresoController;
 use App\Http\Controllers\Operacion\ImportCargaController;
+use App\Http\Controllers\Operacion\ResumenFletesController;
 use App\Http\Controllers\Operacion\PedidoStoreController;
 use App\Http\Controllers\Operacion\PedidoRecepcionControlController;
 use App\Http\Controllers\Operacion\Comprobantes\ComprobanteIndexController;
@@ -261,6 +262,7 @@ Route::middleware([
     Route::prefix('operacion')->name('operacion.')->group(function () {
         Route::redirect('/', '/operacion/manifiestos')->name('index');
         Route::redirect('/import', '/operacion/manifiestos')->name('import.index');
+        Route::middleware(['role:operaciones|facturacion|admin'])->get('/resumen-fletes', ResumenFletesController::class)->name('resumen-fletes');
         Route::get('/manifiestos', [ManifiestoIngresoController::class, 'index'])->name('manifiestos.index');
         Route::post('/manifiestos/import-auto', [ManifiestoIngresoController::class, 'importAuto'])->name('manifiestos.import-auto');
         Route::get('/manifiestos/create', [ManifiestoIngresoController::class, 'create'])->name('manifiestos.create');

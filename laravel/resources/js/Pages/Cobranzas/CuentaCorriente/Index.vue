@@ -18,7 +18,7 @@ const props = defineProps({
 });
 
 const form = useForm({
-    filtro: props.filters?.filtro || 'todos',
+    filtro: props.filters?.filtro || 'con_saldo',
     desde: props.filters?.desde || '',
     hasta: props.filters?.hasta || '',
     zona_id: props.filters?.zona_id || '',
@@ -31,7 +31,7 @@ const form = useForm({
 const applyFilters = () => {
     selectedIds.value = new Set();
     router.get(route('cobranzas.ctacte.index'), {
-        filtro: form.filtro || 'todos',
+        filtro: form.filtro || 'con_saldo',
         desde: form.desde || null,
         hasta: form.hasta || null,
         zona_id: form.zona_id || null,
@@ -87,7 +87,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
             <div class="flex items-center justify-between gap-4">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Cobranzas / Cuentas corrientes</h2>
                 <div class="flex items-center gap-3 flex-wrap">
-                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'todos', desde: form.desde || null, hasta: form.hasta || null, zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null, ver_todas_empresas: form.ver_todas_empresas ? 1 : null })">Exportar CSV</a>
+                    <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.export', { filtro: form.filtro || 'con_saldo', desde: form.desde || null, hasta: form.hasta || null, zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null, ver_todas_empresas: form.ver_todas_empresas ? 1 : null })">Exportar CSV</a>
                     <a class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.ctacte.listado-print', { zona_id: form.zona_id || null, localidad: form.localidad || null, barrio: form.barrio || null, cobrador_user_id: form.cobrador_user_id || null, ver_todas_empresas: form.ver_todas_empresas ? 1 : null })" target="_blank">Imprimir listado</a>
                     <button type="button" class="text-sm text-indigo-600 hover:text-indigo-800" :disabled="!selectedIds.size" @click="printSelected">Imprimir seleccionados ({{ selectedIds.size }})</button>
                     <Link class="text-sm text-indigo-600 hover:text-indigo-800" :href="route('cobranzas.pre-recibos.index')">Pre-recibos</Link>
@@ -104,7 +104,7 @@ const sumBy = (arr, key) => arr.reduce((a, c) => a + Number(c[key] || 0), 0);
                         <select v-model="form.filtro" class="mt-0.5 block w-full border-gray-300 rounded-md shadow-sm text-[11px] py-1">
                             <option value="todos">Todos</option>
                             <option value="vencido">Vencidos +30</option>
-                            <option value="con_saldo">Con saldo</option>
+                            <option value="con_saldo">Con saldo distinto de cero</option>
                             <option value="sin_saldo">Sin saldo</option>
                         </select>
                     </div>
