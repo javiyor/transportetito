@@ -101,6 +101,9 @@ defineProps({
                             <div v-if="Number(comprobante.detalle?.combustible?.impuestos_combustible || 0) > 0" class="rounded border border-gray-200 px-3 py-2">
                                 Impuestos combustible · {{ comprobante.detalle?.combustible?.impuestos_combustible }}
                             </div>
+                            <div v-if="Number(comprobante.detalle?.combustible?.impuestos_combustible || 0) > 0" class="rounded border border-gray-200 px-3 py-2">
+                                Impuesto acumulado al costo (55%) · {{ comprobante.detalle?.combustible?.impuestos_acumulados_combustible ?? (Number(comprobante.detalle?.combustible?.impuestos_combustible || 0) - Number(comprobante.detalle?.combustible?.pago_cuenta_combustible || 0)).toFixed(2) }}
+                            </div>
                         </div>
                     </div>
                     <div>

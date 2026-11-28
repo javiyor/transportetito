@@ -400,6 +400,7 @@ class RepararPlanCuentas extends Command
             ['codigo' => '1.02.001', 'nombre' => 'INVERSIONES', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 1],
             ['codigo' => '1.03.001', 'nombre' => 'DEUDORES POR VENTAS', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 1],
             ['codigo' => '1.03.002', 'nombre' => 'OTROS CREDITOS', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 2],
+            ['codigo' => '1.03.003', 'nombre' => 'OTROS CRÉDITOS FISCALES', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 3],
             ['codigo' => '1.04.001', 'nombre' => 'IVA', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 1],
             ['codigo' => '1.04.002', 'nombre' => 'IIBB', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 2],
             ['codigo' => '1.04.003', 'nombre' => 'OTROS CREDITOS FISCALES', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'orden' => 3],
@@ -455,6 +456,7 @@ class RepararPlanCuentas extends Command
             ['codigo' => '1.03.002.002', 'codigo_corto' => '1311', 'nombre' => 'Anticipos al Personal', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 2],
             ['codigo' => '1.03.002.003', 'codigo_corto' => '1312', 'nombre' => 'Préstamos al Personal', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 3],
             ['codigo' => '1.03.002.004', 'codigo_corto' => '1313', 'nombre' => 'Depósitos en Garantía', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 4],
+            ['codigo' => '1.03.003.005.003', 'codigo_corto' => null, 'nombre' => 'Crédito por Impuesto a los Combustibles Líquidos', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 3],
             // 1.04 CREDITOS FISCALES
             ['codigo' => '1.04.001.001', 'codigo_corto' => '1400', 'nombre' => 'IVA Crédito Fiscal', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 1],
             ['codigo' => '1.04.001.002', 'codigo_corto' => '1401', 'nombre' => 'Saldo Técnico IVA', 'tipo' => 'activo', 'naturaleza' => 'deudor', 'contabilizable' => true, 'orden' => 2],

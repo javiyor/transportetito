@@ -91,6 +91,9 @@ class PlanDeCuentasSeeder extends Seeder
         $this->addCuenta('1.03.002.003', '1312', 'Préstamos al Personal', 'activo', 'deudor', true, 3);
         $this->addCuenta('1.03.002.004', '1313', 'Depósitos en Garantía', 'activo', 'deudor', true, 4);
 
+        $this->addCuentaMadre('1.03.003', 'OTROS CRÉDITOS FISCALES', 'activo', 'deudor', 3);
+        $this->addCuenta('1.03.003.005.003', null, 'Crédito por Impuesto a los Combustibles Líquidos', 'activo', 'deudor', true, 3);
+
         // 1.04 CREDITOS FISCALES
         $this->addRubro('1.04', 'CREDITOS FISCALES', 'activo', 4);
         $this->addCuentaMadre('1.04.001', 'IVA', 'activo', 'deudor', 1);
@@ -449,7 +452,7 @@ class PlanDeCuentasSeeder extends Seeder
         $this->cuentasMadre[] = ['codigo' => $codigo, 'nombre' => $nombre, 'tipo' => $tipo, 'naturaleza' => $naturaleza, 'orden' => $orden];
     }
 
-    private function addCuenta(string $codigo, string $codigoCorto, string $nombre, string $tipo, string $naturaleza, bool $contabilizable, int $orden): void
+    private function addCuenta(string $codigo, ?string $codigoCorto, string $nombre, string $tipo, string $naturaleza, bool $contabilizable, int $orden): void
     {
         $this->cuentas[] = ['codigo' => $codigo, 'codigo_corto' => $codigoCorto, 'nombre' => $nombre, 'tipo' => $tipo, 'naturaleza' => $naturaleza, 'contabilizable' => $contabilizable, 'orden' => $orden];
     }

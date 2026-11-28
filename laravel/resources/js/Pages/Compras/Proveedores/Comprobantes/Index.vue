@@ -33,6 +33,7 @@ const tipoLabel = (t) => {
     };
     return map[String(t).trim().toUpperCase()] || t;
 };
+const esFacturaC = (tipo) => ['11', 'FC', 'FACTURAC'].includes(String(tipo || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
 
 const parsePv = (num) => {
     if (!num) return '-';
@@ -97,6 +98,7 @@ const form = useForm({
     moneda: 'ARS',
     cuenta_contable_id: '',
     subtotal: '',
+    total_manual: '',
     iva_detalle: [
         { concepto: 'neto_21', importe: '' },
     ],
@@ -124,6 +126,7 @@ const editComprobanteForm = useForm({
     moneda: 'ARS',
     cuenta_contable_id: '',
     subtotal: '',
+    total_manual: '',
     iva_detalle: [{ concepto: 'neto_21', importe: '' }],
     percepciones: [],
     retenciones: [],
@@ -137,6 +140,22 @@ const editComprobanteForm = useForm({
 });
 
 const fiscalSummary = (target) => computed(() => {
+    const percepciones = (target.percepciones || []).reduce((acc, x) => acc + Number(x.importe || 0), 0);
+    const retenciones = (target.retenciones || []).reduce((acc, x) => acc + Number(x.importe || 0), 0);
+    const impuestosCombustible = Number(target.impuestos_combustible || 0);
+    const pagoCuentaCombustible = Math.round((impuestosCombustible * 0.45 + Number.EPSILON) * 100) / 100;
+    const restoImpuestosCombustible = Math.max(0, impuestosCombustible - pagoCuentaCombustible);
+    const tributos = percepciones + (impuestosCombustible > 0 ? pagoCuentaCombustible : 0);
+    if (esFacturaC(target.tipo)) {
+        const total = Number(target.total_manual || 0);
+        return {
+            subtotal: (total - tributos + retenciones).toFixed(2),
+            iva: '0.00',
+            tributos: tributos.toFixed(2),
+            retenciones: retenciones.toFixed(2),
+            total: total.toFixed(2),
+        };
+    }
     const ivaDesglosado = !target.tipo || (target.tipo || '').endsWith('A');
     let subtotal = 0;
     let iva = 0;
@@ -152,19 +171,15 @@ const fiscalSummary = (target) => computed(() => {
     } else {
         subtotal = Number(target.subtotal || 0);
     }
-    const percepciones = (target.percepciones || []).reduce((acc, x) => acc + Number(x.importe || 0), 0);
-    const retenciones = (target.retenciones || []).reduce((acc, x) => acc + Number(x.importe || 0), 0);
-    const impComb = Number(target.impuestos_combustible || 0);
-    const pagoCuentaComb = Number(target.pago_cuenta_combustible || 0);
-    const tributos = percepciones + impComb;
+    if (impuestosCombustible > 0) subtotal += restoImpuestosCombustible;
     const total = ivaDesglosado
-        ? subtotal + iva + tributos - retenciones - pagoCuentaComb
-        : subtotal + tributos - retenciones - pagoCuentaComb;
+        ? subtotal + iva + tributos - retenciones
+        : subtotal + tributos - retenciones;
     return {
         subtotal: subtotal.toFixed(2),
         iva: iva.toFixed(2),
         tributos: tributos.toFixed(2),
-        retenciones: (retenciones + pagoCuentaComb).toFixed(2),
+        retenciones: retenciones.toFixed(2),
         total: total.toFixed(2),
     };
 });
@@ -229,10 +244,24 @@ watch(() => editComprobanteForm.tercero_cuenta_id, (val) => {
     fetchTiposArca(val, true);
 });
 
+watch(() => editComprobanteForm.tipo, (tipo) => {
+    if (!editComprobanteDialog.value) return;
+    if (esFacturaC(tipo)) {
+        editComprobanteForm.total_manual = editComprobanteForm.total_manual || editComprobanteForm.subtotal || '';
+        editComprobanteForm.iva_detalle = [];
+    } else if (!editComprobanteForm.iva_detalle.length) {
+        editComprobanteForm.iva_detalle = [{ concepto: 'neto_21', importe: '' }];
+    }
+});
+
 watch(() => form.tipo, (tipo) => {
     if (!tipo) return;
-    if (tipo.endsWith('A')) {
+    if (esFacturaC(tipo)) {
         form.subtotal = '';
+        form.iva_detalle = [];
+    } else if (tipo.endsWith('A')) {
+        form.subtotal = '';
+        if (!form.iva_detalle.length) form.iva_detalle = [{ concepto: 'neto_21', importe: '' }];
     } else {
         form.iva_detalle = [{ concepto: 'neto_21', importe: '' }];
     }
@@ -260,7 +289,7 @@ const actualizarPagoCuenta = async (target) => {
         target.pago_cuenta_combustible = '';
         return;
     }
-    target.pago_cuenta_combustible = (litros * tasa).toFixed(2);
+    target.pago_cuenta_combustible = (litros * tasa * 0.45).toFixed(2);
 };
 
 const guardarTasaCombustible = async (target) => {
@@ -277,7 +306,7 @@ const guardarTasaCombustible = async (target) => {
             body: JSON.stringify({ combustible_tipo: tipo, mes, monto_por_litro: tasaCalculada }),
         });
         tasaActualCombustible.value = tasaCalculada;
-        target.pago_cuenta_combustible = (litros * tasaCalculada).toFixed(2);
+        target.pago_cuenta_combustible = (impuestos * 0.45).toFixed(2);
     } catch { /* silencioso */ }
 };
 
@@ -392,7 +421,10 @@ const openEditComprobante = (c) => {
     editComprobanteForm.moneda = c.moneda || 'ARS';
     editComprobanteForm.cuenta_contable_id = c.cuenta_contable_id || '';
     editComprobanteForm.subtotal = c.subtotal || '';
-    if (c.detalle?.iva_detalle?.length) {
+    editComprobanteForm.total_manual = c.total || '';
+    if (esFacturaC(c.tipo)) {
+        editComprobanteForm.iva_detalle = [];
+    } else if (c.detalle?.iva_detalle?.length) {
         editComprobanteForm.iva_detalle = c.detalle.iva_detalle.map((x) => ({ concepto: x.concepto, importe: x.importe }));
     } else {
         const rows = (c.detalle?.iva_items || []).map((x) => ({ concepto: conceptoDeAlicuota(x.alicuota), importe: x.base_imponible }));
@@ -502,7 +534,7 @@ const submitDelete = () => {
                         </select>
                         <InputError class="mt-1" :message="form.errors.cuenta_contable_id" />
                     </div>
-                    <div v-if="!form.tipo || form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
+                    <div v-if="!esFacturaC(form.tipo) && (!form.tipo || form.tipo.endsWith('A'))" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
                         <div class="flex items-center justify-between gap-2">
                             <h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4>
                             <SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addIvaItem(form)">+ Fila</SecondaryButton>
@@ -517,9 +549,14 @@ const submitDelete = () => {
                             </div>
                         </div>
                     </div>
-                    <div v-if="form.tipo && !form.tipo.endsWith('A')" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
+                    <div v-if="form.tipo && !form.tipo.endsWith('A') && !esFacturaC(form.tipo)" class="sm:col-span-4 rounded-lg border border-gray-200 p-2">
                         <InputLabel value="Subtotal / Importe (IVA incluido)" />
                         <TextInput v-model="form.subtotal" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" />
+                    </div>
+                    <div v-if="esFacturaC(form.tipo)" class="sm:col-span-4 rounded-lg border border-indigo-200 bg-indigo-50 p-2">
+                        <InputLabel value="Total de factura C" />
+                        <TextInput v-model="form.total_manual" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" />
+                        <InputError class="mt-1" :message="form.errors.total_manual" />
                     </div>
                     <div class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                         <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addPercepcion(form)">+ Fila</SecondaryButton></div>
@@ -557,13 +594,15 @@ const submitDelete = () => {
                         <div class="mt-2">
                             <InputLabel value="Impuestos combustible (adicional)" />
                             <TextInput v-model="form.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" />
+                            <p class="mt-1 text-[10px] text-gray-500">El 45% se registra como pago a cuenta de combustible; el 55% restante se suma al costo.</p>
                         </div>
                     </div>
                     <div><InputLabel value="Fecha emision" /><TextInput v-model="form.fecha_emision" type="date" class="mt-1 block w-full text-xs" /><InputError class="mt-1" :message="form.errors.fecha_emision" /></div>
                     <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="form.fecha_vencimiento" type="date" class="mt-1 block w-full text-xs" /><InputError class="mt-1" :message="form.errors.fecha_vencimiento" /></div>
                     <div class="sm:col-span-3"><InputLabel value="Observacion" /><TextInput v-model="form.observacion" type="text" class="mt-1 block w-full text-xs" /><InputError class="mt-1" :message="form.errors.observacion" /></div>
                     <div class="sm:col-span-4 rounded-lg border border-indigo-200 bg-indigo-50 p-2 text-xs text-indigo-900 resumen-total">
-                        Subtotal {{ summary.subtotal }} · IVA {{ summary.iva }} · Tributos {{ summary.tributos }} · Retenciones {{ summary.retenciones }} · Total {{ summary.total }}
+                        <template v-if="esFacturaC(form.tipo)">Factura C · IVA no aplicable · Total {{ summary.total }}</template>
+                        <template v-else>Subtotal {{ summary.subtotal }} · IVA {{ summary.iva }} · Tributos {{ summary.tributos }} · Retenciones {{ summary.retenciones }} · Total {{ summary.total }}</template>
                     </div>
                     <div class="sm:col-span-4 flex justify-end"><PrimaryButton :disabled="form.processing">Guardar</PrimaryButton></div>
                 </form>
@@ -684,15 +723,20 @@ const submitDelete = () => {
                                 </select>
                                 <InputError class="mt-1" :message="editComprobanteForm.errors.cuenta_contable_id" />
                             </div>
-                            <div v-if="!editComprobanteForm.tipo || editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
+                            <div v-if="!esFacturaC(editComprobanteForm.tipo) && (!editComprobanteForm.tipo || editComprobanteForm.tipo.endsWith('A'))" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <div class="flex items-center justify-between gap-2"><h4 class="text-xs font-semibold text-gray-900">IVA / Netos</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addIvaItem(editComprobanteForm)">+ Fila</SecondaryButton></div>
                                 <div class="mt-1 grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase"><div class="col-span-5">Concepto</div><div class="col-span-3">Importe</div><div class="col-span-3">IVA</div><div></div></div>
                                 <div class="mt-1 space-y-1"><div v-for="(item, index) in editComprobanteForm.iva_detalle" :key="index" class="grid grid-cols-12 gap-1 items-center"><select v-model="item.concepto" class="col-span-5 block w-full border-gray-300 rounded-md shadow-sm text-xs py-1"><option v-for="c in ivaDetalleOpciones" :key="c.value" :value="c.value">{{ c.label }}</option></select><TextInput v-model="item.importe" type="number" min="0" step="0.01" class="col-span-3 block w-full text-xs !py-1" /><div class="col-span-3 text-xs text-gray-700 text-right">{{ IVA_DETALLE_TASAS[item.concepto] !== undefined ? (Number(item.importe || 0) * IVA_DETALLE_TASAS[item.concepto] / 100).toFixed(2) : '-' }}<InputError :message="editComprobanteForm.errors['iva_detalle.' + index + '.concepto'] || editComprobanteForm.errors['iva_detalle.' + index + '.importe']" /></div><button v-if="editComprobanteForm.iva_detalle.length > 1" type="button" class="text-xs text-red-600 font-bold" @click="removeAt(editComprobanteForm.iva_detalle, index)">X</button><span v-else></span></div></div>
                             </div>
-                            <div v-if="editComprobanteForm.tipo && !editComprobanteForm.tipo.endsWith('A')" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
+                            <div v-if="editComprobanteForm.tipo && !editComprobanteForm.tipo.endsWith('A') && !esFacturaC(editComprobanteForm.tipo)" class="sm:col-span-2 rounded-lg border border-gray-200 p-2">
                                 <InputLabel value="Subtotal / Importe (IVA incluido)" />
                                 <TextInput v-model="editComprobanteForm.subtotal" type="number" min="0" step="0.01" class="mt-2 block w-full text-xs" />
                                 <InputError class="mt-1" :message="editComprobanteForm.errors.subtotal" />
+                            </div>
+                            <div v-if="esFacturaC(editComprobanteForm.tipo)" class="sm:col-span-2 rounded-lg border border-indigo-200 bg-indigo-50 p-2">
+                                <InputLabel value="Total de factura C" />
+                                <TextInput v-model="editComprobanteForm.total_manual" type="number" min="0" step="0.01" class="mt-2 block w-full text-xs" />
+                                <InputError class="mt-1" :message="editComprobanteForm.errors.total_manual" />
                             </div>
                             <div class="rounded-lg border border-gray-200 p-2">
                                 <div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-xs font-semibold text-gray-900">Percepciones</h4><SecondaryButton type="button" class="!text-xs !px-2 !py-1" @click="addPercepcion(editComprobanteForm)">+ Fila</SecondaryButton></div>
@@ -730,13 +774,15 @@ const submitDelete = () => {
                                 <div class="mt-2">
                                     <InputLabel value="Impuestos combustible" />
                                     <TextInput v-model="editComprobanteForm.impuestos_combustible" type="number" min="0" step="0.01" class="mt-1 block w-full text-xs" />
+                                    <p class="mt-1 text-[10px] text-gray-500">El 45% se registra como pago a cuenta de combustible; el 55% restante se suma al costo.</p>
                                 </div>
                             </div>
                             <div><InputLabel value="Fecha emision" /><TextInput v-model="editComprobanteForm.fecha_emision" type="date" class="mt-1 block w-full text-xs" /><InputError class="mt-1" :message="editComprobanteForm.errors.fecha_emision" /></div>
                             <div><InputLabel value="Fecha vencimiento" /><TextInput v-model="editComprobanteForm.fecha_vencimiento" type="date" class="mt-1 block w-full text-xs" /><InputError class="mt-1" :message="editComprobanteForm.errors.fecha_vencimiento" /></div>
                             <div class="sm:col-span-2"><InputLabel value="Observacion" /><TextInput v-model="editComprobanteForm.observacion" type="text" class="mt-1 block w-full text-xs" /><InputError class="mt-1" :message="editComprobanteForm.errors.observacion" /></div>
                             <div class="sm:col-span-2 rounded-lg border border-indigo-200 bg-indigo-50 p-2 text-xs text-indigo-900 resumen-total">
-                                Subtotal {{ editSummary.subtotal }} · IVA {{ editSummary.iva }} · Tributos {{ editSummary.tributos }} · Retenciones {{ editSummary.retenciones }} · Total {{ editSummary.total }}
+                                <template v-if="esFacturaC(editComprobanteForm.tipo)">Factura C · IVA no aplicable · Total {{ editSummary.total }}</template>
+                                <template v-else>Subtotal {{ editSummary.subtotal }} · IVA {{ editSummary.iva }} · Tributos {{ editSummary.tributos }} · Retenciones {{ editSummary.retenciones }} · Total {{ editSummary.total }}</template>
                             </div>
                         </div>
                 </template>

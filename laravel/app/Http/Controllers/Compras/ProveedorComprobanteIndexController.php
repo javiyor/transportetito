@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
 use App\Models\CombustibleTipo;
+use App\Models\CtaCteMovimiento;
 use App\Models\CuentaContable;
 use App\Models\ProveedorComprobante;
 use App\Models\Tercero;
@@ -57,8 +58,16 @@ class ProveedorComprobanteIndexController extends Controller
         'exento' => 'Op. exentas',
     ];
 
+    private function esFacturaC(?string $tipo): bool
+    {
+        $codigo = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) $tipo) ?? '');
+
+        return in_array($codigo, ['11', 'FC', 'FACTURAC'], true);
+    }
+
     private function fiscalDetail(array $data, ?string $tipo = null): array
     {
+        $esFacturaC = $this->esFacturaC($tipo);
         $ivaDesglosado = $tipo && str_ends_with($tipo, 'A');
 
         // Nuevo formato: filas {concepto, importe} (dropdown ARCA + importe)
@@ -129,11 +138,14 @@ class ProveedorComprobanteIndexController extends Controller
             ->values()
             ->all();
 
+        $impuestosCombustible = round((float) ($data['impuestos_combustible'] ?? 0), 2);
+        $pagoCuentaCombustible = round($impuestosCombustible * 0.45, 2);
         $combustible = [
             'tipo' => $data['combustible_tipo'] ?? null,
             'litros' => $data['litros_combustible'] ?? null,
-            'impuestos_combustible' => round((float) ($data['impuestos_combustible'] ?? 0), 2),
-            'pago_cuenta_combustible' => round((float) ($data['pago_cuenta_combustible'] ?? 0), 2),
+            'impuestos_combustible' => $impuestosCombustible,
+            'pago_cuenta_combustible' => $pagoCuentaCombustible,
+            'impuestos_acumulados_combustible' => round($impuestosCombustible - $pagoCuentaCombustible, 2),
         ];
 
         $usarIvaDetalle = ! empty($ivaDetalle);
@@ -142,15 +154,32 @@ class ProveedorComprobanteIndexController extends Controller
             $netoNoGravado = round((float) ($data['neto_no_gravado'] ?? 0), 2);
             $opExentas = round((float) ($data['op_exentas'] ?? 0), 2);
         }
-        $subtotal = !empty($ivaItems)
+        $subtotal = ! empty($ivaItems)
             ? round(collect($ivaItems)->sum('base_imponible') + $netoNoGravado + $opExentas, 2)
             : round((float) ($data['subtotal'] ?? 0) + $netoNoGravado + $opExentas, 2);
         $ivaTotal = round(collect($ivaItems)->sum('importe'), 2);
-        $tributos = round(collect($percepciones)->sum('importe') + $combustible['impuestos_combustible'], 2);
-        $retencionesTotal = round(collect($retenciones)->sum('importe') + $combustible['pago_cuenta_combustible'], 2);
-        $total = $ivaDesglosado
-            ? round($subtotal + $ivaTotal + $tributos - $retencionesTotal, 2)
-            : round($subtotal + $tributos - $retencionesTotal, 2);
+        $percepcionesTotal = round((float) collect($percepciones)->sum('importe'), 2);
+        $hayImpuestosCombustible = $combustible['impuestos_combustible'] > 0;
+        if ($hayImpuestosCombustible) {
+            $subtotal = round($subtotal + $combustible['impuestos_acumulados_combustible'], 2);
+        }
+        $tributos = round($percepcionesTotal + ($hayImpuestosCombustible
+            ? $combustible['pago_cuenta_combustible']
+            : $combustible['impuestos_combustible']), 2);
+        $retencionesTotal = round((float) collect($retenciones)->sum('importe'), 2);
+        if ($esFacturaC) {
+            $ivaItems = [];
+            $ivaDetalle = [];
+            $ivaTotal = 0.0;
+            $netoNoGravado = 0.0;
+            $opExentas = 0.0;
+            $total = round((float) ($data['total_manual'] ?? 0), 2);
+            $subtotal = round($total - $tributos + $retencionesTotal, 2);
+        } else {
+            $total = $ivaDesglosado
+                ? round($subtotal + $ivaTotal + $tributos - $retencionesTotal, 2)
+                : round($subtotal + $tributos - $retencionesTotal, 2);
+        }
 
         return [
             'subtotal' => $subtotal,
@@ -259,6 +288,7 @@ class ProveedorComprobanteIndexController extends Controller
                 $acc['tributos_total'] += (float) $c->tributos_total;
                 $acc['retenciones_total'] += (float) (($c->detalle ?? [])['retenciones_total'] ?? 0);
                 $acc['total'] += (float) $c->total;
+
                 return $acc;
             }, ['subtotal' => 0, 'iva_total' => 0, 'tributos_total' => 0, 'retenciones_total' => 0, 'total' => 0]);
 
@@ -369,22 +399,20 @@ class ProveedorComprobanteIndexController extends Controller
     public function store(Request $request, TipoCambioResolver $tipoCambioResolver): RedirectResponse
     {
         $empresaId = (int) ($request->user()->current_empresa_id ?: 0);
-        $data = $request->validate([
+        $esFacturaC = $this->esFacturaC((string) $request->input('tipo'));
+        $reglas = [
             'tercero_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'tipo' => ['required', 'string', 'max:64'],
             'numero' => ['nullable', 'string', 'max:64'],
             'receptor_cuit' => ['nullable', 'string', 'max:32'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
             'subtotal' => ['nullable', 'numeric', 'min:0'],
+            'total_manual' => [$esFacturaC ? 'required' : 'nullable', 'numeric', 'min:0'],
             'neto_no_gravado' => ['nullable', 'numeric', 'min:0'],
             'op_exentas' => ['nullable', 'numeric', 'min:0'],
             'cuenta_contable_id' => ['nullable', 'integer', 'exists:cuentas_contables,id'],
             'iva_items' => ['nullable', 'array'],
-            'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],
-            'iva_items.*.base_imponible' => ['required_with:iva_items.*.alicuota', 'numeric', 'min:0'],
             'iva_detalle' => ['nullable', 'array'],
-            'iva_detalle.*.concepto' => ['required_with:iva_detalle.*.importe', 'string', 'max:64'],
-            'iva_detalle.*.importe' => ['required_with:iva_detalle.*.concepto', 'numeric', 'min:0'],
             'percepciones' => ['nullable', 'array'],
             'percepciones.*.concepto' => ['nullable', 'string', 'max:255'],
             'percepciones.*.importe' => ['nullable', 'numeric', 'min:0'],
@@ -398,7 +426,16 @@ class ProveedorComprobanteIndexController extends Controller
             'fecha_emision' => ['required', 'date'],
             'fecha_vencimiento' => ['nullable', 'date'],
             'observacion' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ];
+        if (! $esFacturaC) {
+            $reglas += [
+                'iva_items.*.alicuota' => ['required_with:iva_items.*.base_imponible', 'numeric', 'min:0'],
+                'iva_items.*.base_imponible' => ['required_with:iva_items.*.alicuota', 'numeric', 'min:0'],
+                'iva_detalle.*.concepto' => ['required_with:iva_detalle.*.importe', 'string', 'max:64'],
+                'iva_detalle.*.importe' => ['required_with:iva_detalle.*.concepto', 'numeric', 'min:0'],
+            ];
+        }
+        $data = $request->validate($reglas);
 
         $cuenta = TerceroCuenta::query()->findOrFail($data['tercero_cuenta_id']);
         abort_unless((int) $cuenta->empresa_id === $empresaId, 422);
@@ -422,7 +459,7 @@ class ProveedorComprobanteIndexController extends Controller
             $this->proveedorComprobantePayload($data, $cuenta, $fiscal['total'], $cotizacion, $empresaId, $request->user()->id)
         );
 
-        \App\Models\CtaCteMovimiento::query()->create([
+        CtaCteMovimiento::query()->create([
             'empresa_id' => $empresaId,
             'tercero_cuenta_id' => $cuenta->id,
             'fecha' => $data['fecha_emision'],

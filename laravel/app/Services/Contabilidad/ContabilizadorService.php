@@ -109,6 +109,17 @@ class ContabilizadorService
         $cuentaCompras = $comprobante->cuentaContable ?: $empresa->getCuentaContable('compras_default');
         $cuentaIvaCredito = $empresa->getCuentaContable('iva_credito');
         $cuentaProveedores = $empresa->getCuentaContable('proveedores_default');
+        $pagoCuentaCombustible = round((float) ($comprobante->detalle['combustible']['pago_cuenta_combustible'] ?? 0), 2);
+        $cuentaCreditoCombustible = null;
+        if ($pagoCuentaCombustible > 0) {
+            $cuentaCreditoCombustible = CuentaContable::query()
+                ->where('empresa_id', $empresa->id)
+                ->where('codigo', '1.03.003.005.003')
+                ->first();
+            if (! $cuentaCreditoCombustible) {
+                throw new \RuntimeException("No existe la cuenta 1.03.003.005.003 (Crédito por Impuesto a los Combustibles Líquidos) para la empresa {$empresa->id}.");
+            }
+        }
 
         foreach (['compras_default' => $cuentaCompras, 'iva_credito' => $cuentaIvaCredito, 'proveedores_default' => $cuentaProveedores] as $clave => $cuenta) {
             if (! $cuenta) {
@@ -116,7 +127,7 @@ class ContabilizadorService
             }
         }
 
-        return DB::transaction(function () use ($comprobante, $empresa, $cuentaCompras, $cuentaIvaCredito, $cuentaProveedores) {
+        return DB::transaction(function () use ($comprobante, $empresa, $cuentaCompras, $cuentaIvaCredito, $cuentaProveedores, $cuentaCreditoCombustible, $pagoCuentaCombustible) {
             $asiento = AsientoContable::create([
                 'empresa_id' => $empresa->id,
                 'fecha' => $comprobante->fecha_emision,
@@ -130,11 +141,27 @@ class ContabilizadorService
             $total = (float) $comprobante->total;
             $subtotal = (float) ($comprobante->subtotal ?: 0);
             $ivaTotal = (float) ($comprobante->iva_total ?: 0);
+            $tributosTotal = (float) ($comprobante->tributos_total ?: 0);
 
-            $comprasImporte = $subtotal > 0 ? $subtotal : $total;
+            if ($pagoCuentaCombustible > 0) {
+                $otrosTributos = max(0, $tributosTotal - $pagoCuentaCombustible);
+                $comprasImporte = ($subtotal > 0 ? $subtotal : max($total - $ivaTotal - $tributosTotal, 0)) + $otrosTributos;
+            } else {
+                $comprasImporte = $subtotal > 0 ? $subtotal : $total;
+            }
             $this->addLinea($asiento, $cuentaCompras, null, $comprasImporte, 0, 'Costo de compra');
             if ($ivaTotal > 0) {
                 $this->addLinea($asiento, $cuentaIvaCredito, null, $ivaTotal, 0, 'IVA Credito Fiscal');
+            }
+            if ($pagoCuentaCombustible > 0) {
+                $this->addLinea(
+                    $asiento,
+                    $cuentaCreditoCombustible,
+                    null,
+                    $pagoCuentaCombustible,
+                    0,
+                    'Crédito por Impuesto a los Combustibles Líquidos (45%)'
+                );
             }
             $this->addLinea($asiento, $cuentaProveedores, $comprobante->cuenta, 0, $total, 'Proveedor');
 
