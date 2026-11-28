@@ -9,7 +9,6 @@ use App\Models\Contrarreembolso;
 use App\Models\ContrarreembolsoComprobante;
 use App\Models\ContrarreembolsoComprobanteAplicacion;
 use App\Models\ContrarreembolsoComprobanteItem;
-use App\Models\Deposito;
 use App\Models\Empresa;
 use App\Models\TerceroCuenta;
 use App\Services\Cobranzas\ContrarreembolsoService;
@@ -101,7 +100,6 @@ class ContrarreembolsoController extends Controller
                 ->where('estado', 'en_cartera')
                 ->orderBy('fecha_vencimiento')
                 ->get(['id', 'tipo', 'numero', 'banco', 'importe', 'moneda', 'titular', 'librado_por', 'fecha_emision', 'fecha_vencimiento']),
-            'depositos' => Deposito::query()->where('empresa_id', $empresaId)->orderByDesc('es_central')->orderBy('nombre')->get(['id', 'nombre', 'es_central']),
             'fecha' => now()->toDateString(),
         ]);
     }
@@ -113,10 +111,9 @@ class ContrarreembolsoController extends Controller
 
         $data = $request->validate([
             'fecha' => ['required', 'date'],
-            'deposito_id' => ['nullable', 'integer', 'exists:depositos,id'],
             'moneda' => ['required', 'in:ARS,USD,EUR,BRL'],
-            'beneficiario_tipo' => ['required', 'in:remitente,destinatario'],
-            'beneficiario_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+            'remitente_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
+            'destinatario_cuenta_id' => ['required', 'integer', 'exists:tercero_cuentas,id'],
             'descuento_porcentaje' => ['nullable', 'numeric', 'in:0,0.0,0.00'],
             'descuento_importe' => ['nullable', 'numeric', 'in:0,0.0,0.00'],
             'observaciones' => ['nullable', 'string', 'max:2000'],
@@ -132,20 +129,21 @@ class ContrarreembolsoController extends Controller
         $voucher = DB::transaction(function () use ($request, $data, $empresaId, $contabilizador): ContrarreembolsoComprobante {
             Empresa::query()->whereKey($empresaId)->lockForUpdate()->firstOrFail();
 
-            $depositoId = isset($data['deposito_id'])
-                ? (int) $data['deposito_id']
-                : (int) (Deposito::query()->where('empresa_id', $empresaId)->orderByDesc('es_central')->value('id') ?? 0);
-            if (! $depositoId || ! Deposito::query()->where('empresa_id', $empresaId)->whereKey($depositoId)->exists()) {
-                throw ValidationException::withMessages(['deposito_id' => 'Seleccioná un depósito válido para la empresa.']);
-            }
-
-            $beneficiario = TerceroCuenta::query()
+            $remitente = TerceroCuenta::query()
                 ->where('empresa_id', $empresaId)
-                ->whereKey($data['beneficiario_cuenta_id'])
+                ->whereKey($data['remitente_cuenta_id'])
                 ->with('tercero')
                 ->first();
-            if (! $beneficiario) {
-                throw ValidationException::withMessages(['beneficiario_cuenta_id' => 'El beneficiario debe tener una cuenta en la empresa actual.']);
+            $destinatario = TerceroCuenta::query()
+                ->where('empresa_id', $empresaId)
+                ->whereKey($data['destinatario_cuenta_id'])
+                ->with('tercero')
+                ->first();
+            if (! $remitente) {
+                throw ValidationException::withMessages(['remitente_cuenta_id' => 'Seleccioná un remitente con cuenta en la empresa actual.']);
+            }
+            if (! $destinatario) {
+                throw ValidationException::withMessages(['destinatario_cuenta_id' => 'Seleccioná un destinatario con cuenta en la empresa actual.']);
             }
 
             $registros = Contrarreembolso::query()
@@ -162,11 +160,9 @@ class ContrarreembolsoController extends Controller
             $totalAplicar = 0.0;
             foreach ($data['contrarreembolsos'] ?? [] as $linea) {
                 $registro = $registros->get((int) $linea['id']);
-                $cuentaBeneficiariaId = $data['beneficiario_tipo'] === 'remitente'
-                    ? $registro->remitente_cuenta_id
-                    : $registro->destinatario_cuenta_id;
-                if ((int) $cuentaBeneficiariaId !== (int) $beneficiario->id) {
-                    throw ValidationException::withMessages(['beneficiario_cuenta_id' => 'El beneficiario elegido no corresponde a todos los contrarreembolsos seleccionados.']);
+                if ((int) $registro->remitente_cuenta_id !== (int) $remitente->id
+                    || (int) $registro->destinatario_cuenta_id !== (int) $destinatario->id) {
+                    throw ValidationException::withMessages(['contrarreembolsos' => 'Los contrarreembolsos deben corresponder al remitente y destinatario elegidos.']);
                 }
                 if ((string) $registro->moneda !== $data['moneda']) {
                     throw ValidationException::withMessages(['moneda' => 'Los contrarreembolsos seleccionados deben tener la misma moneda.']);
@@ -211,11 +207,11 @@ class ContrarreembolsoController extends Controller
             $numero = (int) (ContrarreembolsoComprobante::query()->where('empresa_id', $empresaId)->max('numero_interno') ?? 0) + 1;
             $comprobante = ContrarreembolsoComprobante::query()->create([
                 'empresa_id' => $empresaId,
-                'deposito_id' => $depositoId,
+                'deposito_id' => null,
                 'numero_interno' => $numero,
                 'fecha' => $data['fecha'],
-                'beneficiario_tipo' => $data['beneficiario_tipo'],
-                'beneficiario_cuenta_id' => $beneficiario->id,
+                'beneficiario_tipo' => 'remitente',
+                'beneficiario_cuenta_id' => $remitente->id,
                 'moneda' => $data['moneda'],
                 'total_cheques' => round($totalCheques, 2),
                 'efectivo' => round($efectivo, 2),

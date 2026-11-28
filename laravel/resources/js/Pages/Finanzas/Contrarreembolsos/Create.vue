@@ -1,24 +1,51 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 
-const props = defineProps({ registros: { type: Array, required: true }, cheques: { type: Array, required: true }, depositos: { type: Array, required: true }, fecha: { type: String, required: true } })
-const form = useForm({ fecha: props.fecha, deposito_id: '', moneda: 'ARS', beneficiario_tipo: 'remitente', beneficiario_cuenta_id: '', descuento_porcentaje: 0, descuento_importe: 0, observaciones: '', contrarreembolsos: [], items: [], cheque_ids: [], efectivo: '', confirmar: false })
+const props = defineProps({ registros: { type: Array, required: true }, cheques: { type: Array, required: true }, fecha: { type: String, required: true } })
+const form = useForm({ fecha: props.fecha, moneda: 'ARS', remitente_cuenta_id: '', destinatario_cuenta_id: '', observaciones: '', contrarreembolsos: [], items: [], cheque_ids: [], efectivo: '', confirmar: false })
 const confirming = ref(false)
+const searchRemitente = ref('')
+const searchDestinatario = ref('')
+const showRemitenteDropdown = ref(false)
+const showDestinatarioDropdown = ref(false)
 const formatNum = (value) => Number(value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const beneficiarios = computed(() => {
-    const key = form.beneficiario_tipo === 'remitente' ? 'remitente' : 'destinatario'
-    const idKey = `${key}_cuenta_id`
-    const names = `${key}`
+const crearOpcionesCuenta = (tipo) => {
+    const idKey = `${tipo}_cuenta_id`
     const result = new Map()
-    for (const row of props.registros) if (row[idKey]) result.set(row[idKey], { id: row[idKey], nombre: row[names], cuit: row[`${key}_cuit`] })
+    for (const row of props.registros) {
+        if (row[idKey]) result.set(row[idKey], { id: row[idKey], nombre: row[tipo], cuit: row[`${tipo}_cuit`] })
+    }
     return [...result.values()]
+}
+const remitentes = computed(() => crearOpcionesCuenta('remitente'))
+const destinatarios = computed(() => crearOpcionesCuenta('destinatario'))
+const filtrarCuentas = (cuentas, texto) => {
+    const query = texto.trim().toLocaleLowerCase()
+    return query ? cuentas.filter((cuenta) => `${cuenta.nombre} ${cuenta.cuit}`.toLocaleLowerCase().includes(query)) : cuentas
+}
+const remitentesFiltrados = computed(() => filtrarCuentas(remitentes.value, searchRemitente.value))
+const destinatariosFiltrados = computed(() => filtrarCuentas(destinatarios.value, searchDestinatario.value))
+const seleccionarRemitente = (cuenta) => {
+    form.remitente_cuenta_id = cuenta.id
+    searchRemitente.value = cuenta.nombre
+    showRemitenteDropdown.value = false
+}
+const seleccionarDestinatario = (cuenta) => {
+    form.destinatario_cuenta_id = cuenta.id
+    searchDestinatario.value = cuenta.nombre
+    showDestinatarioDropdown.value = false
+}
+watch(() => [form.remitente_cuenta_id, form.destinatario_cuenta_id, form.moneda], () => {
+    form.contrarreembolsos = []
 })
-const disponibles = computed(() => props.registros.filter((row) => {
-    const accountId = form.beneficiario_tipo === 'remitente' ? row.remitente_cuenta_id : row.destinatario_cuenta_id
-    return (!form.beneficiario_cuenta_id || Number(accountId) === Number(form.beneficiario_cuenta_id)) && row.moneda === form.moneda
-}))
+const disponibles = computed(() => {
+    if (!form.remitente_cuenta_id || !form.destinatario_cuenta_id) return []
+    return props.registros.filter((row) => Number(row.remitente_cuenta_id) === Number(form.remitente_cuenta_id)
+        && Number(row.destinatario_cuenta_id) === Number(form.destinatario_cuenta_id)
+        && row.moneda === form.moneda)
+})
 const selectedCheques = computed(() => props.cheques.filter((cheque) => form.cheque_ids.includes(cheque.id) && cheque.moneda === form.moneda))
 const totalAplicar = computed(() => form.contrarreembolsos.reduce((sum, row) => sum + Number(row.importe || 0), 0))
 const totalMedios = computed(() => Number(form.efectivo || 0) + selectedCheques.value.reduce((sum, cheque) => sum + Number(cheque.importe), 0))
@@ -48,11 +75,26 @@ const enviar = (confirmar) => {
             <div v-if="Object.keys(form.errors).length" class="rounded-md bg-red-50 p-4 text-sm text-red-700">{{ Object.values(form.errors)[0] }}</div>
             <section class="grid gap-4 rounded-lg bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
                 <label class="text-sm">Fecha<input v-model="form.fecha" type="date" class="mt-1 block w-full rounded-md border-gray-300" /></label>
-                <label class="text-sm">Depósito<select v-model="form.deposito_id" class="mt-1 block w-full rounded-md border-gray-300"><option value="">Depósito central predeterminado</option><option v-for="deposito in depositos" :key="deposito.id" :value="deposito.id">{{ deposito.nombre }}</option></select></label>
                 <label class="text-sm">Moneda<select v-model="form.moneda" class="mt-1 block w-full rounded-md border-gray-300"><option v-for="moneda in ['ARS','USD','EUR','BRL']" :key="moneda">{{ moneda }}</option></select></label>
-                <label class="text-sm">Liquidar a<select v-model="form.beneficiario_tipo" class="mt-1 block w-full rounded-md border-gray-300"><option value="remitente">Remitente</option><option value="destinatario">Destinatario</option></select></label>
-                <label class="text-sm sm:col-span-2">Beneficiario<select v-model="form.beneficiario_cuenta_id" class="mt-1 block w-full rounded-md border-gray-300"><option value="">Seleccionar beneficiario</option><option v-for="beneficiario in beneficiarios" :key="beneficiario.id" :value="beneficiario.id">{{ beneficiario.nombre }} — {{ beneficiario.cuit }}</option></select></label>
-                <label class="text-sm sm:col-span-2">Observaciones<input v-model="form.observaciones" class="mt-1 block w-full rounded-md border-gray-300" maxlength="2000" /></label>
+                <div class="relative text-sm">
+                    <label for="remitente-search">Remitente</label>
+                    <input id="remitente-search" v-model="searchRemitente" @input="form.remitente_cuenta_id = ''; showRemitenteDropdown = true" @focus="showRemitenteDropdown = true" @blur="setTimeout(() => showRemitenteDropdown = false, 200)" type="text" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Buscar nombre o CUIT..." autocomplete="off" />
+                    <input v-model="form.remitente_cuenta_id" type="hidden" />
+                    <ul v-if="showRemitenteDropdown && remitentesFiltrados.length" class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-gray-300 bg-white shadow-lg">
+                        <li v-for="cuenta in remitentesFiltrados" :key="cuenta.id" @mousedown.prevent="seleccionarRemitente(cuenta)" class="cursor-pointer border-b px-3 py-2 hover:bg-indigo-50"><div class="font-medium">{{ cuenta.nombre }}</div><div class="text-xs text-gray-500">{{ cuenta.cuit || 'Sin CUIT' }}</div></li>
+                    </ul>
+                    <InputError :message="form.errors.remitente_cuenta_id" />
+                </div>
+                <div class="relative text-sm">
+                    <label for="destinatario-search">Destinatario</label>
+                    <input id="destinatario-search" v-model="searchDestinatario" @input="form.destinatario_cuenta_id = ''; showDestinatarioDropdown = true" @focus="showDestinatarioDropdown = true" @blur="setTimeout(() => showDestinatarioDropdown = false, 200)" type="text" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Buscar nombre o CUIT..." autocomplete="off" />
+                    <input v-model="form.destinatario_cuenta_id" type="hidden" />
+                    <ul v-if="showDestinatarioDropdown && destinatariosFiltrados.length" class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-gray-300 bg-white shadow-lg">
+                        <li v-for="cuenta in destinatariosFiltrados" :key="cuenta.id" @mousedown.prevent="seleccionarDestinatario(cuenta)" class="cursor-pointer border-b px-3 py-2 hover:bg-indigo-50"><div class="font-medium">{{ cuenta.nombre }}</div><div class="text-xs text-gray-500">{{ cuenta.cuit || 'Sin CUIT' }}</div></li>
+                    </ul>
+                    <InputError :message="form.errors.destinatario_cuenta_id" />
+                </div>
+                <label class="text-sm sm:col-span-2 lg:col-span-4">Observaciones<input v-model="form.observaciones" class="mt-1 block w-full rounded-md border-gray-300" maxlength="2000" /></label>
                 <p class="text-xs text-gray-500 sm:col-span-2 lg:col-span-4">Los descuentos están deshabilitados hasta definir la regla comercial y contable.</p>
             </section>
 
@@ -60,7 +102,7 @@ const enviar = (confirmar) => {
                 <div class="border-b px-4 py-3 font-semibold">Contrarreembolsos cobrados disponibles</div>
                 <div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr><th class="px-3 py-3">Aplicar</th><th class="px-3 py-3">Factura / Remito</th><th class="px-3 py-3">Remitente</th><th class="px-3 py-3">Destinatario</th><th class="px-3 py-3 text-right">Disponible</th><th class="px-3 py-3">Importe a liquidar</th></tr></thead><tbody class="divide-y">
                     <tr v-for="row in disponibles" :key="row.id"><td class="px-3 py-2"><input type="checkbox" :checked="form.contrarreembolsos.some((item) => item.id === row.id)" @change="toggled(row, $event)" /></td><td class="px-3 py-2">{{ row.comprobante }}<div class="text-xs text-gray-500">Remito {{ row.remito || '—' }}</div></td><td class="px-3 py-2">{{ row.remitente }}</td><td class="px-3 py-2">{{ row.destinatario }}</td><td class="px-3 py-2 text-right font-mono">{{ row.moneda }} {{ formatNum(row.disponible) }}</td><td class="px-3 py-2"><input type="number" min="0.01" step="0.01" :max="row.disponible" :disabled="!form.contrarreembolsos.some((item) => item.id === row.id)" :value="importePara(row.id)" @input="cambiarImporte(row.id, $event.target.value)" class="w-36 rounded-md border-gray-300 text-right" /></td></tr>
-                    <tr v-if="!disponibles.length"><td colspan="6" class="px-3 py-8 text-center text-gray-500">No hay saldos cobrados para este beneficiario y moneda.</td></tr>
+                    <tr v-if="!disponibles.length"><td colspan="6" class="px-3 py-8 text-center text-gray-500">Seleccioná remitente, destinatario y moneda para ver los contrarreembolsos disponibles.</td></tr>
                 </tbody></table></div>
             </section>
 
